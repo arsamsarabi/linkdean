@@ -1,0 +1,17 @@
+# Linkdean on nova — public when in Cloudflare DOMAINS.
+# Native Authentik OIDC (no ForwardAuth).
+http:
+  routers:
+    linkdean:
+      rule: "Host(`linkdean.arsam.app`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: linkdean
+
+  services:
+    linkdean:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.0.120:8128"
