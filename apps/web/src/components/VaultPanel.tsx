@@ -82,7 +82,7 @@ export function VaultPanel() {
 
   return (
     <Stack gap="lg" maw={480}>
-      <Alert icon={<IconInfoCircle size={16} />} color="harbor" variant="light">
+      <Alert icon={<IconInfoCircle size={16} />} color="violet" variant="light">
         Password-protected categories. AES-GCM at rest. Not in Meilisearch until unlocked
         (then Postgres search).
       </Alert>

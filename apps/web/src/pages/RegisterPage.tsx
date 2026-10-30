@@ -73,7 +73,7 @@ export function RegisterPage() {
   return (
     <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className="ld-fade-in">
       <Stack gap={6}>
-        <Title order={1} c="harbor">
+        <Title order={1} c="violet">
           Create account
         </Title>
         <Text c="dimmed">Join this Linkdean instance.</Text>

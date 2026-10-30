@@ -95,7 +95,7 @@ export function SettingsPage() {
   return (
     <Stack gap="xl">
       <Group gap="md">
-        <ThemeIcon size={40} radius="md" variant="light" color="harbor">
+        <ThemeIcon size={40} radius="md" variant="light" color="violet">
           <IconSettings size={22} stroke={1.5} />
         </ThemeIcon>
         <Title order={2}>Settings</Title>

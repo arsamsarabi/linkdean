@@ -130,7 +130,7 @@ export function ProfilePage() {
   return (
     <Stack gap="xl" maw={560}>
       <Group gap="md">
-        <ThemeIcon size={40} radius="md" variant="light" color="harbor">
+        <ThemeIcon size={40} radius="md" variant="light" color="violet">
           <IconUser size={22} stroke={1.5} />
         </ThemeIcon>
         <Title order={2}>Profile</Title>
@@ -225,7 +225,7 @@ export function ProfilePage() {
             <Paper p="xl" withBorder>
               <Stack gap="lg">
                 <Group gap="sm">
-                  <ThemeIcon size={28} radius="md" variant="light" color="harbor">
+                  <ThemeIcon size={28} radius="md" variant="light" color="violet">
                     <IconKey size={16} stroke={1.5} />
                   </ThemeIcon>
                   <Title order={4}>Change password</Title>
@@ -263,7 +263,7 @@ export function ProfilePage() {
               </Stack>
             </Paper>
           ) : (
-            <Alert icon={<IconInfoCircle size={16} />} color="harbor" variant="light">
+            <Alert icon={<IconInfoCircle size={16} />} color="violet" variant="light">
               OIDC account — no local password to change.
             </Alert>
           )}

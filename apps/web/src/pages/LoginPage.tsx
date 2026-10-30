@@ -59,7 +59,7 @@ export function LoginPage() {
   if (checking) {
     return (
       <Center mih="70vh">
-        <Loader color="harbor" type="dots" />
+        <Loader color="violet" type="dots" />
       </Center>
     )
   }
@@ -67,7 +67,7 @@ export function LoginPage() {
   return (
     <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className="ld-fade-in">
       <Stack gap={6}>
-        <Title order={1} c="harbor">
+        <Title order={1} c="violet">
           Linkdean
         </Title>
         <Text c="dimmed">Sign in to your bookmarks.</Text>

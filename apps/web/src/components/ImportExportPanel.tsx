@@ -62,7 +62,7 @@ export function ImportExportPanel() {
       <Paper p="xl" withBorder>
         <Stack gap="lg">
           <Group gap="sm">
-            <ThemeIcon size={28} radius="md" variant="light" color="harbor">
+            <ThemeIcon size={28} radius="md" variant="light" color="violet">
               <IconUpload size={16} stroke={1.5} />
             </ThemeIcon>
             <Title order={4}>Import</Title>
@@ -99,12 +99,12 @@ export function ImportExportPanel() {
       <Paper p="xl" withBorder>
         <Stack gap="lg">
           <Group gap="sm">
-            <ThemeIcon size={28} radius="md" variant="light" color="harbor">
+            <ThemeIcon size={28} radius="md" variant="light" color="violet">
               <IconFileExport size={16} stroke={1.5} />
             </ThemeIcon>
             <Title order={4}>Export</Title>
           </Group>
-          <Alert icon={<IconInfoCircle size={16} />} color="harbor" variant="light">
+          <Alert icon={<IconInfoCircle size={16} />} color="violet" variant="light">
             Vault bookmarks skipped on export — ciphertext stays private.
           </Alert>
           <Group>

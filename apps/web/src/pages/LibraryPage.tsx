@@ -536,7 +536,7 @@ export function LibraryPage() {
                   size="lg"
                   radius="xl"
                   variant="filled"
-                  color="harbor"
+                  color="violet"
                   aria-label="Back to top"
                   onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 >
@@ -550,7 +550,7 @@ export function LibraryPage() {
               size="xl"
               radius="xl"
               variant="filled"
-              color="harbor"
+              color="violet"
               aria-label="Add bookmark"
               onClick={openCreate}
               hiddenFrom="sm"

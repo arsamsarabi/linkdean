@@ -14,7 +14,7 @@ export function EmptyState({
 }) {
   return (
     <Stack align="center" gap="md" py={64} px="md" className="ld-fade-in">
-      <ThemeIcon size={56} radius="xl" variant="light" color="harbor">
+      <ThemeIcon size={56} radius="xl" variant="light" color="violet">
         {icon}
       </ThemeIcon>
       <Stack gap={6} align="center" maw={360}>

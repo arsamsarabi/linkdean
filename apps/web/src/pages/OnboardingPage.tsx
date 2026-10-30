@@ -166,7 +166,7 @@ export function OnboardingPage() {
   if (!ready) {
     return (
       <Center mih="70vh">
-        <Loader color="harbor" type="dots" />
+        <Loader color="violet" type="dots" />
       </Center>
     )
   }
@@ -174,7 +174,7 @@ export function OnboardingPage() {
   return (
     <Stack maw={560} mx="auto" mt={48} px="md" pb={48} gap="lg" className="ld-fade-in">
       <Stack gap={6}>
-        <Title order={1} c="harbor">
+        <Title order={1} c="violet">
           Welcome to Linkdean
         </Title>
         <Text c="dimmed">

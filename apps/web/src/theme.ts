@@ -1,67 +1,82 @@
 import { createTheme, type MantineColorsTuple, type MantineThemeOverride } from '@mantine/core'
 
 /**
- * Brand — #213C51 · #6594B1 · #DDAED3 · #EEEEEE
- * Dark UI: near-black navy (not mid #213C51) + harbor highlights.
+ * Brand —
+ * Ice Cold #A0D2EB · Freeze Purple #E5EAF5 · Medium Purple #D0BDF4
+ * Purple Pain #8458B3 · Heavy Purple #A28089
  */
 
-/** Steel blue — primary; #6594B1 @ 5 */
-const harbor: MantineColorsTuple = [
-  '#F2F7FA',
-  '#E4EEF4',
-  '#C8DCE8',
-  '#A5C5D6',
-  '#84AEC6',
-  '#6594B1',
-  '#527A94',
-  '#416178',
-  '#324A5C',
-  '#1A3040',
+/** Purple Pain — primary; #8458B3 @ 5 */
+const violet: MantineColorsTuple = [
+  '#F7F2FC',
+  '#EDE4F7',
+  '#D9C6EB',
+  '#C1A3DE',
+  '#A57DCD',
+  '#8458B3',
+  '#6E4796',
+  '#58387A',
+  '#432A5C',
+  '#2E1D40',
 ]
 
-/** Soft mauve accent — #DDAED3 @ 4 */
-const mauve: MantineColorsTuple = [
-  '#FBF5FA',
-  '#F5E8F3',
-  '#EED5E9',
-  '#E6C2DF',
-  '#DDAED3',
-  '#C994C0',
-  '#B07AA8',
-  '#916289',
-  '#724B6B',
-  '#54364F',
+/** Ice Cold — cool accent; #A0D2EB @ 3 */
+const ice: MantineColorsTuple = [
+  '#F0F8FC',
+  '#E0F1F8',
+  '#C5E5F3',
+  '#A0D2EB',
+  '#7ABFE0',
+  '#5AABD0',
+  '#458EAF',
+  '#35708C',
+  '#28556B',
+  '#1C3C4C',
 ]
 
-/** Neutrals from #EEEEEE → navy ink (light theme) */
+/** Medium Purple — soft accent; #D0BDF4 @ 3 */
+const orchid: MantineColorsTuple = [
+  '#F8F5FD',
+  '#F0EAFB',
+  '#E4D8F8',
+  '#D0BDF4',
+  '#B89AEB',
+  '#9F7ADF',
+  '#8560C4',
+  '#6B4BA3',
+  '#523A7F',
+  '#3A295A',
+]
+
+/** Neutrals: Freeze Purple → Heavy Purple */
 const mist: MantineColorsTuple = [
-  '#EEEEEE',
-  '#E2E2E2',
-  '#D0D0D0',
-  '#B8B8B8',
-  '#9A9A9A',
-  '#7A7A7A',
-  '#5C6A75',
-  '#3F4A55',
-  '#2C3D4A',
-  '#213C51',
+  '#E5EAF5',
+  '#D8DDE8',
+  '#C5CAD6',
+  '#ADB3C0',
+  '#949AA8',
+  '#A28089',
+  '#7A5F66',
+  '#5C484E',
+  '#3F3236',
+  '#2A2225',
 ]
 
 /**
- * Dark-mode surfaces — deep near-black navy.
+ * Dark-mode surfaces — neutral charcoal from Heavy Purple (not violet).
  * Mantine: dark[6] ≈ Paper/Card, dark[7] ≈ body.
  */
-const navyNight: MantineColorsTuple = [
-  '#EEEEEE',
-  '#C5D0DA',
-  '#8FA8B8',
-  '#6594B1',
-  '#3D5F78',
-  '#213C51',
-  '#0B1520',
-  '#0B1520',
-  '#080F18',
-  '#060C14',
+const charcoal: MantineColorsTuple = [
+  '#E5EAF5',
+  '#C5CAD6',
+  '#A28089',
+  '#7A5F66',
+  '#5C484E',
+  '#3F3236',
+  '#2A2225',
+  '#2A2225',
+  '#1A1618',
+  '#121011',
 ]
 
 /** Soft semantic — keep calm, not neon */
@@ -105,7 +120,7 @@ const softApricot: MantineColorsTuple = [
 ]
 
 export const linkdeanTheme: MantineThemeOverride = createTheme({
-  primaryColor: 'harbor',
+  primaryColor: 'violet',
   fontFamily: 'Satoshi, system-ui, sans-serif',
   headings: {
     fontFamily: 'Rajdhani, system-ui, sans-serif',
@@ -120,28 +135,37 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
     xl: '2.25rem',
   },
   colors: {
-    harbor,
-    mauve,
+    violet,
+    ice,
+    orchid,
     mist,
+    /** @deprecated alias — prefer violet */
+    harbor: violet,
+    /** @deprecated alias — prefer orchid */
+    mauve: orchid,
     green: softGreen,
     red: softCoral,
     yellow: softApricot,
-    blue: harbor,
+    blue: ice,
     gray: mist,
-    dark: navyNight,
+    dark: charcoal,
   },
   primaryShade: { light: 5, dark: 5 },
-  white: '#EEEEEE',
-  black: '#060C14',
+  white: '#E5EAF5',
+  black: '#121011',
   other: {
-    brandLight: '#EEEEEE',
-    brandBlue: '#6594B1',
-    brandMauve: '#DDAED3',
-    brandInk: '#213C51',
-    brandNight: '#0B1520',
+    brandIce: '#A0D2EB',
+    brandFreeze: '#E5EAF5',
+    brandOrchid: '#D0BDF4',
+    brandPain: '#8458B3',
+    brandHeavy: '#A28089',
+    brandNight: '#1A1618',
     pageMaxWidth: 1140,
   },
   components: {
+    Anchor: {
+      defaultProps: { c: 'ice' },
+    },
     Button: {
       defaultProps: { radius: 'md' },
     },

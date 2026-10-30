@@ -20,31 +20,34 @@ h6 {
   font-weight: 700;
 }
 
-/* Mist + steel / mauve wash — light */
+/* Freeze base + soft orchid wash — light (ice reserved for links) */
 [data-mantine-color-scheme='light'] body {
   background:
-    radial-gradient(1100px 520px at 8% -8%, #6594b133, transparent),
-    radial-gradient(900px 480px at 92% 0%, #ddaed344, transparent),
-    #eeeeee;
+    radial-gradient(1100px 520px at 8% -8%, #d0bdf433, transparent),
+    radial-gradient(900px 480px at 92% 0%, #a2808922, transparent),
+    #e5eaf5;
 }
 
 /*
- * Dark theme — near-black navy surfaces, harbor blue highlights.
- * #213C51 is mid-tone only (borders/hover), not body fill.
+ * Dark theme — neutral charcoal (Heavy lineage), not purple.
+ * Ice Cold only on links/anchors.
  */
 [data-mantine-color-scheme='dark'] {
-  --ld-night: #0b1520;
-  --ld-night-deep: #060c14;
-  --ld-ink: #213c51;
-  --ld-harbor: #6594b1;
+  --ld-night: #1a1618;
+  --ld-night-deep: #121011;
+  --ld-ink: #3f3236;
+  --ld-pain: #8458b3;
+  --ld-ice: #a0d2eb;
+  --ld-freeze: #e5eaf5;
+  --ld-heavy: #a28089;
 
   --mantine-color-body: var(--ld-night);
   --mantine-color-default: var(--ld-night);
   --mantine-color-default-hover: var(--ld-ink);
-  --mantine-color-default-border: color-mix(in srgb, var(--ld-harbor) 40%, transparent);
-  --mantine-color-dimmed: #8fa8b8;
-  --mantine-color-text: #eeeeee;
-  --mantine-color-anchor: var(--ld-harbor);
+  --mantine-color-default-border: color-mix(in srgb, var(--ld-heavy) 45%, transparent);
+  --mantine-color-dimmed: var(--ld-heavy);
+  --mantine-color-text: var(--ld-freeze);
+  --mantine-color-anchor: var(--ld-ice);
 
   --mantine-color-dark-6: var(--ld-night);
   --mantine-color-dark-7: var(--ld-night);
@@ -54,16 +57,7 @@ h6 {
 
 [data-mantine-color-scheme='dark'] body {
   background: var(--ld-night);
-  color: #eeeeee;
-}
-
-[data-mantine-color-scheme='dark'] h1,
-[data-mantine-color-scheme='dark'] h2,
-[data-mantine-color-scheme='dark'] h3,
-[data-mantine-color-scheme='dark'] h4,
-[data-mantine-color-scheme='dark'] h5,
-[data-mantine-color-scheme='dark'] h6 {
-  color: var(--ld-harbor);
+  color: var(--ld-freeze);
 }
 
 [data-mantine-color-scheme='dark'] .mantine-Paper-root,
@@ -77,11 +71,16 @@ h6 {
 [data-mantine-color-scheme='dark'] .mantine-Select-dropdown,
 [data-mantine-color-scheme='dark'] .mantine-Combobox-dropdown {
   background-color: var(--ld-night) !important;
-  border-color: color-mix(in srgb, var(--ld-harbor) 40%, transparent);
+  border-color: color-mix(in srgb, var(--ld-heavy) 45%, transparent);
 }
 
 a {
   color: inherit;
+}
+
+a[href]:not([class*='mantine-']):hover,
+.mantine-Anchor-root {
+  color: var(--mantine-color-ice-filled);
 }
 
 /* —— Motion / polish —— */
@@ -110,18 +109,22 @@ a {
 
 .ld-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--mantine-color-harbor-filled) 12%, transparent);
-  border-color: color-mix(in srgb, var(--mantine-color-harbor-filled) 45%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--mantine-color-violet-filled) 14%, transparent);
+  border-color: color-mix(in srgb, var(--mantine-color-violet-filled) 45%, transparent);
 }
 
 .ld-card:focus-within {
-  border-color: var(--mantine-color-harbor-filled);
+  border-color: var(--mantine-color-violet-filled);
+}
+
+.ld-link {
+  color: var(--mantine-color-ice-filled);
 }
 
 [data-mantine-color-scheme='light'] .mantine-AppShell-header {
-  background: color-mix(in srgb, #eeeeee 82%, transparent);
+  background: color-mix(in srgb, #e5eaf5 82%, transparent);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid color-mix(in srgb, #6594b1 18%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, #a28089 22%, transparent);
 }
 
 [data-mantine-color-scheme='dark'] .mantine-AppShell-header {

@@ -74,7 +74,7 @@ function PreviewFallback({
       gap="sm"
       style={{
         background:
-          'linear-gradient(145deg, var(--mantine-color-harbor-1), var(--mantine-color-mauve-1))',
+          'linear-gradient(145deg, var(--mantine-color-violet-1), var(--mantine-color-orchid-1))',
       }}
     >
       {iconSrc ? (
@@ -171,6 +171,7 @@ export function BookmarkCard({
             href={b.url}
             target="_blank"
             rel="noreferrer"
+            className="ld-link"
             style={{ flex: 1, minWidth: 0 }}
           >
             <Group gap={6} wrap="nowrap" align="flex-start">
@@ -268,8 +269,8 @@ export function BookmarkCard({
                   styles={{
                     root: {
                       cursor: 'pointer',
-                      backgroundColor: 'var(--mantine-color-harbor-light)',
-                      color: 'var(--mantine-color-harbor-filled)',
+                      backgroundColor: 'var(--mantine-color-violet-filled)',
+                      color: 'var(--mantine-color-gray-0)',
                     },
                   }}
                 >

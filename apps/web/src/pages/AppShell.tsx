@@ -52,7 +52,7 @@ export function AppShell() {
         <PageContainer h="100%">
           <Group h="100%" justify="space-between">
             <UnstyledButton component={Link} to="/library" aria-label="Library">
-              <Title order={3} c="harbor">
+              <Title order={3} c="violet">
                 Linkdean
               </Title>
             </UnstyledButton>
@@ -121,7 +121,7 @@ export function AppShell() {
         <PageContainer pb="xl" className="ld-fade-in">
           {loading ? (
             <Group justify="center" py={80}>
-              <Loader color="harbor" type="dots" />
+              <Loader color="violet" type="dots" />
             </Group>
           ) : (
             <Outlet />
