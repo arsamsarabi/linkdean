@@ -60,12 +60,44 @@ pub async fn enrich_bookmark(
                 } else {
                     None
                 };
-                let favicon = parsed.favicon.map(|href| absolutize(&url, &href));
-                let preview = if raw.preview_image_url.is_none() {
-                    parsed.preview_image.map(|href| absolutize(&url, &href))
-                } else {
-                    None
-                };
+
+                let favicon_remote = parsed
+                    .favicon
+                    .map(|href| absolutize(&url, &href))
+                    .filter(|u| is_fetchable(u))
+                    .or_else(|| {
+                        raw.favicon_url
+                            .clone()
+                            .filter(|u| is_http_url(u))
+                    });
+                let favicon = resolve_cached_asset(
+                    &client,
+                    &opts.preview_dir,
+                    bookmark_id,
+                    AssetKind::Favicon,
+                    favicon_remote,
+                    raw.favicon_url.as_deref(),
+                )
+                .await;
+
+                let preview_remote = parsed
+                    .preview_image
+                    .map(|href| absolutize(&url, &href))
+                    .filter(|u| is_fetchable(u))
+                    .or_else(|| {
+                        raw.preview_image_url
+                            .clone()
+                            .filter(|u| is_http_url(u))
+                    });
+                let preview = resolve_cached_asset(
+                    &client,
+                    &opts.preview_dir,
+                    bookmark_id,
+                    AssetKind::Og,
+                    preview_remote,
+                    raw.preview_image_url.as_deref(),
+                )
+                .await;
 
                 if let Err(e) = db::update_bookmark_metadata(
                     pool,
@@ -120,6 +152,236 @@ pub async fn enrich_bookmark(
 
 pub fn preview_file(dir: &Path, bookmark_id: Uuid) -> PathBuf {
     dir.join(format!("{bookmark_id}.jpg"))
+}
+
+pub fn favicon_file(dir: &Path, bookmark_id: Uuid) -> PathBuf {
+    dir.join(format!("{bookmark_id}.favicon"))
+}
+
+pub fn favicon_ct_file(dir: &Path, bookmark_id: Uuid) -> PathBuf {
+    dir.join(format!("{bookmark_id}.favicon.ct"))
+}
+
+pub fn og_file(dir: &Path, bookmark_id: Uuid) -> PathBuf {
+    dir.join(format!("{bookmark_id}.og"))
+}
+
+pub fn og_ct_file(dir: &Path, bookmark_id: Uuid) -> PathBuf {
+    dir.join(format!("{bookmark_id}.og.ct"))
+}
+
+pub fn cached_favicon_url(bookmark_id: Uuid) -> String {
+    format!("/api/bookmarks/{bookmark_id}/favicon")
+}
+
+pub fn cached_og_url(bookmark_id: Uuid) -> String {
+    format!("/api/bookmarks/{bookmark_id}/og")
+}
+
+/// Remove screenshot + favicon + OG cache files (best-effort).
+pub async fn purge_preview_assets(dir: &Path, bookmark_id: Uuid) {
+    for path in [
+        preview_file(dir, bookmark_id),
+        favicon_file(dir, bookmark_id),
+        favicon_ct_file(dir, bookmark_id),
+        og_file(dir, bookmark_id),
+        og_ct_file(dir, bookmark_id),
+    ] {
+        if let Err(e) = tokio::fs::remove_file(&path).await {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                warn!(?path, error = %e, "preview asset delete failed");
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum AssetKind {
+    Favicon,
+    Og,
+}
+
+impl AssetKind {
+    fn max_bytes(self) -> usize {
+        match self {
+            Self::Favicon => 512 * 1024,
+            Self::Og => 5 * 1024 * 1024,
+        }
+    }
+
+    fn path(self, dir: &Path, id: Uuid) -> PathBuf {
+        match self {
+            Self::Favicon => favicon_file(dir, id),
+            Self::Og => og_file(dir, id),
+        }
+    }
+
+    fn ct_path(self, dir: &Path, id: Uuid) -> PathBuf {
+        match self {
+            Self::Favicon => favicon_ct_file(dir, id),
+            Self::Og => og_ct_file(dir, id),
+        }
+    }
+
+    fn local_url(self, id: Uuid) -> String {
+        match self {
+            Self::Favicon => cached_favicon_url(id),
+            Self::Og => cached_og_url(id),
+        }
+    }
+
+    fn default_ct(self) -> &'static str {
+        match self {
+            Self::Favicon => "image/png",
+            Self::Og => "image/jpeg",
+        }
+    }
+}
+
+/// Cache remote image on disk; return local API URL (or remote fallback / None = no DB change).
+async fn resolve_cached_asset(
+    client: &reqwest::Client,
+    dir: &Path,
+    bookmark_id: Uuid,
+    kind: AssetKind,
+    remote: Option<String>,
+    existing: Option<&str>,
+) -> Option<String> {
+    let local = kind.local_url(bookmark_id);
+    let path = kind.path(dir, bookmark_id);
+    let ct_path = kind.ct_path(dir, bookmark_id);
+
+    if path.is_file() {
+        if existing == Some(local.as_str()) {
+            return None;
+        }
+        return Some(local);
+    }
+
+    let fetch_url = remote
+        .filter(|u| is_fetchable(u))
+        .or_else(|| existing.filter(|u| is_http_url(u)).map(|s| s.to_string()))?;
+
+    match fetch_and_store(client, &fetch_url, &path, &ct_path, kind).await {
+        Ok(()) => Some(local),
+        Err(e) => {
+            warn!(%bookmark_id, error = %e, "asset cache failed");
+            if existing == Some(fetch_url.as_str()) {
+                None
+            } else if is_http_url(&fetch_url) {
+                Some(fetch_url)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+async fn fetch_and_store(
+    client: &reqwest::Client,
+    url: &str,
+    path: &Path,
+    ct_path: &Path,
+    kind: AssetKind,
+) -> anyhow::Result<()> {
+    let (bytes, ct) = if let Some(data) = parse_data_url(url) {
+        data
+    } else {
+        let resp = client.get(url).send().await?;
+        if !resp.status().is_success() {
+            anyhow::bail!("HTTP {}", resp.status());
+        }
+        let header_ct = resp
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.split(';').next().unwrap_or(s).trim().to_string())
+            .filter(|s| !s.is_empty());
+        let bytes = resp.bytes().await?;
+        if bytes.len() > kind.max_bytes() {
+            anyhow::bail!("asset too large ({} bytes)", bytes.len());
+        }
+        let ct = header_ct
+            .or_else(|| sniff_image_ct(&bytes).map(str::to_string))
+            .unwrap_or_else(|| kind.default_ct().to_string());
+        (bytes.to_vec(), ct)
+    };
+
+    if bytes.len() > kind.max_bytes() {
+        anyhow::bail!("asset too large ({} bytes)", bytes.len());
+    }
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    tokio::fs::write(path, &bytes).await?;
+    let _ = tokio::fs::write(ct_path, ct.as_bytes()).await;
+    Ok(())
+}
+
+fn parse_data_url(url: &str) -> Option<(Vec<u8>, String)> {
+    let rest = url.strip_prefix("data:")?;
+    let (meta, data) = rest.split_once(',')?;
+    let ct = meta
+        .split(';')
+        .next()
+        .unwrap_or("application/octet-stream")
+        .trim()
+        .to_string();
+    let bytes = if meta.contains(";base64") {
+        use base64::Engine as _;
+        base64::engine::general_purpose::STANDARD
+            .decode(data.trim())
+            .ok()?
+    } else {
+        // Percent-decoded plain data URLs are rare for images; skip if not base64.
+        return None;
+    };
+    Some((bytes, ct))
+}
+
+fn sniff_image_ct(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(&[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n']) {
+        return Some("image/png");
+    }
+    if bytes.len() >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff {
+        return Some("image/jpeg");
+    }
+    if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        return Some("image/gif");
+    }
+    if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        return Some("image/webp");
+    }
+    if bytes.len() >= 4 && bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0x01 && bytes[3] == 0x00
+    {
+        return Some("image/x-icon");
+    }
+    let head = std::str::from_utf8(&bytes[..bytes.len().min(256)]).ok()?;
+    let trimmed = head.trim_start();
+    if trimmed.starts_with("<svg") || trimmed.contains("<svg") {
+        return Some("image/svg+xml");
+    }
+    None
+}
+
+fn is_http_url(u: &str) -> bool {
+    u.starts_with("http://") || u.starts_with("https://")
+}
+
+fn is_fetchable(u: &str) -> bool {
+    is_http_url(u) || u.starts_with("data:image/")
+}
+
+fn absolutize(base: &str, href: &str) -> String {
+    if href.starts_with("http://") || href.starts_with("https://") || href.starts_with("data:") {
+        return href.to_string();
+    }
+    if let Ok(base_url) = url::Url::parse(base) {
+        if let Ok(joined) = base_url.join(href) {
+            return joined.to_string();
+        }
+    }
+    href.to_string()
 }
 
 /// Rate-limited backfill for bookmarks missing local screenshots.
@@ -271,14 +533,33 @@ fn parse_meta(body: &str) -> Meta {
     }
 }
 
-fn absolutize(base: &str, href: &str) -> String {
-    if href.starts_with("http://") || href.starts_with("https://") || href.starts_with("data:") {
-        return href.to_string();
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sniff_png_jpeg_ico() {
+        assert_eq!(
+            sniff_image_ct(&[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n']),
+            Some("image/png")
+        );
+        assert_eq!(sniff_image_ct(&[0xff, 0xd8, 0xff, 0xe0]), Some("image/jpeg"));
+        assert_eq!(
+            sniff_image_ct(&[0x00, 0x00, 0x01, 0x00, 0x01]),
+            Some("image/x-icon")
+        );
     }
-    if let Ok(base_url) = url::Url::parse(base) {
-        if let Ok(joined) = base_url.join(href) {
-            return joined.to_string();
-        }
+
+    #[test]
+    fn local_asset_urls() {
+        let id = Uuid::nil();
+        assert_eq!(
+            cached_favicon_url(id),
+            "/api/bookmarks/00000000-0000-0000-0000-000000000000/favicon"
+        );
+        assert_eq!(
+            cached_og_url(id),
+            "/api/bookmarks/00000000-0000-0000-0000-000000000000/og"
+        );
     }
-    href.to_string()
 }

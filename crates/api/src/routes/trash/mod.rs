@@ -74,12 +74,11 @@ async fn purge_one(
             if let Err(e) = state.search.delete_bookmark(id).await {
                 tracing::warn!(bookmark_id = %id, error = %e, "meili delete on purge failed");
             }
-            let path = state.preview_path(id);
-            if let Err(e) = tokio::fs::remove_file(&path).await {
-                if e.kind() != std::io::ErrorKind::NotFound {
-                    tracing::warn!(?path, error = %e, "preview delete on purge failed");
-                }
-            }
+            linkdean_worker::purge_preview_assets(
+                std::path::Path::new(&state.cfg.preview_dir),
+                id,
+            )
+            .await;
         }
         TrashKind::Category => db::purge_category(&state.pool, user.id, id).await?,
         TrashKind::Dashboard => db::purge_dashboard(&state.pool, user.id, id).await?,
@@ -100,8 +99,11 @@ async fn purge_selected(
                 let r = db::purge_bookmark(&state.pool, user.id, item.id).await;
                 if r.is_ok() {
                     let _ = state.search.delete_bookmark(item.id).await;
-                    let path = state.preview_path(item.id);
-                    let _ = tokio::fs::remove_file(&path).await;
+                    linkdean_worker::purge_preview_assets(
+                        std::path::Path::new(&state.cfg.preview_dir),
+                        item.id,
+                    )
+                    .await;
                 }
                 r
             }

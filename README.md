@@ -110,7 +110,7 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 | `BIND` | | Listen address (default `0.0.0.0:8080`) |
 | `MEILI_URL` / `MEILI_MASTER_KEY` | | Meilisearch endpoint + key |
 | `STATIC_DIR` | | Built SPA directory (Compose sets this) |
-| `AVATAR_DIR` / `PREVIEW_DIR` | | Upload / preview storage paths |
+| `AVATAR_DIR` / `PREVIEW_DIR` | | Avatar uploads; screenshots + favicon/OG cache |
 | `SESSION_DAYS` | | Session lifetime (default `30`) |
 | `CORS_ORIGINS` | | Comma-separated origins; default = `APP_URL` |
 | `BROWSER_WS_URL` | | Chrome CDP URL for screenshots |

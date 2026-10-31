@@ -17,6 +17,8 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks", get(list).post(create))
         .route("/bookmarks/duplicates", get(duplicates))
         .route("/bookmarks/{id}/preview", get(get_preview))
+        .route("/bookmarks/{id}/favicon", get(get_favicon))
+        .route("/bookmarks/{id}/og", get(get_og))
         .route(
             "/bookmarks/{id}",
             get(get_one).patch(update).delete(delete_one),
@@ -130,6 +132,58 @@ async fn get_preview(
     let bytes = tokio::fs::read(&path).await.map_err(|_| Error::NotFound)?;
     let mut headers = HeaderMap::new();
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, max-age=86400"),
+    );
+    Ok((StatusCode::OK, headers, bytes))
+}
+
+async fn get_favicon(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<impl IntoResponse> {
+    let _raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    serve_cached_asset(
+        state.favicon_path(id),
+        state.favicon_ct_path(id),
+        "image/png",
+    )
+    .await
+}
+
+async fn get_og(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<impl IntoResponse> {
+    let _raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    serve_cached_asset(state.og_path(id), state.og_ct_path(id), "image/jpeg").await
+}
+
+async fn serve_cached_asset(
+    path: std::path::PathBuf,
+    ct_path: std::path::PathBuf,
+    default_ct: &'static str,
+) -> ApiResult<impl IntoResponse> {
+    let bytes = tokio::fs::read(&path).await.map_err(|_| Error::NotFound)?;
+    let ct = match tokio::fs::read_to_string(&ct_path).await {
+        Ok(s) => {
+            let trimmed = s.trim().to_string();
+            if trimmed.is_empty() {
+                default_ct.to_string()
+            } else {
+                trimmed
+            }
+        }
+        Err(_) => default_ct.to_string(),
+    };
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_str(&ct).unwrap_or_else(|_| HeaderValue::from_static(default_ct)),
+    );
     headers.insert(
         header::CACHE_CONTROL,
         HeaderValue::from_static("private, max-age=86400"),

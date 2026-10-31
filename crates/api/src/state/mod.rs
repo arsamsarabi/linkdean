@@ -39,7 +39,32 @@ impl AppState {
     }
 
     pub fn preview_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
-        std::path::Path::new(&self.cfg.preview_dir).join(format!("{bookmark_id}.jpg"))
+        linkdean_worker::preview_file(
+            std::path::Path::new(&self.cfg.preview_dir),
+            bookmark_id,
+        )
+    }
+
+    pub fn favicon_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
+        linkdean_worker::favicon_file(
+            std::path::Path::new(&self.cfg.preview_dir),
+            bookmark_id,
+        )
+    }
+
+    pub fn favicon_ct_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
+        linkdean_worker::favicon_ct_file(
+            std::path::Path::new(&self.cfg.preview_dir),
+            bookmark_id,
+        )
+    }
+
+    pub fn og_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
+        linkdean_worker::og_file(std::path::Path::new(&self.cfg.preview_dir), bookmark_id)
+    }
+
+    pub fn og_ct_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
+        linkdean_worker::og_ct_file(std::path::Path::new(&self.cfg.preview_dir), bookmark_id)
     }
 
     pub fn enrich_opts(&self) -> linkdean_worker::EnrichOpts {

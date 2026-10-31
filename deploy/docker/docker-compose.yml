@@ -64,6 +64,7 @@ services:
       - "8080:8080"
     volumes:
       - avatars:/app/data/avatars
+      # screenshots ({id}.jpg) + favicon/OG ({id}.favicon[.ct], {id}.og[.ct])
       - previews:/app/data/previews
     depends_on:
       db:

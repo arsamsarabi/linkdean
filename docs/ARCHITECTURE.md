@@ -22,7 +22,7 @@ linkdean/
   crates/core/        # domain, crypto, import/export
   crates/db/          # Postgres repos + migrations
   crates/search/      # Meilisearch client
-  crates/worker/      # metadata/favicon fetch
+  crates/worker/      # metadata + favicon/OG disk cache
   migrations/         # sqlx migrations
   deploy/docker/      # compose + Dockerfile
   deploy/homelab/     # Traefik snippet + notes
