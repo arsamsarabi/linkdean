@@ -15,7 +15,7 @@ import {
   Title,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconLogin, IconRocket, IconUserPlus } from '@tabler/icons-react'
+import { IconLogin, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from '@/api'
 import { LogoMark, QueryErrorAlert } from '@/components'
@@ -124,12 +124,6 @@ export function LoginPage(): ReactElement {
               </Group>
             </Anchor>
           ) : null}
-          <Anchor component="button" type="button" onClick={() => void nav({ to: '/onboarding' })}>
-            <Group gap={6} justify="center">
-              <IconRocket size={14} stroke={1.5} />
-              First install? Open setup
-            </Group>
-          </Anchor>
         </Stack>
       </Paper>
     </Stack>
