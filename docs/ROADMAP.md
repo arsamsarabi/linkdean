@@ -38,7 +38,7 @@ Foundation for collaboration. Sharing landed before personal dashboards so share
 
 ---
 
-## Milestone 2: Personal dashboard (ready to close — confirm feel)
+## Milestone 2: Personal dashboard - done
 
 Home surface for a single user (glance-style sectioned grid). `/` is the dashboard; library stays at `/library`.
 
