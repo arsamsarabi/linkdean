@@ -3,8 +3,24 @@ import type { Category } from '@/schemas'
 import { buildCategoryTree, categoryPath, categorySelectData } from './categories'
 
 const cats: Category[] = [
-  { id: '1', parent_id: null, name: 'Root', is_hidden: false, is_vault: false, position: 0 },
-  { id: '2', parent_id: '1', name: 'Child', is_hidden: true, is_vault: true, position: 1 },
+  {
+    id: '1',
+    parent_id: null,
+    name: 'Root',
+    is_hidden: false,
+    is_vault: false,
+    position: 0,
+    access: 'owner',
+  },
+  {
+    id: '2',
+    parent_id: '1',
+    name: 'Child',
+    is_hidden: true,
+    is_vault: true,
+    position: 1,
+    access: 'owner',
+  },
 ]
 
 describe('buildCategoryTree', () => {

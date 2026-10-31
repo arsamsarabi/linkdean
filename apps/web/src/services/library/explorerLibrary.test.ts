@@ -11,9 +11,33 @@ import {
 } from './explorerLibrary'
 
 const cats: Category[] = [
-  { id: 'root', parent_id: null, name: 'Work', is_hidden: false, is_vault: false, position: 0 },
-  { id: 'child', parent_id: 'root', name: 'Docs', is_hidden: false, is_vault: false, position: 1 },
-  { id: 'hidden', parent_id: null, name: 'Secret', is_hidden: true, is_vault: true, position: 2 },
+  {
+    id: 'root',
+    parent_id: null,
+    name: 'Work',
+    is_hidden: false,
+    is_vault: false,
+    position: 0,
+    access: 'owner',
+  },
+  {
+    id: 'child',
+    parent_id: 'root',
+    name: 'Docs',
+    is_hidden: false,
+    is_vault: false,
+    position: 1,
+    access: 'owner',
+  },
+  {
+    id: 'hidden',
+    parent_id: null,
+    name: 'Secret',
+    is_hidden: true,
+    is_vault: true,
+    position: 2,
+    access: 'owner',
+  },
 ]
 
 const baseBm = {

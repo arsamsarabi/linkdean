@@ -15,11 +15,13 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconFolder, IconFolderPlus, IconTrash } from '@tabler/icons-react'
+import { IconFolder, IconFolderPlus, IconShare, IconTrash } from '@tabler/icons-react'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from '@/hooks'
 import { buildCategoryTree, categorySelectData, type CatNode } from '@/lib'
+import type { Category } from '@/schemas'
+import { ShareCategoryModal } from './ShareCategoryModal'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -29,6 +31,7 @@ export function CategoryManager(): ReactElement {
   const [hidden, setHidden] = useState(false)
   const [vault, setVault] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [shareCat, setShareCat] = useState<Category | null>(null)
 
   const cats = useCategories(true)
   const create = useCreateCategory()
@@ -37,7 +40,10 @@ export function CategoryManager(): ReactElement {
 
   const tree = useMemo(() => buildCategoryTree(cats.data || []), [cats.data])
   const parentOptions = useMemo(
-    () => [{ value: '', label: '— root —' }, ...categorySelectData(cats.data || [])],
+    () => [
+      { value: '', label: '— root —' },
+      ...categorySelectData((cats.data || []).filter((c) => c.access === 'owner' || c.access === 'write')),
+    ],
     [cats.data]
   )
 
@@ -73,7 +79,8 @@ export function CategoryManager(): ReactElement {
   return (
     <Stack gap="lg">
       <Text size="sm" c="dimmed">
-        Nested folders for the library. Manage here — library filters by category.
+        Nested folders for the library. Manage here — library filters by category. Share owned
+        folders with other users on this instance.
       </Text>
 
       {cats.isError ? <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} /> : null}
@@ -94,6 +101,7 @@ export function CategoryManager(): ReactElement {
                 node={n}
                 depth={0}
                 onDelete={setDeleteId}
+                onShare={setShareCat}
                 onRename={async (id, next) => {
                   try {
                     await update.mutateAsync({ id, body: { name: next } })
@@ -145,6 +153,13 @@ export function CategoryManager(): ReactElement {
         confirmLabel="Delete"
         loading={remove.isPending}
       />
+
+      <ShareCategoryModal
+        opened={!!shareCat}
+        onClose={() => setShareCat(null)}
+        categoryId={shareCat?.id ?? null}
+        categoryName={shareCat?.name ?? ''}
+      />
     </Stack>
   )
 }
@@ -153,12 +168,15 @@ type CatRowProps = {
   node: CatNode
   depth: number
   onDelete: (id: string) => void
+  onShare: (cat: Category) => void
   onRename: (id: string, name: string) => Promise<void>
 }
 
-function CatRow({ node, depth, onDelete, onRename }: CatRowProps): ReactElement {
+function CatRow({ node, depth, onDelete, onShare, onRename }: CatRowProps): ReactElement {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(node.cat.name)
+  const canWrite = node.cat.access === 'owner' || node.cat.access === 'write'
+  const isOwner = node.cat.access === 'owner'
 
   async function commitRename(): Promise<void> {
     setEditing(false)
@@ -173,7 +191,7 @@ function CatRow({ node, depth, onDelete, onRename }: CatRowProps): ReactElement 
     <>
       <Group gap="xs" wrap="nowrap" style={{ paddingLeft: depth * 16 }}>
         <IconFolder size={14} stroke={1.5} style={{ flexShrink: 0 }} />
-        {editing ? (
+        {editing && canWrite ? (
           <TextInput
             size="xs"
             value={name}
@@ -189,7 +207,7 @@ function CatRow({ node, depth, onDelete, onRename }: CatRowProps): ReactElement 
             style={{ flex: 1 }}
             autoFocus
           />
-        ) : (
+        ) : canWrite ? (
           <UnstyledButton
             type="button"
             onClick={() => setEditing(true)}
@@ -198,7 +216,21 @@ function CatRow({ node, depth, onDelete, onRename }: CatRowProps): ReactElement 
           >
             <Text size="sm">{node.cat.name}</Text>
           </UnstyledButton>
+        ) : (
+          <Text size="sm" style={{ flex: 1 }}>
+            {node.cat.name}
+          </Text>
         )}
+        {node.cat.access === 'read' ? (
+          <Badge size="xs" variant="outline" color="blue">
+            shared · RO
+          </Badge>
+        ) : null}
+        {node.cat.access === 'write' ? (
+          <Badge size="xs" variant="light" color="blue">
+            shared · RW
+          </Badge>
+        ) : null}
         {node.cat.is_hidden ? (
           <Badge size="xs" variant="outline" color="gray">
             hidden
@@ -209,20 +241,41 @@ function CatRow({ node, depth, onDelete, onRename }: CatRowProps): ReactElement 
             vault
           </Badge>
         ) : null}
-        <Tooltip label="Delete category">
-          <ActionIcon
-            size="sm"
-            variant="subtle"
-            color="red"
-            aria-label="Delete category"
-            onClick={() => onDelete(node.cat.id)}
-          >
-            <IconTrash size={14} stroke={1.5} />
-          </ActionIcon>
-        </Tooltip>
+        {isOwner && !node.cat.is_vault ? (
+          <Tooltip label="Share category">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              aria-label="Share category"
+              onClick={() => onShare(node.cat)}
+            >
+              <IconShare size={14} stroke={1.5} />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
+        {isOwner ? (
+          <Tooltip label="Delete category">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="red"
+              aria-label="Delete category"
+              onClick={() => onDelete(node.cat.id)}
+            >
+              <IconTrash size={14} stroke={1.5} />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
       </Group>
       {node.children.map((c) => (
-        <CatRow key={c.cat.id} node={c} depth={depth + 1} onDelete={onDelete} onRename={onRename} />
+        <CatRow
+          key={c.cat.id}
+          node={c}
+          depth={depth + 1}
+          onDelete={onDelete}
+          onShare={onShare}
+          onRename={onRename}
+        />
       ))}
     </>
   )

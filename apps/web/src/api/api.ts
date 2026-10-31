@@ -5,6 +5,8 @@ import {
   bootstrapStatusSchema,
   categoriesSchema,
   categorySchema,
+  categorySharesSchema,
+  categoryShareSchema,
   duplicatesSchema,
   importResultSchema,
   meResponseSchema,
@@ -16,7 +18,9 @@ import {
   vaultStatusSchema,
   type Bookmark,
   type Category,
+  type CategoryShare,
   type PlatformSettings,
+  type ShareAccess,
   type UserPublic,
   type UserSettings,
 } from '@/schemas'
@@ -106,6 +110,33 @@ export const api = {
   ): Promise<Category> => req(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, categorySchema),
 
   deleteCategory: (id: string): Promise<void> => req(`/categories/${id}`, { method: 'DELETE' }),
+
+  categoryShares: (categoryId: string): Promise<CategoryShare[]> =>
+    req(`/categories/${categoryId}/shares`, {}, categorySharesSchema),
+
+  createCategoryShare: (
+    categoryId: string,
+    body: { email: string; access: ShareAccess }
+  ): Promise<CategoryShare> =>
+    req(
+      `/categories/${categoryId}/shares`,
+      { method: 'POST', body: JSON.stringify(body) },
+      categoryShareSchema
+    ),
+
+  updateCategoryShare: (
+    categoryId: string,
+    userId: string,
+    body: { access: ShareAccess }
+  ): Promise<CategoryShare> =>
+    req(
+      `/categories/${categoryId}/shares/${userId}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+      categoryShareSchema
+    ),
+
+  deleteCategoryShare: (categoryId: string, userId: string): Promise<void> =>
+    req(`/categories/${categoryId}/shares/${userId}`, { method: 'DELETE' }),
 
   bookmarks: (category_id?: string | null, include_vault = false): Promise<Bookmark[]> => {
     const q = new URLSearchParams()
