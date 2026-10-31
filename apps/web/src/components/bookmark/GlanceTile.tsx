@@ -15,6 +15,7 @@ export type GlanceTileItem = {
   owner_user_id?: string
   can_write?: boolean
   shared_out?: boolean
+  shared_with?: string[]
   owner_display_name?: string | null
 }
 
@@ -53,7 +54,7 @@ export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
               {title}
             </Text>
             {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} /> : null}
-            {showOutgoing ? <ShareBadge outgoing /> : null}
+            {showOutgoing ? <ShareBadge outgoing sharedWith={b.shared_with} /> : null}
             {b.is_vault ? (
               <Tooltip label="Stored in vault">
                 <Badge size="xs" variant="light" leftSection={<IconLock size={8} stroke={1.5} />}>

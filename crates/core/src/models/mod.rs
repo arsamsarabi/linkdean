@@ -178,6 +178,9 @@ pub struct CategoryView {
     /// True when the owner has shared this folder (or an ancestor) with someone.
     #[serde(default)]
     pub shared_out: bool,
+    /// Owner-only: invitee display labels for the outgoing share pill tooltip.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_with: Vec<String>,
     /// Present for invitees — owner's display name (or email local-part).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_display_name: Option<String>,
@@ -199,6 +202,7 @@ impl CategoryView {
             updated_at: cat.updated_at,
             access,
             shared_out: false,
+            shared_with: Vec::new(),
             owner_display_name: None,
             deleted_at: cat.deleted_at,
         }
@@ -332,6 +336,9 @@ pub struct BookmarkView {
     /// Owner has shared a folder this bookmark lives in (invitees see invitee badges instead).
     #[serde(default)]
     pub shared_out: bool,
+    /// Owner-only: invitee display labels for the outgoing share pill tooltip.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_with: Vec<String>,
     /// Present for invitees — owner's display name (or email local-part).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_display_name: Option<String>,
@@ -567,6 +574,9 @@ pub struct DashboardView {
     /// True when the owner has shared this dashboard with someone.
     #[serde(default)]
     pub shared_out: bool,
+    /// Owner-only: invitee display labels for the outgoing share pill tooltip.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_with: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_display_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -585,6 +595,8 @@ pub struct DashboardSummary {
     pub access: CategoryAccess,
     #[serde(default)]
     pub shared_out: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shared_with: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_display_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

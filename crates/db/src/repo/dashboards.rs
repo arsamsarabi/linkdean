@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use super::bookmarks::bookmark_to_view;
 use super::dashboard_shares::{
-    dashboard_shared_out, list_shared_dashboards, require_dashboard_owner, require_dashboard_read,
+    dashboard_shared_with, list_shared_dashboards, require_dashboard_owner, require_dashboard_read,
     require_dashboard_write,
 };
 use super::shares::bookmark_can_read;
@@ -80,7 +80,8 @@ async fn list_dashboard_rows_filtered(
     .map_err(|e| Error::msg(e.to_string()))
 }
 
-fn owned_summary(d: Dashboard, shared_out: bool) -> DashboardSummary {
+fn owned_summary(d: Dashboard, shared_with: Vec<String>) -> DashboardSummary {
+    let shared_out = !shared_with.is_empty();
     DashboardSummary {
         id: d.id,
         owner_user_id: d.owner_user_id,
@@ -88,6 +89,7 @@ fn owned_summary(d: Dashboard, shared_out: bool) -> DashboardSummary {
         is_default: d.is_default,
         access: CategoryAccess::Owner,
         shared_out,
+        shared_with,
         owner_display_name: None,
         deleted_at: d.deleted_at,
         created_at: d.created_at,
@@ -104,6 +106,7 @@ fn shared_summary(d: Dashboard, access: CategoryAccess, owner_display_name: Opti
         is_default: false,
         access,
         shared_out: false,
+        shared_with: Vec::new(),
         owner_display_name,
         deleted_at: d.deleted_at,
         created_at: d.created_at,
@@ -124,8 +127,8 @@ pub async fn list_dashboards_filtered(
     let owned = list_dashboard_rows_filtered(pool, user_id, include_deleted).await?;
     let mut out = Vec::with_capacity(owned.len());
     for d in owned {
-        let shared_out = dashboard_shared_out(pool, d.id).await?;
-        out.push(owned_summary(d, shared_out));
+        let shared_with = dashboard_shared_with(pool, d.id).await?;
+        out.push(owned_summary(d, shared_with));
     }
     for (d, access) in list_shared_dashboards(pool, user_id).await? {
         if d.deleted_at.is_some() {
@@ -164,11 +167,12 @@ async fn load_dashboard_view(
     access: CategoryAccess,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
-    let shared_out = if access.is_owner() {
-        dashboard_shared_out(pool, dash.id).await?
+    let shared_with = if access.is_owner() {
+        dashboard_shared_with(pool, dash.id).await?
     } else {
-        false
+        Vec::new()
     };
+    let shared_out = !shared_with.is_empty();
     let is_default = if access.is_owner() {
         dash.is_default
     } else {
@@ -246,6 +250,7 @@ async fn load_dashboard_view(
         sections: section_views,
         access,
         shared_out,
+        shared_with,
         owner_display_name,
         deleted_at: dash.deleted_at,
         created_at: dash.created_at,

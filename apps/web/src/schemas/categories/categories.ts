@@ -12,6 +12,7 @@ export const categorySchema = z.object({
   position: z.number(),
   access: categoryAccessSchema.default('owner'),
   shared_out: z.boolean().default(false),
+  shared_with: z.array(z.string()).default([]),
   owner_display_name: z.string().nullish(),
   deleted_at: z.string().nullish(),
 })

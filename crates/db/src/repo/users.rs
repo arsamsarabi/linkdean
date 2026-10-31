@@ -73,22 +73,22 @@ pub async fn find_user_by_id(pool: &PgPool, id: Uuid) -> Result<Option<User>> {
         .map_err(|e| Error::msg(e.to_string()))
 }
 
-/// Label for share badges: display_name, else email local-part, else `"Owner"`.
-pub fn user_share_label(user: &User) -> String {
-    if let Some(name) = user
-        .display_name
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
+/// Label for share badges: display_name, else email local-part, else `fallback`.
+pub fn share_invitee_label(display_name: Option<&str>, email: &str, fallback: &str) -> String {
+    if let Some(name) = display_name.map(str::trim).filter(|s| !s.is_empty()) {
         return name.to_string();
     }
-    user.email
+    email
         .split('@')
         .next()
         .filter(|s| !s.is_empty())
-        .unwrap_or("Owner")
+        .unwrap_or(fallback)
         .to_string()
+}
+
+/// Label for share badges: display_name, else email local-part, else `"Owner"`.
+pub fn user_share_label(user: &User) -> String {
+    share_invitee_label(user.display_name.as_deref(), &user.email, "Owner")
 }
 
 /// Owner label for invitee views (`None` when viewer is the owner).

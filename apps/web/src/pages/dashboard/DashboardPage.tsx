@@ -256,7 +256,9 @@ export function DashboardPage(): ReactElement {
               {inviteeAccess ? (
                 <ShareBadge access={inviteeAccess} ownerLabel={view.owner_display_name} />
               ) : null}
-              {isOwner && view.shared_out ? <ShareBadge outgoing /> : null}
+              {isOwner && view.shared_out ? (
+                <ShareBadge outgoing sharedWith={view.shared_with} />
+              ) : null}
               {view.deleted_at ? (
                 <Badge size="sm" variant="outline" color="red" tt="none">
                   Pending delete

@@ -56,6 +56,8 @@ export type BookmarkCardItem = {
   can_write?: boolean
   /** Owner has shared a folder this bookmark lives in. */
   shared_out?: boolean
+  /** Owner-only: invitee labels for outgoing share tooltip. */
+  shared_with?: string[]
   /** Invitee-only: owner's display name for share badge. */
   owner_display_name?: string | null
   is_favorite?: boolean
@@ -329,7 +331,7 @@ export function BookmarkCard({
 
         <Group gap={4} mt="auto" pt={4}>
           {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} size="sm" /> : null}
-          {showOutgoing ? <ShareBadge outgoing size="sm" /> : null}
+          {showOutgoing ? <ShareBadge outgoing sharedWith={b.shared_with} size="sm" /> : null}
           {pendingDelete ? (
             <Badge size="sm" variant="outline" color="red" tt="none">
               Pending delete

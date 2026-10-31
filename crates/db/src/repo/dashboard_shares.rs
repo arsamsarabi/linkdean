@@ -164,20 +164,33 @@ pub async fn list_shared_dashboards(
     Ok(out)
 }
 
-pub async fn dashboard_shared_out(pool: &PgPool, dashboard_id: Uuid) -> Result<bool> {
-    let exists: Option<(i32,)> = sqlx::query_as(
+pub async fn dashboard_shared_with(pool: &PgPool, dashboard_id: Uuid) -> Result<Vec<String>> {
+    let rows: Vec<(Option<String>, String)> = sqlx::query_as(
         r#"
-        SELECT 1
-        FROM dashboard_shares
-        WHERE dashboard_id = $1
-        LIMIT 1
+        SELECT u.display_name, u.email
+        FROM dashboard_shares ds
+        JOIN users u ON u.id = ds.invitee_user_id
+        WHERE ds.dashboard_id = $1
+        ORDER BY u.email ASC
         "#,
     )
     .bind(dashboard_id)
-    .fetch_optional(pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(exists.is_some())
+
+    let mut labels = Vec::new();
+    for (display_name, email) in rows {
+        let label = super::users::share_invitee_label(display_name.as_deref(), &email, "User");
+        if !labels.iter().any(|s| s == &label) {
+            labels.push(label);
+        }
+    }
+    Ok(labels)
+}
+
+pub async fn dashboard_shared_out(pool: &PgPool, dashboard_id: Uuid) -> Result<bool> {
+    Ok(!dashboard_shared_with(pool, dashboard_id).await?.is_empty())
 }
 
 pub async fn list_shares_for_dashboard(

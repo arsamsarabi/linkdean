@@ -403,34 +403,65 @@ pub async fn owned_shared_out_category_ids(
     pool: &PgPool,
     owner_user_id: Uuid,
 ) -> Result<std::collections::HashSet<Uuid>> {
-    let ids: Vec<Uuid> = sqlx::query_scalar(
+    Ok(owned_shared_out_invitees(pool, owner_user_id)
+        .await?
+        .into_keys()
+        .collect())
+}
+
+/// Per owned category: invitee labels (display name / email local-part) for share tooltip.
+/// Includes share roots and their non-vault descendants.
+pub async fn owned_shared_out_invitees(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+) -> Result<std::collections::HashMap<Uuid, Vec<String>>> {
+    let rows: Vec<(Uuid, Option<String>, String)> = sqlx::query_as(
         r#"
         WITH RECURSIVE tree AS (
-            SELECT c.id
+            SELECT
+                c.id,
+                u.display_name AS invitee_display_name,
+                u.email AS invitee_email
             FROM category_shares cs
             JOIN categories c ON c.id = cs.category_id
+            JOIN users u ON u.id = cs.invitee_user_id
             WHERE c.owner_user_id = $1
               AND c.is_vault = FALSE
             UNION
-            SELECT child.id
+            SELECT
+                child.id,
+                tree.invitee_display_name,
+                tree.invitee_email
             FROM categories child
             JOIN tree ON child.parent_id = tree.id
             WHERE child.owner_user_id = $1
               AND child.is_vault = FALSE
         )
-        SELECT DISTINCT id FROM tree
+        SELECT id, invitee_display_name, invitee_email FROM tree
         "#,
     )
     .bind(owner_user_id)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(ids.into_iter().collect())
+
+    let mut map: std::collections::HashMap<Uuid, Vec<String>> = std::collections::HashMap::new();
+    for (id, display_name, email) in rows {
+        let label = super::users::share_invitee_label(display_name.as_deref(), &email, "User");
+        let entry = map.entry(id).or_default();
+        if !entry.iter().any(|s| s == &label) {
+            entry.push(label);
+        }
+    }
+    for labels in map.values_mut() {
+        labels.sort();
+    }
+    Ok(map)
 }
 
-/// True when any of the bookmark's folders (or an ancestor) is shared out by the owner.
-pub async fn bookmark_shared_out(pool: &PgPool, bookmark_id: Uuid) -> Result<bool> {
-    let row: (bool,) = sqlx::query_as(
+/// Invitee labels when any of the bookmark's folders (or an ancestor) is shared out.
+pub async fn bookmark_shared_with(pool: &PgPool, bookmark_id: Uuid) -> Result<Vec<String>> {
+    let rows: Vec<(Option<String>, String)> = sqlx::query_as(
         r#"
         WITH RECURSIVE bm_cats AS (
             SELECT category_id AS id
@@ -450,15 +481,30 @@ pub async fn bookmark_shared_out(pool: &PgPool, bookmark_id: Uuid) -> Result<boo
             FROM categories c
             JOIN ancestors a ON a.parent_id = c.id
         )
-        SELECT EXISTS (
-            SELECT 1 FROM category_shares cs
-            WHERE cs.category_id IN (SELECT id FROM ancestors)
-        )
+        SELECT DISTINCT u.display_name, u.email
+        FROM category_shares cs
+        JOIN users u ON u.id = cs.invitee_user_id
+        WHERE cs.category_id IN (SELECT id FROM ancestors)
+        ORDER BY u.email
         "#,
     )
     .bind(bookmark_id)
-    .fetch_one(pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(row.0)
+
+    let mut labels = Vec::new();
+    for (display_name, email) in rows {
+        let label = super::users::share_invitee_label(display_name.as_deref(), &email, "User");
+        if !labels.iter().any(|s| s == &label) {
+            labels.push(label);
+        }
+    }
+    labels.sort();
+    Ok(labels)
+}
+
+/// True when any of the bookmark's folders (or an ancestor) is shared out by the owner.
+pub async fn bookmark_shared_out(pool: &PgPool, bookmark_id: Uuid) -> Result<bool> {
+    Ok(!bookmark_shared_with(pool, bookmark_id).await?.is_empty())
 }

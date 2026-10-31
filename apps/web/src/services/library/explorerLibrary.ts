@@ -17,6 +17,8 @@ export type ExplorerFolder = {
   access?: CategoryAccess
   /** Owner has shared this folder (or an ancestor) out. */
   sharedOut?: boolean
+  /** Owner-only: invitee labels for outgoing share tooltip. */
+  sharedWith?: string[]
   /** Invitee-only: owner's display name for share badge. */
   ownerDisplayName?: string | null
   deletedAt?: string | null
@@ -74,6 +76,7 @@ function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): Exp
     isHidden: cat.is_hidden,
     access: cat.access,
     sharedOut: cat.shared_out,
+    sharedWith: cat.shared_with,
     ownerDisplayName: cat.owner_display_name,
     deletedAt: cat.deleted_at,
   }

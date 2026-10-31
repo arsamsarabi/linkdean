@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use super::bookmarks::{bookmark_to_view, create_bookmark, get_bookmark_raw};
 use super::shares::{
-    bookmark_can_read, category_access, list_shared_categories, owned_shared_out_category_ids,
+    bookmark_can_read, category_access, list_shared_categories, owned_shared_out_invitees,
     require_category_owner, require_category_read, require_category_write,
 };
 
@@ -46,14 +46,17 @@ pub async fn list_categories(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    let shared_out_ids = owned_shared_out_category_ids(pool, user_id).await?;
+    let shared_out = owned_shared_out_invitees(pool, user_id).await?;
 
     let mut by_id: HashMap<Uuid, CategoryView> = owned
         .into_iter()
         .map(|c| {
             let id = c.id;
             let mut view = CategoryView::from_category(c, CategoryAccess::Owner);
-            view.shared_out = shared_out_ids.contains(&id);
+            if let Some(labels) = shared_out.get(&id) {
+                view.shared_out = true;
+                view.shared_with = labels.clone();
+            }
             (id, view)
         })
         .collect();
@@ -106,7 +109,12 @@ pub async fn get_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Cate
     let access = category_access(pool, user_id, id).await?;
     let cat = get_category_by_id(pool, id).await?;
     let mut view = CategoryView::from_category(cat, access);
-    if !view.access.is_owner() {
+    if view.access.is_owner() {
+        if let Some(labels) = owned_shared_out_invitees(pool, user_id).await?.remove(&id) {
+            view.shared_out = true;
+            view.shared_with = labels;
+        }
+    } else {
         view.owner_display_name =
             super::users::owner_display_name_for_viewer(pool, view.owner_user_id, user_id).await?;
     }

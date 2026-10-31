@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use super::categories::{get_category_by_id, list_owned_categories};
 use super::shares::{
-    bookmark_can_read, bookmark_can_write, bookmark_shared_out, require_category_read,
+    bookmark_can_read, bookmark_can_write, bookmark_shared_with, require_category_read,
     require_category_write,
 };
 use super::tags::ensure_tags;
@@ -270,11 +270,12 @@ pub async fn bookmark_to_view(
     } else {
         bookmark_can_write(pool, viewer_id, b.id).await?
     };
-    let shared_out = if b.owner_user_id == viewer_id {
-        bookmark_shared_out(pool, b.id).await?
+    let shared_with = if b.owner_user_id == viewer_id {
+        bookmark_shared_with(pool, b.id).await?
     } else {
-        false
+        Vec::new()
     };
+    let shared_out = !shared_with.is_empty();
     let owner_display_name =
         super::users::owner_display_name_for_viewer(pool, b.owner_user_id, viewer_id).await?;
     let flags = flags_for_viewer(pool, viewer_id, b.id).await?;
@@ -312,6 +313,7 @@ pub async fn bookmark_to_view(
             tags: payload.tags,
             can_write,
             shared_out,
+            shared_with: shared_with.clone(),
             owner_display_name: owner_display_name.clone(),
             is_favorite: flags.is_favorite,
             is_unread: flags.is_unread,
@@ -338,6 +340,7 @@ pub async fn bookmark_to_view(
         tags,
         can_write,
         shared_out,
+        shared_with,
         owner_display_name,
         is_favorite: flags.is_favorite,
         is_unread: flags.is_unread,
