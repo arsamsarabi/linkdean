@@ -22,6 +22,8 @@ export const bookmarkSchema = z.object({
   tags: z.array(z.string()),
   can_write: z.boolean(),
   shared_out: z.boolean().default(false),
+  owner_display_name: z.string().nullish(),
+  deleted_at: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 })

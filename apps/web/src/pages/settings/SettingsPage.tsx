@@ -161,7 +161,7 @@ export function SettingsPage(): ReactElement {
     save.mutate(p, {
       onSuccess: (res) => {
         applyTheme(res.settings.theme, setColorScheme)
-        notifications.show({ message: 'Settings saved' })
+        notifications.show({ message: 'Config options saved' })
       },
       onError: (e) => notifications.show({ color: 'red', message: String(e) }),
     })
@@ -182,7 +182,7 @@ export function SettingsPage(): ReactElement {
         <ThemeIcon size={40} radius="md" variant="light" color="violet">
           <IconSettings size={22} stroke={1.5} />
         </ThemeIcon>
-        <Title order={2}>Settings</Title>
+        <Title order={2}>Config options</Title>
       </Group>
 
       {me.isError ? <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} /> : null}
@@ -216,9 +216,28 @@ export function SettingsPage(): ReactElement {
               <Stack gap="lg">
                 <Switch
                   label="Show hidden categories"
-                  description="Reveal categories marked hidden in filters and settings"
+                  description="Reveal categories marked hidden in filters and Config options"
                   checked={settings.show_hidden}
                   onChange={(e) => patch({ show_hidden: e.currentTarget.checked })}
+                />
+
+                <Switch
+                  label="Show pending delete in library"
+                  description="Ghost soft-deleted bookmarks and folders in library and dashboards while they wait in Deleted items"
+                  checked={settings.show_deleted_in_library}
+                  onChange={(e) => patch({ show_deleted_in_library: e.currentTarget.checked })}
+                />
+
+                <NumberInput
+                  label="Deleted retention (days)"
+                  description="Soft-deleted items purge automatically after this many days"
+                  min={1}
+                  max={3650}
+                  value={settings.trash_retention_days}
+                  onChange={(v) => {
+                    const n = typeof v === 'number' ? v : Number(v)
+                    if (Number.isFinite(n) && n > 0) patch({ trash_retention_days: Math.floor(n) })
+                  }}
                 />
 
                 <Divider />

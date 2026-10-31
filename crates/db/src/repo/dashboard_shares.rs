@@ -120,6 +120,7 @@ pub async fn list_shared_dashboards(
         owner_user_id: Uuid,
         title: String,
         is_default: bool,
+        deleted_at: Option<chrono::DateTime<chrono::Utc>>,
         created_at: chrono::DateTime<chrono::Utc>,
         updated_at: chrono::DateTime<chrono::Utc>,
         share_access: String,
@@ -128,11 +129,12 @@ pub async fn list_shared_dashboards(
     let rows = sqlx::query_as::<_, Row>(
         r#"
         SELECT
-            d.id, d.owner_user_id, d.title, d.is_default, d.created_at, d.updated_at,
+            d.id, d.owner_user_id, d.title, d.is_default, d.deleted_at, d.created_at, d.updated_at,
             ds.access AS share_access
         FROM dashboard_shares ds
         JOIN dashboards d ON d.id = ds.dashboard_id
         WHERE ds.invitee_user_id = $1
+          AND d.deleted_at IS NULL
         ORDER BY d.title ASC, d.created_at ASC
         "#,
     )
@@ -152,6 +154,7 @@ pub async fn list_shared_dashboards(
                 owner_user_id: row.owner_user_id,
                 title: row.title,
                 is_default: row.is_default,
+                deleted_at: row.deleted_at,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
             },

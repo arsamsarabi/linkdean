@@ -42,7 +42,15 @@ async fn list(
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<CategoryView>>> {
     let include_vault = q.include_vault && state.vault_key(user.id).await.is_some();
-    let cats = db::list_categories(&state.pool, user.id, q.include_hidden, include_vault).await?;
+    let settings = db::get_user_settings(&state.pool, user.id).await?;
+    let cats = db::list_categories(
+        &state.pool,
+        user.id,
+        q.include_hidden,
+        include_vault,
+        settings.show_deleted_in_library,
+    )
+    .await?;
     Ok(Json(cats))
 }
 

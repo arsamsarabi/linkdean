@@ -33,7 +33,9 @@ async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<Vec<DashboardSummary>>> {
-    let rows = db::list_dashboards(&state.pool, user.id).await?;
+    let settings = db::get_user_settings(&state.pool, user.id).await?;
+    let rows =
+        db::list_dashboards_filtered(&state.pool, user.id, settings.show_deleted_in_library).await?;
     Ok(Json(rows))
 }
 

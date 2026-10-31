@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toggleId, unionTags, writableIds } from './bulkSelection'
+import { toggleId, unionIds, unionTags, writableIds } from './bulkSelection'
 
 describe('writableIds', () => {
   it('drops read-only and keeps default-writable', () => {
@@ -24,5 +24,11 @@ describe('toggleId', () => {
 describe('unionTags', () => {
   it('merges without dupes', () => {
     expect(unionTags(['a', 'b'], [' b ', 'c', ''])).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('unionIds', () => {
+  it('merges category ids', () => {
+    expect(unionIds(['a', 'b'], ['b', 'c', ''])).toEqual(['a', 'b', 'c'])
   })
 })

@@ -27,6 +27,7 @@ describe('bookmarks drafts', () => {
       is_vault: false,
       tags: ['t'],
       can_write: true,
+      shared_out: false,
       categories: [{ id: 'c1', name: 'C', path: 'C' }],
       category_id: 'c1',
       created_at: '2024-01-01T00:00:00Z',

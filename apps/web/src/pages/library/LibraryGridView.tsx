@@ -146,7 +146,7 @@ export function LibraryGridView({
           title={canCreate ? 'No bookmarks yet' : 'Nothing here yet'}
           description={
             canCreate
-              ? 'Save the first link. Imports live under Settings.'
+              ? 'Save the first link. Imports live under Config options.'
               : 'This shared folder has no bookmarks yet.'
           }
           action={

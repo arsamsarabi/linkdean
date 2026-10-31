@@ -195,7 +195,7 @@ export function LibraryExplorerView({
         <EmptyState
           icon={<IconFolder size={28} stroke={1.5} />}
           title="No bookmarks yet"
-          description="Save the first link. Imports live under Settings."
+          description="Save the first link. Imports live under Config options."
           action={canCreate ? { label: 'Add bookmark', onClick: onCreate } : undefined}
         />
       ) : emptyFolder ? (

@@ -46,7 +46,7 @@ async fn get_default_dashboard_row(pool: &PgPool, user_id: Uuid) -> Result<Optio
     sqlx::query_as::<_, Dashboard>(
         r#"
         SELECT * FROM dashboards
-        WHERE owner_user_id = $1 AND is_default = TRUE
+        WHERE owner_user_id = $1 AND is_default = TRUE AND deleted_at IS NULL
         LIMIT 1
         "#,
     )
@@ -57,14 +57,24 @@ async fn get_default_dashboard_row(pool: &PgPool, user_id: Uuid) -> Result<Optio
 }
 
 async fn list_dashboard_rows(pool: &PgPool, user_id: Uuid) -> Result<Vec<Dashboard>> {
+    list_dashboard_rows_filtered(pool, user_id, false).await
+}
+
+async fn list_dashboard_rows_filtered(
+    pool: &PgPool,
+    user_id: Uuid,
+    include_deleted: bool,
+) -> Result<Vec<Dashboard>> {
     sqlx::query_as::<_, Dashboard>(
         r#"
         SELECT * FROM dashboards
         WHERE owner_user_id = $1
+          AND ($2 OR deleted_at IS NULL)
         ORDER BY is_default DESC, title ASC, created_at ASC
         "#,
     )
     .bind(user_id)
+    .bind(include_deleted)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))
@@ -78,12 +88,14 @@ fn owned_summary(d: Dashboard, shared_out: bool) -> DashboardSummary {
         is_default: d.is_default,
         access: CategoryAccess::Owner,
         shared_out,
+        owner_display_name: None,
+        deleted_at: d.deleted_at,
         created_at: d.created_at,
         updated_at: d.updated_at,
     }
 }
 
-fn shared_summary(d: Dashboard, access: CategoryAccess) -> DashboardSummary {
+fn shared_summary(d: Dashboard, access: CategoryAccess, owner_display_name: Option<String>) -> DashboardSummary {
     DashboardSummary {
         id: d.id,
         owner_user_id: d.owner_user_id,
@@ -92,21 +104,36 @@ fn shared_summary(d: Dashboard, access: CategoryAccess) -> DashboardSummary {
         is_default: false,
         access,
         shared_out: false,
+        owner_display_name,
+        deleted_at: d.deleted_at,
         created_at: d.created_at,
         updated_at: d.updated_at,
     }
 }
 
 pub async fn list_dashboards(pool: &PgPool, user_id: Uuid) -> Result<Vec<DashboardSummary>> {
+    list_dashboards_filtered(pool, user_id, false).await
+}
+
+pub async fn list_dashboards_filtered(
+    pool: &PgPool,
+    user_id: Uuid,
+    include_deleted: bool,
+) -> Result<Vec<DashboardSummary>> {
     let _ = ensure_default_dashboard(pool, user_id).await?;
-    let owned = list_dashboard_rows(pool, user_id).await?;
+    let owned = list_dashboard_rows_filtered(pool, user_id, include_deleted).await?;
     let mut out = Vec::with_capacity(owned.len());
     for d in owned {
         let shared_out = dashboard_shared_out(pool, d.id).await?;
         out.push(owned_summary(d, shared_out));
     }
     for (d, access) in list_shared_dashboards(pool, user_id).await? {
-        out.push(shared_summary(d, access));
+        if d.deleted_at.is_some() {
+            continue;
+        }
+        let owner_display_name =
+            super::users::owner_display_name_for_viewer(pool, d.owner_user_id, user_id).await?;
+        out.push(shared_summary(d, access, owner_display_name));
     }
     Ok(out)
 }
@@ -205,6 +232,12 @@ async fn load_dashboard_view(
         });
     }
 
+    let owner_display_name = if access.is_owner() {
+        None
+    } else {
+        super::users::owner_display_name_for_viewer(pool, dash.owner_user_id, user_id).await?
+    };
+
     Ok(DashboardView {
         id: dash.id,
         owner_user_id: dash.owner_user_id,
@@ -213,6 +246,8 @@ async fn load_dashboard_view(
         sections: section_views,
         access,
         shared_out,
+        owner_display_name,
+        deleted_at: dash.deleted_at,
         created_at: dash.created_at,
         updated_at: dash.updated_at,
     })
@@ -445,14 +480,23 @@ pub async fn delete_dashboard(
     id: Uuid,
 ) -> Result<Vec<DashboardSummary>> {
     let dash = require_dashboard_owner(pool, user_id, id).await?;
+    if dash.deleted_at.is_some() {
+        return list_dashboards(pool, user_id).await;
+    }
     let was_default = dash.is_default;
 
-    sqlx::query("DELETE FROM dashboards WHERE id = $1 AND owner_user_id = $2")
-        .bind(id)
-        .bind(user_id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query(
+        r#"
+        UPDATE dashboards
+        SET deleted_at = now(), is_default = FALSE, updated_at = now()
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
 
     let remaining = list_dashboard_rows(pool, user_id).await?;
     if remaining.is_empty() {
@@ -463,4 +507,41 @@ pub async fn delete_dashboard(
     }
 
     list_dashboards(pool, user_id).await
+}
+
+pub async fn restore_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let res = sqlx::query(
+        r#"
+        UPDATE dashboards
+        SET deleted_at = NULL, updated_at = now()
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if res.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub async fn purge_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM dashboards
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if res.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
 }

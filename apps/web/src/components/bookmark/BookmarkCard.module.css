@@ -17,6 +17,11 @@
   opacity: 0.55;
 }
 
+.pendingDelete {
+  opacity: 0.62;
+  border-style: dashed;
+}
+
 .selectCheck {
   position: absolute;
   top: 10px;

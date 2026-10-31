@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import {
   ActionIcon,
+  Badge,
   Button,
   Group,
   Menu,
@@ -252,8 +253,15 @@ export function DashboardPage(): ReactElement {
           ) : (
             <Group gap="sm" align="center" wrap="wrap" style={{ flex: '1 1 220px', minWidth: 220 }}>
               <Title order={2}>{view.title}</Title>
-              {inviteeAccess ? <ShareBadge access={inviteeAccess} /> : null}
+              {inviteeAccess ? (
+                <ShareBadge access={inviteeAccess} ownerLabel={view.owner_display_name} />
+              ) : null}
               {isOwner && view.shared_out ? <ShareBadge outgoing /> : null}
+              {view.deleted_at ? (
+                <Badge size="sm" variant="outline" color="red" tt="none">
+                  Pending delete
+                </Badge>
+              ) : null}
             </Group>
           )}
           <Group gap="sm" wrap="nowrap" align="center">

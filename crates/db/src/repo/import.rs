@@ -106,7 +106,7 @@ pub async fn export_data(
         })
         .collect::<Vec<_>>();
 
-    let bookmarks = list_bookmarks(pool, user_id, None, false, None).await?;
+    let bookmarks = list_bookmarks(pool, user_id, None, false, None, false).await?;
     let owned_ids: std::collections::HashSet<Uuid> = sqlx::query_as::<_, (Uuid,)>(
         "SELECT id FROM bookmarks WHERE owner_user_id = $1 AND is_vault = FALSE",
     )

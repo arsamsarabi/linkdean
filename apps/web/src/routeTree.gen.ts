@@ -18,6 +18,7 @@ import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppLibraryRouteImport } from './routes/_app/library'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppTrashRouteImport } from './routes/_app/trash'
 import { Route as AppVaultRouteImport } from './routes/_app/vault'
 
 const AppRoute = AppRouteImport.update({
@@ -64,6 +65,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTrashRoute = AppTrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVaultRoute = AppVaultRouteImport.update({
   id: '/vault',
   path: '/vault',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/library': typeof AppLibraryRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
+  '/trash': typeof AppTrashRoute
   '/vault': typeof AppVaultRoute
 }
 export interface FileRoutesByTo {
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/library': typeof AppLibraryRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
+  '/trash': typeof AppTrashRoute
   '/vault': typeof AppVaultRoute
   '/': typeof AppIndexRoute
 }
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/_app/library': typeof AppLibraryRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/trash': typeof AppTrashRoute
   '/_app/vault': typeof AppVaultRoute
   '/_app/': typeof AppIndexRoute
 }
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/profile'
     | '/settings'
+    | '/trash'
     | '/vault'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/profile'
     | '/settings'
+    | '/trash'
     | '/vault'
     | '/'
   id:
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/_app/library'
     | '/_app/profile'
     | '/_app/settings'
+    | '/_app/trash'
     | '/_app/vault'
     | '/_app/'
   fileRoutesById: FileRoutesById
@@ -214,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/trash': {
+      id: '/_app/trash'
+      path: '/trash'
+      fullPath: '/trash'
+      preLoaderRoute: typeof AppTrashRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/vault': {
       id: '/_app/vault'
       path: '/vault'
@@ -229,6 +248,7 @@ interface AppRouteChildren {
   AppLibraryRoute: typeof AppLibraryRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppTrashRoute: typeof AppTrashRoute
   AppVaultRoute: typeof AppVaultRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -238,6 +258,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLibraryRoute: AppLibraryRoute,
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppTrashRoute: AppTrashRoute,
   AppVaultRoute: AppVaultRoute,
   AppIndexRoute: AppIndexRoute,
 }

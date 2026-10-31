@@ -199,6 +199,8 @@ pub async fn bookmark_to_view(
     } else {
         false
     };
+    let owner_display_name =
+        super::users::owner_display_name_for_viewer(pool, b.owner_user_id, viewer_id).await?;
 
     if b.is_vault {
         let key = match vault_key {
@@ -233,6 +235,8 @@ pub async fn bookmark_to_view(
             tags: payload.tags,
             can_write,
             shared_out,
+            owner_display_name: owner_display_name.clone(),
+            deleted_at: b.deleted_at,
             created_at: b.created_at,
             updated_at: b.updated_at,
         }));
@@ -254,6 +258,8 @@ pub async fn bookmark_to_view(
         tags,
         can_write,
         shared_out,
+        owner_display_name,
+        deleted_at: b.deleted_at,
         created_at: b.created_at,
         updated_at: b.updated_at,
     }))
@@ -265,6 +271,7 @@ pub async fn list_bookmarks(
     category_id: Option<Uuid>,
     include_vault: bool,
     vault_key: Option<&[u8; 32]>,
+    include_deleted: bool,
 ) -> Result<Vec<BookmarkView>> {
     use super::shares::list_shared_categories;
 
@@ -275,6 +282,7 @@ pub async fn list_bookmarks(
             r#"
             SELECT b.* FROM bookmarks b
             WHERE ($2 OR b.is_vault = FALSE)
+              AND ($3 OR b.deleted_at IS NULL)
               AND (
                 b.category_id = $1
                 OR EXISTS (
@@ -287,6 +295,7 @@ pub async fn list_bookmarks(
         )
         .bind(cid)
         .bind(include_vault)
+        .bind(include_deleted)
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?
@@ -299,11 +308,13 @@ pub async fn list_bookmarks(
             SELECT * FROM bookmarks
             WHERE owner_user_id = $1
               AND ($2 OR is_vault = FALSE)
+              AND ($3 OR deleted_at IS NULL)
             ORDER BY updated_at DESC
             "#,
         )
         .bind(user_id)
         .bind(include_vault)
+        .bind(include_deleted)
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
@@ -314,6 +325,7 @@ pub async fn list_bookmarks(
                 SELECT DISTINCT b.* FROM bookmarks b
                 WHERE b.owner_user_id <> $1
                   AND b.is_vault = FALSE
+                  AND b.deleted_at IS NULL
                   AND (
                     b.category_id = ANY($2)
                     OR EXISTS (
@@ -557,6 +569,7 @@ pub async fn update_bookmark(
         .ok_or(Error::NotFound)
 }
 
+/// Soft-delete: set `deleted_at`. Owner-only for vault; writers otherwise.
 pub async fn delete_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
     if !bookmark_can_write(pool, user_id, id).await? {
         if bookmark_can_read(pool, user_id, id).await? {
@@ -568,11 +581,62 @@ pub async fn delete_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
     if existing.is_vault && existing.owner_user_id != user_id {
         return Err(Error::Forbidden);
     }
-    let res = sqlx::query("DELETE FROM bookmarks WHERE id = $1")
-        .bind(id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    if existing.owner_user_id != user_id {
+        // Invitees soft-delete is not supported — only owner can trash.
+        return Err(Error::Forbidden);
+    }
+    if existing.deleted_at.is_some() {
+        return Ok(());
+    }
+    let res = sqlx::query(
+        r#"
+        UPDATE bookmarks
+        SET deleted_at = now(), updated_at = now()
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if res.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub async fn restore_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let res = sqlx::query(
+        r#"
+        UPDATE bookmarks
+        SET deleted_at = NULL, updated_at = now()
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if res.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub async fn purge_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM bookmarks
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }

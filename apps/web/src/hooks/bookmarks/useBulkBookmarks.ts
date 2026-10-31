@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api } from '@/api'
 import type { Bookmark } from '@/schemas'
-import { unionTags } from '@/services'
+import { unionIds, unionTags } from '@/services'
 
-export type BulkMoveVars = {
+export type BulkAddCategoriesVars = {
   ids: string[]
   category_ids: string[]
+  /** Needed so we can union without an extra fetch. */
+  byId: Map<string, Bookmark>
 }
 
 export type BulkTagVars = {
@@ -47,15 +49,20 @@ function invalidate(qc: ReturnType<typeof useQueryClient>): void {
   void qc.invalidateQueries({ queryKey: ['bookmarks'] })
   void qc.invalidateQueries({ queryKey: ['search'] })
   void qc.invalidateQueries({ queryKey: ['duplicates'] })
+  void qc.invalidateQueries({ queryKey: ['trash'] })
   window.setTimeout(() => void qc.invalidateQueries({ queryKey: ['bookmarks'] }), 2500)
   window.setTimeout(() => void qc.invalidateQueries({ queryKey: ['bookmarks'] }), 6000)
 }
 
-export function useBulkMoveBookmarks(): UseMutationResult<BulkResult, Error, BulkMoveVars> {
+export function useBulkAddCategories(): UseMutationResult<BulkResult, Error, BulkAddCategoriesVars> {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ ids, category_ids }: BulkMoveVars) =>
-      runAll(ids, (id) => api.updateBookmark(id, { category_ids })),
+    mutationFn: ({ ids, category_ids, byId }: BulkAddCategoriesVars) =>
+      runAll(ids, (id) => {
+        const existing = (byId.get(id)?.categories || []).map((c) => c.id)
+        const next = unionIds(existing, category_ids)
+        return api.updateBookmark(id, { category_ids: next })
+      }),
     onSuccess: () => invalidate(qc),
   })
 }

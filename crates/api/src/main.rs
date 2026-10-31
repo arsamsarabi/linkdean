@@ -25,6 +25,17 @@ async fn main() -> anyhow::Result<()> {
 
     {
         let pool = state.pool.clone();
+        match linkdean_db::purge_expired_trash(&pool).await {
+            Ok((b, c, d)) if b + c + d > 0 => {
+                tracing::info!(bookmarks = b, categories = c, dashboards = d, "purged expired trash");
+            }
+            Ok(_) => {}
+            Err(e) => tracing::warn!(error = %e, "trash retention purge failed"),
+        }
+    }
+
+    {
+        let pool = state.pool.clone();
         let search = state.search.clone();
         let opts = state.enrich_opts();
         if opts.browser_ws_url.is_some() {

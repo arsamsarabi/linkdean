@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import {
   Box,
   Button,
@@ -13,7 +13,7 @@ import {
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 
-export type BulkEditMode = 'move' | 'tag'
+export type BulkEditMode = 'categories' | 'tag'
 
 type Props = {
   opened: boolean
@@ -22,7 +22,7 @@ type Props = {
   count: number
   categories: Category[]
   pending?: boolean
-  onApplyMove: (categoryIds: string[]) => void
+  onApplyCategories: (categoryIds: string[]) => void
   onApplyTag: (tags: string[], tagMode: 'add' | 'replace') => void
 }
 
@@ -33,32 +33,40 @@ export function BulkEditDrawer({
   count,
   categories,
   pending,
-  onApplyMove,
+  onApplyCategories,
   onApplyTag,
 }: Props): ReactElement {
   const [categoryIds, setCategoryIds] = useState<string[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [tagMode, setTagMode] = useState<'add' | 'replace'>('add')
-
-  useEffect(() => {
-    if (!opened) return
-    setCategoryIds([])
-    setTags([])
-    setTagMode('add')
-  }, [opened, mode])
+  const [openEpoch, setOpenEpoch] = useState(opened)
+  const [modeEpoch, setModeEpoch] = useState(mode)
+  if (opened !== openEpoch || mode !== modeEpoch) {
+    setOpenEpoch(opened)
+    setModeEpoch(mode)
+    if (opened) {
+      setCategoryIds([])
+      setTags([])
+      setTagMode('add')
+    }
+  }
 
   const writable = writableCategories(categories)
-  const title = mode === 'move' ? `Move ${count} bookmark${count === 1 ? '' : 's'}` : `Tag ${count} bookmark${count === 1 ? '' : 's'}`
+  const title =
+    mode === 'categories'
+      ? `Add categories to ${count} bookmark${count === 1 ? '' : 's'}`
+      : `Tag ${count} bookmark${count === 1 ? '' : 's'}`
 
   return (
     <Drawer opened={opened} onClose={onClose} title={title} position="right" size="md" padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={!!pending} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
-          {mode === 'move' ? (
+          {mode === 'categories' ? (
             <>
               <Text size="sm" c="dimmed">
-                Replaces categories on each selected bookmark. Read-only shared folders omitted.
+                Merges folders onto each selected bookmark. Existing categories stay. Read-only shared
+                folders omitted.
               </Text>
               <MultiSelect
                 label="Categories"
@@ -67,13 +75,13 @@ export function BulkEditDrawer({
                 onChange={setCategoryIds}
                 searchable
                 clearable
-                placeholder="Pick folders…"
+                placeholder="Pick folders to add…"
               />
               <Button
-                onClick={() => onApplyMove(categoryIds)}
-                disabled={pending}
+                onClick={() => onApplyCategories(categoryIds)}
+                disabled={pending || categoryIds.length === 0}
               >
-                Apply move
+                Add categories
               </Button>
             </>
           ) : (

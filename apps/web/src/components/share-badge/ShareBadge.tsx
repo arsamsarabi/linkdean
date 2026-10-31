@@ -6,12 +6,15 @@ import type { InviteeShareAccess } from '@/lib'
 type InviteeProps = {
   access: InviteeShareAccess
   outgoing?: false
+  /** Owner label for invitee badges (display name / email local-part). */
+  ownerLabel?: string | null
   size?: 'xs' | 'sm'
 }
 
 type OutgoingProps = {
   outgoing: true
   access?: never
+  ownerLabel?: never
   size?: 'xs' | 'sm'
 }
 
@@ -23,7 +26,13 @@ export function ShareBadge(props: Props): ReactElement {
   if (props.outgoing) {
     return (
       <Tooltip label="Shared with others">
-        <Badge size={size} variant="light" color="blue" leftSection={<IconShare size={10} stroke={1.5} />}>
+        <Badge
+          size={size}
+          variant="light"
+          color="blue"
+          tt="none"
+          leftSection={<IconShare size={10} stroke={1.5} />}
+        >
           Shared
         </Badge>
       </Tooltip>
@@ -31,8 +40,9 @@ export function ShareBadge(props: Props): ReactElement {
   }
 
   const ro = props.access === 'read'
-  const label = ro ? 'Shared · RO' : 'Shared · RW'
-  const tip = ro ? 'Shared with you (read-only)' : 'Shared with you (can edit)'
+  const owner = props.ownerLabel?.trim() || 'Owner'
+  const label = ro ? `${owner} · RO` : `${owner} · RW`
+  const tip = ro ? `Shared by ${owner} (read-only)` : `Shared by ${owner} (can edit)`
 
   return (
     <Tooltip label={tip}>
@@ -40,6 +50,7 @@ export function ShareBadge(props: Props): ReactElement {
         size={size}
         variant={ro ? 'outline' : 'light'}
         color="blue"
+        tt="none"
         leftSection={<IconShare size={10} stroke={1.5} />}
       >
         {label}

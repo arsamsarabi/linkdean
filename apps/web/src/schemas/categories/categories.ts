@@ -12,6 +12,8 @@ export const categorySchema = z.object({
   position: z.number(),
   access: categoryAccessSchema.default('owner'),
   shared_out: z.boolean().default(false),
+  owner_display_name: z.string().nullish(),
+  deleted_at: z.string().nullish(),
 })
 
 export const categoriesSchema = z.array(categorySchema)

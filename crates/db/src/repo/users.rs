@@ -73,6 +73,39 @@ pub async fn find_user_by_id(pool: &PgPool, id: Uuid) -> Result<Option<User>> {
         .map_err(|e| Error::msg(e.to_string()))
 }
 
+/// Label for share badges: display_name, else email local-part, else `"Owner"`.
+pub fn user_share_label(user: &User) -> String {
+    if let Some(name) = user
+        .display_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        return name.to_string();
+    }
+    user.email
+        .split('@')
+        .next()
+        .filter(|s| !s.is_empty())
+        .unwrap_or("Owner")
+        .to_string()
+}
+
+/// Owner label for invitee views (`None` when viewer is the owner).
+pub async fn owner_display_name_for_viewer(
+    pool: &PgPool,
+    owner_id: Uuid,
+    viewer_id: Uuid,
+) -> Result<Option<String>> {
+    if owner_id == viewer_id {
+        return Ok(None);
+    }
+    let Some(user) = find_user_by_id(pool, owner_id).await? else {
+        return Ok(Some("Owner".into()));
+    };
+    Ok(Some(user_share_label(&user)))
+}
+
 pub async fn find_user_by_oidc(pool: &PgPool, issuer: &str, subject: &str) -> Result<Option<User>> {
     sqlx::query_as::<_, User>("SELECT * FROM users WHERE oidc_issuer = $1 AND oidc_subject = $2")
         .bind(issuer)
@@ -187,6 +220,17 @@ pub async fn update_user_settings(
             }
         }
     }
+    if let Some(v) = patch.trash_retention_days {
+        if v <= 0 {
+            return Err(Error::BadRequest(
+                "trash_retention_days must be > 0".into(),
+            ));
+        }
+        s.trash_retention_days = v;
+    }
+    if let Some(v) = patch.show_deleted_in_library {
+        s.show_deleted_in_library = v;
+    }
     sqlx::query_as::<_, UserSettings>(
         r#"
         UPDATE user_settings SET
@@ -196,6 +240,8 @@ pub async fn update_user_settings(
             vault_auto_lock_minutes = $5,
             default_landing = $6,
             library_view = $7,
+            trash_retention_days = $8,
+            show_deleted_in_library = $9,
             updated_at = now()
         WHERE user_id = $1
         RETURNING *
@@ -208,6 +254,8 @@ pub async fn update_user_settings(
     .bind(s.vault_auto_lock_minutes)
     .bind(&s.default_landing)
     .bind(&s.library_view)
+    .bind(s.trash_retention_days)
+    .bind(s.show_deleted_in_library)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))

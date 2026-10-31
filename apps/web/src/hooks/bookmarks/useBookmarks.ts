@@ -84,6 +84,7 @@ export function useDeleteBookmark(): UseMutationResult<void, Error, string> {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['bookmarks'] })
       void qc.invalidateQueries({ queryKey: ['search'] })
+      void qc.invalidateQueries({ queryKey: ['trash'] })
     },
   })
 }

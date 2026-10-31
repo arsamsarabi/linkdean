@@ -165,7 +165,8 @@ Items may be promoted into a milestone when prioritized.
 - Wait/retry UX when Meili is briefly behind writes
 - Reindex button for admins
 - Search filters: tag, category, date, vault-only
-- Soft-delete + trash / undo
+- ~~Soft-delete + trash / undo~~ (deleted_at; `/trash` restore/purge; retention + show-deleted-in-library)
+- Personal activity history: per-item create/edit/delete log + filterable History drawer (bookmark / category / dashboard). Distinct from Milestone 7 shared activity (notifications / comments)
 
 **Platform**
 

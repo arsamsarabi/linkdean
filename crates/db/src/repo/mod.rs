@@ -8,6 +8,7 @@ mod platform;
 mod sessions;
 mod shares;
 mod tags;
+mod trash;
 mod users;
 mod vault;
 
@@ -20,5 +21,6 @@ pub use platform::*;
 pub use sessions::*;
 pub use shares::*;
 pub use tags::*;
+pub use trash::*;
 pub use users::*;
 pub use vault::*;

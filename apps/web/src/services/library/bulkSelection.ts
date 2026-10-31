@@ -24,3 +24,15 @@ export function unionTags(existing: readonly string[], add: readonly string[]): 
   }
   return out
 }
+
+/** Union category ids onto existing (dedupe, preserve order). */
+export function unionIds(existing: readonly string[], add: readonly string[]): string[] {
+  const out = [...existing]
+  const seen = new Set(existing)
+  for (const id of add) {
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    out.push(id)
+  }
+  return out
+}

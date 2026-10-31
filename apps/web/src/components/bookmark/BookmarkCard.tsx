@@ -50,6 +50,9 @@ export type BookmarkCardItem = {
   can_write?: boolean
   /** Owner has shared a folder this bookmark lives in. */
   shared_out?: boolean
+  /** Invitee-only: owner's display name for share badge. */
+  owner_display_name?: string | null
+  deleted_at?: string | null
 }
 
 type PreviewFallbackProps = {
@@ -115,10 +118,12 @@ export function BookmarkCard({
 
   const cats = b.categories || []
   const q = highlightQuery?.trim()
+  const pendingDelete = !!b.deleted_at
   const cardClass = [
     styles.card,
     selected ? styles.selected : '',
     selectMode && !canWrite ? styles.selectDisabled : '',
+    pendingDelete ? styles.pendingDelete : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -263,8 +268,13 @@ export function BookmarkCard({
         )}
 
         <Group gap={4} mt="auto" pt={4}>
-          {share ? <ShareBadge access={share} size="sm" /> : null}
+          {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} size="sm" /> : null}
           {showOutgoing ? <ShareBadge outgoing size="sm" /> : null}
+          {pendingDelete ? (
+            <Badge size="sm" variant="outline" color="red" tt="none">
+              Pending delete
+            </Badge>
+          ) : null}
           {b.is_vault ? (
             <Tooltip label="Stored in vault">
               <Badge size="sm" leftSection={<IconLock size={10} stroke={1.5} />}>

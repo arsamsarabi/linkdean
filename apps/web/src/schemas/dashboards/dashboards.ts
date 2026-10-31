@@ -23,6 +23,8 @@ export const dashboardSchema = z.object({
   sections: z.array(dashboardSectionSchema),
   access: categoryAccessSchema.default('owner'),
   shared_out: z.boolean().default(false),
+  owner_display_name: z.string().nullish(),
+  deleted_at: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -34,6 +36,8 @@ export const dashboardSummarySchema = z.object({
   is_default: z.boolean(),
   access: categoryAccessSchema.default('owner'),
   shared_out: z.boolean().default(false),
+  owner_display_name: z.string().nullish(),
+  deleted_at: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 })

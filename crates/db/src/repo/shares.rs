@@ -129,26 +129,28 @@ pub async fn list_shared_categories(
         WITH RECURSIVE tree AS (
             SELECT
                 c.id, c.owner_user_id, c.parent_id, c.name, c.is_hidden, c.is_vault,
-                c.position, c.created_at, c.updated_at,
+                c.position, c.deleted_at, c.created_at, c.updated_at,
                 cs.access AS share_access
             FROM category_shares cs
             JOIN categories c ON c.id = cs.category_id
             WHERE cs.invitee_user_id = $1
               AND c.is_vault = FALSE
+              AND c.deleted_at IS NULL
               AND ($2 OR c.is_hidden = FALSE)
             UNION ALL
             SELECT
                 child.id, child.owner_user_id, child.parent_id, child.name, child.is_hidden,
-                child.is_vault, child.position, child.created_at, child.updated_at,
+                child.is_vault, child.position, child.deleted_at, child.created_at, child.updated_at,
                 tree.share_access
             FROM categories child
             JOIN tree ON child.parent_id = tree.id
             WHERE child.is_vault = FALSE
+              AND child.deleted_at IS NULL
               AND ($2 OR child.is_hidden = FALSE)
         )
         SELECT DISTINCT ON (id)
             id, owner_user_id, parent_id, name, is_hidden, is_vault, position,
-            created_at, updated_at, share_access
+            deleted_at, created_at, updated_at, share_access
         FROM tree
         ORDER BY id, CASE share_access WHEN 'write' THEN 0 ELSE 1 END
         "#,
@@ -178,6 +180,7 @@ struct CategoryShareRow {
     is_hidden: bool,
     is_vault: bool,
     position: i32,
+    deleted_at: Option<chrono::DateTime<chrono::Utc>>,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
     share_access: String,
@@ -193,6 +196,7 @@ impl CategoryShareRow {
             is_hidden: self.is_hidden,
             is_vault: self.is_vault,
             position: self.position,
+            deleted_at: self.deleted_at,
             created_at: self.created_at,
             updated_at: self.updated_at,
         }

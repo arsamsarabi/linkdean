@@ -34,10 +34,15 @@ export function useUpdateSettings(): UseMutationResult<SettingsEnvelope, Error, 
   const setShowHidden = useUi((s) => s.setShowHidden)
   return useMutation({
     mutationFn: (patch: Partial<UserSettings>) => api.updateSettings(patch),
-    onSuccess: (res) => {
+    onSuccess: (res, patch) => {
       qc.setQueryData(['me'], (old: MeResponse | undefined) => (old ? { ...old, settings: res.settings } : old))
       if (useUi.getState().showHidden !== res.settings.show_hidden) {
         setShowHidden(res.settings.show_hidden)
+      }
+      if (patch.show_deleted_in_library !== undefined) {
+        void qc.invalidateQueries({ queryKey: ['bookmarks'] })
+        void qc.invalidateQueries({ queryKey: ['categories'] })
+        void qc.invalidateQueries({ queryKey: ['dashboards'] })
       }
     },
   })

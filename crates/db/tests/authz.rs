@@ -144,7 +144,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
     ));
 
     // B's list never includes A's bookmark
-    let b_list = db::list_bookmarks(&pool, user_b.id, None, false, None)
+    let b_list = db::list_bookmarks(&pool, user_b.id, None, false, None, false)
         .await
         .expect("list for b");
     assert!(!b_list.iter().any(|x| x.id == bm.id));
@@ -368,14 +368,14 @@ async fn share_read_and_write_membership() {
         db::get_bookmark_raw(&pool, user_c.id, bm.id).await,
         Err(Error::NotFound)
     ));
-    assert!(!db::list_bookmarks(&pool, user_c.id, None, false, None)
+    assert!(!db::list_bookmarks(&pool, user_c.id, None, false, None, false)
         .await
         .expect("list c")
         .iter()
         .any(|x| x.id == bm.id || x.id == b_created.id));
 
     // B sees shared bookmark in list
-    assert!(db::list_bookmarks(&pool, user_b.id, None, false, None)
+    assert!(db::list_bookmarks(&pool, user_b.id, None, false, None, false)
         .await
         .expect("list b")
         .iter()

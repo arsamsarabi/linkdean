@@ -46,8 +46,8 @@ import {
 } from '@/components'
 import {
   useBookmarks,
+  useBulkAddCategories,
   useBulkDeleteBookmarks,
-  useBulkMoveBookmarks,
   useBulkTagBookmarks,
   useCategories,
   useDeleteBookmark,
@@ -159,11 +159,11 @@ export function LibraryPage(): ReactElement {
   const searching = debouncedQ.trim().length > 1
   const search = useSearchBookmarks(debouncedQ, searching)
   const deleteBookmark = useDeleteBookmark()
-  const bulkMove = useBulkMoveBookmarks()
+  const bulkCategories = useBulkAddCategories()
   const bulkTag = useBulkTagBookmarks()
   const bulkDelete = useBulkDeleteBookmarks()
   const vaultUnlock = useVaultUnlock()
-  const bulkPending = bulkMove.isPending || bulkTag.isPending || bulkDelete.isPending
+  const bulkPending = bulkCategories.isPending || bulkTag.isPending || bulkDelete.isPending
 
   useEffect(() => {
     const next = debouncedQ.trim() || undefined
@@ -371,11 +371,12 @@ export function LibraryPage(): ReactElement {
     })
   }
 
-  async function applyBulkMove(categoryIds: string[]): Promise<void> {
+  async function applyBulkCategories(categoryIds: string[]): Promise<void> {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const result = await bulkMove.mutateAsync({ ids, category_ids: categoryIds })
-    notifyBulk('Moved', result)
+    const byId = new Map<string, Bookmark>((bookmarks.data || []).map((b) => [b.id, b]))
+    const result = await bulkCategories.mutateAsync({ ids, category_ids: categoryIds, byId })
+    notifyBulk('Categories added', result)
     setBulkMode(null)
     exitSelectMode()
   }
@@ -502,7 +503,7 @@ export function LibraryPage(): ReactElement {
               }
               disabled={selectableIds.length === 0}
             >
-              {allVisibleSelected ? 'Clear visible' : 'Select visible'}
+              {allVisibleSelected ? 'Clear all' : 'Select all'}
             </Button>
           </Group>
           <Group gap="xs">
@@ -511,9 +512,9 @@ export function LibraryPage(): ReactElement {
               variant="light"
               leftSection={<IconFolders size={14} stroke={1.5} />}
               disabled={selectedCount === 0}
-              onClick={() => setBulkMode('move')}
+              onClick={() => setBulkMode('categories')}
             >
-              Move
+              Categories
             </Button>
             <Button
               size="compact-sm"
@@ -678,11 +679,11 @@ export function LibraryPage(): ReactElement {
       <BulkEditDrawer
         opened={bulkMode != null}
         onClose={() => setBulkMode(null)}
-        mode={bulkMode ?? 'move'}
+        mode={bulkMode ?? 'categories'}
         count={selectedCount}
         categories={cats.data || []}
         pending={bulkPending}
-        onApplyMove={(ids) => void applyBulkMove(ids)}
+        onApplyCategories={(ids) => void applyBulkCategories(ids)}
         onApplyTag={(tags, mode) => void applyBulkTag(tags, mode)}
       />
 
@@ -693,7 +694,7 @@ export function LibraryPage(): ReactElement {
         onClose={() => setDeleteId(null)}
         onConfirm={() => void confirmDelete()}
         title="Delete bookmark?"
-        body="This removes the bookmark permanently. You cannot undo this."
+        body="Moves this bookmark to Deleted items. You can restore it later."
         confirmLabel="Delete"
         loading={deleteBookmark.isPending}
       />
@@ -703,7 +704,7 @@ export function LibraryPage(): ReactElement {
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={() => void confirmBulkDelete()}
         title={`Delete ${selectedCount} bookmark${selectedCount === 1 ? '' : 's'}?`}
-        body="This removes the selected bookmarks permanently. You cannot undo this."
+        body="Moves selected bookmarks to Deleted items. You can restore them later."
         confirmLabel="Delete"
         loading={bulkDelete.isPending}
       />
@@ -711,7 +712,7 @@ export function LibraryPage(): ReactElement {
       <Modal opened={unlockOpen} onClose={() => setUnlockOpen(false)} title="Unlock vault for search">
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Settings say vault should be included in search. Unlock to include vault hits.
+            Config options say vault should be included in search. Unlock to include vault hits.
           </Text>
           <PasswordInput
             label="Vault passphrase"

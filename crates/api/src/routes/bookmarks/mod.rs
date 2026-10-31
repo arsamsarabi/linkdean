@@ -37,12 +37,14 @@ async fn list(
 ) -> ApiResult<Json<Vec<BookmarkView>>> {
     let key = state.vault_key(user.id).await;
     let include_vault = q.include_vault && key.is_some();
+    let settings = db::get_user_settings(&state.pool, user.id).await?;
     let items = db::list_bookmarks(
         &state.pool,
         user.id,
         q.category_id,
         include_vault,
         key.as_ref(),
+        settings.show_deleted_in_library,
     )
     .await?;
     Ok(Json(items))
@@ -107,15 +109,10 @@ async fn delete_one(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
+    // Soft-delete — keep preview on disk until permanent purge.
     db::delete_bookmark(&state.pool, user.id, id).await?;
     if let Err(e) = state.search.delete_bookmark(id).await {
         tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
-    }
-    let path = state.preview_path(id);
-    if let Err(e) = tokio::fs::remove_file(&path).await {
-        if e.kind() != std::io::ErrorKind::NotFound {
-            tracing::warn!(?path, error = %e, "preview delete failed");
-        }
     }
     Ok(Json(json!({ "ok": true })))
 }

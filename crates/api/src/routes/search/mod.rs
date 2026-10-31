@@ -41,7 +41,7 @@ async fn search(
 
     if !q.q.trim().is_empty() {
         // Owned + shared category ids so Meili can surface shared (and invitee-created) docs.
-        let readable = db::list_categories(&state.pool, user.id, true, false).await?;
+        let readable = db::list_categories(&state.pool, user.id, true, false, false).await?;
         let readable_ids: Vec<Uuid> = readable.into_iter().map(|c| c.id).collect();
 
         match state

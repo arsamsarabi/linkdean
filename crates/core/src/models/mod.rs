@@ -42,6 +42,8 @@ pub struct UserSettings {
     pub vault_auto_lock_minutes: i32,
     pub default_landing: String,
     pub library_view: String,
+    pub trash_retention_days: i32,
+    pub show_deleted_in_library: bool,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -67,6 +69,8 @@ pub struct UpdateSettings {
     pub vault_auto_lock_minutes: Option<i32>,
     pub default_landing: Option<String>,
     pub library_view: Option<String>,
+    pub trash_retention_days: Option<i32>,
+    pub show_deleted_in_library: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -98,6 +102,7 @@ pub struct Category {
     pub is_hidden: bool,
     pub is_vault: bool,
     pub position: i32,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -173,6 +178,11 @@ pub struct CategoryView {
     /// True when the owner has shared this folder (or an ancestor) with someone.
     #[serde(default)]
     pub shared_out: bool,
+    /// Present for invitees — owner's display name (or email local-part).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_display_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 impl CategoryView {
@@ -189,6 +199,8 @@ impl CategoryView {
             updated_at: cat.updated_at,
             access,
             shared_out: false,
+            owner_display_name: None,
+            deleted_at: cat.deleted_at,
         }
     }
 }
@@ -286,6 +298,7 @@ pub struct Bookmark {
     pub is_vault: bool,
     pub vault_ciphertext: Option<Vec<u8>>,
     pub vault_nonce: Option<Vec<u8>>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -319,6 +332,11 @@ pub struct BookmarkView {
     /// Owner has shared a folder this bookmark lives in (invitees see invitee badges instead).
     #[serde(default)]
     pub shared_out: bool,
+    /// Present for invitees — owner's display name (or email local-part).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_display_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -482,6 +500,7 @@ pub struct Dashboard {
     pub owner_user_id: Uuid,
     pub title: String,
     pub is_default: bool,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -531,6 +550,10 @@ pub struct DashboardView {
     /// True when the owner has shared this dashboard with someone.
     #[serde(default)]
     pub shared_out: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_display_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -545,8 +568,39 @@ pub struct DashboardSummary {
     pub access: CategoryAccess,
     #[serde(default)]
     pub shared_out: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_display_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TrashKind {
+    Bookmark,
+    Category,
+    Dashboard,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrashItem {
+    pub kind: TrashKind,
+    pub id: Uuid,
+    pub title: String,
+    pub deleted_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PurgeTrashRequest {
+    pub items: Vec<TrashItemRef>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrashItemRef {
+    pub kind: TrashKind,
+    pub id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

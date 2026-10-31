@@ -7,6 +7,7 @@ mod health;
 mod import_export;
 mod search;
 mod tags;
+mod trash;
 mod users;
 mod vault;
 
@@ -23,6 +24,7 @@ pub fn router() -> Router<AppState> {
         .merge(bookmarks::router())
         .merge(dashboards::router())
         .merge(tags::router())
+        .merge(trash::router())
         .merge(search::router())
         .merge(import_export::router())
         .merge(vault::router())

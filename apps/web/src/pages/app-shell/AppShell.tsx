@@ -1,6 +1,7 @@
 import { useEffect, type ReactElement } from 'react'
 import {
   Button,
+  Code,
   Group,
   Indicator,
   Loader,
@@ -12,7 +13,14 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { useDisclosure, useHotkeys } from '@mantine/hooks'
-import { IconBooks, IconLayoutDashboard, IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
+import {
+  IconBooks,
+  IconLayoutDashboard,
+  IconLogout,
+  IconSettings,
+  IconTrash,
+  IconUser,
+} from '@tabler/icons-react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   CommandPalette,
@@ -25,6 +33,7 @@ import {
 import { useLogout, usePrefsHydration } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useUi } from '@/stores'
+import classes from './AppShell.module.css'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -128,11 +137,24 @@ export function AppShell(): ReactElement {
                 <Menu.Dropdown>
                   <Menu.Label>{user?.display_name || user?.email || 'User'}</Menu.Label>
                   {vaultUnlocked ? <Menu.Label c="green">Vault unlocked</Menu.Label> : null}
+                  <Menu.Divider />
+                  <Menu.Label>
+                    <Group gap={6} align="center" justify="center">
+                      <Code classNames={{root: classes.codeRoot}}>
+                        ⌘K
+                      </Code>
+                        Command palette
+                    </Group>
+                  </Menu.Label>
+                  <Menu.Divider />
                   <Menu.Item component={Link} to="/profile" leftSection={<IconUser {...iconProps} />}>
                     Profile
                   </Menu.Item>
                   <Menu.Item component={Link} to="/settings" leftSection={<IconSettings {...iconProps} />}>
-                    Settings
+                    Config options
+                  </Menu.Item>
+                  <Menu.Item component={Link} to="/trash" leftSection={<IconTrash {...iconProps} />}>
+                    Deleted items
                   </Menu.Item>
                   <Menu.Divider />
                   <ThemeMenuSwitch />

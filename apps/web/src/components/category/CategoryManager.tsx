@@ -301,7 +301,7 @@ function CatRow({
           </Text>
         )}
         {node.cat.access === 'read' || node.cat.access === 'write' ? (
-          <ShareBadge access={node.cat.access} />
+          <ShareBadge access={node.cat.access} ownerLabel={node.cat.owner_display_name} />
         ) : null}
         {node.cat.access === 'owner' && node.cat.shared_out ? <ShareBadge outgoing /> : null}
         {node.cat.is_hidden ? (

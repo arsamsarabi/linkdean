@@ -26,6 +26,7 @@ pub async fn list_categories(
     user_id: Uuid,
     include_hidden: bool,
     include_vault: bool,
+    include_deleted: bool,
 ) -> Result<Vec<CategoryView>> {
     let owned = sqlx::query_as::<_, Category>(
         r#"
@@ -33,12 +34,14 @@ pub async fn list_categories(
         WHERE owner_user_id = $1
           AND ($2 OR is_hidden = FALSE)
           AND ($3 OR is_vault = FALSE)
+          AND ($4 OR deleted_at IS NULL)
         ORDER BY position, name
         "#,
     )
     .bind(user_id)
     .bind(include_hidden)
     .bind(include_vault)
+    .bind(include_deleted)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -63,6 +66,13 @@ pub async fn list_categories(
     }
 
     let mut out: Vec<CategoryView> = by_id.into_values().collect();
+    for view in &mut out {
+        if !view.access.is_owner() {
+            view.owner_display_name =
+                super::users::owner_display_name_for_viewer(pool, view.owner_user_id, user_id)
+                    .await?;
+        }
+    }
     out.sort_by(|a, b| a.position.cmp(&b.position).then_with(|| a.name.cmp(&b.name)));
     Ok(out)
 }
@@ -80,6 +90,7 @@ pub async fn list_owned_categories(
         WHERE owner_user_id = $1
           AND ($2 OR is_hidden = FALSE)
           AND ($3 OR is_vault = FALSE)
+          AND deleted_at IS NULL
         ORDER BY position, name
         "#,
     )
@@ -94,7 +105,12 @@ pub async fn list_owned_categories(
 pub async fn get_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<CategoryView> {
     let access = category_access(pool, user_id, id).await?;
     let cat = get_category_by_id(pool, id).await?;
-    Ok(CategoryView::from_category(cat, access))
+    let mut view = CategoryView::from_category(cat, access);
+    if !view.access.is_owner() {
+        view.owner_display_name =
+            super::users::owner_display_name_for_viewer(pool, view.owner_user_id, user_id).await?;
+    }
+    Ok(view)
 }
 
 pub async fn create_category(
@@ -203,15 +219,104 @@ pub async fn update_category(
     Ok(CategoryView::from_category(updated, access))
 }
 
+/// Soft-delete category subtree (descendants included). Owner-only.
 pub async fn delete_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
-    // Owner-only: invitees cannot delete shared folders.
     require_category_owner(pool, user_id, id).await?;
-    let res = sqlx::query("DELETE FROM categories WHERE id = $1 AND owner_user_id = $2")
-        .bind(id)
-        .bind(user_id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    let cat = get_category_by_id(pool, id).await?;
+    if cat.deleted_at.is_some() {
+        return Ok(());
+    }
+    // Collect subtree ids (owned).
+    let owned = list_owned_categories(pool, user_id, true, true).await?;
+    let mut ids = vec![id];
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for c in &owned {
+            if let Some(pid) = c.parent_id {
+                if ids.contains(&pid) && !ids.contains(&c.id) && c.deleted_at.is_none() {
+                    ids.push(c.id);
+                    changed = true;
+                }
+            }
+        }
+    }
+    let res = sqlx::query(
+        r#"
+        UPDATE categories
+        SET deleted_at = now(), updated_at = now()
+        WHERE owner_user_id = $1 AND id = ANY($2) AND deleted_at IS NULL
+        "#,
+    )
+    .bind(user_id)
+    .bind(&ids)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if res.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub async fn restore_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    require_category_owner(pool, user_id, id).await?;
+    // Restore this node + descendants that share the same soft-delete wave
+    // (deleted_at not null under this root). Simpler: restore subtree by parent walk among deleted.
+    let owned = sqlx::query_as::<_, Category>(
+        r#"
+        SELECT * FROM categories
+        WHERE owner_user_id = $1 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if !owned.iter().any(|c| c.id == id) {
+        return Err(Error::NotFound);
+    }
+    let mut ids = vec![id];
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for c in &owned {
+            if let Some(pid) = c.parent_id {
+                if ids.contains(&pid) && !ids.contains(&c.id) {
+                    ids.push(c.id);
+                    changed = true;
+                }
+            }
+        }
+    }
+    sqlx::query(
+        r#"
+        UPDATE categories
+        SET deleted_at = NULL, updated_at = now()
+        WHERE owner_user_id = $1 AND id = ANY($2)
+        "#,
+    )
+    .bind(user_id)
+    .bind(&ids)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(())
+}
+
+pub async fn purge_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    require_category_owner(pool, user_id, id).await?;
+    let res = sqlx::query(
+        r#"
+        DELETE FROM categories
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }

@@ -17,6 +17,7 @@ const cats: Category[] = [
     is_vault: false,
     position: 0,
     access: 'owner',
+    shared_out: false,
   },
   {
     id: '2',
@@ -26,6 +27,7 @@ const cats: Category[] = [
     is_vault: true,
     position: 1,
     access: 'owner',
+    shared_out: false,
   },
 ]
 

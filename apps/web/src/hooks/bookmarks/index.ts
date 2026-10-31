@@ -6,7 +6,7 @@ export {
   useDeleteBookmark,
 } from './useBookmarks'
 export {
-  useBulkMoveBookmarks,
+  useBulkAddCategories,
   useBulkTagBookmarks,
   useBulkDeleteBookmarks,
   type BulkResult,

@@ -19,6 +19,8 @@ import {
   platformSettingsEnvelopeSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
+  trashItemsSchema,
+  trashPurgeResultSchema,
   userEnvelopeSchema,
   vaultStatusSchema,
   type Bookmark,
@@ -34,6 +36,8 @@ import {
   type PlatformSettings,
   type PutDashboardLayout,
   type ShareAccess,
+  type TrashItem,
+  type TrashKind,
   type UserPublic,
   type UserSettings,
 } from '@/schemas'
@@ -94,6 +98,8 @@ export const api = {
       vault_auto_lock_minutes: number
       default_landing: UserSettings['default_landing']
       library_view: UserSettings['library_view']
+      trash_retention_days: number
+      show_deleted_in_library: boolean
     }>
   ): Promise<{ settings: UserSettings }> =>
     req('/users/me/settings', { method: 'PATCH', body: JSON.stringify(body) }, settingsEnvelopeSchema),
@@ -254,4 +260,17 @@ export const api = {
 
   deleteDashboardShare: (dashboardId: string, userId: string): Promise<void> =>
     req(`/dashboards/${dashboardId}/shares/${userId}`, { method: 'DELETE' }),
+
+  trash: (): Promise<TrashItem[]> => req('/trash', {}, trashItemsSchema),
+
+  restoreTrashItem: (kind: TrashKind, id: string): Promise<{ ok: boolean }> =>
+    req(`/trash/${kind}/${id}/restore`, { method: 'POST' }, okSchema),
+
+  purgeTrashItem: (kind: TrashKind, id: string): Promise<{ ok: boolean }> =>
+    req(`/trash/${kind}/${id}`, { method: 'DELETE' }, okSchema),
+
+  purgeTrashSelected: (
+    items: Array<{ kind: TrashKind; id: string }>
+  ): Promise<{ ok: boolean; purged?: number; failed?: number }> =>
+    req('/trash/purge', { method: 'POST', body: JSON.stringify({ items }) }, trashPurgeResultSchema),
 }
