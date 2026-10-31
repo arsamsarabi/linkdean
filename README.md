@@ -29,6 +29,15 @@
   <a href="#license">License</a>
 </p>
 
+<details>
+<summary><strong>Click here to find out how AI was used in the development of this app</strong></summary>
+
+<br />
+
+I built this with the help of AI, but with hands-on supervision throughout the process. I’m a Staff Software Engineer with ~20 years of coding experience (13 years commercially), and I carefully reviewed the architecture, logic, CI/CD pipelines, tests, and code coverage. AI helped speed things up, but the technical decisions and reviews were mine.
+
+</details>
+
 ---
 
 ## Why Linkdean?
