@@ -56,7 +56,7 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 
 ---
 
-## Milestone 3: Shared dashboards (in progress)
+## Milestone 3: Shared dashboards (confirm done)
 
 Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX), including multi-dashboard.
 
@@ -145,7 +145,7 @@ Items may be promoted into a milestone when prioritized.
 - ~~Reading list / unread + pin / favorites~~ (`bookmark_flags`; library chips + card menu; open link marks read)
 - Full-text notes and optional highlights
 - ~~Favicon + OG image cache on disk (not hot-fetch forever)~~ (`PREVIEW_DIR`; enrich writes; `/favicon` + `/og` serve)
-- Reimagine category management UX
+- ~~Reimagine category management UX~~ (Settings → Categories explorer + new-category drawer)
 - Category icons
 
 **Vault & privacy**
