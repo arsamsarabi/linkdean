@@ -201,7 +201,7 @@ Found a vuln? Prefer a private report to the maintainers before a public issue.
 
 **Shipped (v1):** nested cats + tags, Meili search, import/export, vault, hidden folders, local + OIDC auth, Compose path, library views, admin registration toggle.
 
-**Next (v2+):** sharing polish → personal dashboards → shared dashboards → API keys → archive/downloads → browser extension.
+**Next (v2+):** sharing polish → personal dashboards → shared dashboards → API keys → archive/downloads → browser extension → shared activity/social. Native mobile apps sit in an unplanned far-out bucket.
 
 See the full ordered list in [docs/ROADMAP.md](docs/ROADMAP.md).
 

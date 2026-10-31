@@ -89,12 +89,28 @@ Heavy infra; keep after interactive product surfaces.
 
 ## Milestone 6 — Browser extension
 
-Lowest numbered priority.
+Lowest numbered priority among the planned interactive surfaces.
 
 **Deliverables**
 
 - “Save current tab” to Linkdean
 - Quick file-to-category from the extension
+
+---
+
+## Milestone 7 — Shared activity & social
+
+Depends on Milestone 1 (share/ACL). Stronger with Milestone 3 (shared dashboards) for activity surfaces, but notifications can start on shared folders/lists alone.
+
+Build order inside this milestone: notifications first, then discussion, then lightweight reactions; gamification last (or slip to backlog if scope balloons).
+
+**Deliverables**
+
+- Notifications for shared activity (invites, edits, membership changes)
+- Comments on shared bookmarks / lists / dashboards
+- Likes on shared bookmarks / lists / dashboards
+- Ratings on shared bookmarks / lists / dashboards
+- Light gamification (optional; defer to backlog if it threatens the rest)
 
 ---
 
@@ -112,6 +128,8 @@ Pick into a milestone when prioritized.
 - Reading list / “unread” + pin / favorites
 - Full-text notes and optional highlights
 - Favicon + OG image cache on disk (not hot-fetch forever)
+- Reimagine category management UX
+- Category icons
 
 **Vault & privacy**
 
@@ -136,6 +154,14 @@ Pick into a milestone when prioritized.
 - Official `docker compose` one-liner docs + healthchecks in README badge style
 - Prometheus metrics / basic ops endpoint
 - Backup recipe (pg_dump + meili dump) in docs
-- i18n-ready strings
+- Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
 - PWA install for “app-like” phone use
+
+---
+
+## Unplanned (far out)
+
+Not on the numbered track. Revisit only after planned milestones and backlog pressure ease.
+
+- Native mobile apps (iOS / Android) — separate from responsive web + PWA
