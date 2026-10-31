@@ -53,7 +53,7 @@ Homelab: nova runs compose; ncc Traefik terminates TLS (`linkdean.arsam.app`). A
 - **Vault** — per-user wrapped data key (Argon2id + AES-GCM)
 - **ImportJob** — import run stats
 
-Rows carry `owner_user_id` now so v2 sharing can land without a rewrite.
+Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`/`write`) beside ownership; access covers the shared category and its non-vault descendants.
 
 ## Auth & sessions
 

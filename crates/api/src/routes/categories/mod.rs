@@ -4,7 +4,10 @@ use crate::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::routing::{get, patch};
 use axum::{Json, Router};
-use linkdean_core::{Category, CreateCategory, UpdateCategory};
+use linkdean_core::{
+    CategoryShareView, CategoryView, CreateCategory, CreateCategoryShare, UpdateCategory,
+    UpdateCategoryShare,
+};
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -13,6 +16,14 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/categories", get(list).post(create))
         .route("/categories/{id}", patch(update).delete(delete_one))
+        .route(
+            "/categories/{id}/shares",
+            get(list_shares).post(create_share),
+        )
+        .route(
+            "/categories/{id}/shares/{user_id}",
+            patch(update_share).delete(delete_share),
+        )
 }
 
 #[derive(Deserialize)]
@@ -27,7 +38,7 @@ async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Query(q): Query<ListQuery>,
-) -> ApiResult<Json<Vec<Category>>> {
+) -> ApiResult<Json<Vec<CategoryView>>> {
     let include_vault = q.include_vault && state.vault_key(user.id).await.is_some();
     let cats = db::list_categories(&state.pool, user.id, q.include_hidden, include_vault).await?;
     Ok(Json(cats))
@@ -37,9 +48,8 @@ async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Json(req): Json<CreateCategory>,
-) -> ApiResult<Json<Category>> {
+) -> ApiResult<Json<CategoryView>> {
     if req.is_vault && state.vault_key(user.id).await.is_none() {
-        // allow creating vault category only if vault setup exists; unlock not strictly required to create empty cat
         if !db::user_has_vault(&state.pool, user.id).await? {
             return Err(linkdean_core::Error::BadRequest(
                 "setup vault before creating vault categories".into(),
@@ -56,7 +66,7 @@ async fn update(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateCategory>,
-) -> ApiResult<Json<Category>> {
+) -> ApiResult<Json<CategoryView>> {
     let cat = db::update_category(&state.pool, user.id, id, req).await?;
     Ok(Json(cat))
 }
@@ -67,5 +77,43 @@ async fn delete_one(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<serde_json::Value>> {
     db::delete_category(&state.pool, user.id, id).await?;
+    Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+async fn list_shares(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Vec<CategoryShareView>>> {
+    let shares = db::list_shares_for_category(&state.pool, user.id, id).await?;
+    Ok(Json(shares))
+}
+
+async fn create_share(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<CreateCategoryShare>,
+) -> ApiResult<Json<CategoryShareView>> {
+    let share = db::create_share(&state.pool, user.id, id, req).await?;
+    Ok(Json(share))
+}
+
+async fn update_share(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, invitee_user_id)): Path<(Uuid, Uuid)>,
+    Json(req): Json<UpdateCategoryShare>,
+) -> ApiResult<Json<CategoryShareView>> {
+    let share = db::update_share(&state.pool, user.id, id, invitee_user_id, req).await?;
+    Ok(Json(share))
+}
+
+async fn delete_share(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, invitee_user_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<serde_json::Value>> {
+    db::delete_share(&state.pool, user.id, id, invitee_user_id).await?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }

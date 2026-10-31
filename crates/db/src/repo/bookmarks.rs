@@ -7,7 +7,10 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::categories::{get_category, list_categories};
+use super::categories::{get_category_by_id, list_owned_categories};
+use super::shares::{
+    bookmark_can_read, bookmark_can_write, require_category_read, require_category_write,
+};
 use super::tags::ensure_tags;
 
 async fn set_bookmark_tags(
@@ -92,7 +95,7 @@ async fn categories_for_bookmark(
         return Ok(Vec::new());
     }
 
-    let all = list_categories(pool, owner_user_id, true, true).await?;
+    let all = list_owned_categories(pool, owner_user_id, true, true).await?;
     let by_id: HashMap<Uuid, Category> = all.into_iter().map(|c| (c.id, c)).collect();
     let mut out = Vec::new();
     for id in linked {
@@ -101,6 +104,13 @@ async fn categories_for_bookmark(
                 id: cat.id,
                 name: cat.name.clone(),
                 path: category_path(cat, &by_id),
+            });
+        } else if let Ok(cat) = get_category_by_id(pool, id).await {
+            // Shared / cross-owner link: path may be shallow if ancestors not loaded.
+            out.push(CategoryRef {
+                id: cat.id,
+                name: cat.name.clone(),
+                path: cat.name.clone(),
             });
         }
     }
@@ -123,7 +133,7 @@ async fn set_bookmark_categories(
     let mut any_vault = false;
     let mut any_non_vault = false;
     for id in &unique {
-        let cat = get_category(pool, user_id, *id).await?;
+        let (cat, _) = require_category_write(pool, user_id, *id).await?;
         if cat.is_vault {
             any_vault = true;
         } else {
@@ -238,29 +248,35 @@ pub async fn list_bookmarks(
     include_vault: bool,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<Vec<BookmarkView>> {
+    use super::shares::list_shared_categories;
+
+    let include_vault = include_vault && vault_key.is_some();
     let rows = if let Some(cid) = category_id {
+        require_category_read(pool, user_id, cid).await?;
         sqlx::query_as::<_, Bookmark>(
             r#"
             SELECT b.* FROM bookmarks b
-            WHERE b.owner_user_id = $1
-              AND ($3 OR b.is_vault = FALSE)
+            WHERE ($2 OR b.is_vault = FALSE)
               AND (
-                b.category_id = $2
+                b.category_id = $1
                 OR EXISTS (
                   SELECT 1 FROM bookmark_categories bc
-                  WHERE bc.bookmark_id = b.id AND bc.category_id = $2
+                  WHERE bc.bookmark_id = b.id AND bc.category_id = $1
                 )
               )
             ORDER BY b.updated_at DESC
             "#,
         )
-        .bind(user_id)
         .bind(cid)
-        .bind(include_vault && vault_key.is_some())
+        .bind(include_vault)
         .fetch_all(pool)
         .await
+        .map_err(|e| Error::msg(e.to_string()))?
     } else {
-        sqlx::query_as::<_, Bookmark>(
+        let shared = list_shared_categories(pool, user_id, true).await?;
+        let shared_ids: Vec<Uuid> = shared.into_iter().map(|(c, _)| c.id).collect();
+
+        let mut owned = sqlx::query_as::<_, Bookmark>(
             r#"
             SELECT * FROM bookmarks
             WHERE owner_user_id = $1
@@ -269,15 +285,54 @@ pub async fn list_bookmarks(
             "#,
         )
         .bind(user_id)
-        .bind(include_vault && vault_key.is_some())
+        .bind(include_vault)
         .fetch_all(pool)
         .await
-    }
-    .map_err(|e| Error::msg(e.to_string()))?;
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+        if !shared_ids.is_empty() {
+            let shared_rows = sqlx::query_as::<_, Bookmark>(
+                r#"
+                SELECT DISTINCT b.* FROM bookmarks b
+                WHERE b.owner_user_id <> $1
+                  AND b.is_vault = FALSE
+                  AND (
+                    b.category_id = ANY($2)
+                    OR EXISTS (
+                      SELECT 1 FROM bookmark_categories bc
+                      WHERE bc.bookmark_id = b.id AND bc.category_id = ANY($2)
+                    )
+                  )
+                ORDER BY b.updated_at DESC
+                "#,
+            )
+            .bind(user_id)
+            .bind(&shared_ids)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+
+            let mut seen: std::collections::HashSet<Uuid> = owned.iter().map(|b| b.id).collect();
+            for b in shared_rows {
+                if seen.insert(b.id) {
+                    owned.push(b);
+                }
+            }
+            owned.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        }
+        owned
+    };
 
     let mut out = Vec::new();
     for b in rows {
-        if let Some(v) = bookmark_to_view(pool, b, vault_key).await? {
+        let key = if b.is_vault && b.owner_user_id == user_id {
+            vault_key
+        } else if b.is_vault {
+            None
+        } else {
+            None
+        };
+        if let Some(v) = bookmark_to_view(pool, b, key).await? {
             out.push(v);
         }
     }
@@ -285,9 +340,11 @@ pub async fn list_bookmarks(
 }
 
 pub async fn get_bookmark_raw(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Bookmark> {
-    sqlx::query_as::<_, Bookmark>("SELECT * FROM bookmarks WHERE id = $1 AND owner_user_id = $2")
+    if !bookmark_can_read(pool, user_id, id).await? {
+        return Err(Error::NotFound);
+    }
+    sqlx::query_as::<_, Bookmark>("SELECT * FROM bookmarks WHERE id = $1")
         .bind(id)
-        .bind(user_id)
         .fetch_optional(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?
@@ -303,8 +360,11 @@ pub async fn create_bookmark(
     let cat_ids = resolve_category_ids(&req.category_ids, req.category_id);
     let mut is_vault = false;
     for cid in &cat_ids {
-        let cat = get_category(pool, user_id, *cid).await?;
+        let (cat, access) = require_category_write(pool, user_id, *cid).await?;
         if cat.is_vault {
+            if !access.is_owner() {
+                return Err(Error::Forbidden);
+            }
             is_vault = true;
         }
     }
@@ -377,7 +437,18 @@ pub async fn update_bookmark(
     req: UpdateBookmark,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<BookmarkView> {
+    if !bookmark_can_write(pool, user_id, id).await? {
+        // Distinguish RO share (forbidden) from outsider (not found).
+        if bookmark_can_read(pool, user_id, id).await? {
+            return Err(Error::Forbidden);
+        }
+        return Err(Error::NotFound);
+    }
     let existing = get_bookmark_raw(pool, user_id, id).await?;
+    // Vault mutations only by bookmark owner with their key.
+    if existing.is_vault && existing.owner_user_id != user_id {
+        return Err(Error::Forbidden);
+    }
     if existing.is_vault {
         let key = *vault_key.ok_or(Error::VaultLocked)?;
         let ct0 = existing
@@ -419,7 +490,7 @@ pub async fn update_bookmark(
         .bind(ct)
         .bind(nonce)
         .bind(id)
-        .bind(user_id)
+        .bind(existing.owner_user_id)
         .fetch_one(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
@@ -442,7 +513,7 @@ pub async fn update_bookmark(
         r#"
         UPDATE bookmarks
         SET url=$1, title=$2, description=$3, notes=$4, updated_at=now()
-        WHERE id=$5 AND owner_user_id=$6
+        WHERE id=$5
         "#,
     )
     .bind(&url)
@@ -450,11 +521,11 @@ pub async fn update_bookmark(
     .bind(&description)
     .bind(&notes)
     .bind(id)
-    .bind(user_id)
     .execute(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
     if let Some(tags) = req.tags {
+        // Tags stay in the actor's tag namespace.
         set_bookmark_tags(pool, user_id, id, &tags).await?;
     }
     if let Some(ids) = req.category_ids {
@@ -469,9 +540,18 @@ pub async fn update_bookmark(
 }
 
 pub async fn delete_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
-    let res = sqlx::query("DELETE FROM bookmarks WHERE id = $1 AND owner_user_id = $2")
+    if !bookmark_can_write(pool, user_id, id).await? {
+        if bookmark_can_read(pool, user_id, id).await? {
+            return Err(Error::Forbidden);
+        }
+        return Err(Error::NotFound);
+    }
+    let existing = get_bookmark_raw(pool, user_id, id).await?;
+    if existing.is_vault && existing.owner_user_id != user_id {
+        return Err(Error::Forbidden);
+    }
+    let res = sqlx::query("DELETE FROM bookmarks WHERE id = $1")
         .bind(id)
-        .bind(user_id)
         .execute(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;

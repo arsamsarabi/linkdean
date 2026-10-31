@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::bookmarks::{create_bookmark, list_bookmarks};
-use super::categories::{create_category, list_categories};
+use super::categories::{create_category, list_owned_categories};
 
 pub async fn create_import_job(pool: &PgPool, user_id: Uuid, source: &str) -> Result<ImportJob> {
     sqlx::query_as::<_, ImportJob>(
@@ -93,7 +93,7 @@ pub async fn export_data(
     pool: &PgPool,
     user_id: Uuid,
 ) -> Result<(Vec<CategoryExport>, Vec<BookmarkExport>)> {
-    let cats = list_categories(pool, user_id, true, false).await?;
+    let cats = list_owned_categories(pool, user_id, true, false).await?;
     let cat_exports = cats
         .into_iter()
         .map(|c| CategoryExport {
@@ -107,8 +107,20 @@ pub async fn export_data(
         .collect::<Vec<_>>();
 
     let bookmarks = list_bookmarks(pool, user_id, None, false, None).await?;
+    let owned_ids: std::collections::HashSet<Uuid> = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM bookmarks WHERE owner_user_id = $1 AND is_vault = FALSE",
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .into_iter()
+    .map(|(id,)| id)
+    .collect();
+
     let bm_exports = bookmarks
         .into_iter()
+        .filter(|b| owned_ids.contains(&b.id))
         .map(|b| BookmarkExport {
             url: b.url,
             title: b.title,

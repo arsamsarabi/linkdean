@@ -102,6 +102,123 @@ pub struct Category {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Effective access for the current user on a category.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CategoryAccess {
+    Owner,
+    Read,
+    Write,
+}
+
+impl CategoryAccess {
+    pub fn can_write(self) -> bool {
+        matches!(self, Self::Owner | Self::Write)
+    }
+
+    pub fn is_owner(self) -> bool {
+        matches!(self, Self::Owner)
+    }
+}
+
+/// Membership grant on a shared category (`read` / `write` only).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShareAccess {
+    Read,
+    Write,
+}
+
+impl ShareAccess {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Read => "read",
+            Self::Write => "write",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "read" => Ok(Self::Read),
+            "write" => Ok(Self::Write),
+            _ => Err("access must be read or write".into()),
+        }
+    }
+
+    pub fn to_category_access(self) -> CategoryAccess {
+        match self {
+            Self::Read => CategoryAccess::Read,
+            Self::Write => CategoryAccess::Write,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryView {
+    pub id: Uuid,
+    pub owner_user_id: Uuid,
+    pub parent_id: Option<Uuid>,
+    pub name: String,
+    pub is_hidden: bool,
+    pub is_vault: bool,
+    pub position: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub access: CategoryAccess,
+}
+
+impl CategoryView {
+    pub fn from_category(cat: Category, access: CategoryAccess) -> Self {
+        Self {
+            id: cat.id,
+            owner_user_id: cat.owner_user_id,
+            parent_id: cat.parent_id,
+            name: cat.name,
+            is_hidden: cat.is_hidden,
+            is_vault: cat.is_vault,
+            position: cat.position,
+            created_at: cat.created_at,
+            updated_at: cat.updated_at,
+            access,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CategoryShare {
+    pub id: Uuid,
+    pub category_id: Uuid,
+    pub invitee_user_id: Uuid,
+    pub access: String,
+    pub invited_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryShareView {
+    pub id: Uuid,
+    pub category_id: Uuid,
+    pub invitee_user_id: Uuid,
+    pub invitee_email: String,
+    pub invitee_display_name: Option<String>,
+    pub access: ShareAccess,
+    pub invited_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCategoryShare {
+    pub email: String,
+    pub access: ShareAccess,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCategoryShare {
+    pub access: ShareAccess,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Tag {
     pub id: Uuid,

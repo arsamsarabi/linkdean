@@ -4,7 +4,8 @@
 //! Skips when unset so CI without a DB stays green.
 
 use linkdean_core::{
-    CreateBookmark, CreateCategory, Error, UpdateBookmark, UpdateCategory,
+    CategoryAccess, CreateBookmark, CreateCategory, CreateCategoryShare, Error, ShareAccess,
+    UpdateBookmark, UpdateCategory, UpdateCategoryShare,
 };
 use linkdean_db::{self as db};
 use uuid::Uuid;
@@ -151,4 +152,307 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
     // Cleanup A's rows (best-effort; unique emails avoid collisions)
     let _ = db::delete_bookmark(&pool, user_a.id, bm.id).await;
     let _ = db::delete_category(&pool, user_a.id, cat.id).await;
+}
+
+#[tokio::test]
+async fn share_read_and_write_membership() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+
+    let user_a = db::create_user(
+        &pool,
+        &unique_email("share-a"),
+        Some("password-a-long"),
+        Some("Share A"),
+        None,
+        None,
+    )
+    .await
+    .expect("create user a");
+    let user_b = db::create_user(
+        &pool,
+        &unique_email("share-b"),
+        Some("password-b-long"),
+        Some("Share B"),
+        None,
+        None,
+    )
+    .await
+    .expect("create user b");
+    let user_c = db::create_user(
+        &pool,
+        &unique_email("share-c"),
+        Some("password-c-long"),
+        Some("Share C"),
+        None,
+        None,
+    )
+    .await
+    .expect("create user c");
+
+    let cat = db::create_category(
+        &pool,
+        user_a.id,
+        CreateCategory {
+            name: format!("SharedCat-{}", Uuid::new_v4()),
+            parent_id: None,
+            is_hidden: false,
+            is_vault: false,
+        },
+    )
+    .await
+    .expect("create category");
+
+    let bm = db::create_bookmark(
+        &pool,
+        user_a.id,
+        CreateBookmark {
+            url: format!("https://share.example/{}/", Uuid::new_v4()),
+            title: Some("Shared bookmark".into()),
+            description: None,
+            notes: None,
+            category_id: Some(cat.id),
+            category_ids: vec![cat.id],
+            tags: vec![],
+        },
+        None,
+    )
+    .await
+    .expect("create bookmark");
+
+    // Outsider C: no access
+    assert!(matches!(
+        db::get_category(&pool, user_c.id, cat.id).await,
+        Err(Error::NotFound)
+    ));
+    assert!(matches!(
+        db::get_bookmark_raw(&pool, user_c.id, bm.id).await,
+        Err(Error::NotFound)
+    ));
+
+    // A shares with B as read
+    let share = db::create_share(
+        &pool,
+        user_a.id,
+        cat.id,
+        CreateCategoryShare {
+            email: user_b.email.clone(),
+            access: ShareAccess::Read,
+        },
+    )
+    .await
+    .expect("create read share");
+    assert_eq!(share.access, ShareAccess::Read);
+    assert_eq!(share.invitee_user_id, user_b.id);
+
+    let view = db::get_category(&pool, user_b.id, cat.id)
+        .await
+        .expect("B reads shared cat");
+    assert_eq!(view.access, CategoryAccess::Read);
+
+    assert!(db::get_bookmark_raw(&pool, user_b.id, bm.id).await.is_ok());
+    assert!(matches!(
+        db::update_bookmark(
+            &pool,
+            user_b.id,
+            bm.id,
+            UpdateBookmark {
+                url: Some("https://share.example/ro-mutate/".into()),
+                title: None,
+                description: None,
+                notes: None,
+                category_id: None,
+                category_ids: None,
+                tags: None,
+            },
+            None,
+        )
+        .await,
+        Err(Error::Forbidden)
+    ));
+    assert!(matches!(
+        db::delete_bookmark(&pool, user_b.id, bm.id).await,
+        Err(Error::Forbidden)
+    ));
+    assert!(matches!(
+        db::update_category(
+            &pool,
+            user_b.id,
+            cat.id,
+            UpdateCategory {
+                name: Some("ro-rename".into()),
+                parent_id: None,
+                is_hidden: None,
+                position: None,
+            },
+        )
+        .await,
+        Err(Error::Forbidden)
+    ));
+    assert!(matches!(
+        db::delete_category(&pool, user_b.id, cat.id).await,
+        Err(Error::Forbidden)
+    ));
+
+    // Upgrade B to write
+    db::update_share(
+        &pool,
+        user_a.id,
+        cat.id,
+        user_b.id,
+        UpdateCategoryShare {
+            access: ShareAccess::Write,
+        },
+    )
+    .await
+    .expect("upgrade to write");
+
+    let view = db::get_category(&pool, user_b.id, cat.id)
+        .await
+        .expect("B write access");
+    assert_eq!(view.access, CategoryAccess::Write);
+
+    db::update_bookmark(
+        &pool,
+        user_b.id,
+        bm.id,
+        UpdateBookmark {
+            title: Some("Edited by B".into()),
+            url: None,
+            description: None,
+            notes: None,
+            category_id: None,
+            category_ids: None,
+            tags: None,
+        },
+        None,
+    )
+    .await
+    .expect("RW can edit bookmark");
+
+    let child = db::create_category(
+        &pool,
+        user_b.id,
+        CreateCategory {
+            name: format!("ChildByB-{}", Uuid::new_v4()),
+            parent_id: Some(cat.id),
+            is_hidden: false,
+            is_vault: false,
+        },
+    )
+    .await
+    .expect("RW can create child under shared");
+    assert_eq!(child.owner_user_id, user_a.id);
+    assert_eq!(child.access, CategoryAccess::Write);
+
+    let b_created = db::create_bookmark(
+        &pool,
+        user_b.id,
+        CreateBookmark {
+            url: format!("https://share.example/b/{}/", Uuid::new_v4()),
+            title: Some("B added".into()),
+            description: None,
+            notes: None,
+            category_id: Some(cat.id),
+            category_ids: vec![cat.id],
+            tags: vec![],
+        },
+        None,
+    )
+    .await
+    .expect("RW can add bookmark");
+
+    // C still blocked
+    assert!(matches!(
+        db::get_bookmark_raw(&pool, user_c.id, bm.id).await,
+        Err(Error::NotFound)
+    ));
+    assert!(!db::list_bookmarks(&pool, user_c.id, None, false, None)
+        .await
+        .expect("list c")
+        .iter()
+        .any(|x| x.id == bm.id || x.id == b_created.id));
+
+    // B sees shared bookmark in list
+    assert!(db::list_bookmarks(&pool, user_b.id, None, false, None)
+        .await
+        .expect("list b")
+        .iter()
+        .any(|x| x.id == bm.id));
+
+    // Revoke → B loses access
+    db::delete_share(&pool, user_a.id, cat.id, user_b.id)
+        .await
+        .expect("revoke");
+    assert!(matches!(
+        db::get_category(&pool, user_b.id, cat.id).await,
+        Err(Error::NotFound)
+    ));
+    assert!(matches!(
+        db::get_bookmark_raw(&pool, user_b.id, bm.id).await,
+        Err(Error::NotFound)
+    ));
+
+    let _ = db::delete_bookmark(&pool, user_a.id, bm.id).await;
+    let _ = db::delete_bookmark(&pool, user_b.id, b_created.id).await;
+    let _ = db::delete_category(&pool, user_a.id, child.id).await;
+    let _ = db::delete_category(&pool, user_a.id, cat.id).await;
+}
+
+#[tokio::test]
+async fn cannot_share_vault_category() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+
+    let user_a = db::create_user(
+        &pool,
+        &unique_email("vault-a"),
+        Some("password-a-long"),
+        Some("Vault A"),
+        None,
+        None,
+    )
+    .await
+    .expect("user a");
+    let user_b = db::create_user(
+        &pool,
+        &unique_email("vault-b"),
+        Some("password-b-long"),
+        Some("Vault B"),
+        None,
+        None,
+    )
+    .await
+    .expect("user b");
+
+    let vault_cat = db::create_category(
+        &pool,
+        user_a.id,
+        CreateCategory {
+            name: format!("VaultCat-{}", Uuid::new_v4()),
+            parent_id: None,
+            is_hidden: false,
+            is_vault: true,
+        },
+    )
+    .await
+    .expect("vault cat");
+
+    assert!(matches!(
+        db::create_share(
+            &pool,
+            user_a.id,
+            vault_cat.id,
+            CreateCategoryShare {
+                email: user_b.email.clone(),
+                access: ShareAccess::Read,
+            },
+        )
+        .await,
+        Err(Error::BadRequest(_))
+    ));
+
+    let _ = db::delete_category(&pool, user_a.id, vault_cat.id).await;
 }
