@@ -67,9 +67,18 @@ export function LoginPage() {
   return (
     <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className="ld-fade-in">
       <Stack gap={6}>
-        <Title order={1} c="violet">
-          Linkdean
-        </Title>
+        <Group gap="sm" wrap="nowrap">
+          <img
+            src="/linkdean-symbol.svg"
+            alt=""
+            width={40}
+            height={40}
+            style={{ display: 'block' }}
+          />
+          <Title order={1} c="violet">
+            Linkdean
+          </Title>
+        </Group>
         <Text c="dimmed">Sign in to your bookmarks.</Text>
       </Stack>
       <Paper p="xl" radius="md" withBorder>

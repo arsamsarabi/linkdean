@@ -52,9 +52,18 @@ export function AppShell() {
         <PageContainer h="100%">
           <Group h="100%" justify="space-between">
             <UnstyledButton component={Link} to="/library" aria-label="Library">
-              <Title order={3} c="violet">
-                Linkdean
-              </Title>
+              <Group gap="sm" wrap="nowrap">
+                <img
+                  src="/linkdean-symbol.svg"
+                  alt=""
+                  width={28}
+                  height={28}
+                  style={{ display: 'block' }}
+                />
+                <Title order={3} c="violet">
+                  Linkdean
+                </Title>
+              </Group>
             </UnstyledButton>
 
             {loading ? (

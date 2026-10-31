@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept D - Snap Chain</title>
+  <!--
+    Vertical closed link + horizontal link threading through it, mouth still
+    ajar on the right = mid-snap. evenodd for pass-through. Unit 8.
+  -->
+  <path id="symbol" fill="#000" fill-rule="evenodd" d="M 150.00 128.00 A 38.00 62.00 0 1 1 74.00 128.00 A 38.00 62.00 0 1 1 150.00 128.00 Z M 130.00 128.00 A 18.00 38.00 0 1 0 94.00 128.00 A 18.00 38.00 0 1 0 130.00 128.00 Z M 205.49 142.24 A 62.00 38.00 0 1 1 205.49 113.76 L 183.23 121.26 A 38.00 18.00 0 1 0 183.23 134.74 Z"/>
+</svg>

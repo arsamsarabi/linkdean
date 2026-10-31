@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept D - Snap Chain</title>
+  <!--
+    Vertical closed chain-link + horizontal link threaded through it.
+    Horizontal mouth still ajar (east) with round caps = mid-snap.
+    evenodd weave. Unit 8. Optically centred.
+  -->
+  <path id="symbol" fill="#000" fill-rule="evenodd" d="M 138.0 128.0 A 44 72 0 1 1 50.0 128.0 A 44 72 0 1 1 138.0 128.0 Z M 114.0 128.0 A 20 44 0 1 0 74.0 128.0 A 20 44 0 1 0 114.0 128.0 Z M 200.8 144.5 A 72 44 0 1 1 204.9 120.4 A 12.0 12.0 0 0 1 177.3 124.5 A 44 20 0 1 0 174.8 135.5 A 12.0 12.0 0 0 1 200.8 144.5 Z"/>
+</svg>

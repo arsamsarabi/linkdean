@@ -1,0 +1,36 @@
+{
+  "brand": "Linkdean",
+  "tagline": "Your bookmarks. Your vault. Your server.",
+  "brief": "Self-hostable bookmarks manager for homelabbers and privacy-minded power users. Library + encrypted vault. Calm, precise, curated — not another blue SaaS bookmark clone.",
+  "adjectives": ["calm", "precise", "curated", "private", "cool"],
+  "criteria": "Works at 16px favicon, one colour, distinct from LinkedIn/bookmark-ribbon clichés, uses existing Purple Pain / Ice Cold palette.",
+  "industry": "software",
+  "nav": ["Library", "Vault", "Docs"],
+  "brand_color": "#8458B3",
+  "greyscale": false,
+  "final": true,
+  "designer": "Cursor / identity pass",
+  "round": 1,
+  "concepts": [
+    {
+      "name": "Snap Chain",
+      "symbol": "../final/linkdean-symbol-color.svg",
+      "lockup": "../final/linkdean-horizontal-color.svg",
+      "symbol_on_tile": "../exports/linkdean-symbol-app-icon.svg",
+      "lockup_on_dark": "../final/linkdean-horizontal-white.svg",
+      "tile_color": "#8458B3",
+      "idea": "Two open chain-links mid-interlock — the snap of saving a link.",
+      "rationale": [
+        "Owns 'link' without bookmark ribbon or LinkedIn blue",
+        "evenodd weave reads at large; small-size cut for favicons",
+        "Purple Pain (#8458B3) matches the live Mantine theme"
+      ]
+    }
+  ],
+  "recommendation": "Snap Chain — approved direction. Ship symbol, lockups, and web-icon set into apps/web/public.",
+  "next_steps": [
+    "Drop exports/web into apps/web/public",
+    "Use horizontal lockup in AppShell header",
+    "Optional trademark search before public launch"
+  ]
+}

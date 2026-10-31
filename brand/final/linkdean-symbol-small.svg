@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean symbol (small)</title>
+  <g id="symbol" fill="#000" fill-rule="evenodd">
+    <path transform="rotate(-8 87.00 128)" d="M 113.47 193.67 A 48.60 78.30 0 1 1 134.35 145.61 L 105.42 137.11 A 18.90 40.50 0 1 0 97.29 161.97 Z"/>
+    <path transform="rotate(8 141.00 128)" d="M 98.35 87.24 A 78.30 48.60 0 1 1 64.71 117.07 L 101.54 123.75 A 40.50 18.90 0 1 0 118.94 112.15 Z"/>
+  </g>
+</svg>

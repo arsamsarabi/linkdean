@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept D - Snap Chain</title>
+  <!--
+    Two open vertical chain-links, mouths facing, tips almost touching.
+    Tilted inward (-12 / +12) = snap-together energy. Unit 8.
+  -->
+  <g id="symbol" fill="#000">
+    <path transform="rotate(-12 86 128)" d="M 111.27 165.47 A 34.00 56.00 0 1 1 111.27 90.53 L 97.89 105.25 A 16.00 34.00 0 1 0 97.89 150.75 Z"/>
+    <path transform="rotate(12 170 128)" d="M 144.73 90.53 A 34.00 56.00 0 1 1 144.73 165.47 L 158.11 150.75 A 16.00 34.00 0 1 0 158.11 105.25 Z"/>
+  </g>
+</svg>

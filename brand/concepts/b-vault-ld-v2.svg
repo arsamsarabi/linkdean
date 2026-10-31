@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept B - Vault LD</title>
+  <!--
+    LD monogram optically centred. Shared stem 44w. L foot left 48h.
+    D bowl r=84. Vault aperture rx=22 ry=36, shifted slightly up for optical centre.
+  -->
+  <path id="symbol" fill="#000" fill-rule="evenodd" d="
+    M 44 160
+    H 96
+    V 44
+    H 140
+    A 84 84 0 0 1 140 212
+    H 44
+    Z
+    M 164 90
+    A 22 36 0 1 0 164.01 162
+    A 22 36 0 1 0 164 90
+    Z
+  "/>
+</svg>

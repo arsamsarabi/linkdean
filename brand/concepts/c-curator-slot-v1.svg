@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept C - Curator Slot</title>
+  <!--
+    Rounded square with L-channel negative space (shelf/vault groove)
+    + small square saved-stop. Channel 36 wide. Unit 8.
+  -->
+  <path id="symbol" fill="#000" fill-rule="evenodd" d="
+    M 48 84
+    A 36 36 0 0 1 84 48
+    H 172
+    A 36 36 0 0 1 208 84
+    V 172
+    A 36 36 0 0 1 172 208
+    H 84
+    A 36 36 0 0 1 48 172
+    Z
+    M 84 84
+    H 120
+    V 136
+    H 172
+    V 172
+    H 84
+    Z
+    M 148 100
+    H 172
+    V 124
+    H 148
+    Z
+  "/>
+</svg>

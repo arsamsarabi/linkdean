@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept C - Curator Slot</title>
+  <!--
+    Rounded square (rx=40) with L-channel (w=40) + circular saved-node
+    in the solid field (link pin). App-icon ready. Unit 8.
+  -->
+  <path id="symbol" fill="#000" fill-rule="evenodd" d="
+    M 40 80
+    A 40 40 0 0 1 80 40
+    H 176
+    A 40 40 0 0 1 216 80
+    V 176
+    A 40 40 0 0 1 176 216
+    H 80
+    A 40 40 0 0 1 40 176
+    Z
+    M 80 80
+    H 120
+    V 136
+    H 176
+    V 176
+    H 80
+    Z
+    M 160 112
+    A 16 16 0 1 0 160.01 112
+    Z
+  "/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept D - Snap Chain</title>
+  <g id="symbol" fill="#000">
+    <path transform="rotate(-18 96 128)" d="M 129.46 165.16 A 50 50 0 1 1 140.15 104.53 L 120.72 114.85 A 28 28 0 1 0 114.74 148.81 Z"/>
+    <path transform="rotate(18 160 128)" d="M 126.54 90.84 A 50 50 0 1 1 115.85 151.47 L 135.28 141.15 A 28 28 0 1 0 141.26 107.19 Z"/>
+  </g>
+</svg>

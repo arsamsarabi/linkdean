@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linkdean concept A - Link Node</title>
+  <!--
+    Geometric L + open ring interlocking the foot (link through the L).
+    evenodd: L XOR outer-circle XOR inner-circle. Unit 8.
+    Stem 52w, foot 56h, ring Ro=44 Ri=22, center (176,180).
+  -->
+  <path id="symbol" fill="#000" fill-rule="evenodd" d="
+    M 52 36
+    H 104
+    V 152
+    H 208
+    V 208
+    H 52
+    Z
+    M 176 136
+    A 44 44 0 1 1 175.99 136
+    Z
+    M 176 158
+    A 22 22 0 1 0 176.01 158
+    Z
+  "/>
+</svg>

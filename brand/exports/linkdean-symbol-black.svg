@@ -1,0 +1,11 @@
+<svg fill="#000000" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title"><title>Linkdean logo</title>
+  <title id="title">Linkdean symbol</title>
+  <!--
+    Two open links mid-interlock. Mouths gap_h=20. Tilt -8 / +8.
+    Scaled ~1.28, optically centred. evenodd weave.
+  -->
+  <g id="symbol" fill="#000000" fill-rule="evenodd">
+    <path transform="rotate(-8 88.40 128)" d="M 114.83 188.81 A 46.08 74.24 0 1 1 132.91 147.21 L 108.18 139.26 A 20.48 43.52 0 1 0 100.15 163.65 Z"/>
+    <path transform="rotate(8 139.60 128)" d="M 97.02 90.25 A 74.24 46.08 0 1 1 67.89 116.07 L 97.56 122.70 A 43.52 20.48 0 1 0 114.64 111.22 Z"/>
+  </g>
+</svg>
