@@ -30,7 +30,7 @@ import { Link } from '@tanstack/react-router'
 import { ShareBadge } from '@/components/share-badge'
 import { inviteeShareAccess } from '@/lib'
 import type { CategoryRef } from '@/schemas'
-import { googleFavicon, hostname, previewSrcCandidates } from '@/services'
+import { FOLDER_UNCATEGORIZED, googleFavicon, hostname, previewSrcCandidates } from '@/services'
 import styles from './BookmarkCard.module.css'
 
 export type BookmarkCardItem = {
@@ -205,22 +205,38 @@ export function BookmarkCard({
         ) : null}
 
         {cats.length > 0 ? (
-          <Group gap={4}>
+          <Group gap={4} className={styles.categoryRow}>
             {cats.map((c) => (
+              <Tooltip key={c.id} label={c.path} openDelay={400}>
+                <Link
+                  to="/library"
+                  search={{ category: c.id }}
+                  onClick={(e) => e.stopPropagation()}
+                  className={styles.categoryLink}
+                >
+                  <Pill size="sm" className={styles.categoryPill}>
+                    {c.path}
+                  </Pill>
+                </Link>
+              </Tooltip>
+            ))}
+          </Group>
+        ) : (
+          <Group gap={4} className={styles.categoryRow}>
+            <Tooltip label="No category — open Unsorted in library" openDelay={400}>
               <Link
-                key={c.id}
                 to="/library"
-                search={{ category: c.id }}
+                search={{ folder: FOLDER_UNCATEGORIZED, category: FOLDER_UNCATEGORIZED }}
                 onClick={(e) => e.stopPropagation()}
                 className={styles.categoryLink}
               >
-                <Pill size="sm" className={styles.categoryPill}>
-                  {c.path}
+                <Pill size="sm" className={styles.unsortedPill}>
+                  Unsorted
                 </Pill>
               </Link>
-            ))}
+            </Tooltip>
           </Group>
-        ) : null}
+        )}
 
         <Group gap={4} mt="auto" pt={4}>
           {share ? <ShareBadge access={share} size="sm" /> : null}
