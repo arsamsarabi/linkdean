@@ -1,12 +1,16 @@
 # Ideas for future work
 
-## Questions & Answers
+## Agent's Questions
 
 Q: Open registration ungated (intentional?)
 A: Yes, but make it an admin configurable setting
 
 Q: Authz integration tests still missing
 A: Idea for a future enhancement 
+
+## Arsam's Questions
+
+Q: will removing avatars, page/bookmark thumbnails also remove the asset? if not, it should. 
 
 ## Future Enhancements
 
@@ -26,3 +30,4 @@ Once we have implemented shared folders/lists we should also add shared dashboar
 
 - [ ] the app should remember a user's view preference (grid/explorer) even from the library toggle view
 - [ ] When in Explorer view, the sort options don't affect the "folders". They should also get sorted. But always appear above the bookmark items.
+

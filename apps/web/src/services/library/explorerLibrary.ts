@@ -1,4 +1,4 @@
-import { buildCategoryTree, type CatNode } from '@/lib'
+import { buildCategoryTree } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
 
 /** Virtual folder ids (not real category UUIDs). */
@@ -6,15 +6,6 @@ export const FOLDER_ALL = 'all' as const
 export const FOLDER_UNCATEGORIZED = 'uncategorized' as const
 
 export type ExplorerFolderId = typeof FOLDER_ALL | typeof FOLDER_UNCATEGORIZED | string
-
-export type ExplorerTreeNode = {
-  id: ExplorerFolderId
-  name: string
-  bookmarkCount: number
-  isVault: boolean
-  isHidden: boolean
-  children: ExplorerTreeNode[]
-}
 
 export type ExplorerFolder = {
   id: ExplorerFolderId
@@ -63,77 +54,37 @@ function filterVisibleCats(cats: readonly Category[], showHidden: boolean): Cate
   return cats.filter((c) => showHidden || !c.is_hidden)
 }
 
-function mapTree(
-  nodes: CatNode[],
-  bookmarks: readonly ExplorerBookmarkRef[],
-  showHidden: boolean
-): ExplorerTreeNode[] {
-  return nodes
-    .filter((n) => showHidden || !n.cat.is_hidden)
-    .map((n) => ({
-      id: n.cat.id,
-      name: n.cat.name,
-      bookmarkCount: countDirectBookmarks(n.cat.id, bookmarks),
-      isVault: n.cat.is_vault,
-      isHidden: n.cat.is_hidden,
-      children: mapTree(n.children, bookmarks, showHidden),
-    }))
-}
-
-/** Category tree for the left pane, plus virtual Uncategorized under All. */
-export function buildExplorerTree(
-  cats: readonly Category[],
-  bookmarks: readonly ExplorerBookmarkRef[],
-  showHidden = false
-): ExplorerTreeNode[] {
-  const visible = filterVisibleCats(cats, showHidden)
-  const roots = mapTree(buildCategoryTree(visible), bookmarks, showHidden)
-  const uncategorizedCount = bookmarks.filter(isUncategorized).length
-
-  return [
-    {
-      id: FOLDER_ALL,
-      name: 'All',
-      bookmarkCount: bookmarks.length,
-      isVault: false,
-      isHidden: false,
-      children: [
-        ...roots,
-        {
-          id: FOLDER_UNCATEGORIZED,
-          name: 'Uncategorized',
-          bookmarkCount: uncategorizedCount,
-          isVault: false,
-          isHidden: false,
-          children: [],
-        },
-      ],
-    },
-  ]
-}
-
-function toFolder(n: ExplorerTreeNode): ExplorerFolder {
+function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): ExplorerFolder {
   return {
-    id: n.id,
-    name: n.name,
-    bookmarkCount: n.bookmarkCount,
-    isVault: n.isVault,
-    isHidden: n.isHidden,
+    id: cat.id,
+    name: cat.name,
+    bookmarkCount: countDirectBookmarks(cat.id, bookmarks),
+    isVault: cat.is_vault,
+    isHidden: cat.is_hidden,
   }
 }
 
+/** Top-level folders at All, plus Uncategorized. */
 function rootFolders(
   cats: readonly Category[],
   bookmarks: readonly ExplorerBookmarkRef[],
   showHidden: boolean
 ): ExplorerFolder[] {
-  const tree = buildExplorerTree(cats, bookmarks, showHidden)
-  const all = tree[0]
-  if (!all) return []
-  return all.children.map(toFolder)
+  const visible = filterVisibleCats(cats, showHidden)
+  const roots = buildCategoryTree(visible).map((n) => toFolder(n.cat, bookmarks))
+  return [
+    ...roots,
+    {
+      id: FOLDER_UNCATEGORIZED,
+      name: 'Uncategorized',
+      bookmarkCount: bookmarks.filter(isUncategorized).length,
+      isVault: false,
+      isHidden: false,
+    },
+  ]
 }
 
-/** Contents of the selected folder for the right pane. */
+/** Contents of the selected folder for the drill-down pane. */
 export function listFolderContents(
   folderId: ExplorerFolderId | undefined,
   cats: readonly Category[],
@@ -158,13 +109,7 @@ export function listFolderContents(
   }
 
   const byParent = visible.filter((c) => c.parent_id === id)
-  const folders: ExplorerFolder[] = byParent.map((c) => ({
-    id: c.id,
-    name: c.name,
-    bookmarkCount: countDirectBookmarks(c.id, bookmarks),
-    isVault: c.is_vault,
-    isHidden: c.is_hidden,
-  }))
+  const folders: ExplorerFolder[] = byParent.map((c) => toFolder(c, bookmarks))
 
   return {
     folders,

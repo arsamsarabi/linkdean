@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bookmark, Category } from '@/schemas'
-import {
-  FOLDER_ALL,
-  FOLDER_UNCATEGORIZED,
-  buildExplorerTree,
-  folderBreadcrumb,
-  listFolderContents,
-  normalizeFolderId,
-} from './explorerLibrary'
+import { FOLDER_ALL, FOLDER_UNCATEGORIZED, folderBreadcrumb, listFolderContents, normalizeFolderId } from './explorerLibrary'
 
 const cats: Category[] = [
   { id: 'root', parent_id: null, name: 'Work', is_hidden: false, is_vault: false, position: 0 },
@@ -54,32 +47,18 @@ const bookmarks: Bookmark[] = [
   },
 ]
 
-describe('buildExplorerTree', () => {
-  it('wraps roots under All and adds Uncategorized', () => {
-    const tree = buildExplorerTree(cats, bookmarks, false)
-    expect(tree).toHaveLength(1)
-    expect(tree[0]?.id).toBe(FOLDER_ALL)
-    expect(tree[0]?.bookmarkCount).toBe(3)
-    const childIds = tree[0]?.children.map((c) => c.id)
-    expect(childIds).toContain('root')
-    expect(childIds).toContain(FOLDER_UNCATEGORIZED)
-    expect(childIds).not.toContain('hidden')
-    expect(tree[0]?.children.find((c) => c.id === FOLDER_UNCATEGORIZED)?.bookmarkCount).toBe(1)
-    expect(tree[0]?.children.find((c) => c.id === 'root')?.bookmarkCount).toBe(1)
-    expect(tree[0]?.children.find((c) => c.id === 'root')?.children[0]?.id).toBe('child')
-  })
-
-  it('includes hidden when showHidden', () => {
-    const tree = buildExplorerTree(cats, bookmarks, true)
-    expect(tree[0]?.children.map((c) => c.id)).toContain('hidden')
-  })
-})
-
 describe('listFolderContents', () => {
-  it('lists top folders at All, no bookmarks', () => {
+  it('lists top folders at All, no bookmarks; hides hidden cats', () => {
     const c = listFolderContents(FOLDER_ALL, cats, bookmarks, false)
     expect(c.bookmarks).toHaveLength(0)
     expect(c.folders.map((f) => f.id)).toEqual(['root', FOLDER_UNCATEGORIZED])
+    expect(c.folders.find((f) => f.id === FOLDER_UNCATEGORIZED)?.bookmarkCount).toBe(1)
+    expect(c.folders.find((f) => f.id === 'root')?.bookmarkCount).toBe(1)
+  })
+
+  it('includes hidden when showHidden', () => {
+    const c = listFolderContents(FOLDER_ALL, cats, bookmarks, true)
+    expect(c.folders.map((f) => f.id)).toContain('hidden')
   })
 
   it('lists child folders and bookmarks for a category', () => {

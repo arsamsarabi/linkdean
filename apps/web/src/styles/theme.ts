@@ -65,6 +65,7 @@ const mist: MantineColorsTuple = [
 /**
  * Dark-mode surfaces — neutral charcoal from Heavy Purple (not violet).
  * Mantine: dark[6] ≈ Paper/Card, dark[7] ≈ body.
+ * Tuned deeper so dark theme reads near-black, not muddy brown-grey.
  */
 const charcoal: MantineColorsTuple = [
   '#E5EAF5',
@@ -73,10 +74,10 @@ const charcoal: MantineColorsTuple = [
   '#7A5F66',
   '#5C484E',
   '#3F3236',
-  '#2A2225',
-  '#2A2225',
   '#1A1618',
   '#121011',
+  '#0C0A0B',
+  '#080707',
 ]
 
 /** Soft semantic — keep calm, not neon */
@@ -93,17 +94,18 @@ const softGreen: MantineColorsTuple = [
   '#21352A',
 ]
 
+/** Danger — mid shades lifted so dark theme text/buttons stay readable */
 const softCoral: MantineColorsTuple = [
   '#FBF3F2',
   '#F5E0DD',
-  '#ECC4BF',
-  '#E0A49C',
-  '#D1847A',
-  '#B86860',
-  '#9A504A',
+  '#F0C8C2',
+  '#E8A8A0',
+  '#E0887E',
+  '#D46B60',
+  '#C2554C',
+  '#A3443C',
   '#7A3E3A',
   '#5C2F2C',
-  '#402220',
 ]
 
 const softApricot: MantineColorsTuple = [
@@ -152,14 +154,14 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
   },
   primaryShade: { light: 5, dark: 5 },
   white: '#E5EAF5',
-  black: '#121011',
+  black: '#080707',
   other: {
     brandIce: '#A0D2EB',
     brandFreeze: '#E5EAF5',
     brandOrchid: '#D0BDF4',
     brandPain: '#8458B3',
     brandHeavy: '#A28089',
-    brandNight: '#1A1618',
+    brandNight: '#0C0A0B',
     pageMaxWidth: 1440,
   },
   components: {
