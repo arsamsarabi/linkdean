@@ -53,6 +53,7 @@ import {
   useDeleteBookmark,
   useMe,
   useSearchBookmarks,
+  useUpdateBookmark,
   useUpdateSettings,
   useVaultUnlock,
 } from '@/hooks'
@@ -61,6 +62,7 @@ import {
   buildLibrarySearch,
   canWriteCategory,
   categoryPath,
+  type FlagKey,
   type SortKey,
 } from '@/lib'
 import type { Bookmark } from '@/schemas'
@@ -75,6 +77,7 @@ import {
   toggleId,
   writableIds,
   type ExplorerFolderId,
+  type FlagFilter,
   type LibraryListItem,
 } from '@/services'
 import { useUi } from '@/stores'
@@ -93,6 +96,7 @@ export function LibraryPage(): ReactElement {
     sort?: SortKey
     category?: string | string[]
     tag?: string | string[]
+    flag?: string | string[]
     folder?: string
     create?: true
     focus?: 'search'
@@ -106,6 +110,10 @@ export function LibraryPage(): ReactElement {
 
   const filterCats = useMemo(() => asStringList(searchParams.category), [searchParams.category])
   const filterTags = useMemo(() => asStringList(searchParams.tag), [searchParams.tag])
+  const filterFlags = useMemo(
+    () => asStringList(searchParams.flag).filter((f): f is FlagFilter => ['unread', 'favorite', 'pinned'].includes(f)),
+    [searchParams.flag]
+  )
   const sort: SortKey = searchParams.sort ?? 'updated_desc'
   const urlQ = searchParams.q ?? ''
   const folderId = normalizeFolderId(searchParams.folder)
@@ -159,6 +167,7 @@ export function LibraryPage(): ReactElement {
   const searching = debouncedQ.trim().length > 1
   const search = useSearchBookmarks(debouncedQ, searching)
   const deleteBookmark = useDeleteBookmark()
+  const updateBookmark = useUpdateBookmark()
   const bulkCategories = useBulkAddCategories()
   const bulkTag = useBulkTagBookmarks()
   const bulkDelete = useBulkDeleteBookmarks()
@@ -176,6 +185,7 @@ export function LibraryPage(): ReactElement {
         sort,
         category: filterCats,
         tag: filterTags,
+        flag: filterFlags,
         folder: folderId,
       }),
       replace: true,
@@ -187,6 +197,7 @@ export function LibraryPage(): ReactElement {
     sort?: SortKey
     category?: string[]
     tag?: string[]
+    flag?: string[]
     /** Pass `all` or empty string to clear folder selection. */
     folder?: string
   }): void {
@@ -197,9 +208,29 @@ export function LibraryPage(): ReactElement {
         sort: patch.sort ?? sort,
         category: patch.category ?? filterCats,
         tag: patch.tag ?? filterTags,
+        flag: patch.flag ?? filterFlags,
         folder: patch.folder !== undefined ? patch.folder || FOLDER_ALL : folderId,
       }),
     })
+  }
+
+  function toggleFlagFilter(key: FlagKey): void {
+    const next = filterFlags.includes(key)
+      ? filterFlags.filter((f) => f !== key)
+      : [...filterFlags, key]
+    setLibrarySearch({ flag: next })
+  }
+
+  function onFlags(
+    id: string,
+    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
+  ): void {
+    updateBookmark.mutate(
+      { id, body: patch },
+      {
+        onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+      }
+    )
   }
 
   useEffect(() => {
@@ -220,7 +251,18 @@ export function LibraryPage(): ReactElement {
   }, [cats.data])
 
   const list = useMemo((): LibraryListItem[] => {
-    const items: LibraryListItem[] = searching ? search.data?.hits || [] : bookmarks.data || []
+    const raw: LibraryListItem[] = searching ? search.data?.hits || [] : bookmarks.data || []
+    const flagsById = new Map((bookmarks.data || []).map((b) => [b.id, b]))
+    const items = raw.map((item) => {
+      const full = flagsById.get(item.id)
+      if (!full) return item
+      return {
+        ...item,
+        is_favorite: full.is_favorite,
+        is_unread: full.is_unread,
+        is_pinned: full.is_pinned,
+      }
+    })
     const cats =
       folderId === FOLDER_UNCATEGORIZED && !filterCats.includes(FOLDER_UNCATEGORIZED)
         ? [...filterCats, FOLDER_UNCATEGORIZED]
@@ -229,9 +271,10 @@ export function LibraryPage(): ReactElement {
       items,
       filterCats: cats,
       filterTags,
+      filterFlags,
       sort,
     })
-  }, [bookmarks.data, search.data, searching, filterCats, filterTags, sort, folderId])
+  }, [bookmarks.data, search.data, searching, filterCats, filterTags, filterFlags, sort, folderId])
 
   function toggleFilter(): void {
     setDraftFilterCats(filterCats)
@@ -311,6 +354,7 @@ export function LibraryPage(): ReactElement {
         sort,
         category: filterCats,
         tag: filterTags,
+        flag: filterFlags,
         folder: folderId,
       }),
       replace: true,
@@ -404,7 +448,7 @@ export function LibraryPage(): ReactElement {
     setLibrarySearch({ folder: id })
   }
 
-  const filterActive = filterCats.length > 0 || filterTags.length > 0
+  const filterActive = filterCats.length > 0 || filterTags.length > 0 || filterFlags.length > 0
   const loading = bookmarks.isLoading || (searching && search.isFetching && !search.data)
   const emptyLibrary = !loading && !searching && !filterActive && list.length === 0
   const emptyFiltered = !loading && list.length === 0 && (searching || filterActive)
@@ -590,10 +634,35 @@ export function LibraryPage(): ReactElement {
                   aria-controls={FILTER_PANEL_ID}
                 >
                   Filter
-                  {filterActive ? ` (${filterCats.length + filterTags.length})` : ''}
+                  {filterActive
+                    ? ` (${filterCats.length + filterTags.length + filterFlags.length})`
+                    : ''}
                 </Button>
               </Tooltip>
             ) : null}
+            <Button.Group>
+              <Button
+                size="compact-sm"
+                variant={filterFlags.includes('unread') ? 'light' : 'default'}
+                onClick={() => toggleFlagFilter('unread')}
+              >
+                Reading list
+              </Button>
+              <Button
+                size="compact-sm"
+                variant={filterFlags.includes('favorite') ? 'light' : 'default'}
+                onClick={() => toggleFlagFilter('favorite')}
+              >
+                Favorites
+              </Button>
+              <Button
+                size="compact-sm"
+                variant={filterFlags.includes('pinned') ? 'light' : 'default'}
+                onClick={() => toggleFlagFilter('pinned')}
+              >
+                Pinned
+              </Button>
+            </Button.Group>
             <Select
               aria-label="Sort"
               value={sort}
@@ -626,6 +695,8 @@ export function LibraryPage(): ReactElement {
           onFolderChange={onFolderChange}
           onEdit={openEdit}
           onDelete={setDeleteId}
+          onFlags={onFlags}
+          filterFlags={filterFlags}
           onCreate={openCreate}
           canCreate={canCreateInContext}
           folderReadOnly={!!folderCat && !canWriteCategory(folderCat)}
@@ -651,6 +722,7 @@ export function LibraryPage(): ReactElement {
           draftFilterTags={draftFilterTags}
           filterCats={filterCats}
           filterTags={filterTags}
+          filterFlags={filterFlags}
           catLabel={catLabel}
           categories={cats.data || []}
           allTags={allTags}
@@ -658,16 +730,18 @@ export function LibraryPage(): ReactElement {
           onDraftTags={setDraftFilterTags}
           onApplyFilter={applyFilter}
           onCloseFilter={() => setFilterOpen(false)}
-          onClearFilters={() => setLibrarySearch({ category: [], tag: [] })}
+          onClearFilters={() => setLibrarySearch({ category: [], tag: [], flag: [] })}
           onRemoveCat={(id) => setLibrarySearch({ category: filterCats.filter((x) => x !== id) })}
           onRemoveTag={(t) => setLibrarySearch({ tag: filterTags.filter((x) => x !== t) })}
+          onRemoveFlag={(f) => setLibrarySearch({ flag: filterFlags.filter((x) => x !== f) })}
           onClearSearchAndFilters={() => {
             setQ('')
-            setLibrarySearch({ q: '', category: [], tag: [] })
+            setLibrarySearch({ q: '', category: [], tag: [], flag: [] })
           }}
           onCreate={openCreate}
           onEdit={openEdit}
           onDelete={setDeleteId}
+          onFlags={onFlags}
           selectMode={selectMode}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}

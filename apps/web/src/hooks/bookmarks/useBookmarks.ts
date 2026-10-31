@@ -37,6 +37,9 @@ type CreateBookmarkBody = {
   category_id?: string | null
   category_ids?: string[]
   tags: string[]
+  is_favorite?: boolean
+  is_unread?: boolean
+  is_pinned?: boolean
 }
 
 export function useCreateBookmark(): UseMutationResult<Bookmark, Error, CreateBookmarkBody> {
@@ -61,6 +64,9 @@ type UpdateBookmarkVars = {
     notes: string | null
     category_ids: string[]
     tags: string[]
+    is_favorite: boolean
+    is_unread: boolean
+    is_pinned: boolean
   }>
 }
 

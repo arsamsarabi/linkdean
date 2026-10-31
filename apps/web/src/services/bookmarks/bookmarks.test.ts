@@ -10,6 +10,9 @@ describe('bookmarks drafts', () => {
       description: '',
       tags: [],
       category_ids: [],
+      is_favorite: false,
+      is_unread: false,
+      is_pinned: false,
     })
   })
 
@@ -28,6 +31,9 @@ describe('bookmarks drafts', () => {
       tags: ['t'],
       can_write: true,
       shared_out: false,
+      is_favorite: true,
+      is_unread: true,
+      is_pinned: false,
       categories: [{ id: 'c1', name: 'C', path: 'C' }],
       category_id: 'c1',
       created_at: '2024-01-01T00:00:00Z',
@@ -40,6 +46,9 @@ describe('bookmarks drafts', () => {
       description: 'd',
       tags: ['t'],
       category_ids: ['c1'],
+      is_favorite: true,
+      is_unread: true,
+      is_pinned: false,
     })
   })
 })

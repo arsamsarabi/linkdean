@@ -175,6 +175,9 @@ export const api = {
     category_id?: string | null
     category_ids?: string[]
     tags: string[]
+    is_favorite?: boolean
+    is_unread?: boolean
+    is_pinned?: boolean
   }): Promise<Bookmark> => req('/bookmarks', { method: 'POST', body: JSON.stringify(body) }, bookmarkSchema),
 
   updateBookmark: (
@@ -186,6 +189,9 @@ export const api = {
       notes: string | null
       category_ids: string[]
       tags: string[]
+      is_favorite: boolean
+      is_unread: boolean
+      is_pinned: boolean
     }>
   ): Promise<Bookmark> => req(`/bookmarks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, bookmarkSchema),
 

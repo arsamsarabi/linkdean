@@ -7,6 +7,9 @@ export type BookmarkDraft = {
   description: string
   tags: string[]
   category_ids: string[]
+  is_favorite: boolean
+  is_unread: boolean
+  is_pinned: boolean
 }
 
 export function emptyDraft(): BookmarkDraft {
@@ -16,6 +19,9 @@ export function emptyDraft(): BookmarkDraft {
     description: '',
     tags: [],
     category_ids: [],
+    is_favorite: false,
+    is_unread: false,
+    is_pinned: false,
   }
 }
 
@@ -27,5 +33,8 @@ export function draftFromBookmark(b: Bookmark): BookmarkDraft {
     description: b.description || '',
     tags: b.tags || [],
     category_ids: (b.categories || []).map((c) => c.id),
+    is_favorite: !!b.is_favorite,
+    is_unread: !!b.is_unread,
+    is_pinned: !!b.is_pinned,
   }
 }

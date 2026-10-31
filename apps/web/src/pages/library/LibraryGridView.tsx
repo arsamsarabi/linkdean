@@ -17,10 +17,16 @@ import {
 } from '@/components'
 import { categorySelectData } from '@/lib'
 import type { Category } from '@/schemas'
-import { FOLDER_UNCATEGORIZED, type LibraryListItem } from '@/services'
+import { FOLDER_UNCATEGORIZED, type FlagFilter, type LibraryListItem } from '@/services'
 import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
+
+const FLAG_LABEL: Record<FlagFilter, string> = {
+  unread: 'Reading list',
+  favorite: 'Favorites',
+  pinned: 'Pinned',
+}
 
 type Props = {
   loading: boolean
@@ -36,6 +42,7 @@ type Props = {
   draftFilterTags: string[]
   filterCats: string[]
   filterTags: string[]
+  filterFlags: FlagFilter[]
   catLabel: Map<string, string>
   categories: Category[]
   allTags: { value: string; label: string }[]
@@ -46,10 +53,15 @@ type Props = {
   onClearFilters: () => void
   onRemoveCat: (id: string) => void
   onRemoveTag: (t: string) => void
+  onRemoveFlag: (f: FlagFilter) => void
   onClearSearchAndFilters: () => void
   onCreate: () => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onFlags?: (
+    id: string,
+    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
+  ) => void
   canCreate?: boolean
   viewerUserId?: string
   selectMode?: boolean
@@ -71,6 +83,7 @@ export function LibraryGridView({
   draftFilterTags,
   filterCats,
   filterTags,
+  filterFlags,
   catLabel,
   categories,
   allTags,
@@ -81,10 +94,12 @@ export function LibraryGridView({
   onClearFilters,
   onRemoveCat,
   onRemoveTag,
+  onRemoveFlag,
   onClearSearchAndFilters,
   onCreate,
   onEdit,
   onDelete,
+  onFlags,
   canCreate = true,
   viewerUserId,
   selectMode = false,
@@ -130,6 +145,11 @@ export function LibraryGridView({
           {filterTags.map((t) => (
             <Pill key={t} withRemoveButton onRemove={() => onRemoveTag(t)}>
               #{t}
+            </Pill>
+          ))}
+          {filterFlags.map((f) => (
+            <Pill key={f} withRemoveButton onRemove={() => onRemoveFlag(f)}>
+              {FLAG_LABEL[f]}
             </Pill>
           ))}
           <Button variant="subtle" size="compact-sm" onClick={onClearFilters}>
@@ -183,6 +203,7 @@ export function LibraryGridView({
               viewerUserId={viewerUserId}
               onEdit={onEdit}
               onDelete={onDelete}
+              onFlags={onFlags}
               selectMode={selectMode}
               selected={selectedIds?.has(b.id)}
               onToggleSelect={onToggleSelect}

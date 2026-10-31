@@ -1,5 +1,16 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { Box, Button, Drawer, LoadingOverlay, MultiSelect, Stack, TagsInput, Textarea, TextInput } from '@mantine/core'
+import {
+  Box,
+  Button,
+  Checkbox,
+  Drawer,
+  LoadingOverlay,
+  MultiSelect,
+  Stack,
+  TagsInput,
+  Textarea,
+  TextInput,
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useCreateBookmark, useUpdateBookmark } from '@/hooks'
 import { categorySelectData, writableCategories } from '@/lib'
@@ -46,6 +57,9 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
             description: body.description ?? null,
             category_ids: body.category_ids,
             tags: body.tags,
+            is_favorite: draft.is_favorite,
+            is_unread: draft.is_unread,
+            is_pinned: draft.is_pinned,
           },
         })
       } else {
@@ -55,6 +69,9 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
           description: body.description,
           category_ids: body.category_ids,
           tags: body.tags,
+          is_favorite: draft.is_favorite,
+          is_unread: draft.is_unread,
+          is_pinned: draft.is_pinned,
         })
       }
       notifications.show({ message: editing ? 'Updated' : 'Saved' })
@@ -81,19 +98,28 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
             required
             placeholder="https://"
             value={draft.url}
-            onChange={(e) => setDraft((d) => ({ ...d, url: e.currentTarget.value }))}
+            onChange={(e) => {
+              const url = e.currentTarget.value
+              setDraft((d) => ({ ...d, url }))
+            }}
           />
           <TextInput
             label="Title"
             value={draft.title}
-            onChange={(e) => setDraft((d) => ({ ...d, title: e.currentTarget.value }))}
+            onChange={(e) => {
+              const title = e.currentTarget.value
+              setDraft((d) => ({ ...d, title }))
+            }}
           />
           <Textarea
             label="Description"
             minRows={2}
             autosize
             value={draft.description}
-            onChange={(e) => setDraft((d) => ({ ...d, description: e.currentTarget.value }))}
+            onChange={(e) => {
+              const description = e.currentTarget.value
+              setDraft((d) => ({ ...d, description }))
+            }}
           />
           <MultiSelect
             label="Categories"
@@ -110,6 +136,30 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
             value={draft.tags}
             onChange={(tags) => setDraft((d) => ({ ...d, tags }))}
             clearable
+          />
+          <Checkbox
+            label="Reading list (unread)"
+            checked={draft.is_unread}
+            onChange={(e) => {
+              const is_unread = e.currentTarget.checked
+              setDraft((d) => ({ ...d, is_unread }))
+            }}
+          />
+          <Checkbox
+            label="Favorite"
+            checked={draft.is_favorite}
+            onChange={(e) => {
+              const is_favorite = e.currentTarget.checked
+              setDraft((d) => ({ ...d, is_favorite }))
+            }}
+          />
+          <Checkbox
+            label="Pin to top of library"
+            checked={draft.is_pinned}
+            onChange={(e) => {
+              const is_pinned = e.currentTarget.checked
+              setDraft((d) => ({ ...d, is_pinned }))
+            }}
           />
           <Button mt="sm" onClick={() => void save()} disabled={!draft.url.trim()} loading={pending}>
             {editing ? 'Save changes' : 'Add bookmark'}

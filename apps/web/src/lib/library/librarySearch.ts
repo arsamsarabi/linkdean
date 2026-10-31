@@ -2,6 +2,9 @@ export const SORT_KEYS = ['updated_desc', 'updated_asc', 'title_asc', 'title_des
 
 export type SortKey = (typeof SORT_KEYS)[number]
 
+export const FLAG_KEYS = ['unread', 'favorite', 'pinned'] as const
+export type FlagKey = (typeof FLAG_KEYS)[number]
+
 export type LibrarySearch = {
   q?: string
   sort?: SortKey
@@ -9,6 +12,8 @@ export type LibrarySearch = {
   category?: string | string[]
   /** One or many tags */
   tag?: string | string[]
+  /** Reading-list / favorite / pin filters */
+  flag?: string | string[]
   /** Explorer folder id (`uncategorized` or category uuid). Omit / `all` = root. */
   folder?: string
   /** One-shot: open create drawer (command palette). Consumed then stripped. */
@@ -41,6 +46,9 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
 
   const category = asStringList(search.category)
   const tag = asStringList(search.tag)
+  const flag = asStringList(search.flag).filter((f): f is FlagKey =>
+    (FLAG_KEYS as readonly string[]).includes(f)
+  )
   const q = typeof search.q === 'string' && search.q.trim() ? search.q : undefined
   const folderRaw = typeof search.folder === 'string' ? search.folder.trim() : ''
   const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
@@ -54,6 +62,7 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
     sort: sort && sort !== 'updated_desc' ? sort : undefined,
     category: listToSearchParam(category),
     tag: listToSearchParam(tag),
+    flag: listToSearchParam(flag),
     folder,
     create,
     focus,
@@ -66,6 +75,7 @@ export function buildLibrarySearch(input: {
   sort?: SortKey
   category?: string[]
   tag?: string[]
+  flag?: string[]
   folder?: string
   create?: boolean
   focus?: 'search'
@@ -74,11 +84,15 @@ export function buildLibrarySearch(input: {
   const sort = input.sort && input.sort !== 'updated_desc' ? input.sort : undefined
   const folderRaw = input.folder?.trim() || undefined
   const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
+  const flag = (input.flag || []).filter((f): f is FlagKey =>
+    (FLAG_KEYS as readonly string[]).includes(f)
+  )
   return {
     q,
     sort,
     category: listToSearchParam(input.category || []),
     tag: listToSearchParam(input.tag || []),
+    flag: listToSearchParam(flag),
     folder,
     create: input.create ? true : undefined,
     focus: input.focus === 'search' ? 'search' : undefined,

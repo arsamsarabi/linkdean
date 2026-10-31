@@ -4,11 +4,19 @@ import { FOLDER_UNCATEGORIZED, isUncategorized } from './explorerLibrary'
 
 export type LibraryListItem = Bookmark | (SearchHit & { categories?: Bookmark['categories'] })
 
+export const FLAG_FILTERS = ['unread', 'favorite', 'pinned'] as const
+export type FlagFilter = (typeof FLAG_FILTERS)[number]
+
 export type LibraryListInput = {
   items: readonly LibraryListItem[]
   filterCats: readonly string[]
   filterTags: readonly string[]
+  filterFlags?: readonly FlagFilter[]
   sort: SortKey
+}
+
+function flagOf(item: LibraryListItem, key: 'is_favorite' | 'is_unread' | 'is_pinned'): boolean {
+  return key in item ? Boolean((item as Bookmark)[key]) : false
 }
 
 export function filterAndSortLibraryItems(input: LibraryListInput): LibraryListItem[] {
@@ -27,9 +35,22 @@ export function filterAndSortLibraryItems(input: LibraryListInput): LibraryListI
   if (input.filterTags.length) {
     items = items.filter((b) => input.filterTags.every((t) => (b.tags || []).includes(t)))
   }
+  if (input.filterFlags?.length) {
+    items = items.filter((b) =>
+      input.filterFlags!.every((f) => {
+        if (f === 'unread') return flagOf(b, 'is_unread')
+        if (f === 'favorite') return flagOf(b, 'is_favorite')
+        return flagOf(b, 'is_pinned')
+      })
+    )
+  }
 
   const sorted = [...items]
   sorted.sort((a, b) => {
+    const ap = flagOf(a, 'is_pinned') ? 1 : 0
+    const bp = flagOf(b, 'is_pinned') ? 1 : 0
+    if (ap !== bp) return bp - ap
+
     const at = (a.title || a.url).toLowerCase()
     const bt = (b.title || b.url).toLowerCase()
     const au = 'updated_at' in a && a.updated_at ? a.updated_at : ''

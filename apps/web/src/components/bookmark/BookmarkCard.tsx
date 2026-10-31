@@ -18,12 +18,18 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import {
+  IconBookmark,
+  IconBookmarkFilled,
   IconCheck,
   IconCopy,
   IconDotsVertical,
   IconExternalLink,
   IconLock,
   IconPencil,
+  IconPin,
+  IconPinFilled,
+  IconStar,
+  IconStarFilled,
   IconTrash,
   IconWorld,
 } from '@tabler/icons-react'
@@ -52,6 +58,9 @@ export type BookmarkCardItem = {
   shared_out?: boolean
   /** Invitee-only: owner's display name for share badge. */
   owner_display_name?: string | null
+  is_favorite?: boolean
+  is_unread?: boolean
+  is_pinned?: boolean
   deleted_at?: string | null
 }
 
@@ -85,6 +94,11 @@ type Props = {
   viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  /** Toggle per-viewer flags (favorite / unread / pin). */
+  onFlags?: (
+    id: string,
+    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
+  ) => void
   selectMode?: boolean
   selected?: boolean
   onToggleSelect?: (id: string) => void
@@ -96,6 +110,7 @@ export function BookmarkCard({
   viewerUserId,
   onEdit,
   onDelete,
+  onFlags,
   selectMode = false,
   selected = false,
   onToggleSelect,
@@ -168,7 +183,16 @@ export function BookmarkCard({
 
       <Stack gap={8} mt="md" className={styles.body}>
         <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
-          <UnstyledButton component="a" href={b.url} target="_blank" rel="noreferrer" className={styles.titleLink}>
+          <UnstyledButton
+            component="a"
+            href={b.url}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.titleLink}
+            onClick={() => {
+              if (b.is_unread && onFlags) onFlags(b.id, { is_unread: false })
+            }}
+          >
             <Group gap={6} wrap="nowrap" align="flex-start">
               <IconExternalLink size={14} stroke={1.5} className={styles.externalIcon} />
               {q ? (
@@ -182,7 +206,7 @@ export function BookmarkCard({
               )}
             </Group>
           </UnstyledButton>
-          <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+          <Menu shadow="md" width={200} position="bottom-end" withinPortal>
             <Menu.Target>
               <Tooltip label="Actions">
                 <ActionIcon variant="subtle" color="gray" aria-label="Bookmark actions">
@@ -203,6 +227,42 @@ export function BookmarkCard({
                   </Menu.Item>
                 )}
               </CopyButton>
+              {onFlags ? (
+                <>
+                  <Menu.Item
+                    leftSection={
+                      b.is_favorite ? (
+                        <IconStarFilled size={14} stroke={1.5} />
+                      ) : (
+                        <IconStar size={14} stroke={1.5} />
+                      )
+                    }
+                    onClick={() => onFlags(b.id, { is_favorite: !b.is_favorite })}
+                  >
+                    {b.is_favorite ? 'Unfavorite' : 'Favorite'}
+                  </Menu.Item>
+                  <Menu.Item
+                    leftSection={
+                      b.is_unread ? (
+                        <IconBookmarkFilled size={14} stroke={1.5} />
+                      ) : (
+                        <IconBookmark size={14} stroke={1.5} />
+                      )
+                    }
+                    onClick={() => onFlags(b.id, { is_unread: !b.is_unread })}
+                  >
+                    {b.is_unread ? 'Mark read' : 'Reading list'}
+                  </Menu.Item>
+                  <Menu.Item
+                    leftSection={
+                      b.is_pinned ? <IconPinFilled size={14} stroke={1.5} /> : <IconPin size={14} stroke={1.5} />
+                    }
+                    onClick={() => onFlags(b.id, { is_pinned: !b.is_pinned })}
+                  >
+                    {b.is_pinned ? 'Unpin' : 'Pin to top'}
+                  </Menu.Item>
+                </>
+              ) : null}
               {canWrite ? (
                 <>
                   <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={() => onEdit(b.id)}>
@@ -273,6 +333,21 @@ export function BookmarkCard({
           {pendingDelete ? (
             <Badge size="sm" variant="outline" color="red" tt="none">
               Pending delete
+            </Badge>
+          ) : null}
+          {b.is_favorite ? (
+            <Badge size="sm" variant="light" color="yellow" leftSection={<IconStarFilled size={10} stroke={1.5} />}>
+              favorite
+            </Badge>
+          ) : null}
+          {b.is_unread ? (
+            <Badge size="sm" variant="light" color="blue" leftSection={<IconBookmarkFilled size={10} stroke={1.5} />}>
+              unread
+            </Badge>
+          ) : null}
+          {b.is_pinned ? (
+            <Badge size="sm" variant="light" leftSection={<IconPinFilled size={10} stroke={1.5} />}>
+              pinned
             </Badge>
           ) : null}
           {b.is_vault ? (

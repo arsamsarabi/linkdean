@@ -14,6 +14,7 @@ import {
   sortExplorerFolders,
   type ExplorerFolder,
   type ExplorerFolderId,
+  type FlagFilter,
   type LibraryListItem,
 } from '@/services'
 import { ExplorerBreadcrumb } from './ExplorerBreadcrumb'
@@ -32,6 +33,11 @@ type Props = {
   onFolderChange: (id: ExplorerFolderId) => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onFlags?: (
+    id: string,
+    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
+  ) => void
+  filterFlags?: FlagFilter[]
   onCreate: () => void
   canCreate?: boolean
   folderReadOnly?: boolean
@@ -47,6 +53,7 @@ function BookmarkGrid({
   viewerUserId,
   onEdit,
   onDelete,
+  onFlags,
   selectMode,
   selectedIds,
   onToggleSelect,
@@ -56,6 +63,10 @@ function BookmarkGrid({
   viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onFlags?: (
+    id: string,
+    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
+  ) => void
   selectMode?: boolean
   selectedIds?: ReadonlySet<string>
   onToggleSelect?: (id: string) => void
@@ -70,6 +81,7 @@ function BookmarkGrid({
           viewerUserId={viewerUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          onFlags={onFlags}
           selectMode={selectMode}
           selected={selectedIds?.has(b.id)}
           onToggleSelect={onToggleSelect}
@@ -108,6 +120,8 @@ export function LibraryExplorerView({
   onFolderChange,
   onEdit,
   onDelete,
+  onFlags,
+  filterFlags = [],
   onCreate,
   canCreate = true,
   folderReadOnly = false,
@@ -138,12 +152,26 @@ export function LibraryExplorerView({
     [atAll, sortedFolders]
   )
   const sortedBookmarks = useMemo(
-    () => filterAndSortLibraryItems({ items: contents.bookmarks, filterCats: [], filterTags: [], sort }),
-    [contents.bookmarks, sort]
+    () =>
+      filterAndSortLibraryItems({
+        items: contents.bookmarks,
+        filterCats: [],
+        filterTags: [],
+        filterFlags,
+        sort,
+      }),
+    [contents.bookmarks, filterFlags, sort]
   )
   const sortedHits = useMemo(
-    () => filterAndSortLibraryItems({ items: searchHits, filterCats: [], filterTags: [], sort }),
-    [searchHits, sort]
+    () =>
+      filterAndSortLibraryItems({
+        items: searchHits,
+        filterCats: [],
+        filterTags: [],
+        filterFlags,
+        sort,
+      }),
+    [searchHits, filterFlags, sort]
   )
 
   if (loading) {
@@ -175,6 +203,7 @@ export function LibraryExplorerView({
           viewerUserId={viewerUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          onFlags={onFlags}
           selectMode={selectMode}
           selectedIds={selectedIds}
           onToggleSelect={onToggleSelect}
@@ -239,6 +268,7 @@ export function LibraryExplorerView({
                 viewerUserId={viewerUserId}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onFlags={onFlags}
                 selectMode={selectMode}
                 selectedIds={selectedIds}
                 onToggleSelect={onToggleSelect}

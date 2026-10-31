@@ -87,6 +87,57 @@ describe('filterAndSortLibraryItems', () => {
     })
     expect(result.map((i) => i.id)).toEqual(['2'])
   })
+
+  it('filters flags and pins first', () => {
+    const items = [
+      {
+        ...base,
+        id: '1',
+        url: 'https://a.example',
+        title: 'Zulu',
+        category_id: null,
+        is_favorite: true,
+        is_unread: false,
+        is_pinned: false,
+      },
+      {
+        ...base,
+        id: '2',
+        url: 'https://b.example',
+        title: 'Alpha',
+        category_id: null,
+        is_favorite: true,
+        is_unread: true,
+        is_pinned: true,
+      },
+      {
+        ...base,
+        id: '3',
+        url: 'https://c.example',
+        title: 'Beta',
+        category_id: null,
+        is_favorite: false,
+        is_unread: true,
+        is_pinned: false,
+      },
+    ]
+    const favorites = filterAndSortLibraryItems({
+      items,
+      filterCats: [],
+      filterTags: [],
+      filterFlags: ['favorite'],
+      sort: 'title_asc',
+    })
+    expect(favorites.map((i) => i.id)).toEqual(['2', '1'])
+    const unreadPinned = filterAndSortLibraryItems({
+      items,
+      filterCats: [],
+      filterTags: [],
+      filterFlags: ['unread'],
+      sort: 'title_asc',
+    })
+    expect(unreadPinned.map((i) => i.id)).toEqual(['2', '3'])
+  })
 })
 
 describe('collectTagOptions', () => {
