@@ -258,6 +258,19 @@ export function SettingsPage(): ReactElement {
                   ]}
                 />
 
+                <Select
+                  label="Default landing"
+                  description="Where you land after sign-in."
+                  value={settings.default_landing}
+                  onChange={(v) =>
+                    v && patch({ default_landing: v as UserSettings['default_landing'] })
+                  }
+                  data={[
+                    { value: '/', label: 'Dashboard (home)' },
+                    { value: '/library', label: 'Library' },
+                  ]}
+                />
+
                 {save.isPending ? (
                   <Text size="xs" c="dimmed">
                     Saving…

@@ -169,10 +169,10 @@ pub async fn update_user_settings(
     }
     if let Some(ref v) = patch.default_landing {
         match v.as_str() {
-            "/" | "/vault" | "/import" => s.default_landing = v.clone(),
+            "/" | "/library" => s.default_landing = v.clone(),
             _ => {
                 return Err(Error::BadRequest(
-                    "default_landing must be /|/vault|/import".into(),
+                    "default_landing must be /|/library".into(),
                 ))
             }
         }

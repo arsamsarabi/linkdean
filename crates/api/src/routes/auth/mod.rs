@@ -273,7 +273,13 @@ async fn oidc_callback(
 
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let cookie = session_cookie(&token, state.cfg.session_days, state.cfg.cookie_secure());
-    let mut res = Redirect::temporary("/").into_response();
+    let settings = db::get_user_settings(&state.pool, user.id).await?;
+    let dest = if settings.default_landing.as_str() == "/library" {
+        "/library"
+    } else {
+        "/"
+    };
+    let mut res = Redirect::temporary(dest).into_response();
     res.headers_mut().insert(
         axum::http::header::SET_COOKIE,
         HeaderValue::from_str(&cookie).map_err(|e| Error::msg(e.to_string()))?,

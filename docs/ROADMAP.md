@@ -47,6 +47,7 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 - User dashboard: sectioned grid of selected bookmarks
 - Arrange / edit layout of frequently visited links
 - Persisted per-user layout (`dashboards` + sections + items)
+- Glance tiles + section reorder; `default_landing` `/` vs `/library` (Settings + post-login)
 
 ---
 

@@ -16,8 +16,10 @@ import {
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
+import { api } from '@/api'
 import { AvatarCropModal, QueryErrorAlert } from '@/components'
 import { useBootstrap, useRegister, useUploadAvatar } from '@/hooks'
+import { resolveDefaultLanding } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
 
@@ -62,8 +64,12 @@ export function RegisterPage(): ReactElement {
           notifications.show({ color: 'yellow', message: `Account created; avatar failed: ${e}` })
         }
       }
-      if (!res.user.onboarding_completed) void nav({ to: '/onboarding' })
-      else void nav({ to: '/library' })
+      if (!res.user.onboarding_completed) {
+        void nav({ to: '/onboarding' })
+        return
+      }
+      const { settings } = await api.getSettings()
+      void nav({ to: resolveDefaultLanding(settings.default_landing) })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }

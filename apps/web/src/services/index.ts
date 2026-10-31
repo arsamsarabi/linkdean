@@ -1,5 +1,6 @@
 export * from './auth'
 export * from './avatar'
 export * from './bookmarks'
+export * from './dashboards'
 export * from './library'
 export * from './url-display'

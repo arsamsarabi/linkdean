@@ -36,7 +36,7 @@ import {
   useUploadAvatar,
   useVaultSetup,
 } from '@/hooks'
-import { getToken } from '@/lib'
+import { getToken, resolveDefaultLanding } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
 
@@ -104,7 +104,7 @@ export function OnboardingPage(): ReactElement {
     if (!me.data) return
 
     if (me.data.user.onboarding_completed) {
-      void nav({ to: '/library' })
+      void nav({ to: resolveDefaultLanding(me.data.settings.default_landing) })
       return
     }
     setStep(2)
@@ -172,7 +172,7 @@ export function OnboardingPage(): ReactElement {
         notifications.show({ message: `Imported ${res.imported}/${res.total}` })
       }
       await completeOnboarding.mutateAsync()
-      void nav({ to: '/library' })
+      void nav({ to: '/' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     } finally {

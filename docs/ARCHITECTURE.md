@@ -62,7 +62,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - OIDC: Authorization Code against `OIDC_*` env; callback `/api/auth/oidc/callback`
 - Profile (`/profile`) and settings (`/settings`); header avatar menu
 - Avatars: client crop, server resize to 256×256 WebP under `AVATAR_DIR`
-- Prefs in `user_settings` (show hidden, vault search mode, theme, auto-lock, landing)
+- Prefs in `user_settings` (show hidden, vault search mode, theme, auto-lock, landing `/`|`/library`)
 
 ## Hidden vs vault
 

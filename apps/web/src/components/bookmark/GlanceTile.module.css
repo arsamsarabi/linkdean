@@ -1,0 +1,67 @@
+.tile {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 8px;
+  background: var(--mantine-color-body);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.tile:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--mantine-color-violet-filled) 45%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--mantine-color-violet-filled) 12%, transparent);
+  background: color-mix(in srgb, var(--mantine-color-violet-filled) 4%, var(--mantine-color-body));
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--mantine-color-violet-filled);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    transition: none;
+  }
+
+  .tile:hover {
+    transform: none;
+  }
+}
+
+.inner {
+  width: 100%;
+}
+
+.iconWrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(145deg, var(--mantine-color-violet-1), var(--mantine-color-orchid-1));
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.title {
+  color: var(--mantine-color-ice-filled);
+  line-height: 1.3;
+}
+
+.external {
+  flex-shrink: 0;
+  color: var(--mantine-color-dimmed);
+  opacity: 0.7;
+}

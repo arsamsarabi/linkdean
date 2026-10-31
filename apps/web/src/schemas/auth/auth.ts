@@ -19,7 +19,7 @@ export const userSettingsSchema = z.object({
   vault_search_mode: z.enum(['never', 'when_unlocked', 'always']),
   theme: z.enum(['light', 'dark', 'system']),
   vault_auto_lock_minutes: z.number(),
-  default_landing: z.enum(['/', '/vault', '/import']),
+  default_landing: z.enum(['/', '/library']),
   library_view: z.enum(['grid', 'explorer']).default('grid'),
   updated_at: z.string(),
 })

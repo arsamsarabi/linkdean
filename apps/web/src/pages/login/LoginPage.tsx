@@ -17,8 +17,10 @@ import {
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconRocket, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
+import { api } from '@/api'
 import { LogoMark, QueryErrorAlert } from '@/components'
 import { useBootstrap, useLogin } from '@/hooks'
+import { resolveDefaultLanding } from '@/lib'
 import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -43,7 +45,8 @@ export function LoginPage(): ReactElement {
         void nav({ to: '/onboarding' })
         return
       }
-      void nav({ to: '/library' })
+      const { settings } = await api.getSettings()
+      void nav({ to: resolveDefaultLanding(settings.default_landing) })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
