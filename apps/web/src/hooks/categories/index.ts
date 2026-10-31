@@ -1,4 +1,10 @@
-export { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from './useCategories'
+export {
+  useCategories,
+  useCreateCategory,
+  useUpdateCategory,
+  useDeleteCategory,
+  useForkCategory,
+} from './useCategories'
 export {
   useCategoryShares,
   useCreateCategoryShare,

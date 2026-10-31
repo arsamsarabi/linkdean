@@ -16,8 +16,14 @@ export const categorySchema = z.object({
 
 export const categoriesSchema = z.array(categorySchema)
 
+export const forkCategoryResultSchema = z.object({
+  category: categorySchema,
+  bookmarks_copied: z.number(),
+})
+
 export type CategoryAccess = z.infer<typeof categoryAccessSchema>
 export type Category = z.infer<typeof categorySchema>
+export type ForkCategoryResult = z.infer<typeof forkCategoryResultSchema>
 
 export const shareAccessSchema = z.enum(['read', 'write'])
 

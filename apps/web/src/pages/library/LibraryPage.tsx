@@ -22,23 +22,33 @@ import { notifications } from '@mantine/notifications'
 import {
   IconArrowUp,
   IconBookmarkPlus,
+  IconCheck,
+  IconCopy,
   IconFilter,
   IconFolders,
   IconLayoutGrid,
   IconLockOpen,
   IconSearch,
+  IconTags,
+  IconTrash,
   IconX,
 } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   BookmarkDrawer,
+  BulkEditDrawer,
   ConfirmModal,
+  DuplicateMergeDrawer,
   LibraryExplorerView,
   QueryErrorAlert,
   type BookmarkDraft,
+  type BulkEditMode,
 } from '@/components'
 import {
   useBookmarks,
+  useBulkDeleteBookmarks,
+  useBulkMoveBookmarks,
+  useBulkTagBookmarks,
   useCategories,
   useDeleteBookmark,
   useMe,
@@ -53,6 +63,7 @@ import {
   categoryPath,
   type SortKey,
 } from '@/lib'
+import type { Bookmark } from '@/schemas'
 import {
   FOLDER_ALL,
   FOLDER_UNCATEGORIZED,
@@ -61,6 +72,8 @@ import {
   emptyDraft,
   filterAndSortLibraryItems,
   normalizeFolderId,
+  toggleId,
+  writableIds,
   type ExplorerFolderId,
   type LibraryListItem,
 } from '@/services'
@@ -133,13 +146,22 @@ export function LibraryPage(): ReactElement {
   const [unlockOpen, setUnlockOpen] = useState(false)
   const [vaultPass, setVaultPass] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [bulkMode, setBulkMode] = useState<BulkEditMode | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [dupesOpen, { open: openDupes, close: closeDupes }] = useDisclosure(false)
 
   const cats = useCategories()
   const bookmarks = useBookmarks()
   const searching = debouncedQ.trim().length > 1
   const search = useSearchBookmarks(debouncedQ, searching)
   const deleteBookmark = useDeleteBookmark()
+  const bulkMove = useBulkMoveBookmarks()
+  const bulkTag = useBulkTagBookmarks()
+  const bulkDelete = useBulkDeleteBookmarks()
   const vaultUnlock = useVaultUnlock()
+  const bulkPending = bulkMove.isPending || bulkTag.isPending || bulkDelete.isPending
 
   useEffect(() => {
     const next = debouncedQ.trim() || undefined
@@ -238,6 +260,22 @@ export function LibraryPage(): ReactElement {
     openDrawer()
   }
 
+  function exitSelectMode(): void {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+    setBulkMode(null)
+    setBulkDeleteOpen(false)
+  }
+
+  function enterSelectMode(): void {
+    setSelectMode(true)
+    setSelectedIds(new Set())
+  }
+
+  function toggleSelect(id: string): void {
+    setSelectedIds((prev) => toggleId(prev, id))
+  }
+
   useHotkeys([
     [
       '/',
@@ -261,6 +299,12 @@ export function LibraryPage(): ReactElement {
         if (!canCreateInContext) return
         e.preventDefault()
         openCreate()
+      },
+    ],
+    [
+      'Escape',
+      () => {
+        if (selectMode) exitSelectMode()
       },
     ],
   ])
@@ -307,6 +351,45 @@ export function LibraryPage(): ReactElement {
     }
   }
 
+  function notifyBulk(label: string, result: { ok: number; failed: number }): void {
+    if (result.failed === 0) {
+      notifications.show({ message: `${label}: ${result.ok} bookmark${result.ok === 1 ? '' : 's'}` })
+      return
+    }
+    notifications.show({
+      color: 'yellow',
+      message: `${label}: ${result.ok} ok, ${result.failed} failed`,
+    })
+  }
+
+  async function applyBulkMove(categoryIds: string[]): Promise<void> {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    const result = await bulkMove.mutateAsync({ ids, category_ids: categoryIds })
+    notifyBulk('Moved', result)
+    setBulkMode(null)
+    exitSelectMode()
+  }
+
+  async function applyBulkTag(tags: string[], tagMode: 'add' | 'replace'): Promise<void> {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    const byId = new Map<string, Bookmark>((bookmarks.data || []).map((b) => [b.id, b]))
+    const result = await bulkTag.mutateAsync({ ids, tags, mode: tagMode, byId })
+    notifyBulk(tagMode === 'add' ? 'Tagged' : 'Tags replaced', result)
+    setBulkMode(null)
+    exitSelectMode()
+  }
+
+  async function confirmBulkDelete(): Promise<void> {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    const result = await bulkDelete.mutateAsync({ ids })
+    notifyBulk('Deleted', result)
+    setBulkDeleteOpen(false)
+    exitSelectMode()
+  }
+
   function onFolderChange(id: ExplorerFolderId): void {
     setLibrarySearch({ folder: id })
   }
@@ -316,6 +399,10 @@ export function LibraryPage(): ReactElement {
   const emptyLibrary = !loading && !searching && !filterActive && list.length === 0
   const emptyFiltered = !loading && list.length === 0 && (searching || filterActive)
   const explorerLoading = bookmarks.isLoading || cats.isLoading
+  const selectableIds = useMemo(() => writableIds(list), [list])
+  const selectedCount = selectedIds.size
+  const allVisibleSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id))
 
   return (
     <Stack gap="xl">
@@ -355,6 +442,27 @@ export function LibraryPage(): ReactElement {
               },
             ]}
           />
+          {selectMode ? (
+            <Button variant="default" onClick={exitSelectMode}>
+              Cancel select
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="default"
+                leftSection={<IconCheck {...iconSm} />}
+                onClick={enterSelectMode}
+                disabled={loading || list.length === 0}
+              >
+                Select
+              </Button>
+              <Tooltip label="Find and merge duplicate URLs">
+                <Button variant="default" leftSection={<IconCopy {...iconSm} />} onClick={openDupes}>
+                  Duplicates
+                </Button>
+              </Tooltip>
+            </>
+          )}
           {canCreateInContext ? (
             <Tooltip label="New bookmark (N)">
               <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={openCreate}>
@@ -370,6 +478,56 @@ export function LibraryPage(): ReactElement {
           )}
         </Group>
       </Group>
+
+      {selectMode ? (
+        <Group justify="space-between" wrap="wrap" gap="sm" p="sm" className={styles.filterPanel}>
+          <Group gap="sm">
+            <Text size="sm" fw={600}>
+              {selectedCount} selected
+            </Text>
+            <Button
+              size="compact-sm"
+              variant="subtle"
+              onClick={() =>
+                setSelectedIds(allVisibleSelected ? new Set() : new Set(selectableIds))
+              }
+              disabled={selectableIds.length === 0}
+            >
+              {allVisibleSelected ? 'Clear visible' : 'Select visible'}
+            </Button>
+          </Group>
+          <Group gap="xs">
+            <Button
+              size="compact-sm"
+              variant="light"
+              leftSection={<IconFolders size={14} stroke={1.5} />}
+              disabled={selectedCount === 0}
+              onClick={() => setBulkMode('move')}
+            >
+              Move
+            </Button>
+            <Button
+              size="compact-sm"
+              variant="light"
+              leftSection={<IconTags size={14} stroke={1.5} />}
+              disabled={selectedCount === 0}
+              onClick={() => setBulkMode('tag')}
+            >
+              Tag
+            </Button>
+            <Button
+              size="compact-sm"
+              color="red"
+              variant="light"
+              leftSection={<IconTrash size={14} stroke={1.5} />}
+              disabled={selectedCount === 0}
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              Delete
+            </Button>
+          </Group>
+        </Group>
+      ) : null}
 
       {cats.isError ? (
         <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} title="Categories failed" />
@@ -462,6 +620,9 @@ export function LibraryPage(): ReactElement {
           canCreate={canCreateInContext}
           folderReadOnly={!!folderCat && !canWriteCategory(folderCat)}
           viewerUserId={me.data?.user.id}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
         />
       ) : (
         <LibraryGridView
@@ -497,10 +658,26 @@ export function LibraryPage(): ReactElement {
           onCreate={openCreate}
           onEdit={openEdit}
           onDelete={setDeleteId}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
         />
       )}
 
       <BookmarkDrawer opened={drawerOpen} onClose={closeDrawer} categories={cats.data || []} initial={draft} />
+
+      <BulkEditDrawer
+        opened={bulkMode != null}
+        onClose={() => setBulkMode(null)}
+        mode={bulkMode ?? 'move'}
+        count={selectedCount}
+        categories={cats.data || []}
+        pending={bulkPending}
+        onApplyMove={(ids) => void applyBulkMove(ids)}
+        onApplyTag={(tags, mode) => void applyBulkTag(tags, mode)}
+      />
+
+      <DuplicateMergeDrawer opened={dupesOpen} onClose={closeDupes} />
 
       <ConfirmModal
         opened={!!deleteId}
@@ -510,6 +687,16 @@ export function LibraryPage(): ReactElement {
         body="This removes the bookmark permanently. You cannot undo this."
         confirmLabel="Delete"
         loading={deleteBookmark.isPending}
+      />
+
+      <ConfirmModal
+        opened={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={() => void confirmBulkDelete()}
+        title={`Delete ${selectedCount} bookmark${selectedCount === 1 ? '' : 's'}?`}
+        body="This removes the selected bookmarks permanently. You cannot undo this."
+        confirmLabel="Delete"
+        loading={bulkDelete.isPending}
       />
 
       <Modal opened={unlockOpen} onClose={() => setUnlockOpen(false)} title="Unlock vault for search">

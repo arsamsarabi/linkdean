@@ -36,6 +36,9 @@ type Props = {
   canCreate?: boolean
   folderReadOnly?: boolean
   viewerUserId?: string
+  selectMode?: boolean
+  selectedIds?: ReadonlySet<string>
+  onToggleSelect?: (id: string) => void
 }
 
 function BookmarkGrid({
@@ -44,12 +47,18 @@ function BookmarkGrid({
   viewerUserId,
   onEdit,
   onDelete,
+  selectMode,
+  selectedIds,
+  onToggleSelect,
 }: {
   items: LibraryListItem[]
   highlightQuery?: string
   viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  selectMode?: boolean
+  selectedIds?: ReadonlySet<string>
+  onToggleSelect?: (id: string) => void
 }): ReactElement {
   return (
     <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
@@ -61,6 +70,9 @@ function BookmarkGrid({
           viewerUserId={viewerUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          selectMode={selectMode}
+          selected={selectedIds?.has(b.id)}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </SimpleGrid>
@@ -100,6 +112,9 @@ export function LibraryExplorerView({
   canCreate = true,
   folderReadOnly = false,
   viewerUserId,
+  selectMode = false,
+  selectedIds,
+  onToggleSelect,
 }: Props): ReactElement {
   const selectedId: ExplorerFolderId = folderId || FOLDER_ALL
   const atAll = selectedId === FOLDER_ALL
@@ -160,6 +175,9 @@ export function LibraryExplorerView({
           viewerUserId={viewerUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
         />
       </Stack>
     )
@@ -221,6 +239,9 @@ export function LibraryExplorerView({
                 viewerUserId={viewerUserId}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                selectMode={selectMode}
+                selectedIds={selectedIds}
+                onToggleSelect={onToggleSelect}
               />
             </Stack>
           ) : null}

@@ -1,13 +1,15 @@
 use linkdean_core::{
-    Category, CategoryAccess, CategoryView, CreateCategory, Error, Result, UpdateCategory,
+    BookmarkView, Category, CategoryAccess, CategoryView, CreateBookmark, CreateCategory, Error,
+    ForkCategory, Result, UpdateCategory,
 };
 use sqlx::PgPool;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
+use super::bookmarks::{bookmark_to_view, create_bookmark, get_bookmark_raw};
 use super::shares::{
-    category_access, list_shared_categories, owned_shared_out_category_ids, require_category_owner,
-    require_category_write,
+    bookmark_can_read, category_access, list_shared_categories, owned_shared_out_category_ids,
+    require_category_owner, require_category_read, require_category_write,
 };
 
 pub async fn get_category_by_id(pool: &PgPool, id: Uuid) -> Result<Category> {
@@ -214,4 +216,168 @@ pub async fn delete_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
         return Err(Error::NotFound);
     }
     Ok(())
+}
+
+/// Fork a readable non-vault category tree into a new owned root + bookmark copies.
+/// Returns `(new_root, copied_bookmarks)`.
+pub async fn fork_category(
+    pool: &PgPool,
+    user_id: Uuid,
+    source_id: Uuid,
+    req: ForkCategory,
+) -> Result<(CategoryView, Vec<BookmarkView>)> {
+    let (root, _) = require_category_read(pool, user_id, source_id).await?;
+    if root.is_vault {
+        return Err(Error::BadRequest("cannot fork vault categories".into()));
+    }
+
+    let subtree: Vec<Category> = sqlx::query_as(
+        r#"
+        WITH RECURSIVE tree AS (
+            SELECT * FROM categories WHERE id = $1 AND is_vault = FALSE
+            UNION ALL
+            SELECT c.* FROM categories c
+            JOIN tree ON c.parent_id = tree.id
+            WHERE c.is_vault = FALSE
+        )
+        SELECT * FROM tree
+        "#,
+    )
+    .bind(source_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    if subtree.is_empty() {
+        return Err(Error::NotFound);
+    }
+
+    let new_root_name = req
+        .name
+        .filter(|n| !n.trim().is_empty())
+        .unwrap_or_else(|| format!("{} (copy)", root.name));
+
+    let mut id_map: HashMap<Uuid, Uuid> = HashMap::new();
+    let mut remaining = subtree;
+    let mut guard = 0;
+    while !remaining.is_empty() {
+        guard += 1;
+        if guard > 10_000 {
+            return Err(Error::msg("category fork tree too deep or cyclic"));
+        }
+        let mut next = Vec::new();
+        let mut progressed = false;
+        for cat in remaining {
+            let new_parent = if cat.id == source_id {
+                None
+            } else {
+                match cat.parent_id.and_then(|pid| id_map.get(&pid).copied()) {
+                    Some(mapped) => Some(mapped),
+                    None => {
+                        next.push(cat);
+                        continue;
+                    }
+                }
+            };
+            let name = if cat.id == source_id {
+                new_root_name.clone()
+            } else {
+                cat.name.clone()
+            };
+            let created = create_category(
+                pool,
+                user_id,
+                CreateCategory {
+                    name,
+                    parent_id: new_parent,
+                    is_hidden: cat.is_hidden,
+                    is_vault: false,
+                },
+            )
+            .await?;
+            id_map.insert(cat.id, created.id);
+            progressed = true;
+        }
+        if !progressed {
+            return Err(Error::msg("category fork could not resolve parent order"));
+        }
+        remaining = next;
+    }
+
+    let old_ids: Vec<Uuid> = id_map.keys().copied().collect();
+    let mut bookmark_ids: HashSet<Uuid> = sqlx::query_scalar(
+        r#"
+        SELECT DISTINCT bookmark_id FROM bookmark_categories
+        WHERE category_id = ANY($1)
+        "#,
+    )
+    .bind(&old_ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .into_iter()
+    .collect();
+
+    let legacy_ids: Vec<Uuid> = sqlx::query_scalar(
+        r#"
+        SELECT id FROM bookmarks
+        WHERE is_vault = FALSE AND category_id = ANY($1)
+        "#,
+    )
+    .bind(&old_ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    bookmark_ids.extend(legacy_ids);
+
+    let mut copied = Vec::new();
+    for bid in bookmark_ids {
+        if !bookmark_can_read(pool, user_id, bid).await? {
+            continue;
+        }
+        let raw = match get_bookmark_raw(pool, user_id, bid).await {
+            Ok(b) => b,
+            Err(_) => continue,
+        };
+        if raw.is_vault {
+            continue;
+        }
+        let Some(view) = bookmark_to_view(pool, raw, None, user_id).await? else {
+            continue;
+        };
+        let mut mapped_cats: Vec<Uuid> = view
+            .categories
+            .iter()
+            .filter_map(|c| id_map.get(&c.id).copied())
+            .collect();
+        if mapped_cats.is_empty() {
+            if let Some(new_root) = id_map.get(&source_id) {
+                mapped_cats.push(*new_root);
+            } else {
+                continue;
+            }
+        }
+        let created = create_bookmark(
+            pool,
+            user_id,
+            CreateBookmark {
+                url: view.url,
+                title: Some(view.title),
+                description: view.description,
+                notes: view.notes,
+                category_id: mapped_cats.first().copied(),
+                category_ids: mapped_cats,
+                tags: view.tags,
+            },
+            None,
+        )
+        .await?;
+        copied.push(created);
+    }
+
+    let new_root_id = *id_map
+        .get(&source_id)
+        .ok_or_else(|| Error::msg("fork root missing"))?;
+    let view = get_category(pool, user_id, new_root_id).await?;
+    Ok((view, copied))
 }

@@ -1,10 +1,30 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
     border-color 180ms ease;
+}
+
+.selected {
+  border-color: var(--mantine-color-violet-filled);
+  box-shadow: 0 0 0 1px var(--mantine-color-violet-filled);
+}
+
+.selectDisabled {
+  opacity: 0.55;
+}
+
+.selectCheck {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  background: color-mix(in srgb, var(--mantine-color-body) 88%, transparent);
+  border-radius: 4px;
+  padding: 2px;
 }
 
 .card:hover {

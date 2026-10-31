@@ -1,4 +1,6 @@
 export { BookmarkCard, type BookmarkCardItem } from './BookmarkCard'
 export { BookmarkGridSkeleton } from './BookmarkCardSkeleton'
 export { BookmarkDrawer, type BookmarkDraft } from './BookmarkDrawer'
+export { BulkEditDrawer, type BulkEditMode } from './BulkEditDrawer'
+export { DuplicateMergeDrawer } from './DuplicateMergeDrawer'
 export { GlanceTile, type GlanceTileItem } from './GlanceTile'

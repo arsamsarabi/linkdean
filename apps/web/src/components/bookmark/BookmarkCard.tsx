@@ -4,6 +4,7 @@ import {
   AspectRatio,
   Badge,
   Card,
+  Checkbox,
   CopyButton,
   Group,
   Highlight,
@@ -81,6 +82,9 @@ type Props = {
   viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (id: string) => void
 }
 
 export function BookmarkCard({
@@ -89,9 +93,13 @@ export function BookmarkCard({
   viewerUserId,
   onEdit,
   onDelete,
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
 }: Props): ReactElement {
   const title = b.title || b.url
   const canWrite = b.can_write !== false
+  const selectable = selectMode && canWrite && !!onToggleSelect
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
@@ -107,9 +115,25 @@ export function BookmarkCard({
 
   const cats = b.categories || []
   const q = highlightQuery?.trim()
+  const cardClass = [
+    styles.card,
+    selected ? styles.selected : '',
+    selectMode && !canWrite ? styles.selectDisabled : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <Card withBorder padding="sm" radius="md" h="100%" className={styles.card}>
+    <Card withBorder padding="sm" radius="md" h="100%" className={cardClass}>
+      {selectable ? (
+        <Checkbox
+          className={styles.selectCheck}
+          checked={selected}
+          onChange={() => onToggleSelect?.(b.id)}
+          aria-label={`Select ${title}`}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : null}
       <Card.Section>
         <UnstyledButton
           component="a"

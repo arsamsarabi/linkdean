@@ -137,9 +137,9 @@ Items may be promoted into a milestone when prioritized.
 
 - Public bookmark list URLs (after sharing infra is solid)
 - Pending email invites for bookmark / list / dashboard shares (not public URLs): invite by address; if recipient has no account, they register and claim access
-- Bulk edit / multi-select move, tag, delete
-- Duplicate merge UI (API already lists duplicate URLs)
-- Duplicate / fork a list (esp. shared → personal copy the invitee keeps)
+- ~~Bulk edit / multi-select move, tag, delete~~ (library Select mode + bulk drawer)
+- ~~Duplicate merge UI~~ (`GET /bookmarks/duplicates` groups + library drawer)
+- ~~Duplicate / fork a list~~ (`POST /categories/{id}/fork`; Settings → Categories copy action)
 - Broken-link checker (rate-limited worker)
 - Keyboard-first command palette (add, search, jump category)
 - Reading list / unread + pin / favorites

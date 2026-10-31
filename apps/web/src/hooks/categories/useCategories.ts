@@ -63,3 +63,22 @@ export function useDeleteCategory(): UseMutationResult<void, Error, string> {
     },
   })
 }
+
+type ForkCategoryVars = { id: string; name?: string }
+
+export function useForkCategory(): UseMutationResult<
+  Awaited<ReturnType<typeof api.forkCategory>>,
+  Error,
+  ForkCategoryVars
+> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, name }: ForkCategoryVars) => api.forkCategory(id, name ? { name } : {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['categories'] })
+      void qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      void qc.invalidateQueries({ queryKey: ['search'] })
+      window.setTimeout(() => void qc.invalidateQueries({ queryKey: ['bookmarks'] }), 2500)
+    },
+  })
+}

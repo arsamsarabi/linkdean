@@ -655,3 +655,37 @@ pub async fn find_duplicate_urls(pool: &PgPool, user_id: Uuid) -> Result<Vec<Str
     .map_err(|e| Error::msg(e.to_string()))?;
     Ok(rows.into_iter().map(|(u,)| u).collect())
 }
+
+/// Duplicate URL groups with full bookmark views (owner, non-vault only).
+pub async fn find_duplicate_groups(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<Vec<(String, Vec<BookmarkView>)>> {
+    let urls = find_duplicate_urls(pool, user_id).await?;
+    let mut groups = Vec::with_capacity(urls.len());
+    for url in urls {
+        let rows = sqlx::query_as::<_, Bookmark>(
+            r#"
+            SELECT * FROM bookmarks
+            WHERE owner_user_id = $1 AND is_vault = FALSE AND url = $2
+            ORDER BY updated_at DESC, created_at DESC
+            "#,
+        )
+        .bind(user_id)
+        .bind(&url)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+        let mut bookmarks = Vec::with_capacity(rows.len());
+        for b in rows {
+            if let Some(view) = bookmark_to_view(pool, b, None, user_id).await? {
+                bookmarks.push(view);
+            }
+        }
+        if bookmarks.len() > 1 {
+            groups.push((url, bookmarks));
+        }
+    }
+    Ok(groups)
+}

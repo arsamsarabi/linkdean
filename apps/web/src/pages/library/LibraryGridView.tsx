@@ -52,6 +52,9 @@ type Props = {
   onDelete: (id: string) => void
   canCreate?: boolean
   viewerUserId?: string
+  selectMode?: boolean
+  selectedIds?: ReadonlySet<string>
+  onToggleSelect?: (id: string) => void
 }
 
 export function LibraryGridView({
@@ -84,6 +87,9 @@ export function LibraryGridView({
   onDelete,
   canCreate = true,
   viewerUserId,
+  selectMode = false,
+  selectedIds,
+  onToggleSelect,
 }: Props): ReactElement {
   return (
     <Stack gap="md">
@@ -177,6 +183,9 @@ export function LibraryGridView({
               viewerUserId={viewerUserId}
               onEdit={onEdit}
               onDelete={onDelete}
+              selectMode={selectMode}
+              selected={selectedIds?.has(b.id)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </SimpleGrid>

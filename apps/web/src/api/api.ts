@@ -7,6 +7,7 @@ import {
   categorySchema,
   categorySharesSchema,
   categoryShareSchema,
+  forkCategoryResultSchema,
   dashboardSchema,
   dashboardShareSchema,
   dashboardSharesSchema,
@@ -27,6 +28,8 @@ import {
   type Dashboard,
   type DashboardShare,
   type DashboardSummary,
+  type DuplicateGroup,
+  type ForkCategoryResult,
   type PatchDashboard,
   type PlatformSettings,
   type PutDashboardLayout,
@@ -121,6 +124,9 @@ export const api = {
 
   deleteCategory: (id: string): Promise<void> => req(`/categories/${id}`, { method: 'DELETE' }),
 
+  forkCategory: (id: string, body: { name?: string } = {}): Promise<ForkCategoryResult> =>
+    req(`/categories/${id}/fork`, { method: 'POST', body: JSON.stringify(body) }, forkCategoryResultSchema),
+
   categoryShares: (categoryId: string): Promise<CategoryShare[]> =>
     req(`/categories/${categoryId}/shares`, {}, categorySharesSchema),
 
@@ -196,7 +202,8 @@ export const api = {
 
   vaultLock: (): Promise<unknown> => req('/vault/lock', { method: 'POST' }),
 
-  duplicates: (): Promise<{ urls: string[] }> => req('/bookmarks/duplicates', {}, duplicatesSchema),
+  duplicates: (): Promise<{ urls: string[]; groups: DuplicateGroup[] }> =>
+    req('/bookmarks/duplicates', {}, duplicatesSchema),
 
   listDashboards: (): Promise<DashboardSummary[]> =>
     req('/dashboards', {}, dashboardSummariesSchema),

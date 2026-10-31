@@ -2,20 +2,22 @@ use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
-use axum::routing::{get, patch};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::{
-    CategoryShareView, CategoryView, CreateCategory, CreateCategoryShare, UpdateCategory,
-    UpdateCategoryShare,
+    CategoryShareView, CategoryView, CreateCategory, CreateCategoryShare, ForkCategory,
+    UpdateCategory, UpdateCategoryShare,
 };
 use linkdean_db::{self as db};
 use serde::Deserialize;
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/categories", get(list).post(create))
         .route("/categories/{id}", patch(update).delete(delete_one))
+        .route("/categories/{id}/fork", post(fork))
         .route(
             "/categories/{id}/shares",
             get(list_shares).post(create_share),
@@ -75,9 +77,28 @@ async fn delete_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
-) -> ApiResult<Json<serde_json::Value>> {
+) -> ApiResult<Json<Value>> {
     db::delete_category(&state.pool, user.id, id).await?;
-    Ok(Json(serde_json::json!({ "ok": true })))
+    Ok(Json(json!({ "ok": true })))
+}
+
+async fn fork(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<ForkCategory>,
+) -> ApiResult<Json<Value>> {
+    let (cat, copied) = db::fork_category(&state.pool, user.id, id, req).await?;
+    let bookmarks_copied = copied.len();
+    for view in &copied {
+        if let Err(e) = state.search.upsert_bookmark(view).await {
+            tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert after fork failed");
+        }
+    }
+    Ok(Json(json!({
+        "category": cat,
+        "bookmarks_copied": bookmarks_copied,
+    })))
 }
 
 async fn list_shares(

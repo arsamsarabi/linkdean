@@ -387,6 +387,13 @@ pub struct CreateCategory {
     pub is_vault: bool,
 }
 
+/// Copy a readable category tree (+ bookmarks) into a new owned root.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForkCategory {
+    /// Defaults to `{name} (copy)`.
+    pub name: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateCategory {
     pub name: Option<String>,

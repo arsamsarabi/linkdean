@@ -15,11 +15,17 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconFolder, IconFolderPlus, IconShare, IconTrash } from '@tabler/icons-react'
+import { IconCopy, IconFolder, IconFolderPlus, IconShare, IconTrash } from '@tabler/icons-react'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { ShareBadge } from '@/components/share-badge'
-import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from '@/hooks'
+import {
+  useCategories,
+  useCreateCategory,
+  useDeleteCategory,
+  useForkCategory,
+  useUpdateCategory,
+} from '@/hooks'
 import { buildCategoryTree, categorySelectData, type CatNode } from '@/lib'
 import type { Category } from '@/schemas'
 import { ShareCategoryDrawer } from './ShareCategoryDrawer'
@@ -38,6 +44,7 @@ export function CategoryManager(): ReactElement {
   const create = useCreateCategory()
   const update = useUpdateCategory()
   const remove = useDeleteCategory()
+  const fork = useForkCategory()
 
   const tree = useMemo(() => buildCategoryTree(cats.data || []), [cats.data])
   const ownedRoots = useMemo(() => tree.filter((n) => n.cat.access === 'owner'), [tree])
@@ -93,6 +100,17 @@ export function CategoryManager(): ReactElement {
     }
   }
 
+  async function onFork(cat: Category): Promise<void> {
+    try {
+      const res = await fork.mutateAsync({ id: cat.id })
+      notifications.show({
+        message: `Copied “${res.category.name}” (${res.bookmarks_copied} bookmark${res.bookmarks_copied === 1 ? '' : 's'})`,
+      })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
   return (
     <Stack gap="lg">
       <Text size="sm" c="dimmed">
@@ -127,6 +145,8 @@ export function CategoryManager(): ReactElement {
                     onDelete={setDeleteId}
                     onShare={setShareCat}
                     onRename={renameCategory}
+                    onFork={onFork}
+                    forkPending={fork.isPending}
                   />
                 ))}
               </Stack>
@@ -144,6 +164,8 @@ export function CategoryManager(): ReactElement {
                     onDelete={setDeleteId}
                     onShare={setShareCat}
                     onRename={renameCategory}
+                    onFork={onFork}
+                    forkPending={fork.isPending}
                   />
                 ))}
               </Stack>
@@ -217,9 +239,19 @@ type CatRowProps = {
   onDelete: (id: string) => void
   onShare: (cat: Category) => void
   onRename: (id: string, name: string) => Promise<void>
+  onFork: (cat: Category) => void
+  forkPending?: boolean
 }
 
-function CatRow({ node, depth, onDelete, onShare, onRename }: CatRowProps): ReactElement {
+function CatRow({
+  node,
+  depth,
+  onDelete,
+  onShare,
+  onRename,
+  onFork,
+  forkPending,
+}: CatRowProps): ReactElement {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(node.cat.name)
   const canWrite = node.cat.access === 'owner' || node.cat.access === 'write'
@@ -282,6 +314,19 @@ function CatRow({ node, depth, onDelete, onShare, onRename }: CatRowProps): Reac
             vault
           </Badge>
         ) : null}
+        {!node.cat.is_vault ? (
+          <Tooltip label="Duplicate list into your library">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              aria-label="Duplicate list"
+              loading={forkPending}
+              onClick={() => onFork(node.cat)}
+            >
+              <IconCopy size={14} stroke={1.5} />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
         {isOwner && !node.cat.is_vault ? (
           <Tooltip label="Share category">
             <ActionIcon
@@ -316,6 +361,8 @@ function CatRow({ node, depth, onDelete, onShare, onRename }: CatRowProps): Reac
           onDelete={onDelete}
           onShare={onShare}
           onRename={onRename}
+          onFork={onFork}
+          forkPending={forkPending}
         />
       ))}
     </>

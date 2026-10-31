@@ -53,8 +53,14 @@ export const importResultSchema = z.object({
   failed: z.number(),
 })
 
+export const duplicateGroupSchema = z.object({
+  url: z.string(),
+  bookmarks: z.array(bookmarkSchema),
+})
+
 export const duplicatesSchema = z.object({
   urls: z.array(z.string()),
+  groups: z.array(duplicateGroupSchema).default([]),
 })
 
 export type CategoryRef = z.infer<typeof categoryRefSchema>
@@ -62,3 +68,5 @@ export type Bookmark = z.infer<typeof bookmarkSchema>
 export type SearchHit = z.infer<typeof searchHitSchema>
 export type SearchResponse = z.infer<typeof searchResponseSchema>
 export type ImportResult = z.infer<typeof importResultSchema>
+export type DuplicateGroup = z.infer<typeof duplicateGroupSchema>
+export type DuplicatesResponse = z.infer<typeof duplicatesSchema>

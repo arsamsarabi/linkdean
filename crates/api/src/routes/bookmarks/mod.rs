@@ -144,6 +144,16 @@ async fn duplicates(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<Value>> {
-    let urls = db::find_duplicate_urls(&state.pool, user.id).await?;
-    Ok(Json(json!({ "urls": urls })))
+    let groups = db::find_duplicate_groups(&state.pool, user.id).await?;
+    let urls: Vec<String> = groups.iter().map(|(u, _)| u.clone()).collect();
+    let payload: Vec<Value> = groups
+        .into_iter()
+        .map(|(url, bookmarks)| {
+            json!({
+                "url": url,
+                "bookmarks": bookmarks,
+            })
+        })
+        .collect();
+    Ok(Json(json!({ "urls": urls, "groups": payload })))
 }
