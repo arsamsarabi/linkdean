@@ -11,3 +11,7 @@ export {
   useUpdateCategoryShare,
   useDeleteCategoryShare,
 } from './useCategoryShares'
+export {
+  useCategoryFolderActions,
+  type CategoryFolderActions,
+} from './useCategoryFolderActions'

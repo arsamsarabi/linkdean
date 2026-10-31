@@ -1,4 +1,5 @@
 .tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -23,6 +24,18 @@
 .tile:focus-visible {
   outline: 2px solid var(--mantine-color-violet-filled);
   outline-offset: 2px;
+}
+
+.menu {
+  position: absolute;
+  top: var(--mantine-spacing-xs);
+  right: var(--mantine-spacing-xs);
+  opacity: 0.55;
+}
+
+.tile:hover .menu,
+.tile:focus-within .menu {
+  opacity: 1;
 }
 
 .icon {

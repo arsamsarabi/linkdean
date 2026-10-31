@@ -50,6 +50,7 @@ import {
   useBulkDeleteBookmarks,
   useBulkTagBookmarks,
   useCategories,
+  useCategoryFolderActions,
   useDeleteBookmark,
   useMe,
   useSearchBookmarks,
@@ -65,7 +66,7 @@ import {
   type FlagKey,
   type SortKey,
 } from '@/lib'
-import type { Bookmark } from '@/schemas'
+import type { Bookmark, Category } from '@/schemas'
 import {
   FOLDER_ALL,
   FOLDER_UNCATEGORIZED,
@@ -173,6 +174,22 @@ export function LibraryPage(): ReactElement {
   const bulkDelete = useBulkDeleteBookmarks()
   const vaultUnlock = useVaultUnlock()
   const bulkPending = bulkCategories.isPending || bulkTag.isPending || bulkDelete.isPending
+  const categoryActions = useCategoryFolderActions({
+    onDeleted: (id) => {
+      if (folderId !== id) return
+      void nav({
+        to: '/library',
+        search: buildLibrarySearch({
+          q: debouncedQ.trim() || undefined,
+          sort,
+          category: filterCats,
+          tag: filterTags,
+          flag: filterFlags,
+          folder: FOLDER_ALL,
+        }),
+      })
+    },
+  })
 
   useEffect(() => {
     const next = debouncedQ.trim() || undefined
@@ -448,6 +465,16 @@ export function LibraryPage(): ReactElement {
     setLibrarySearch({ folder: id })
   }
 
+  function categoryMenuFor(cat: Category) {
+    return {
+      onRename: () => categoryActions.openRename(cat),
+      onShare: () => categoryActions.openShare(cat),
+      onFork: () => categoryActions.forkCategory(cat),
+      onDelete: () => categoryActions.openDelete(cat.id),
+      forkPending: categoryActions.forkPending,
+    }
+  }
+
   const filterActive = filterCats.length > 0 || filterTags.length > 0 || filterFlags.length > 0
   const loading = bookmarks.isLoading || (searching && search.isFetching && !search.data)
   const emptyLibrary = !loading && !searching && !filterActive && list.length === 0
@@ -704,6 +731,7 @@ export function LibraryPage(): ReactElement {
           selectMode={selectMode}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
+          categoryMenuFor={categoryMenuFor}
         />
       ) : (
         <LibraryGridView
@@ -762,6 +790,8 @@ export function LibraryPage(): ReactElement {
       />
 
       <DuplicateMergeDrawer opened={dupesOpen} onClose={closeDupes} />
+
+      {categoryActions.modals}
 
       <ConfirmModal
         opened={!!deleteId}

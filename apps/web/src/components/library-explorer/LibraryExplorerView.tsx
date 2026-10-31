@@ -2,6 +2,7 @@ import { useMemo, type ReactElement } from 'react'
 import { SimpleGrid, Stack, Text } from '@mantine/core'
 import { IconFolder, IconSearch } from '@tabler/icons-react'
 import { BookmarkCard } from '@/components/bookmark'
+import type { CategoryFolderMenuProps } from '@/components/category/CategoryFolderMenu'
 import { EmptyState } from '@/components/empty-state'
 import type { SortKey } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
@@ -19,6 +20,8 @@ import {
 } from '@/services'
 import { ExplorerBreadcrumb } from './ExplorerBreadcrumb'
 import { ExplorerFolderTile } from './ExplorerFolderTile'
+
+type CategoryMenuHandlers = Omit<CategoryFolderMenuProps, 'name' | 'access' | 'isVault' | 'className'>
 
 type Props = {
   categories: Category[]
@@ -45,6 +48,8 @@ type Props = {
   selectMode?: boolean
   selectedIds?: ReadonlySet<string>
   onToggleSelect?: (id: string) => void
+  /** Category ⋮ menu — same actions as Settings → Categories. */
+  categoryMenuFor?: (cat: Category) => CategoryMenuHandlers | undefined
 }
 
 function BookmarkGrid({
@@ -93,16 +98,22 @@ function BookmarkGrid({
 
 function FolderGrid({
   folders,
+  categoriesById,
   onOpen,
+  categoryMenuFor,
 }: {
   folders: ExplorerFolder[]
+  categoriesById: Map<string, Category>
   onOpen: (id: ExplorerFolderId) => void
+  categoryMenuFor?: (cat: Category) => CategoryMenuHandlers | undefined
 }): ReactElement {
   return (
     <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing="md">
-      {folders.map((f) => (
-        <ExplorerFolderTile key={f.id} folder={f} onOpen={onOpen} />
-      ))}
+      {folders.map((f) => {
+        const cat = categoriesById.get(f.id)
+        const menu = cat && categoryMenuFor ? categoryMenuFor(cat) : undefined
+        return <ExplorerFolderTile key={f.id} folder={f} onOpen={onOpen} menu={menu} />
+      })}
     </SimpleGrid>
   )
 }
@@ -129,6 +140,7 @@ export function LibraryExplorerView({
   selectMode = false,
   selectedIds,
   onToggleSelect,
+  categoryMenuFor,
 }: Props): ReactElement {
   const selectedId: ExplorerFolderId = folderId || FOLDER_ALL
   const atAll = selectedId === FOLDER_ALL
@@ -245,7 +257,12 @@ export function LibraryExplorerView({
               <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
                 {splitShared ? 'Your folders' : 'Folders'}
               </Text>
-              <FolderGrid folders={ownedFolders} onOpen={onFolderChange} />
+              <FolderGrid
+                folders={ownedFolders}
+                categoriesById={byId}
+                onOpen={onFolderChange}
+                categoryMenuFor={categoryMenuFor}
+              />
             </Stack>
           ) : null}
           {sharedFolders.length > 0 ? (
@@ -253,7 +270,12 @@ export function LibraryExplorerView({
               <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
                 Shared with you
               </Text>
-              <FolderGrid folders={sharedFolders} onOpen={onFolderChange} />
+              <FolderGrid
+                folders={sharedFolders}
+                categoriesById={byId}
+                onOpen={onFolderChange}
+                categoryMenuFor={categoryMenuFor}
+              />
             </Stack>
           ) : null}
           {sortedBookmarks.length > 0 ? (

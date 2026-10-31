@@ -328,7 +328,7 @@ export function SettingsPage(): ReactElement {
         </Tabs.Panel>
 
         <Tabs.Panel value="categories" pt="xl">
-          <Paper p="xl" withBorder maw={640}>
+          <Paper p="xl" withBorder>
             <CategoryManager />
           </Paper>
         </Tabs.Panel>
