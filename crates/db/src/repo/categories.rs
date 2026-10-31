@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::shares::{
-    category_access, list_shared_categories, require_category_owner, require_category_write,
+    category_access, list_shared_categories, owned_shared_out_category_ids, require_category_owner,
+    require_category_write,
 };
 
 pub async fn get_category_by_id(pool: &PgPool, id: Uuid) -> Result<Category> {
@@ -40,11 +41,15 @@ pub async fn list_categories(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
+    let shared_out_ids = owned_shared_out_category_ids(pool, user_id).await?;
+
     let mut by_id: HashMap<Uuid, CategoryView> = owned
         .into_iter()
         .map(|c| {
             let id = c.id;
-            (id, CategoryView::from_category(c, CategoryAccess::Owner))
+            let mut view = CategoryView::from_category(c, CategoryAccess::Owner);
+            view.shared_out = shared_out_ids.contains(&id);
+            (id, view)
         })
         .collect();
 

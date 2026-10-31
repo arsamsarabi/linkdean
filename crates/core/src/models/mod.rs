@@ -165,6 +165,9 @@ pub struct CategoryView {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub access: CategoryAccess,
+    /// True when the owner has shared this folder (or an ancestor) with someone.
+    #[serde(default)]
+    pub shared_out: bool,
 }
 
 impl CategoryView {
@@ -180,6 +183,7 @@ impl CategoryView {
             created_at: cat.created_at,
             updated_at: cat.updated_at,
             access,
+            shared_out: false,
         }
     }
 }
@@ -272,6 +276,9 @@ pub struct BookmarkView {
     pub tags: Vec<String>,
     /// Whether the requesting user may mutate this bookmark.
     pub can_write: bool,
+    /// Owner has shared a folder this bookmark lives in (invitees see invitee badges instead).
+    #[serde(default)]
+    pub shared_out: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

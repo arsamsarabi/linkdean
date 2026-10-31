@@ -14,6 +14,7 @@ export type GlanceTileItem = {
   is_vault: boolean
   owner_user_id?: string
   can_write?: boolean
+  shared_out?: boolean
 }
 
 type Props = {
@@ -26,6 +27,7 @@ export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
   const [iconFailed, setIconFailed] = useState(false)
   const iconSrc = !iconFailed ? b.favicon_url || googleFavicon(b.url) : undefined
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
+  const showOutgoing = !share && !!b.shared_out
 
   return (
     <UnstyledButton
@@ -50,6 +52,7 @@ export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
               {title}
             </Text>
             {share ? <ShareBadge access={share} /> : null}
+            {showOutgoing ? <ShareBadge outgoing /> : null}
             {b.is_vault ? (
               <Tooltip label="Stored in vault">
                 <Badge size="xs" variant="light" leftSection={<IconLock size={8} stroke={1.5} />}>

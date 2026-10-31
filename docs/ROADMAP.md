@@ -50,7 +50,7 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 - Glance tiles + section reorder; `default_landing` `/` vs `/library` (Settings + post-login)
 - Invitee share badges on cards / glance tiles / folder tiles
 - App shell: **Dashboard** nav next to Library; logo click honors `default_landing` (done)
-- Owner-side share cue on bookmarks / folders / dashboards you have shared out (invitee badges already shipped)
+- Owner-side share cue on bookmarks / folders you have shared out (done; dashboard cards with M3)
 
 ---
 

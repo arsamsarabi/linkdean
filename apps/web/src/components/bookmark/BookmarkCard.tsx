@@ -47,6 +47,8 @@ export type BookmarkCardItem = {
   owner_user_id?: string
   /** When false, edit/delete stay hidden (read-only share). Default true for legacy callers. */
   can_write?: boolean
+  /** Owner has shared a folder this bookmark lives in. */
+  shared_out?: boolean
 }
 
 type PreviewFallbackProps = {
@@ -91,6 +93,7 @@ export function BookmarkCard({
   const title = b.title || b.url
   const canWrite = b.can_write !== false
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
+  const showOutgoing = !share && !!b.shared_out
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
   const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}`
@@ -221,6 +224,7 @@ export function BookmarkCard({
 
         <Group gap={4} mt="auto" pt={4}>
           {share ? <ShareBadge access={share} size="sm" /> : null}
+          {showOutgoing ? <ShareBadge outgoing size="sm" /> : null}
           {b.is_vault ? (
             <Tooltip label="Stored in vault">
               <Badge size="sm" leftSection={<IconLock size={10} stroke={1.5} />}>

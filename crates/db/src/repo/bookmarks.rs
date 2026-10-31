@@ -9,7 +9,8 @@ use uuid::Uuid;
 
 use super::categories::{get_category_by_id, list_owned_categories};
 use super::shares::{
-    bookmark_can_read, bookmark_can_write, require_category_read, require_category_write,
+    bookmark_can_read, bookmark_can_write, bookmark_shared_out, require_category_read,
+    require_category_write,
 };
 use super::tags::ensure_tags;
 
@@ -193,6 +194,11 @@ pub async fn bookmark_to_view(
     } else {
         bookmark_can_write(pool, viewer_id, b.id).await?
     };
+    let shared_out = if b.owner_user_id == viewer_id {
+        bookmark_shared_out(pool, b.id).await?
+    } else {
+        false
+    };
 
     if b.is_vault {
         let key = match vault_key {
@@ -226,6 +232,7 @@ pub async fn bookmark_to_view(
             is_vault: true,
             tags: payload.tags,
             can_write,
+            shared_out,
             created_at: b.created_at,
             updated_at: b.updated_at,
         }));
@@ -246,6 +253,7 @@ pub async fn bookmark_to_view(
         is_vault: false,
         tags,
         can_write,
+        shared_out,
         created_at: b.created_at,
         updated_at: b.updated_at,
     }))

@@ -271,6 +271,7 @@ function CatRow({ node, depth, onDelete, onShare, onRename }: CatRowProps): Reac
         {node.cat.access === 'read' || node.cat.access === 'write' ? (
           <ShareBadge access={node.cat.access} />
         ) : null}
+        {node.cat.access === 'owner' && node.cat.shared_out ? <ShareBadge outgoing /> : null}
         {node.cat.is_hidden ? (
           <Badge size="xs" variant="outline" color="gray">
             hidden

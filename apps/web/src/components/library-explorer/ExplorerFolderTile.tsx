@@ -14,7 +14,8 @@ export function ExplorerFolderTile({ folder, onOpen }: Props): ReactElement {
   const countLabel = `${folder.bookmarkCount} bookmark${folder.bookmarkCount === 1 ? '' : 's'}`
   const shared =
     folder.access === 'read' || folder.access === 'write' ? folder.access : null
-  const showBadges = folder.isVault || folder.isHidden || !!shared
+  const showOutgoing = !shared && !!folder.sharedOut
+  const showBadges = folder.isVault || folder.isHidden || !!shared || showOutgoing
 
   return (
     <button
@@ -34,6 +35,7 @@ export function ExplorerFolderTile({ folder, onOpen }: Props): ReactElement {
         {showBadges ? (
           <Group gap={4} justify="center" mt={6}>
             {shared ? <ShareBadge access={shared} /> : null}
+            {showOutgoing ? <ShareBadge outgoing /> : null}
             {folder.isVault ? (
               <Badge size="xs" variant="light" color="grape" leftSection={<IconLock size={10} stroke={1.5} />}>
                 Vault

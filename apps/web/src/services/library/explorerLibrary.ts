@@ -15,6 +15,8 @@ export type ExplorerFolder = {
   isHidden: boolean
   /** Effective access; omitted for virtual folders (All / Uncategorized). */
   access?: CategoryAccess
+  /** Owner has shared this folder (or an ancestor) out. */
+  sharedOut?: boolean
 }
 
 export function isSharedFolder(folder: ExplorerFolder): boolean {
@@ -68,6 +70,7 @@ function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): Exp
     isVault: cat.is_vault,
     isHidden: cat.is_hidden,
     access: cat.access,
+    sharedOut: cat.shared_out,
   }
 }
 

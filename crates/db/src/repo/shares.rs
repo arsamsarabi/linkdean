@@ -393,3 +393,68 @@ pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid)
     }
     Ok(false)
 }
+
+/// Category ids the owner has shared out (share roots + their non-vault descendants).
+pub async fn owned_shared_out_category_ids(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+) -> Result<std::collections::HashSet<Uuid>> {
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        r#"
+        WITH RECURSIVE tree AS (
+            SELECT c.id
+            FROM category_shares cs
+            JOIN categories c ON c.id = cs.category_id
+            WHERE c.owner_user_id = $1
+              AND c.is_vault = FALSE
+            UNION
+            SELECT child.id
+            FROM categories child
+            JOIN tree ON child.parent_id = tree.id
+            WHERE child.owner_user_id = $1
+              AND child.is_vault = FALSE
+        )
+        SELECT DISTINCT id FROM tree
+        "#,
+    )
+    .bind(owner_user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(ids.into_iter().collect())
+}
+
+/// True when any of the bookmark's folders (or an ancestor) is shared out by the owner.
+pub async fn bookmark_shared_out(pool: &PgPool, bookmark_id: Uuid) -> Result<bool> {
+    let row: (bool,) = sqlx::query_as(
+        r#"
+        WITH bm_cats AS (
+            SELECT category_id AS id
+            FROM bookmark_categories
+            WHERE bookmark_id = $1
+            UNION
+            SELECT category_id
+            FROM bookmarks
+            WHERE id = $1 AND category_id IS NOT NULL
+        ),
+        ancestors AS (
+            SELECT c.id, c.parent_id
+            FROM categories c
+            JOIN bm_cats b ON c.id = b.id
+            UNION ALL
+            SELECT c.id, c.parent_id
+            FROM categories c
+            JOIN ancestors a ON a.parent_id = c.id
+        )
+        SELECT EXISTS (
+            SELECT 1 FROM category_shares cs
+            WHERE cs.category_id IN (SELECT id FROM ancestors)
+        )
+        "#,
+    )
+    .bind(bookmark_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(row.0)
+}
