@@ -142,9 +142,9 @@ Items may be promoted into a milestone when prioritized.
 - ~~Duplicate / fork a list~~ (`POST /categories/{id}/fork`; Settings → Categories copy action)
 - Broken-link checker (rate-limited worker)
 - ~~Keyboard-first command palette (add, search, jump category)~~ (`/` + mod+K; AppShell palette)
-- Reading list / unread + pin / favorites
+- ~~Reading list / unread + pin / favorites~~ (`bookmark_flags`; library chips + card menu; open link marks read)
 - Full-text notes and optional highlights
-- Favicon + OG image cache on disk (not hot-fetch forever)
+- ~~Favicon + OG image cache on disk (not hot-fetch forever)~~ (`PREVIEW_DIR`; enrich writes; `/favicon` + `/og` serve)
 - Reimagine category management UX
 - Category icons
 
