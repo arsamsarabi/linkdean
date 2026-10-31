@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query'
 import { api } from '@/api'
 import type { Category } from '@/schemas'
-import { useUi } from '@/store'
+import { useUi } from '@/stores'
 
 export function useCategories(includeHidden?: boolean, includeVault?: boolean): UseQueryResult<Category[]> {
   const showHidden = useUi((s) => s.showHidden)

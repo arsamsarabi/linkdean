@@ -257,9 +257,17 @@ TypeScript is not sufficient for external data.
 
 - Keep modules in **domain subfolders** — do not leave related files as flat siblings
 - Example: avatar UI → `components/avatar/` (`UserAvatar.tsx`, `AvatarCropModal.tsx`, `*.module.css`, optional `index.ts`)
-- Same pattern for pages (`pages/library/`), hooks (`hooks/auth/`), services (`services/bookmarks/`), schemas (`schemas/…`)
+- Same pattern for pages (`pages/library/`), hooks (`hooks/auth/`), services (`services/bookmarks/`), schemas (`schemas/…`), stores (`stores/`), styles (`styles/`)
 - Co-locate CSS modules and tests with the component/module they belong to
 - Folder names: kebab-case matching purpose (`query-error-alert`, `import-export`)
+
+### Routing (mandatory)
+
+- Use **TanStack Router file-based routing** under `src/routes/`
+- Do **not** maintain a hand-written `router.tsx` route tree — the Vite plugin / `pnpm routes:gen` owns `src/routeTree.gen.ts`
+- Route files use `createFileRoute` / `createRootRoute`; keep page UI in `pages/` and wire it from route modules
+- Pathless auth layout: `src/routes/_app.tsx` (+ nested `_app/*` children)
+- Never edit `routeTree.gen.ts` by hand; ignore it in Prettier/format tooling
 
 ### Path aliases (mandatory)
 
@@ -271,7 +279,7 @@ TypeScript is not sufficient for external data.
 ### Barrel files (mandatory where it makes sense)
 
 - Every domain folder that exports public symbols gets an `index.ts` barrel
-- Layer roots (`components/`, `hooks/`, `services/`, `lib/`, `pages/`, `schemas/`, `api/`) should re-export their domains
+- Layer roots (`components/`, `hooks/`, `services/`, `lib/`, `pages/`, `schemas/`, `api/`, `stores/`, `styles/`) should re-export their domains
 - Import from the barrel, not the leaf file: `@/hooks` or `@/hooks/auth`, not `@/hooks/auth/useMe`
 - Do not create barrels for test-only or CSS-only folders
 - Avoid circular barrels (a barrel must not re-export a module that imports that same barrel)

@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query'
 import { api } from '@/api'
 import type { VaultStatus } from '@/schemas'
-import { useUi } from '@/store'
+import { useUi } from '@/stores'
 
 function invalidateVaultRelated(qc: ReturnType<typeof useQueryClient>): void {
   void qc.invalidateQueries({ queryKey: ['vault'] })

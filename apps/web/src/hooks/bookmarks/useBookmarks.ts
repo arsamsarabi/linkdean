@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query'
 import { api } from '@/api'
 import type { Bookmark, SearchResponse } from '@/schemas'
-import { useUi } from '@/store'
+import { useUi } from '@/stores'
 
 export function useBookmarks(categoryId?: string | null, includeVault?: boolean): UseQueryResult<Bookmark[]> {
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)

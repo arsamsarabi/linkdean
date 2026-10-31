@@ -4,7 +4,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { useMe } from '@/hooks/auth'
 import { useVaultLock } from '@/hooks/vault'
 import type { MeResponse, UserSettings } from '@/schemas'
-import { useUi } from '@/store'
+import { useUi } from '@/stores'
 
 /** Hydrate show-hidden, theme, vault unlock flag, and idle auto-lock from /auth/me. */
 export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> {

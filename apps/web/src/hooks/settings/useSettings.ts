@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api } from '@/api'
 import type { MeResponse, UserPublic, UserSettings } from '@/schemas'
-import { useUi } from '@/store'
+import { useUi } from '@/stores'
 
 type SettingsEnvelope = { settings: UserSettings }
 

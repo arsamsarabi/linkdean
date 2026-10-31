@@ -14,7 +14,7 @@ import { IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
 import { Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { LogoMark, PageContainer, QueryErrorAlert, ThemeMenuSwitch, UserAvatar } from '@/components'
 import { useLogout, usePrefsHydration } from '@/hooks'
-import { useUi } from '@/store'
+import { useUi } from '@/stores'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 

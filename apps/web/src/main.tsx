@@ -4,12 +4,12 @@ import { Notifications } from '@mantine/notifications'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
-import { routeTree } from '@/router'
-import { linkdeanTheme } from '@/theme'
+import { routeTree } from '@/routeTree.gen'
+import { linkdeanTheme } from '@/styles'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
-import '@/fonts.css'
-import '@/styles.css'
+import '@/styles/fonts.css'
+import '@/styles/styles.css'
 
 const queryClient = new QueryClient()
 const router = createRouter({ routeTree })
