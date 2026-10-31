@@ -48,7 +48,9 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 - Arrange / edit layout of frequently visited links
 - Persisted per-user layout (`dashboards` + sections + items)
 - Glance tiles + section reorder; `default_landing` `/` vs `/library` (Settings + post-login)
-- Invitee share badges on cards / glance tiles / folder tiles (owner-side “I shared this” still open)
+- Invitee share badges on cards / glance tiles / folder tiles
+- App shell: **Dashboard** nav next to Library; logo click honors `default_landing`
+- Owner-side share cue on bookmarks / folders / dashboards you have shared out (invitee badges already shipped)
 
 ---
 
@@ -61,6 +63,7 @@ Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX).
 - Share a dashboard with invitees
 - Creator controls invitee access: read-only / read-write
 - Invitees see shared layout; RW can rearrange per ACL rules
+- Shared-dashboard visual cues consistent with folder/bookmark share badges
 
 ---
 
@@ -126,6 +129,7 @@ Items may be promoted into a milestone when prioritized.
 - Public bookmark list URLs (after sharing infra is solid)
 - Bulk edit / multi-select move, tag, delete
 - Duplicate merge UI (API already lists duplicate URLs)
+- Duplicate / fork a list (esp. shared → personal copy the invitee keeps)
 - Broken-link checker (rate-limited worker)
 - Keyboard-first command palette (add, search, jump category)
 - Reading list / unread + pin / favorites
@@ -142,6 +146,7 @@ Items may be promoted into a milestone when prioritized.
 **Auth & multi-user**
 
 - Admin UI: invite users, promote admin (registration gate already shipped)
+- Admin users dashboard: list / manage accounts; never read private user data (bookmarks, categories, vault, etc.)
 - Passkeys / WebAuthn
 - Hardened OIDC (PKCE + discovery) for all providers, not just Authentik-shaped URLs
 
@@ -159,6 +164,7 @@ Items may be promoted into a milestone when prioritized.
 - Backup recipe (pg_dump + meili dump) in docs
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
+- Burger / collapse nav for mobile and very small viewports
 - PWA install for app-like phone use
 
 ---
