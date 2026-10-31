@@ -1,0 +1,18 @@
+# Brand/export assets — not useful for architecture graph
+brand/exports/
+brand/graphics/
+brand/board/
+brand/**/*.png
+brand/**/*.svg
+brand/**/*.jpg
+brand/**/*.webp
+
+# App icons / static image assets
+apps/web/public/
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.gif
+**/*.ico
+**/*.svg
