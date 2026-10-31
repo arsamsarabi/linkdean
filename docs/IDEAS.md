@@ -25,3 +25,4 @@ Once we have implemented shared folders/lists we should also add shared dashboar
 ### Fixes
 
 - [ ] the app should remember a user's view preference (grid/explorer) even from the library toggle view
+- [ ] When in Explorer view, the sort options don't affect the "folders". They should also get sorted. But always appear above the bookmark items.
