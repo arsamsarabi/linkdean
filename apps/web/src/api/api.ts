@@ -7,6 +7,7 @@ import {
   categorySchema,
   categorySharesSchema,
   categoryShareSchema,
+  dashboardSchema,
   duplicatesSchema,
   importResultSchema,
   meResponseSchema,
@@ -19,7 +20,9 @@ import {
   type Bookmark,
   type Category,
   type CategoryShare,
+  type Dashboard,
   type PlatformSettings,
+  type PutDashboardLayout,
   type ShareAccess,
   type UserPublic,
   type UserSettings,
@@ -187,4 +190,9 @@ export const api = {
   vaultLock: (): Promise<unknown> => req('/vault/lock', { method: 'POST' }),
 
   duplicates: (): Promise<{ urls: string[] }> => req('/bookmarks/duplicates', {}, duplicatesSchema),
+
+  getDefaultDashboard: (): Promise<Dashboard> => req('/dashboards/default', {}, dashboardSchema),
+
+  putDefaultDashboard: (body: PutDashboardLayout): Promise<Dashboard> =>
+    req('/dashboards/default', { method: 'PUT', body: JSON.stringify(body) }, dashboardSchema),
 }

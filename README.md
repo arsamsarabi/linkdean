@@ -201,7 +201,7 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 
 **Shipped (v1):** nested categories and tags, Meili search, import/export, vault, hidden folders, local + OIDC auth, Compose path, library views, admin registration toggle.
 
-**Planned (v2+):** sharing polish, personal dashboards, shared dashboards, API keys, archive/downloads, browser extension, shared activity/social. Native mobile apps are unplanned.
+**Planned (v2+):** personal dashboards (in progress), shared dashboards, API keys, archive/downloads, browser extension, shared activity/social. Native mobile apps are unplanned.
 
 Full ordered list: [docs/ROADMAP.md](docs/ROADMAP.md).
 

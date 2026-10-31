@@ -2,6 +2,7 @@ mod admin;
 mod auth;
 mod bookmarks;
 mod categories;
+mod dashboards;
 mod health;
 mod import_export;
 mod search;
@@ -20,6 +21,7 @@ pub fn router() -> Router<AppState> {
         .merge(users::router())
         .merge(categories::router())
         .merge(bookmarks::router())
+        .merge(dashboards::router())
         .merge(tags::router())
         .merge(search::router())
         .merge(import_export::router())

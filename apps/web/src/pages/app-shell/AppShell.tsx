@@ -1,5 +1,6 @@
 import { useEffect, type ReactElement } from 'react'
 import {
+  Button,
   Group,
   Indicator,
   Loader,
@@ -10,13 +11,14 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
-import { IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
-import { Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { IconBooks, IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { LogoMark, PageContainer, QueryErrorAlert, ThemeMenuSwitch, UserAvatar } from '@/components'
 import { useLogout, usePrefsHydration } from '@/hooks'
 import { useUi } from '@/stores'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
+const iconSm = { size: 16, stroke: 1.5 } as const
 
 export function AppShell(): ReactElement {
   const nav = useNavigate()
@@ -38,20 +40,33 @@ export function AppShell(): ReactElement {
   const user = me.data?.user
   const label = user?.display_name || user?.email || '?'
   const loading = me.isLoading && !me.data
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const onLibrary = pathname.startsWith('/library')
 
   return (
     <MantineAppShell header={{ height: 64 }} padding="lg">
       <MantineAppShell.Header px={0}>
         <PageContainer h="100%">
           <Group h="100%" justify="space-between">
-            <UnstyledButton component={Link} to="/library" aria-label="Library">
-              <Group gap="sm" wrap="nowrap">
-                <LogoMark size={28} />
-                <Title order={3} c="violet">
-                  Linkdean
-                </Title>
-              </Group>
-            </UnstyledButton>
+            <Group gap="md" wrap="nowrap">
+              <UnstyledButton component={Link} to="/" aria-label="Home dashboard">
+                <Group gap="sm" wrap="nowrap">
+                  <LogoMark size={28} />
+                  <Title order={3} c="violet">
+                    Linkdean
+                  </Title>
+                </Group>
+              </UnstyledButton>
+              <Button
+                component={Link}
+                to="/library"
+                variant={onLibrary ? 'light' : 'subtle'}
+                leftSection={<IconBooks {...iconSm} />}
+                size="compact-sm"
+              >
+                Library
+              </Button>
+            </Group>
 
             {loading ? (
               <Skeleton circle height={36} width={36} />

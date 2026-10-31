@@ -420,3 +420,70 @@ pub struct BookmarkExport {
     pub tags: Vec<String>,
     pub is_vault: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Dashboard {
+    pub id: Uuid,
+    pub owner_user_id: Uuid,
+    pub title: String,
+    pub is_default: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DashboardSection {
+    pub id: Uuid,
+    pub dashboard_id: Uuid,
+    pub title: String,
+    pub position: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DashboardItem {
+    pub id: Uuid,
+    pub section_id: Uuid,
+    pub bookmark_id: Uuid,
+    pub position: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardItemView {
+    pub id: Uuid,
+    pub position: i32,
+    pub bookmark: BookmarkView,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardSectionView {
+    pub id: Uuid,
+    pub title: String,
+    pub position: i32,
+    pub items: Vec<DashboardItemView>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardView {
+    pub id: Uuid,
+    pub title: String,
+    pub is_default: bool,
+    pub sections: Vec<DashboardSectionView>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Full layout replace for the default personal dashboard.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PutDashboardLayout {
+    pub title: Option<String>,
+    pub sections: Vec<PutDashboardSection>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PutDashboardSection {
+    pub title: String,
+    pub bookmark_ids: Vec<Uuid>,
+}
