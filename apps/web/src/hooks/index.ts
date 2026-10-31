@@ -1,27 +1,27 @@
-export { useMe } from './useMe'
-export { useBootstrap } from './useBootstrap'
-export { useLogin, useRegister, useLogout, useCompleteOnboarding } from './useAuth'
+export { useMe } from './auth/useMe'
+export { useBootstrap } from './auth/useBootstrap'
+export { useLogin, useRegister, useLogout, useCompleteOnboarding } from './auth/useAuth'
 export {
   useCategories,
   useCreateCategory,
   useUpdateCategory,
   useDeleteCategory,
-} from './useCategories'
+} from './categories/useCategories'
 export {
   useBookmarks,
   useSearchBookmarks,
   useCreateBookmark,
   useUpdateBookmark,
   useDeleteBookmark,
-} from './useBookmarks'
-export { useVaultStatus, useVaultSetup, useVaultUnlock, useVaultLock } from './useVault'
+} from './bookmarks/useBookmarks'
+export { useVaultStatus, useVaultSetup, useVaultUnlock, useVaultLock } from './vault/useVault'
 export {
   useUpdateSettings,
   useUpdateProfile,
   useChangePassword,
   useUploadAvatar,
   useDeleteAvatar,
-} from './useSettings'
-export { useImportBookmarks, useExportBookmarks } from './useImportExport'
-export { usePrefsHydration, applyTheme } from './usePrefs'
-export { useAvatarImage } from './useAvatarImage'
+} from './settings/useSettings'
+export { useImportBookmarks, useExportBookmarks } from './import-export/useImportExport'
+export { usePrefsHydration, applyTheme } from './prefs/usePrefs'
+export { useAvatarImage } from './avatar/useAvatarImage'

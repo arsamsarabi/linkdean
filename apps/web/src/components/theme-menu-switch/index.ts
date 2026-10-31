@@ -1,0 +1,1 @@
+export { ThemeMenuSwitch } from './ThemeMenuSwitch'

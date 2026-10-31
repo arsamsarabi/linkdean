@@ -39,10 +39,7 @@ impl SearchClient {
     }
 
     pub async fn ensure_index(&self) -> anyhow::Result<()> {
-        let index = self
-            .client
-            .create_index(&self.index_name, Some("id"))
-            .await;
+        let index = self.client.create_index(&self.index_name, Some("id")).await;
         let _ = index; // exists ok
         let index = self.client.index(&self.index_name);
         index
@@ -79,7 +76,9 @@ impl SearchClient {
             .add_or_replace(&[doc], None)
             .await
             .context("meili upsert")?;
-        let _ = task.wait_for_completion(&self.client, None, None).await;
+        if let Err(e) = task.wait_for_completion(&self.client, None, None).await {
+            tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert wait failed");
+        }
         Ok(())
     }
 
@@ -90,7 +89,9 @@ impl SearchClient {
             .delete_document(id.to_string())
             .await
             .context("meili delete")?;
-        let _ = task.wait_for_completion(&self.client, None, None).await;
+        if let Err(e) = task.wait_for_completion(&self.client, None, None).await {
+            tracing::warn!(bookmark_id = %id, error = %e, "meili delete wait failed");
+        }
         Ok(())
     }
 

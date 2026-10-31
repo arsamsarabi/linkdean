@@ -211,6 +211,14 @@ cargo fmt --all -- --check
 - No grab-bag `utils.rs` / `helpers.rs` — name by purpose (`crypto`, `import_export`, `avatar`)
 - Mirror domain language from `docs/ARCHITECTURE.md` (Hidden vs Vault, etc.)
 
+### Folder layout (mandatory)
+
+- Keep related modules in **domain subfolders**, not flat grab-bags of sibling files
+- One concern per folder: e.g. `db/src/repo/{users,bookmarks,vault}.rs`, `api/src/routes/…`
+- Co-locate tests next to the module they cover (`#[cfg(test)]` in-file or `foo/tests` sibling)
+- Prefer `mod.rs` + submodules over a single multi-thousand-line file when a domain grows
+- Do not invent `utils/` / `misc/` / `common/` folders
+
 ---
 
 ## 14. Documentation

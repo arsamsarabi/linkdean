@@ -8,16 +8,16 @@ import {
   userEnvelopeSchema,
   type UserPublic,
   type UserSettings,
-} from '../schemas/auth'
+} from '../schemas/auth/auth'
 import {
   bookmarkSchema,
   duplicatesSchema,
   importResultSchema,
   searchResponseSchema,
   type Bookmark,
-} from '../schemas/bookmarks'
-import { categoriesSchema, categorySchema, type Category } from '../schemas/categories'
-import { vaultStatusSchema } from '../schemas/vault'
+} from '../schemas/bookmarks/bookmarks'
+import { categoriesSchema, categorySchema, type Category } from '../schemas/categories/categories'
+import { vaultStatusSchema } from '../schemas/vault/vault'
 import { z } from 'zod'
 
 const bookmarksSchema = z.array(bookmarkSchema)

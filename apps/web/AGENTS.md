@@ -253,6 +253,15 @@ TypeScript is not sufficient for external data.
 - No generic folders like `helpers` or `misc`
 - Folder names must reflect purpose
 
+### Folder layout (mandatory)
+
+- Keep modules in **domain subfolders** — do not leave related files as flat siblings
+- Example: avatar UI → `components/avatar/` (`UserAvatar.tsx`, `AvatarCropModal.tsx`, `*.module.css`, optional `index.ts`)
+- Same pattern for pages (`pages/library/`), hooks (`hooks/auth/`), services (`services/bookmarks/`), schemas (`schemas/…`)
+- Co-locate CSS modules and tests with the component/module they belong to
+- Barrel `index.ts` optional when a folder exports more than one public symbol
+- Folder names: kebab-case matching purpose (`query-error-alert`, `import-export`)
+
 ---
 
 ## 13. Styling

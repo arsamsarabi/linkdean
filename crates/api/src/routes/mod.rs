@@ -1,4 +1,4 @@
-mod auth_routes;
+mod auth;
 mod bookmarks;
 mod categories;
 mod health;
@@ -8,13 +8,13 @@ mod tags;
 mod users;
 mod vault;
 
-use axum::Router;
 use crate::state::AppState;
+use axum::Router;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .merge(health::router())
-        .merge(auth_routes::router())
+        .merge(auth::router())
         .merge(users::router())
         .merge(categories::router())
         .merge(bookmarks::router())

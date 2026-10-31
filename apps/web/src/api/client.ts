@@ -1,7 +1,7 @@
 import type { z } from 'zod'
-import { getToken } from '../lib/authToken'
+import { getToken } from '../lib/auth/authToken'
 
-export { getToken, setToken } from '../lib/authToken'
+export { getToken, setToken } from '../lib/auth/authToken'
 
 function parseWithSchema<T>(schema: z.ZodType<T>, data: unknown, path: string): T {
   const result = schema.safeParse(data)

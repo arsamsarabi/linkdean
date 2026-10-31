@@ -4,10 +4,11 @@ mod error;
 mod routes;
 mod state;
 
+use axum::http::{HeaderValue, Method};
 use axum::Router;
 use state::AppState;
 use std::net::SocketAddr;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
@@ -35,23 +36,15 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    let api = Router::new()
-        .merge(routes::router())
-        .with_state(state);
+    let api = Router::new().merge(routes::router()).with_state(state);
 
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "apps/web/dist".into());
     let index = format!("{static_dir}/index.html");
+    let cors = build_cors(&cfg.cors_origins)?;
     let app = Router::new()
         .nest("/api", api)
-        .fallback_service(
-            ServeDir::new(&static_dir).not_found_service(ServeFile::new(index)),
-        )
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        )
+        .fallback_service(ServeDir::new(&static_dir).not_found_service(ServeFile::new(index)))
+        .layer(cors)
         .layer(TraceLayer::new_for_http());
 
     let addr: SocketAddr = cfg.bind.parse()?;
@@ -59,4 +52,24 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+fn build_cors(origins: &[String]) -> anyhow::Result<CorsLayer> {
+    let layer = CorsLayer::new()
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers(Any);
+    if origins.iter().any(|o| o == "*") {
+        tracing::warn!("CORS_ORIGINS=* — allowing any origin (dev/homelab tradeoff)");
+        return Ok(layer.allow_origin(Any));
+    }
+    let parsed: Result<Vec<HeaderValue>, _> =
+        origins.iter().map(|o| o.parse::<HeaderValue>()).collect();
+    let parsed = parsed.map_err(|e| anyhow::anyhow!("invalid CORS_ORIGINS: {e}"))?;
+    Ok(layer.allow_origin(AllowOrigin::list(parsed)))
 }

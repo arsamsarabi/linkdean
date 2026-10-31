@@ -154,9 +154,7 @@ pub async fn backfill_previews(pool: PgPool, search: SearchClient, opts: EnrichO
 async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Result<Vec<u8>> {
     let ws = resolve_browser_ws(browser_http).await?;
     let (mut browser, mut handler) = Browser::connect(ws).await?;
-    let handle = tokio::spawn(async move {
-        while let Some(_ev) = handler.next().await {}
-    });
+    let handle = tokio::spawn(async move { while let Some(_ev) = handler.next().await {} });
 
     let result = async {
         let page = browser.new_page("about:blank").await?;
