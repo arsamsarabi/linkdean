@@ -3,7 +3,9 @@ import {
   ActionIcon,
   Button,
   Group,
+  Menu,
   MultiSelect,
+  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -16,15 +18,27 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconDeviceFloppy,
+  IconDotsVertical,
   IconLayoutDashboard,
   IconPencil,
+  IconPin,
   IconPlus,
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { EmptyState, GlanceTile, QueryErrorAlert } from '@/components'
-import { useBookmarks, useDefaultDashboard, useMe, usePutDefaultDashboard } from '@/hooks'
+import { ConfirmModal, EmptyState, GlanceTile, QueryErrorAlert } from '@/components'
+import {
+  useBookmarks,
+  useCreateDashboard,
+  useDashboard,
+  useDashboards,
+  useDefaultDashboard,
+  useDeleteDashboard,
+  useMe,
+  usePatchDashboard,
+  usePutDashboard,
+} from '@/hooks'
 import type { Dashboard } from '@/schemas'
 import {
   emptyDashboardDraft,
@@ -48,12 +62,28 @@ function draftFromDashboard(d: Dashboard): DashboardDraft {
 
 export function DashboardPage(): ReactElement {
   const me = useMe()
-  const dashboard = useDefaultDashboard()
+  const list = useDashboards()
+  const defaultDash = useDefaultDashboard()
+  const [activeId, setActiveId] = useState<string | undefined>(undefined)
+  const pinnedId = list.data?.find((d) => d.is_default)?.id || defaultDash.data?.id
+
+  useEffect(() => {
+    if (!activeId && pinnedId) {
+      // oxlint-disable-next-line react/set-state-in-effect -- pick pin once list/default known
+      setActiveId(pinnedId)
+    }
+  }, [activeId, pinnedId])
+
+  const dashboard = useDashboard(activeId)
   const bookmarks = useBookmarks()
-  const save = usePutDefaultDashboard()
+  const save = usePutDashboard()
+  const create = useCreateDashboard()
+  const patch = usePatchDashboard()
+  const remove = useDeleteDashboard()
   const viewerUserId = me.data?.user.id
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<DashboardDraft | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   useEffect(() => {
     if (!editing && dashboard.data) {
@@ -70,9 +100,15 @@ export function DashboardPage(): ReactElement {
   }, [bookmarks.data])
 
   const bookmarkById = useMemo(() => {
-    const map = new Map((bookmarks.data || []).map((b) => [b.id, b]))
-    return map
+    return new Map((bookmarks.data || []).map((b) => [b.id, b]))
   }, [bookmarks.data])
+
+  const switcherData = useMemo(() => {
+    return (list.data || []).map((d) => ({
+      value: d.id,
+      label: d.is_default ? `${d.title} (default)` : d.title,
+    }))
+  }, [list.data])
 
   function startEdit(): void {
     setDraft(dashboard.data ? draftFromDashboard(dashboard.data) : emptyDashboardDraft())
@@ -84,16 +120,74 @@ export function DashboardPage(): ReactElement {
     setDraft(null)
   }
 
+  function selectDashboard(id: string | null): void {
+    if (!id || id === activeId) return
+    if (editing) {
+      notifications.show({ color: 'yellow', message: 'Save or cancel edit before switching' })
+      return
+    }
+    setActiveId(id)
+  }
+
   async function onSave(): Promise<void> {
-    if (!draft) return
+    if (!draft || !activeId) return
     try {
-      await save.mutateAsync(toPutDashboardLayout(draft))
+      await save.mutateAsync({ id: activeId, body: toPutDashboardLayout(draft) })
       notifications.show({ message: 'Dashboard saved' })
       setEditing(false)
       setDraft(null)
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
+  }
+
+  async function onCreate(): Promise<void> {
+    if (editing) {
+      notifications.show({ color: 'yellow', message: 'Save or cancel edit first' })
+      return
+    }
+    try {
+      const created = await create.mutateAsync({ title: 'New dashboard' })
+      setActiveId(created.id)
+      notifications.show({ message: 'Dashboard created' })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
+  async function onPin(): Promise<void> {
+    if (!activeId) return
+    try {
+      await patch.mutateAsync({ id: activeId, body: { is_default: true } })
+      notifications.show({ message: 'Default dashboard updated' })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
+  async function onDelete(): Promise<void> {
+    if (!activeId) return
+    try {
+      const remaining = await remove.mutateAsync(activeId)
+      const next = remaining.find((d) => d.is_default)?.id || remaining[0]?.id
+      setActiveId(next)
+      setDeleteOpen(false)
+      setEditing(false)
+      setDraft(null)
+      notifications.show({ message: 'Dashboard deleted' })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
+  if (list.isError) {
+    return (
+      <QueryErrorAlert
+        error={list.error}
+        onRetry={() => void list.refetch()}
+        title="Dashboards failed"
+      />
+    )
   }
 
   if (dashboard.isError) {
@@ -106,7 +200,7 @@ export function DashboardPage(): ReactElement {
     )
   }
 
-  if (dashboard.isLoading || !dashboard.data) {
+  if (list.isLoading || !activeId || dashboard.isLoading || !dashboard.data) {
     return (
       <Text size="sm" c="dimmed">
         Loading dashboard…
@@ -116,11 +210,12 @@ export function DashboardPage(): ReactElement {
 
   const view = dashboard.data
   const empty = view.sections.length === 0 || view.sections.every((s) => s.items.length === 0)
+  const isPinned = view.is_default
 
   return (
     <Stack gap="lg">
       <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
-        <Stack gap={4}>
+        <Stack gap={4} style={{ flex: 1, minWidth: 220 }}>
           {editing && draft ? (
             <TextInput
               aria-label="Dashboard title"
@@ -132,10 +227,52 @@ export function DashboardPage(): ReactElement {
             <Title order={2}>{view.title}</Title>
           )}
           <Text size="sm" c="dimmed">
-            Glance at pinned links. Edit layout to rearrange sections.
+            Glance at pinned links. Switch boards or set a default pin.
           </Text>
         </Stack>
-        <Group gap="sm">
+        <Group gap="sm" wrap="wrap">
+          <Select
+            aria-label="Switch dashboard"
+            placeholder="Dashboards"
+            data={switcherData}
+            value={activeId}
+            onChange={selectDashboard}
+            allowDeselect={false}
+            maw={220}
+            disabled={editing}
+          />
+          <Menu shadow="md" width={200} position="bottom-end" withinPortal>
+            <Menu.Target>
+              <ActionIcon variant="default" aria-label="Dashboard actions">
+                <IconDotsVertical size={16} stroke={1.5} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<IconPlus size={14} stroke={1.5} />}
+                onClick={() => void onCreate()}
+                disabled={create.isPending}
+              >
+                New dashboard
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<IconPin size={14} stroke={1.5} />}
+                onClick={() => void onPin()}
+                disabled={isPinned || patch.isPending}
+              >
+                {isPinned ? 'Already default' : 'Set as default'}
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item
+                color="red"
+                leftSection={<IconTrash size={14} stroke={1.5} />}
+                onClick={() => setDeleteOpen(true)}
+                disabled={editing}
+              >
+                Delete dashboard
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
           {editing ? (
             <>
               <Button variant="default" leftSection={<IconX {...iconSm} />} onClick={cancelEdit}>
@@ -316,6 +453,17 @@ export function DashboardPage(): ReactElement {
           </Text>
         </Stack>
       )}
+
+      <ConfirmModal
+        opened={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete dashboard?"
+        body={`Delete “${view.title}”? Layout cannot be undone.`}
+        confirmLabel="Delete"
+        confirmColor="red"
+        loading={remove.isPending}
+        onConfirm={() => void onDelete()}
+      />
     </Stack>
   )
 }

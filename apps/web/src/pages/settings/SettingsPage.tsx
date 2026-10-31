@@ -21,7 +21,9 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { CategoryManager, ImportExportPanel, QueryErrorAlert, VaultPanel } from '@/components'
 import {
   applyTheme,
+  useDashboards,
   useMe,
+  usePatchDashboard,
   usePlatformSettings,
   useUpdatePlatformSettings,
   useUpdateSettings,
@@ -151,6 +153,8 @@ export function SettingsPage(): ReactElement {
   const tab: SettingsTab = requested === 'admin' && !isAdmin ? 'general' : requested
   const settings = me.data?.settings
   const save = useUpdateSettings()
+  const dashboards = useDashboards()
+  const pinDashboard = usePatchDashboard()
 
   function patch(p: Partial<UserSettings>): void {
     if (save.isPending) return
@@ -271,7 +275,28 @@ export function SettingsPage(): ReactElement {
                   ]}
                 />
 
-                {save.isPending ? (
+                <Select
+                  label="Default dashboard"
+                  description="Which board opens on the Dashboard page (pin)."
+                  value={dashboards.data?.find((d) => d.is_default)?.id || null}
+                  disabled={!dashboards.data || pinDashboard.isPending}
+                  onChange={(id) => {
+                    if (!id) return
+                    pinDashboard.mutate(
+                      { id, body: { is_default: true } },
+                      {
+                        onSuccess: () => notifications.show({ message: 'Default dashboard updated' }),
+                        onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+                      }
+                    )
+                  }}
+                  data={(dashboards.data || []).map((d) => ({
+                    value: d.id,
+                    label: d.title,
+                  }))}
+                />
+
+                {save.isPending || pinDashboard.isPending ? (
                   <Text size="xs" c="dimmed">
                     Saving…
                   </Text>

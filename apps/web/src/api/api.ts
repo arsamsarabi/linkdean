@@ -8,6 +8,7 @@ import {
   categorySharesSchema,
   categoryShareSchema,
   dashboardSchema,
+  dashboardSummariesSchema,
   duplicatesSchema,
   importResultSchema,
   meResponseSchema,
@@ -20,7 +21,10 @@ import {
   type Bookmark,
   type Category,
   type CategoryShare,
+  type CreateDashboard,
   type Dashboard,
+  type DashboardSummary,
+  type PatchDashboard,
   type PlatformSettings,
   type PutDashboardLayout,
   type ShareAccess,
@@ -191,8 +195,26 @@ export const api = {
 
   duplicates: (): Promise<{ urls: string[] }> => req('/bookmarks/duplicates', {}, duplicatesSchema),
 
+  listDashboards: (): Promise<DashboardSummary[]> =>
+    req('/dashboards', {}, dashboardSummariesSchema),
+
+  createDashboard: (body: CreateDashboard = {}): Promise<Dashboard> =>
+    req('/dashboards', { method: 'POST', body: JSON.stringify(body) }, dashboardSchema),
+
   getDefaultDashboard: (): Promise<Dashboard> => req('/dashboards/default', {}, dashboardSchema),
 
   putDefaultDashboard: (body: PutDashboardLayout): Promise<Dashboard> =>
     req('/dashboards/default', { method: 'PUT', body: JSON.stringify(body) }, dashboardSchema),
+
+  getDashboard: (id: string): Promise<Dashboard> =>
+    req(`/dashboards/${id}`, {}, dashboardSchema),
+
+  putDashboard: (id: string, body: PutDashboardLayout): Promise<Dashboard> =>
+    req(`/dashboards/${id}`, { method: 'PUT', body: JSON.stringify(body) }, dashboardSchema),
+
+  patchDashboard: (id: string, body: PatchDashboard): Promise<Dashboard> =>
+    req(`/dashboards/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, dashboardSchema),
+
+  deleteDashboard: (id: string): Promise<DashboardSummary[]> =>
+    req(`/dashboards/${id}`, { method: 'DELETE' }, dashboardSummariesSchema),
 }

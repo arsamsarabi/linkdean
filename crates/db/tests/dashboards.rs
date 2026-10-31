@@ -2,7 +2,10 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
-use linkdean_core::{CreateBookmark, CreateCategory, Error, PutDashboardLayout, PutDashboardSection};
+use linkdean_core::{
+    CreateBookmark, CreateCategory, CreateDashboard, Error, PatchDashboard, PutDashboardLayout,
+    PutDashboardSection,
+};
 use linkdean_db::{self as db};
 use uuid::Uuid;
 
@@ -171,4 +174,68 @@ async fn default_dashboard_roundtrip_and_authz() {
 
     let _ = db::delete_bookmark(&pool, user_a.id, bm1.id).await;
     let _ = db::delete_category(&pool, user_a.id, cat.id).await;
+}
+
+#[tokio::test]
+async fn multi_dashboard_create_pin_delete() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+
+    let user = db::create_user(
+        &pool,
+        &unique_email("multi"),
+        Some("password-a-long"),
+        Some("Multi"),
+        None,
+        None,
+    )
+    .await
+    .expect("create user");
+
+    let home = db::get_default_dashboard(&pool, user.id, None)
+        .await
+        .expect("default");
+    assert!(home.is_default);
+
+    let second = db::create_dashboard(
+        &pool,
+        user.id,
+        CreateDashboard {
+            title: Some("Work".into()),
+        },
+        None,
+    )
+    .await
+    .expect("create second");
+    assert!(!second.is_default);
+
+    let listed = db::list_dashboards(&pool, user.id).await.expect("list");
+    assert_eq!(listed.len(), 2);
+
+    let pinned = db::patch_dashboard(
+        &pool,
+        user.id,
+        second.id,
+        PatchDashboard {
+            title: None,
+            is_default: Some(true),
+        },
+        None,
+    )
+    .await
+    .expect("pin second");
+    assert!(pinned.is_default);
+
+    let default_now = db::get_default_dashboard(&pool, user.id, None)
+        .await
+        .expect("default after pin");
+    assert_eq!(default_now.id, second.id);
+
+    let after_del = db::delete_dashboard(&pool, user.id, second.id)
+        .await
+        .expect("delete pin");
+    assert_eq!(after_del.len(), 1);
+    assert!(after_del[0].is_default);
+    assert_eq!(after_del[0].id, home.id);
 }

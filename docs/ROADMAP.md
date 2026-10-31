@@ -54,10 +54,10 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 
 **Multi-dashboard (same milestone; schema already allows many rows + one default)**
 
-- User may own several dashboards; exactly one is pinned / active at a time
-- Dashboard page shows the pinned layout; switcher (dropdown) lists all personal dashboards
-- Setting: which dashboard is the default pin (distinct from `default_landing` home route)
-- Create / rename / delete dashboards (keep at least one; deleting pin falls back to another or recreates default)
+- User may own several dashboards; exactly one is pinned / default at a time (done)
+- Dashboard page switcher + create / pin / delete; edit layout per board (done)
+- Settings: default dashboard pin (distinct from `default_landing` home route) (done)
+- Create / rename / delete dashboards (keep at least one; deleting pin falls back to another or recreates default) (done; rename via edit layout title)
 
 ---
 

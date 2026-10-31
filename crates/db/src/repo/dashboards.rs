@@ -1,6 +1,7 @@
 use linkdean_core::{
-    Dashboard, DashboardItem, DashboardItemView, DashboardSection, DashboardSectionView,
-    DashboardView, Error, PutDashboardLayout, Result,
+    CreateDashboard, Dashboard, DashboardItem, DashboardItemView, DashboardSection,
+    DashboardSectionView, DashboardSummary, DashboardView, Error, PatchDashboard,
+    PutDashboardLayout, Result,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -11,6 +12,10 @@ use super::shares::bookmark_can_read;
 pub async fn ensure_default_dashboard(pool: &PgPool, user_id: Uuid) -> Result<Dashboard> {
     if let Some(d) = get_default_dashboard_row(pool, user_id).await? {
         return Ok(d);
+    }
+    // Prefer any existing row (e.g. after delete cleared the pin) before inserting.
+    if let Some(any) = list_dashboard_rows(pool, user_id).await?.into_iter().next() {
+        return pin_dashboard_row(pool, user_id, any.id).await;
     }
     sqlx::query_as::<_, Dashboard>(
         r#"
@@ -39,12 +44,57 @@ async fn get_default_dashboard_row(pool: &PgPool, user_id: Uuid) -> Result<Optio
     .map_err(|e| Error::msg(e.to_string()))
 }
 
+async fn list_dashboard_rows(pool: &PgPool, user_id: Uuid) -> Result<Vec<Dashboard>> {
+    sqlx::query_as::<_, Dashboard>(
+        r#"
+        SELECT * FROM dashboards
+        WHERE owner_user_id = $1
+        ORDER BY is_default DESC, title ASC, created_at ASC
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
+async fn get_owned_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Dashboard> {
+    sqlx::query_as::<_, Dashboard>(
+        r#"
+        SELECT * FROM dashboards
+        WHERE id = $1 AND owner_user_id = $2
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
+}
+
+pub async fn list_dashboards(pool: &PgPool, user_id: Uuid) -> Result<Vec<DashboardSummary>> {
+    let _ = ensure_default_dashboard(pool, user_id).await?;
+    let rows = list_dashboard_rows(pool, user_id).await?;
+    Ok(rows.into_iter().map(DashboardSummary::from).collect())
+}
+
 pub async fn get_default_dashboard(
     pool: &PgPool,
     user_id: Uuid,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
     let dash = ensure_default_dashboard(pool, user_id).await?;
+    load_dashboard_view(pool, user_id, dash, vault_key).await
+}
+
+pub async fn get_dashboard(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+    vault_key: Option<&[u8; 32]>,
+) -> Result<DashboardView> {
+    let dash = get_owned_dashboard(pool, user_id, id).await?;
     load_dashboard_view(pool, user_id, dash, vault_key).await
 }
 
@@ -123,6 +173,36 @@ async fn load_dashboard_view(
     })
 }
 
+pub async fn create_dashboard(
+    pool: &PgPool,
+    user_id: Uuid,
+    req: CreateDashboard,
+    vault_key: Option<&[u8; 32]>,
+) -> Result<DashboardView> {
+    let _ = ensure_default_dashboard(pool, user_id).await?;
+    let title = req
+        .title
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("New dashboard");
+
+    let dash = sqlx::query_as::<_, Dashboard>(
+        r#"
+        INSERT INTO dashboards (owner_user_id, title, is_default)
+        VALUES ($1, $2, FALSE)
+        RETURNING *
+        "#,
+    )
+    .bind(user_id)
+    .bind(title)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    load_dashboard_view(pool, user_id, dash, vault_key).await
+}
+
 pub async fn put_default_dashboard(
     pool: &PgPool,
     user_id: Uuid,
@@ -130,12 +210,23 @@ pub async fn put_default_dashboard(
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
     let dash = ensure_default_dashboard(pool, user_id).await?;
+    put_dashboard(pool, user_id, dash.id, req, vault_key).await
+}
+
+pub async fn put_dashboard(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+    req: PutDashboardLayout,
+    vault_key: Option<&[u8; 32]>,
+) -> Result<DashboardView> {
+    let dash = get_owned_dashboard(pool, user_id, id).await?;
     let title = req
         .title
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .unwrap_or("Home");
+        .unwrap_or(dash.title.as_str());
 
     let mut tx = pool
         .begin()
@@ -210,5 +301,113 @@ pub async fn put_default_dashboard(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
 
-    get_default_dashboard(pool, user_id, vault_key).await
+    get_dashboard(pool, user_id, id, vault_key).await
+}
+
+async fn pin_dashboard_row(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Dashboard> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    sqlx::query(
+        r#"
+        UPDATE dashboards
+        SET is_default = FALSE, updated_at = now()
+        WHERE owner_user_id = $1 AND is_default = TRUE
+        "#,
+    )
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let dash = sqlx::query_as::<_, Dashboard>(
+        r#"
+        UPDATE dashboards
+        SET is_default = TRUE, updated_at = now()
+        WHERE id = $1 AND owner_user_id = $2
+        RETURNING *
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+
+    tx.commit()
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    Ok(dash)
+}
+
+pub async fn patch_dashboard(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+    req: PatchDashboard,
+    vault_key: Option<&[u8; 32]>,
+) -> Result<DashboardView> {
+    let dash = get_owned_dashboard(pool, user_id, id).await?;
+
+    if let Some(true) = req.is_default {
+        let _ = pin_dashboard_row(pool, user_id, id).await?;
+    } else if let Some(false) = req.is_default {
+        if dash.is_default {
+            return Err(Error::BadRequest(
+                "pin another dashboard instead of unpinning the only default".into(),
+            ));
+        }
+    }
+
+    if let Some(ref title_raw) = req.title {
+        let title = title_raw.trim();
+        if title.is_empty() {
+            return Err(Error::BadRequest("title required".into()));
+        }
+        sqlx::query(
+            r#"
+            UPDATE dashboards
+            SET title = $1, updated_at = now()
+            WHERE id = $2 AND owner_user_id = $3
+            "#,
+        )
+        .bind(title)
+        .bind(id)
+        .bind(user_id)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    }
+
+    get_dashboard(pool, user_id, id, vault_key).await
+}
+
+pub async fn delete_dashboard(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+) -> Result<Vec<DashboardSummary>> {
+    let dash = get_owned_dashboard(pool, user_id, id).await?;
+    let was_default = dash.is_default;
+
+    sqlx::query("DELETE FROM dashboards WHERE id = $1 AND owner_user_id = $2")
+        .bind(id)
+        .bind(user_id)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    let remaining = list_dashboard_rows(pool, user_id).await?;
+    if remaining.is_empty() {
+        let _ = ensure_default_dashboard(pool, user_id).await?;
+    } else if was_default {
+        let next = remaining[0].id;
+        let _ = pin_dashboard_row(pool, user_id, next).await?;
+    }
+
+    list_dashboards(pool, user_id).await
 }

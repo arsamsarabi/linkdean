@@ -483,7 +483,41 @@ pub struct DashboardView {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Full layout replace for the default personal dashboard.
+/// Lightweight row for switchers / settings (no sections).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardSummary {
+    pub id: Uuid,
+    pub title: String,
+    pub is_default: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl From<Dashboard> for DashboardSummary {
+    fn from(d: Dashboard) -> Self {
+        Self {
+            id: d.id,
+            title: d.title,
+            is_default: d.is_default,
+            created_at: d.created_at,
+            updated_at: d.updated_at,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateDashboard {
+    pub title: Option<String>,
+}
+
+/// Rename and/or pin (`is_default: true` clears other pins for the owner).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatchDashboard {
+    pub title: Option<String>,
+    pub is_default: Option<bool>,
+}
+
+/// Full layout replace for a personal dashboard.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PutDashboardLayout {
     pub title: Option<String>,

@@ -428,7 +428,7 @@ pub async fn owned_shared_out_category_ids(
 pub async fn bookmark_shared_out(pool: &PgPool, bookmark_id: Uuid) -> Result<bool> {
     let row: (bool,) = sqlx::query_as(
         r#"
-        WITH bm_cats AS (
+        WITH RECURSIVE bm_cats AS (
             SELECT category_id AS id
             FROM bookmark_categories
             WHERE bookmark_id = $1
