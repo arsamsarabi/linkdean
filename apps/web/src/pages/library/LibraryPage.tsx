@@ -94,6 +94,8 @@ export function LibraryPage(): ReactElement {
     category?: string | string[]
     tag?: string | string[]
     folder?: string
+    create?: true
+    focus?: 'search'
   }
 
   const me = useMe()
@@ -278,20 +280,6 @@ export function LibraryPage(): ReactElement {
 
   useHotkeys([
     [
-      '/',
-      (e) => {
-        e.preventDefault()
-        searchRef.current?.focus()
-      },
-    ],
-    [
-      'mod+K',
-      (e) => {
-        e.preventDefault()
-        searchRef.current?.focus()
-      },
-    ],
-    [
       'n',
       (e) => {
         const t = e.target as HTMLElement | null
@@ -308,6 +296,27 @@ export function LibraryPage(): ReactElement {
       },
     ],
   ])
+
+  /** Consume one-shot command-palette flags (`create` / `focus`) then strip from URL. */
+  useEffect(() => {
+    if (!searchParams.create && searchParams.focus !== 'search') return
+    if (searchParams.create) openCreate()
+    if (searchParams.focus === 'search') {
+      window.requestAnimationFrame(() => searchRef.current?.focus())
+    }
+    void nav({
+      to: '/library',
+      search: buildLibrarySearch({
+        q: urlQ,
+        sort,
+        category: filterCats,
+        tag: filterTags,
+        folder: folderId,
+      }),
+      replace: true,
+    })
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- one-shot URL flags only
+  }, [searchParams.create, searchParams.focus])
 
   function openEdit(id: string): void {
     const fromList = (bookmarks.data || []).find((x) => x.id === id)
@@ -560,7 +569,7 @@ export function LibraryPage(): ReactElement {
                 </ActionIcon>
               ) : (
                 <Kbd visibleFrom="sm" size="xs">
-                  /
+                  ⌘K
                 </Kbd>
               )
             }

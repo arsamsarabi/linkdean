@@ -11,6 +11,10 @@ export type LibrarySearch = {
   tag?: string | string[]
   /** Explorer folder id (`uncategorized` or category uuid). Omit / `all` = root. */
   folder?: string
+  /** One-shot: open create drawer (command palette). Consumed then stripped. */
+  create?: true
+  /** One-shot: focus library search input. Consumed then stripped. */
+  focus?: 'search'
 }
 
 export function asStringList(v: unknown): string[] {
@@ -40,6 +44,10 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
   const q = typeof search.q === 'string' && search.q.trim() ? search.q : undefined
   const folderRaw = typeof search.folder === 'string' ? search.folder.trim() : ''
   const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
+  const createRaw = search.create
+  const create =
+    createRaw === true || createRaw === 1 || createRaw === '1' || createRaw === 'true' ? true : undefined
+  const focus = search.focus === 'search' ? ('search' as const) : undefined
 
   return {
     q,
@@ -47,6 +55,8 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
     category: listToSearchParam(category),
     tag: listToSearchParam(tag),
     folder,
+    create,
+    focus,
   }
 }
 
@@ -57,6 +67,8 @@ export function buildLibrarySearch(input: {
   category?: string[]
   tag?: string[]
   folder?: string
+  create?: boolean
+  focus?: 'search'
 }): LibrarySearch {
   const q = input.q?.trim() || undefined
   const sort = input.sort && input.sort !== 'updated_desc' ? input.sort : undefined
@@ -68,5 +80,7 @@ export function buildLibrarySearch(input: {
     category: listToSearchParam(input.category || []),
     tag: listToSearchParam(input.tag || []),
     folder,
+    create: input.create ? true : undefined,
+    focus: input.focus === 'search' ? 'search' : undefined,
   }
 }

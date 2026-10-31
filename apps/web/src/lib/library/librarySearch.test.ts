@@ -25,12 +25,21 @@ describe('validateLibrarySearch', () => {
       category: undefined,
       tag: undefined,
       folder: undefined,
+      create: undefined,
+      focus: undefined,
     })
   })
 
   it('keeps folder except all', () => {
     expect(validateLibrarySearch({ folder: 'all' }).folder).toBeUndefined()
     expect(validateLibrarySearch({ folder: 'uncategorized' }).folder).toBe('uncategorized')
+  })
+
+  it('parses one-shot create and focus', () => {
+    expect(validateLibrarySearch({ create: '1', focus: 'search' })).toMatchObject({
+      create: true,
+      focus: 'search',
+    })
   })
 })
 
@@ -42,6 +51,15 @@ describe('buildLibrarySearch', () => {
       category: 'c',
       tag: undefined,
       folder: 'root',
+      create: undefined,
+      focus: undefined,
+    })
+  })
+
+  it('includes create and focus when set', () => {
+    expect(buildLibrarySearch({ create: true, focus: 'search' })).toMatchObject({
+      create: true,
+      focus: 'search',
     })
   })
 })

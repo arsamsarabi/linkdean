@@ -1,6 +1,7 @@
 export * from './avatar'
 export * from './bookmark'
 export * from './category'
+export * from './command-palette'
 export * from './confirm-modal'
 export * from './dashboard'
 export * from './empty-state'

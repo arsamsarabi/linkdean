@@ -11,9 +11,17 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
+import { useDisclosure, useHotkeys } from '@mantine/hooks'
 import { IconBooks, IconLayoutDashboard, IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { LogoMark, PageContainer, QueryErrorAlert, ThemeMenuSwitch, UserAvatar } from '@/components'
+import {
+  CommandPalette,
+  LogoMark,
+  PageContainer,
+  QueryErrorAlert,
+  ThemeMenuSwitch,
+  UserAvatar,
+} from '@/components'
 import { useLogout, usePrefsHydration } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useUi } from '@/stores'
@@ -26,12 +34,32 @@ export function AppShell(): ReactElement {
   const me = usePrefsHydration(true)
   const logout = useLogout()
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
+  const [paletteOpen, { open: openPalette, close: closePalette, toggle: togglePalette }] = useDisclosure(false)
 
   useEffect(() => {
     if (me.data && !me.data.user.onboarding_completed) {
       void nav({ to: '/onboarding' })
     }
   }, [me.data, nav])
+
+  useHotkeys([
+    [
+      '/',
+      (e) => {
+        const t = e.target as HTMLElement | null
+        if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
+        e.preventDefault()
+        openPalette()
+      },
+    ],
+    [
+      'mod+K',
+      (e) => {
+        e.preventDefault()
+        togglePalette()
+      },
+    ],
+  ])
 
   async function onLogout(): Promise<void> {
     await logout.mutateAsync()
@@ -133,6 +161,7 @@ export function AppShell(): ReactElement {
           )}
         </PageContainer>
       </MantineAppShell.Main>
+      <CommandPalette opened={paletteOpen} onClose={closePalette} />
     </MantineAppShell>
   )
 }

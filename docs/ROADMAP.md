@@ -141,7 +141,7 @@ Items may be promoted into a milestone when prioritized.
 - ~~Duplicate merge UI~~ (`GET /bookmarks/duplicates` groups + library drawer)
 - ~~Duplicate / fork a list~~ (`POST /categories/{id}/fork`; Settings → Categories copy action)
 - Broken-link checker (rate-limited worker)
-- Keyboard-first command palette (add, search, jump category)
+- ~~Keyboard-first command palette (add, search, jump category)~~ (`/` + mod+K; AppShell palette)
 - Reading list / unread + pin / favorites
 - Full-text notes and optional highlights
 - Favicon + OG image cache on disk (not hot-fetch forever)
