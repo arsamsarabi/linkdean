@@ -11,10 +11,11 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
-import { IconBooks, IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
+import { IconBooks, IconLayoutDashboard, IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { LogoMark, PageContainer, QueryErrorAlert, ThemeMenuSwitch, UserAvatar } from '@/components'
 import { useLogout, usePrefsHydration } from '@/hooks'
+import { resolveDefaultLanding } from '@/lib'
 import { useUi } from '@/stores'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
@@ -41,6 +42,8 @@ export function AppShell(): ReactElement {
   const label = user?.display_name || user?.email || '?'
   const loading = me.isLoading && !me.data
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const landing = resolveDefaultLanding(me.data?.settings.default_landing)
+  const onDashboard = pathname === '/'
   const onLibrary = pathname.startsWith('/library')
 
   return (
@@ -49,7 +52,11 @@ export function AppShell(): ReactElement {
         <PageContainer h="100%">
           <Group h="100%" justify="space-between">
             <Group gap="md" wrap="nowrap">
-              <UnstyledButton component={Link} to="/" aria-label="Home dashboard">
+              <UnstyledButton
+                component={Link}
+                to={landing}
+                aria-label={landing === '/library' ? 'Go to library' : 'Go to dashboard'}
+              >
                 <Group gap="sm" wrap="nowrap">
                   <LogoMark size={28} />
                   <Title order={3} c="violet">
@@ -57,6 +64,15 @@ export function AppShell(): ReactElement {
                   </Title>
                 </Group>
               </UnstyledButton>
+              <Button
+                component={Link}
+                to="/"
+                variant={onDashboard ? 'light' : 'subtle'}
+                leftSection={<IconLayoutDashboard {...iconSm} />}
+                size="compact-sm"
+              >
+                Dashboard
+              </Button>
               <Button
                 component={Link}
                 to="/library"
