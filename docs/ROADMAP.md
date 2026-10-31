@@ -38,7 +38,7 @@ Foundation for collaboration. Sharing landed before personal dashboards so share
 
 ---
 
-## Milestone 2: Personal dashboard - done
+## Milestone 2: Personal dashboard — done
 
 Home surface for a single user (glance-style sectioned grid). `/` is the dashboard; library stays at `/library`.
 
@@ -50,17 +50,13 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 - Glance tiles + section reorder; `default_landing` `/` vs `/library` (Settings + post-login)
 - Invitee share badges on cards / glance tiles / folder tiles
 - App shell: **Dashboard** nav next to Library; logo click honors `default_landing`
-- Owner-side share cue on bookmarks / folders you have shared out (dashboard cards with M3)
+- Owner-side share cue on bookmarks / folders you have shared out
 - Multi-dashboard: many boards, one default pin; page switcher + create / pin / delete; Settings default-dashboard select; rename via edit-layout title; delete pin falls back or recreates Home
-
-**Before marking done**
-
-- Quick UX QA (switcher, pin, empty board, RO shared folders in library still gated)
-- User confirm → mark **done**, then Milestone 3
+- Library BookmarkCard on home; denser dashboard grid; Unsorted pill + filter; First-install login link removed
 
 ---
 
-## Milestone 3: Shared dashboards
+## Milestone 3: Shared dashboards (in progress)
 
 Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX), including multi-dashboard.
 
@@ -70,7 +66,13 @@ Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX), inc
 - Creator controls invitee access: read-only / read-write
 - Invitees see shared layout; RW can rearrange per ACL rules
 - Shared-dashboard visual cues consistent with folder/bookmark share badges
-- Invitees can switch among dashboards shared with them (alongside own, once multi-dashboard ships)
+- Invitees can switch among dashboards shared with them (alongside own)
+
+**Building**
+
+- `dashboard_shares` migration + ACL (`read` / `write`); owner-only share / delete / pin
+- List merges owned + shared; non-vault pins visible to invitees; vault pins stay owner-only
+- API `/dashboards/{id}/shares`; Share drawer + badges on dashboard page
 
 ---
 

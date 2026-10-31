@@ -1,0 +1,299 @@
+use linkdean_core::{
+    CategoryAccess, CreateDashboardShare, Dashboard, DashboardShare, DashboardShareView, Error,
+    Result, ShareAccess, UpdateDashboardShare,
+};
+use sqlx::PgPool;
+use uuid::Uuid;
+
+use super::users::find_user_by_email;
+
+#[derive(Debug, sqlx::FromRow)]
+struct DashShareRow {
+    id: Uuid,
+    dashboard_id: Uuid,
+    invitee_user_id: Uuid,
+    access: String,
+    invited_by_user_id: Uuid,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+    invitee_email: String,
+    invitee_display_name: Option<String>,
+}
+
+fn to_view(row: DashShareRow) -> Result<DashboardShareView> {
+    let access = ShareAccess::parse(&row.access).map_err(Error::BadRequest)?;
+    Ok(DashboardShareView {
+        id: row.id,
+        dashboard_id: row.dashboard_id,
+        invitee_user_id: row.invitee_user_id,
+        invitee_email: row.invitee_email,
+        invitee_display_name: row.invitee_display_name,
+        access,
+        invited_by_user_id: row.invited_by_user_id,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    })
+}
+
+pub async fn get_dashboard_row(pool: &PgPool, id: Uuid) -> Result<Dashboard> {
+    sqlx::query_as::<_, Dashboard>("SELECT * FROM dashboards WHERE id = $1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?
+        .ok_or(Error::NotFound)
+}
+
+async fn find_direct_dashboard_share(
+    pool: &PgPool,
+    dashboard_id: Uuid,
+    invitee_user_id: Uuid,
+) -> Result<Option<DashboardShare>> {
+    sqlx::query_as::<_, DashboardShare>(
+        r#"
+        SELECT id, dashboard_id, invitee_user_id, access, invited_by_user_id, created_at, updated_at
+        FROM dashboard_shares
+        WHERE dashboard_id = $1 AND invitee_user_id = $2
+        "#,
+    )
+    .bind(dashboard_id)
+    .bind(invitee_user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
+/// Owner wins. Else direct share. Else NotFound.
+pub async fn dashboard_access(
+    pool: &PgPool,
+    user_id: Uuid,
+    dashboard_id: Uuid,
+) -> Result<CategoryAccess> {
+    let dash = get_dashboard_row(pool, dashboard_id).await?;
+    if dash.owner_user_id == user_id {
+        return Ok(CategoryAccess::Owner);
+    }
+    if let Some(share) = find_direct_dashboard_share(pool, dashboard_id, user_id).await? {
+        let access = ShareAccess::parse(&share.access).map_err(Error::BadRequest)?;
+        return Ok(access.to_dashboard_access());
+    }
+    Err(Error::NotFound)
+}
+
+pub async fn require_dashboard_read(
+    pool: &PgPool,
+    user_id: Uuid,
+    dashboard_id: Uuid,
+) -> Result<(Dashboard, CategoryAccess)> {
+    let access = dashboard_access(pool, user_id, dashboard_id).await?;
+    let dash = get_dashboard_row(pool, dashboard_id).await?;
+    Ok((dash, access))
+}
+
+pub async fn require_dashboard_write(
+    pool: &PgPool,
+    user_id: Uuid,
+    dashboard_id: Uuid,
+) -> Result<(Dashboard, CategoryAccess)> {
+    let (dash, access) = require_dashboard_read(pool, user_id, dashboard_id).await?;
+    if !access.can_write() {
+        return Err(Error::Forbidden);
+    }
+    Ok((dash, access))
+}
+
+pub async fn require_dashboard_owner(pool: &PgPool, user_id: Uuid, dashboard_id: Uuid) -> Result<Dashboard> {
+    let (dash, access) = require_dashboard_read(pool, user_id, dashboard_id).await?;
+    if !access.is_owner() {
+        return Err(Error::Forbidden);
+    }
+    Ok(dash)
+}
+
+pub async fn list_shared_dashboards(
+    pool: &PgPool,
+    invitee_user_id: Uuid,
+) -> Result<Vec<(Dashboard, CategoryAccess)>> {
+    #[derive(Debug, sqlx::FromRow)]
+    struct Row {
+        id: Uuid,
+        owner_user_id: Uuid,
+        title: String,
+        is_default: bool,
+        created_at: chrono::DateTime<chrono::Utc>,
+        updated_at: chrono::DateTime<chrono::Utc>,
+        share_access: String,
+    }
+
+    let rows = sqlx::query_as::<_, Row>(
+        r#"
+        SELECT
+            d.id, d.owner_user_id, d.title, d.is_default, d.created_at, d.updated_at,
+            ds.access AS share_access
+        FROM dashboard_shares ds
+        JOIN dashboards d ON d.id = ds.dashboard_id
+        WHERE ds.invitee_user_id = $1
+        ORDER BY d.title ASC, d.created_at ASC
+        "#,
+    )
+    .bind(invitee_user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        let access = ShareAccess::parse(&row.share_access)
+            .map_err(Error::BadRequest)?
+            .to_dashboard_access();
+        out.push((
+            Dashboard {
+                id: row.id,
+                owner_user_id: row.owner_user_id,
+                title: row.title,
+                is_default: row.is_default,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            },
+            access,
+        ));
+    }
+    Ok(out)
+}
+
+pub async fn dashboard_shared_out(pool: &PgPool, dashboard_id: Uuid) -> Result<bool> {
+    let exists: Option<(i32,)> = sqlx::query_as(
+        r#"
+        SELECT 1
+        FROM dashboard_shares
+        WHERE dashboard_id = $1
+        LIMIT 1
+        "#,
+    )
+    .bind(dashboard_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(exists.is_some())
+}
+
+pub async fn list_shares_for_dashboard(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    dashboard_id: Uuid,
+) -> Result<Vec<DashboardShareView>> {
+    require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+    let rows = sqlx::query_as::<_, DashShareRow>(
+        r#"
+        SELECT
+            ds.id, ds.dashboard_id, ds.invitee_user_id, ds.access, ds.invited_by_user_id,
+            ds.created_at, ds.updated_at,
+            u.email AS invitee_email, u.display_name AS invitee_display_name
+        FROM dashboard_shares ds
+        JOIN users u ON u.id = ds.invitee_user_id
+        WHERE ds.dashboard_id = $1
+        ORDER BY u.email ASC
+        "#,
+    )
+    .bind(dashboard_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    rows.into_iter().map(to_view).collect()
+}
+
+pub async fn create_dashboard_share(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    dashboard_id: Uuid,
+    req: CreateDashboardShare,
+) -> Result<DashboardShareView> {
+    require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+
+    let email = req.email.trim().to_ascii_lowercase();
+    if email.is_empty() {
+        return Err(Error::BadRequest("email required".into()));
+    }
+    let invitee = find_user_by_email(pool, &email)
+        .await?
+        .ok_or(Error::NotFound)?;
+    if invitee.id == owner_user_id {
+        return Err(Error::BadRequest("cannot share with yourself".into()));
+    }
+
+    let access = req.access.as_str();
+    let row = sqlx::query_as::<_, DashShareRow>(
+        r#"
+        INSERT INTO dashboard_shares (dashboard_id, invitee_user_id, access, invited_by_user_id)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (dashboard_id, invitee_user_id) DO UPDATE
+          SET access = EXCLUDED.access, updated_at = now()
+        RETURNING
+            id, dashboard_id, invitee_user_id, access, invited_by_user_id, created_at, updated_at,
+            (SELECT email FROM users WHERE id = invitee_user_id) AS invitee_email,
+            (SELECT display_name FROM users WHERE id = invitee_user_id) AS invitee_display_name
+        "#,
+    )
+    .bind(dashboard_id)
+    .bind(invitee.id)
+    .bind(access)
+    .bind(owner_user_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    to_view(row)
+}
+
+pub async fn update_dashboard_share(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    dashboard_id: Uuid,
+    invitee_user_id: Uuid,
+    req: UpdateDashboardShare,
+) -> Result<DashboardShareView> {
+    require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+    let access = req.access.as_str();
+    let row = sqlx::query_as::<_, DashShareRow>(
+        r#"
+        UPDATE dashboard_shares
+        SET access = $3, updated_at = now()
+        WHERE dashboard_id = $1 AND invitee_user_id = $2
+        RETURNING
+            id, dashboard_id, invitee_user_id, access, invited_by_user_id, created_at, updated_at,
+            (SELECT email FROM users WHERE id = invitee_user_id) AS invitee_email,
+            (SELECT display_name FROM users WHERE id = invitee_user_id) AS invitee_display_name
+        "#,
+    )
+    .bind(dashboard_id)
+    .bind(invitee_user_id)
+    .bind(access)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+
+    to_view(row)
+}
+
+pub async fn delete_dashboard_share(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    dashboard_id: Uuid,
+    invitee_user_id: Uuid,
+) -> Result<()> {
+    require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+    let res = sqlx::query(
+        "DELETE FROM dashboard_shares WHERE dashboard_id = $1 AND invitee_user_id = $2",
+    )
+    .bind(dashboard_id)
+    .bind(invitee_user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if res.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}

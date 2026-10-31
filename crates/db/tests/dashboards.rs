@@ -1,10 +1,10 @@
-//! Personal dashboard (M2) repo tests.
+//! Personal dashboard (M2) + shared dashboards (M3) repo tests.
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
 use linkdean_core::{
-    CreateBookmark, CreateCategory, CreateDashboard, Error, PatchDashboard, PutDashboardLayout,
-    PutDashboardSection,
+    CategoryAccess, CreateBookmark, CreateCategory, CreateDashboard, CreateDashboardShare, Error,
+    PatchDashboard, PutDashboardLayout, PutDashboardSection, ShareAccess, UpdateDashboardShare,
 };
 use linkdean_db::{self as db};
 use uuid::Uuid;
@@ -238,4 +238,182 @@ async fn multi_dashboard_create_pin_delete() {
     assert_eq!(after_del.len(), 1);
     assert!(after_del[0].is_default);
     assert_eq!(after_del[0].id, home.id);
+}
+
+#[tokio::test]
+async fn dashboard_share_read_write_and_revoke() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+
+    let user_a = db::create_user(
+        &pool,
+        &unique_email("share-a"),
+        Some("password-a-long"),
+        Some("Dash Share A"),
+        None,
+        None,
+    )
+    .await
+    .expect("create a");
+    let user_b = db::create_user(
+        &pool,
+        &unique_email("share-b"),
+        Some("password-b-long"),
+        Some("Dash Share B"),
+        None,
+        None,
+    )
+    .await
+    .expect("create b");
+    let user_c = db::create_user(
+        &pool,
+        &unique_email("share-c"),
+        Some("password-c-long"),
+        Some("Dash Share C"),
+        None,
+        None,
+    )
+    .await
+    .expect("create c");
+
+    let cat = db::create_category(
+        &pool,
+        user_a.id,
+        CreateCategory {
+            name: format!("DashShareCat-{}", Uuid::new_v4()),
+            parent_id: None,
+            is_hidden: false,
+            is_vault: false,
+        },
+    )
+    .await
+    .expect("cat");
+    let bm = db::create_bookmark(
+        &pool,
+        user_a.id,
+        CreateBookmark {
+            url: format!("https://dash-share.example/{}/", Uuid::new_v4()),
+            title: Some("Pinned".into()),
+            description: None,
+            notes: None,
+            category_id: Some(cat.id),
+            category_ids: vec![cat.id],
+            tags: vec![],
+        },
+        None,
+    )
+    .await
+    .expect("bm");
+
+    let home = db::get_default_dashboard(&pool, user_a.id, None)
+        .await
+        .expect("home");
+    let _ = db::put_dashboard(
+        &pool,
+        user_a.id,
+        home.id,
+        PutDashboardLayout {
+            title: Some("Team board".into()),
+            sections: vec![PutDashboardSection {
+                title: "Pins".into(),
+                bookmark_ids: vec![bm.id],
+            }],
+        },
+        None,
+    )
+    .await
+    .expect("layout");
+
+    assert!(matches!(
+        db::get_dashboard(&pool, user_c.id, home.id, None).await,
+        Err(Error::NotFound)
+    ));
+
+    let share = db::create_dashboard_share(
+        &pool,
+        user_a.id,
+        home.id,
+        CreateDashboardShare {
+            email: user_b.email.clone(),
+            access: ShareAccess::Read,
+        },
+    )
+    .await
+    .expect("share read");
+    assert_eq!(share.access, ShareAccess::Read);
+
+    let as_b = db::get_dashboard(&pool, user_b.id, home.id, None)
+        .await
+        .expect("b read");
+    assert_eq!(as_b.access, CategoryAccess::Read);
+    assert_eq!(as_b.sections[0].items.len(), 1);
+    assert!(!as_b.is_default);
+
+    assert!(matches!(
+        db::put_dashboard(
+            &pool,
+            user_b.id,
+            home.id,
+            PutDashboardLayout {
+                title: None,
+                sections: vec![PutDashboardSection {
+                    title: "Nope".into(),
+                    bookmark_ids: vec![],
+                }],
+            },
+            None,
+        )
+        .await,
+        Err(Error::Forbidden)
+    ));
+    assert!(matches!(
+        db::delete_dashboard(&pool, user_b.id, home.id).await,
+        Err(Error::Forbidden)
+    ));
+
+    let _ = db::update_dashboard_share(
+        &pool,
+        user_a.id,
+        home.id,
+        user_b.id,
+        UpdateDashboardShare {
+            access: ShareAccess::Write,
+        },
+    )
+    .await
+    .expect("upgrade write");
+
+    let rewritten = db::put_dashboard(
+        &pool,
+        user_b.id,
+        home.id,
+        PutDashboardLayout {
+            title: Some("Team board RW".into()),
+            sections: vec![PutDashboardSection {
+                title: "Pins".into(),
+                bookmark_ids: vec![bm.id],
+            }],
+        },
+        None,
+    )
+    .await
+    .expect("b write layout");
+    assert_eq!(rewritten.access, CategoryAccess::Write);
+    assert_eq!(rewritten.title, "Team board RW");
+
+    let listed_b = db::list_dashboards(&pool, user_b.id).await.expect("list b");
+    assert!(
+        listed_b
+            .iter()
+            .any(|d| d.id == home.id && d.access == CategoryAccess::Write)
+    );
+
+    db::delete_dashboard_share(&pool, user_a.id, home.id, user_b.id)
+        .await
+        .expect("revoke");
+    assert!(matches!(
+        db::get_dashboard(&pool, user_b.id, home.id, None).await,
+        Err(Error::NotFound)
+    ));
 }

@@ -290,10 +290,12 @@ export function SettingsPage(): ReactElement {
                       }
                     )
                   }}
-                  data={(dashboards.data || []).map((d) => ({
-                    value: d.id,
-                    label: d.title,
-                  }))}
+                  data={(dashboards.data || [])
+                    .filter((d) => d.access === 'owner')
+                    .map((d) => ({
+                      value: d.id,
+                      label: d.title,
+                    }))}
                 />
 
                 {save.isPending || pinDashboard.isPending ? (

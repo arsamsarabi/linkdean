@@ -151,6 +151,11 @@ impl ShareAccess {
             Self::Write => CategoryAccess::Write,
         }
     }
+
+    /// Same Owner/Read/Write mapping used for dashboards.
+    pub fn to_dashboard_access(self) -> CategoryAccess {
+        self.to_category_access()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,6 +225,41 @@ pub struct CreateCategoryShare {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateCategoryShare {
+    pub access: ShareAccess,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DashboardShare {
+    pub id: Uuid,
+    pub dashboard_id: Uuid,
+    pub invitee_user_id: Uuid,
+    pub access: String,
+    pub invited_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardShareView {
+    pub id: Uuid,
+    pub dashboard_id: Uuid,
+    pub invitee_user_id: Uuid,
+    pub invitee_email: String,
+    pub invitee_display_name: Option<String>,
+    pub access: ShareAccess,
+    pub invited_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateDashboardShare {
+    pub email: String,
+    pub access: ShareAccess,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateDashboardShare {
     pub access: ShareAccess,
 }
 
@@ -476,9 +516,14 @@ pub struct DashboardSectionView {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardView {
     pub id: Uuid,
+    pub owner_user_id: Uuid,
     pub title: String,
     pub is_default: bool,
     pub sections: Vec<DashboardSectionView>,
+    pub access: CategoryAccess,
+    /// True when the owner has shared this dashboard with someone.
+    #[serde(default)]
+    pub shared_out: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -487,22 +532,14 @@ pub struct DashboardView {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardSummary {
     pub id: Uuid,
+    pub owner_user_id: Uuid,
     pub title: String,
     pub is_default: bool,
+    pub access: CategoryAccess,
+    #[serde(default)]
+    pub shared_out: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-}
-
-impl From<Dashboard> for DashboardSummary {
-    fn from(d: Dashboard) -> Self {
-        Self {
-            id: d.id,
-            title: d.title,
-            is_default: d.is_default,
-            created_at: d.created_at,
-            updated_at: d.updated_at,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

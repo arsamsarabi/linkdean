@@ -8,6 +8,8 @@ import {
   categorySharesSchema,
   categoryShareSchema,
   dashboardSchema,
+  dashboardShareSchema,
+  dashboardSharesSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
   importResultSchema,
@@ -23,6 +25,7 @@ import {
   type CategoryShare,
   type CreateDashboard,
   type Dashboard,
+  type DashboardShare,
   type DashboardSummary,
   type PatchDashboard,
   type PlatformSettings,
@@ -217,4 +220,31 @@ export const api = {
 
   deleteDashboard: (id: string): Promise<DashboardSummary[]> =>
     req(`/dashboards/${id}`, { method: 'DELETE' }, dashboardSummariesSchema),
+
+  dashboardShares: (dashboardId: string): Promise<DashboardShare[]> =>
+    req(`/dashboards/${dashboardId}/shares`, {}, dashboardSharesSchema),
+
+  createDashboardShare: (
+    dashboardId: string,
+    body: { email: string; access: ShareAccess }
+  ): Promise<DashboardShare> =>
+    req(
+      `/dashboards/${dashboardId}/shares`,
+      { method: 'POST', body: JSON.stringify(body) },
+      dashboardShareSchema
+    ),
+
+  updateDashboardShare: (
+    dashboardId: string,
+    userId: string,
+    body: { access: ShareAccess }
+  ): Promise<DashboardShare> =>
+    req(
+      `/dashboards/${dashboardId}/shares/${userId}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+      dashboardShareSchema
+    ),
+
+  deleteDashboardShare: (dashboardId: string, userId: string): Promise<void> =>
+    req(`/dashboards/${dashboardId}/shares/${userId}`, { method: 'DELETE' }),
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { bookmarkSchema } from '@/schemas/bookmarks'
+import { categoryAccessSchema, shareAccessSchema } from '@/schemas/categories'
 
 export const dashboardItemSchema = z.object({
   id: z.string(),
@@ -16,20 +17,40 @@ export const dashboardSectionSchema = z.object({
 
 export const dashboardSchema = z.object({
   id: z.string(),
+  owner_user_id: z.string(),
   title: z.string(),
   is_default: z.boolean(),
   sections: z.array(dashboardSectionSchema),
+  access: categoryAccessSchema.default('owner'),
+  shared_out: z.boolean().default(false),
   created_at: z.string(),
   updated_at: z.string(),
 })
 
 export const dashboardSummarySchema = z.object({
   id: z.string(),
+  owner_user_id: z.string(),
   title: z.string(),
   is_default: z.boolean(),
+  access: categoryAccessSchema.default('owner'),
+  shared_out: z.boolean().default(false),
   created_at: z.string(),
   updated_at: z.string(),
 })
+
+export const dashboardShareSchema = z.object({
+  id: z.string(),
+  dashboard_id: z.string(),
+  invitee_user_id: z.string(),
+  invitee_email: z.string(),
+  invitee_display_name: z.string().nullish(),
+  access: shareAccessSchema,
+  invited_by_user_id: z.string(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+})
+
+export const dashboardSharesSchema = z.array(dashboardShareSchema)
 
 export const dashboardSummariesSchema = z.array(dashboardSummarySchema)
 
@@ -56,6 +77,7 @@ export type DashboardItem = z.infer<typeof dashboardItemSchema>
 export type DashboardSection = z.infer<typeof dashboardSectionSchema>
 export type Dashboard = z.infer<typeof dashboardSchema>
 export type DashboardSummary = z.infer<typeof dashboardSummarySchema>
+export type DashboardShare = z.infer<typeof dashboardShareSchema>
 export type PutDashboardLayout = z.infer<typeof putDashboardLayoutSchema>
 export type CreateDashboard = z.infer<typeof createDashboardSchema>
 export type PatchDashboard = z.infer<typeof patchDashboardSchema>

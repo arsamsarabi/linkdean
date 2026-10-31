@@ -1,6 +1,7 @@
 mod blocking;
 mod bookmarks;
 mod categories;
+mod dashboard_shares;
 mod dashboards;
 mod import;
 mod platform;
@@ -12,6 +13,7 @@ mod vault;
 
 pub use bookmarks::*;
 pub use categories::*;
+pub use dashboard_shares::*;
 pub use dashboards::*;
 pub use import::*;
 pub use platform::*;

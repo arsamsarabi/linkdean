@@ -23,11 +23,19 @@ import {
   IconPencil,
   IconPin,
   IconPlus,
+  IconShare,
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { BookmarkCard, ConfirmModal, EmptyState, QueryErrorAlert } from '@/components'
+import {
+  BookmarkCard,
+  ConfirmModal,
+  EmptyState,
+  QueryErrorAlert,
+  ShareBadge,
+  ShareDashboardDrawer,
+} from '@/components'
 import {
   useBookmarks,
   useCreateDashboard,
@@ -92,6 +100,7 @@ export function DashboardPage(): ReactElement {
   /** null = view mode; set = edit mode (single source of truth). */
   const [editDraft, setEditDraft] = useState<DashboardDraft | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const editing = editDraft !== null
 
   const bookmarkOptions = useMemo(() => {
@@ -106,10 +115,13 @@ export function DashboardPage(): ReactElement {
   }, [bookmarks.data])
 
   const switcherData = useMemo(() => {
-    return (list.data || []).map((d) => ({
-      value: d.id,
-      label: d.is_default ? `${d.title} (default)` : d.title,
-    }))
+    return (list.data || []).map((d) => {
+      const shared = d.access === 'read' || d.access === 'write'
+      let label = d.title
+      if (d.is_default) label = `${label} (default)`
+      else if (shared) label = `${label} (shared)`
+      return { value: d.id, label }
+    })
   }, [list.data])
 
   function startEdit(): void {
@@ -220,96 +232,115 @@ export function DashboardPage(): ReactElement {
   const view = dashboard.data
   const empty = view.sections.length === 0
   const isPinned = view.is_default
+  const isOwner = view.access === 'owner'
+  const canEditLayout = view.access === 'owner' || view.access === 'write'
+  const inviteeAccess = view.access === 'read' || view.access === 'write' ? view.access : null
   const draft = editDraft
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
-        <Stack gap={4} style={{ flex: 1, minWidth: 220 }}>
+      <Stack gap="xs">
+        <Group justify="space-between" align="center" wrap="wrap" gap="md">
           {draft ? (
             <TextInput
               aria-label="Dashboard title"
               value={draft.title}
               onChange={(e) => setEditDraft({ ...draft, title: e.currentTarget.value })}
-              styles={{ input: { fontSize: '1.5rem', fontWeight: 700 } }}
+              style={{ flex: '1 1 220px', minWidth: 220, maxWidth: 420 }}
+              styles={{ input: { fontSize: '1.5rem', fontWeight: 700, height: 42 } }}
             />
           ) : (
-            <Title order={2}>{view.title}</Title>
+            <Group gap="sm" align="center" wrap="wrap" style={{ flex: '1 1 220px', minWidth: 220 }}>
+              <Title order={2}>{view.title}</Title>
+              {inviteeAccess ? <ShareBadge access={inviteeAccess} /> : null}
+              {isOwner && view.shared_out ? <ShareBadge outgoing /> : null}
+            </Group>
           )}
-          <Text size="sm" c="dimmed">
-            Glance at pinned links. Switch boards or set a default pin.
-          </Text>
-        </Stack>
-        <Group gap="sm" wrap="wrap">
-          <Select
-            aria-label="Switch dashboard"
-            placeholder="Dashboards"
-            data={switcherData}
-            value={activeId}
-            onChange={selectDashboard}
-            allowDeselect={false}
-            maw={220}
-            disabled={editing}
-          />
-          <Menu shadow="md" width={200} position="bottom-end" withinPortal>
-            <Menu.Target>
-              <ActionIcon variant="default" aria-label="Dashboard actions">
-                <IconDotsVertical size={16} stroke={1.5} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item
-                leftSection={<IconPlus size={14} stroke={1.5} />}
-                onClick={() => void onCreate()}
-                disabled={create.isPending}
-              >
-                New dashboard
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconPin size={14} stroke={1.5} />}
-                onClick={() => void onPin()}
-                disabled={isPinned || patch.isPending}
-              >
-                {isPinned ? 'Already default' : 'Set as default'}
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                color="red"
-                leftSection={<IconTrash size={14} stroke={1.5} />}
-                onClick={() => setDeleteOpen(true)}
-                disabled={editing}
-              >
-                Delete dashboard
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-          {draft ? (
-            <>
-              <Button type="button" variant="default" leftSection={<IconX {...iconSm} />} onClick={cancelEdit}>
-                Cancel
+          <Group gap="sm" wrap="nowrap" align="center">
+            {!draft ? (
+              <Select
+                aria-label="Switch dashboard"
+                placeholder="Dashboards"
+                data={switcherData}
+                value={activeId}
+                onChange={selectDashboard}
+                allowDeselect={false}
+                maw={220}
+              />
+            ) : null}
+            {!draft ? (
+              <Menu shadow="md" width={200} position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <ActionIcon variant="default" size={36} aria-label="Dashboard actions">
+                    <IconDotsVertical size={16} stroke={1.5} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<IconPlus size={14} stroke={1.5} />}
+                    onClick={() => void onCreate()}
+                    disabled={create.isPending}
+                  >
+                    New dashboard
+                  </Menu.Item>
+                  {isOwner ? (
+                    <>
+                      <Menu.Item
+                        leftSection={<IconShare size={14} stroke={1.5} />}
+                        onClick={() => setShareOpen(true)}
+                      >
+                        Share…
+                      </Menu.Item>
+                      <Menu.Item
+                        leftSection={<IconPin size={14} stroke={1.5} />}
+                        onClick={() => void onPin()}
+                        disabled={isPinned || patch.isPending}
+                      >
+                        {isPinned ? 'Already default' : 'Set as default'}
+                      </Menu.Item>
+                      <Menu.Divider />
+                      <Menu.Item
+                        color="red"
+                        leftSection={<IconTrash size={14} stroke={1.5} />}
+                        onClick={() => setDeleteOpen(true)}
+                      >
+                        Delete dashboard
+                      </Menu.Item>
+                    </>
+                  ) : null}
+                </Menu.Dropdown>
+              </Menu>
+            ) : null}
+            {draft ? (
+              <>
+                <Button type="button" variant="default" leftSection={<IconX {...iconSm} />} onClick={cancelEdit}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  leftSection={<IconDeviceFloppy {...iconSm} />}
+                  onClick={() => void onSave()}
+                  loading={save.isPending}
+                >
+                  Save
+                </Button>
+              </>
+            ) : canEditLayout ? (
+              <Button type="button" leftSection={<IconPencil {...iconSm} />} variant="light" onClick={startEdit}>
+                Edit layout
               </Button>
-              <Button
-                type="button"
-                leftSection={<IconDeviceFloppy {...iconSm} />}
-                onClick={() => void onSave()}
-                loading={save.isPending}
-              >
-                Save
-              </Button>
-            </>
-          ) : (
-            <Button type="button" leftSection={<IconPencil {...iconSm} />} variant="light" onClick={startEdit}>
-              Edit layout
-            </Button>
-          )}
+            ) : null}
+          </Group>
         </Group>
-      </Group>
+        <Text size="sm" c="dimmed">
+          {draft
+            ? 'Editing layout — pick bookmarks, then Save. Manage bookmarks in the library.'
+            : 'Glance at pinned links. Switch boards or set a default pin.'}
+        </Text>
+      </Stack>
 
       {draft ? (
         <Stack gap="md">
-          <Text size="sm" c="violet" fw={600}>
-            Editing layout — pick bookmarks, then Save. Manage bookmarks in the library.
-          </Text>
           {bookmarkOptions.length === 0 ? (
             <Text size="sm" c="orange">
               No bookmarks in your library yet. Add some in the library, then return here to pin them.
@@ -430,12 +461,20 @@ export function DashboardPage(): ReactElement {
         <EmptyState
           icon={<IconLayoutDashboard size={28} stroke={1.5} />}
           title="Dashboard is empty"
-          description="Pin frequently used links into sections for a quick glance home."
-          action={{
-            label: 'Edit layout',
-            onClick: startEdit,
-            leftSection: <IconPencil {...iconSm} />,
-          }}
+          description={
+            canEditLayout
+              ? 'Pin frequently used links into sections for a quick glance home.'
+              : 'This shared dashboard has no sections yet.'
+          }
+          action={
+            canEditLayout
+              ? {
+                  label: 'Edit layout',
+                  onClick: startEdit,
+                  leftSection: <IconPencil {...iconSm} />,
+                }
+              : undefined
+          }
         />
       ) : (
         <Stack gap="lg">
@@ -480,6 +519,13 @@ export function DashboardPage(): ReactElement {
         confirmColor="red"
         loading={remove.isPending}
         onConfirm={() => void onDelete()}
+      />
+
+      <ShareDashboardDrawer
+        dashboardId={isOwner ? activeId || null : null}
+        dashboardTitle={view.title}
+        opened={shareOpen}
+        onClose={() => setShareOpen(false)}
       />
     </Stack>
   )

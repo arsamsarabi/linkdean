@@ -1,13 +1,25 @@
 use linkdean_core::{
-    CreateDashboard, Dashboard, DashboardItem, DashboardItemView, DashboardSection,
-    DashboardSectionView, DashboardSummary, DashboardView, Error, PatchDashboard,
+    Bookmark, CategoryAccess, CreateDashboard, Dashboard, DashboardItem, DashboardItemView,
+    DashboardSection, DashboardSectionView, DashboardSummary, DashboardView, Error, PatchDashboard,
     PutDashboardLayout, Result,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::bookmarks::{bookmark_to_view, get_bookmark_raw};
+use super::bookmarks::bookmark_to_view;
+use super::dashboard_shares::{
+    dashboard_shared_out, list_shared_dashboards, require_dashboard_owner, require_dashboard_read,
+    require_dashboard_write,
+};
 use super::shares::bookmark_can_read;
+
+async fn fetch_bookmark_row(pool: &PgPool, id: Uuid) -> Result<Option<Bookmark>> {
+    sqlx::query_as::<_, Bookmark>("SELECT * FROM bookmarks WHERE id = $1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))
+}
 
 pub async fn ensure_default_dashboard(pool: &PgPool, user_id: Uuid) -> Result<Dashboard> {
     if let Some(d) = get_default_dashboard_row(pool, user_id).await? {
@@ -58,25 +70,45 @@ async fn list_dashboard_rows(pool: &PgPool, user_id: Uuid) -> Result<Vec<Dashboa
     .map_err(|e| Error::msg(e.to_string()))
 }
 
-async fn get_owned_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Dashboard> {
-    sqlx::query_as::<_, Dashboard>(
-        r#"
-        SELECT * FROM dashboards
-        WHERE id = $1 AND owner_user_id = $2
-        "#,
-    )
-    .bind(id)
-    .bind(user_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?
-    .ok_or(Error::NotFound)
+fn owned_summary(d: Dashboard, shared_out: bool) -> DashboardSummary {
+    DashboardSummary {
+        id: d.id,
+        owner_user_id: d.owner_user_id,
+        title: d.title,
+        is_default: d.is_default,
+        access: CategoryAccess::Owner,
+        shared_out,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+    }
+}
+
+fn shared_summary(d: Dashboard, access: CategoryAccess) -> DashboardSummary {
+    DashboardSummary {
+        id: d.id,
+        owner_user_id: d.owner_user_id,
+        title: d.title,
+        // Invitee cannot pin someone else's board as their default.
+        is_default: false,
+        access,
+        shared_out: false,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+    }
 }
 
 pub async fn list_dashboards(pool: &PgPool, user_id: Uuid) -> Result<Vec<DashboardSummary>> {
     let _ = ensure_default_dashboard(pool, user_id).await?;
-    let rows = list_dashboard_rows(pool, user_id).await?;
-    Ok(rows.into_iter().map(DashboardSummary::from).collect())
+    let owned = list_dashboard_rows(pool, user_id).await?;
+    let mut out = Vec::with_capacity(owned.len());
+    for d in owned {
+        let shared_out = dashboard_shared_out(pool, d.id).await?;
+        out.push(owned_summary(d, shared_out));
+    }
+    for (d, access) in list_shared_dashboards(pool, user_id).await? {
+        out.push(shared_summary(d, access));
+    }
+    Ok(out)
 }
 
 pub async fn get_default_dashboard(
@@ -85,7 +117,7 @@ pub async fn get_default_dashboard(
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
     let dash = ensure_default_dashboard(pool, user_id).await?;
-    load_dashboard_view(pool, user_id, dash, vault_key).await
+    load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await
 }
 
 pub async fn get_dashboard(
@@ -94,16 +126,27 @@ pub async fn get_dashboard(
     id: Uuid,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
-    let dash = get_owned_dashboard(pool, user_id, id).await?;
-    load_dashboard_view(pool, user_id, dash, vault_key).await
+    let (dash, access) = require_dashboard_read(pool, user_id, id).await?;
+    load_dashboard_view(pool, user_id, dash, access, vault_key).await
 }
 
 async fn load_dashboard_view(
     pool: &PgPool,
     user_id: Uuid,
     dash: Dashboard,
+    access: CategoryAccess,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
+    let shared_out = if access.is_owner() {
+        dashboard_shared_out(pool, dash.id).await?
+    } else {
+        false
+    };
+    let is_default = if access.is_owner() {
+        dash.is_default
+    } else {
+        false
+    };
     let sections = sqlx::query_as::<_, DashboardSection>(
         r#"
         SELECT * FROM dashboard_sections
@@ -132,14 +175,13 @@ async fn load_dashboard_view(
 
         let mut item_views = Vec::with_capacity(items.len());
         for item in items {
-            if !bookmark_can_read(pool, user_id, item.bookmark_id).await? {
+            let Some(raw) = fetch_bookmark_row(pool, item.bookmark_id).await? else {
+                continue;
+            };
+            // Vault pins: bookmark owner only. Non-vault: any dashboard viewer may glance the pin.
+            if raw.is_vault && raw.owner_user_id != user_id {
                 continue;
             }
-            let raw = match get_bookmark_raw(pool, user_id, item.bookmark_id).await {
-                Ok(b) => b,
-                Err(Error::NotFound) => continue,
-                Err(e) => return Err(e),
-            };
             let key = if raw.is_vault && raw.owner_user_id == user_id {
                 vault_key
             } else {
@@ -165,9 +207,12 @@ async fn load_dashboard_view(
 
     Ok(DashboardView {
         id: dash.id,
+        owner_user_id: dash.owner_user_id,
         title: dash.title,
-        is_default: dash.is_default,
+        is_default,
         sections: section_views,
+        access,
+        shared_out,
         created_at: dash.created_at,
         updated_at: dash.updated_at,
     })
@@ -200,7 +245,7 @@ pub async fn create_dashboard(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    load_dashboard_view(pool, user_id, dash, vault_key).await
+    load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await
 }
 
 pub async fn put_default_dashboard(
@@ -220,7 +265,7 @@ pub async fn put_dashboard(
     req: PutDashboardLayout,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
-    let dash = get_owned_dashboard(pool, user_id, id).await?;
+    let (dash, _) = require_dashboard_write(pool, user_id, id).await?;
     let title = req
         .title
         .as_deref()
@@ -237,12 +282,11 @@ pub async fn put_dashboard(
         r#"
         UPDATE dashboards
         SET title = $1, updated_at = now()
-        WHERE id = $2 AND owner_user_id = $3
+        WHERE id = $2
         "#,
     )
     .bind(title)
     .bind(dash.id)
-    .bind(user_id)
     .execute(&mut *tx)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -277,7 +321,13 @@ pub async fn put_dashboard(
             if !seen.insert(*bookmark_id) {
                 continue;
             }
-            if !bookmark_can_read(pool, user_id, *bookmark_id).await? {
+            // Owner / readers of the bookmark, or write invitees rearranging owner's non-vault pins.
+            let readable = bookmark_can_read(pool, user_id, *bookmark_id).await?;
+            let owner_pin = match fetch_bookmark_row(pool, *bookmark_id).await? {
+                Some(b) if !b.is_vault && b.owner_user_id == dash.owner_user_id => true,
+                _ => false,
+            };
+            if !readable && !owner_pin {
                 return Err(Error::BadRequest(
                     "bookmark not found or not readable".into(),
                 ));
@@ -351,16 +401,20 @@ pub async fn patch_dashboard(
     req: PatchDashboard,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
-    let dash = get_owned_dashboard(pool, user_id, id).await?;
-
-    if let Some(true) = req.is_default {
-        let _ = pin_dashboard_row(pool, user_id, id).await?;
-    } else if let Some(false) = req.is_default {
-        if dash.is_default {
-            return Err(Error::BadRequest(
-                "pin another dashboard instead of unpinning the only default".into(),
-            ));
+    // Pin is owner-only. Title may be updated by write invitees (same as put layout).
+    if req.is_default.is_some() {
+        let dash = require_dashboard_owner(pool, user_id, id).await?;
+        if let Some(true) = req.is_default {
+            let _ = pin_dashboard_row(pool, user_id, id).await?;
+        } else if let Some(false) = req.is_default {
+            if dash.is_default {
+                return Err(Error::BadRequest(
+                    "pin another dashboard instead of unpinning the only default".into(),
+                ));
+            }
         }
+    } else {
+        require_dashboard_write(pool, user_id, id).await?;
     }
 
     if let Some(ref title_raw) = req.title {
@@ -372,12 +426,11 @@ pub async fn patch_dashboard(
             r#"
             UPDATE dashboards
             SET title = $1, updated_at = now()
-            WHERE id = $2 AND owner_user_id = $3
+            WHERE id = $2
             "#,
         )
         .bind(title)
         .bind(id)
-        .bind(user_id)
         .execute(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
@@ -391,7 +444,7 @@ pub async fn delete_dashboard(
     user_id: Uuid,
     id: Uuid,
 ) -> Result<Vec<DashboardSummary>> {
-    let dash = get_owned_dashboard(pool, user_id, id).await?;
+    let dash = require_dashboard_owner(pool, user_id, id).await?;
     let was_default = dash.is_default;
 
     sqlx::query("DELETE FROM dashboards WHERE id = $1 AND owner_user_id = $2")
