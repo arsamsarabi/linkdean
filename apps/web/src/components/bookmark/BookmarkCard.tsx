@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   AspectRatio,
@@ -78,12 +78,14 @@ export function BookmarkCard({ bookmark: b, highlightQuery, onEdit, onDelete }: 
   const title = b.title || b.url
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
+  const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}`
   const [srcIndex, setSrcIndex] = useState(0)
-  const previewSrc = candidates[srcIndex]
-
-  useEffect(() => {
+  const [srcForKey, setSrcForKey] = useState(previewKey)
+  if (srcForKey !== previewKey) {
+    setSrcForKey(previewKey)
     setSrcIndex(0)
-  }, [b.id, b.has_preview, b.preview_image_url])
+  }
+  const previewSrc = candidates[srcIndex]
 
   const cats = b.categories || []
   const q = highlightQuery?.trim()

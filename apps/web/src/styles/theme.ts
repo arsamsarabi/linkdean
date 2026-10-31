@@ -160,7 +160,7 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
     brandPain: '#8458B3',
     brandHeavy: '#A28089',
     brandNight: '#1A1618',
-    pageMaxWidth: 1140,
+    pageMaxWidth: 1440,
   },
   components: {
     Anchor: {

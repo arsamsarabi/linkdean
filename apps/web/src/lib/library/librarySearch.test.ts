@@ -24,17 +24,24 @@ describe('validateLibrarySearch', () => {
       sort: undefined,
       category: undefined,
       tag: undefined,
+      folder: undefined,
     })
+  })
+
+  it('keeps folder except all', () => {
+    expect(validateLibrarySearch({ folder: 'all' }).folder).toBeUndefined()
+    expect(validateLibrarySearch({ folder: 'uncategorized' }).folder).toBe('uncategorized')
   })
 })
 
 describe('buildLibrarySearch', () => {
   it('builds search object', () => {
-    expect(buildLibrarySearch({ q: 'x', sort: 'title_asc', category: ['c'], tag: [] })).toEqual({
+    expect(buildLibrarySearch({ q: 'x', sort: 'title_asc', category: ['c'], tag: [], folder: 'root' })).toEqual({
       q: 'x',
       sort: 'title_asc',
       category: 'c',
       tag: undefined,
+      folder: 'root',
     })
   })
 })

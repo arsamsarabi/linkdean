@@ -177,6 +177,16 @@ pub async fn update_user_settings(
             }
         }
     }
+    if let Some(ref v) = patch.library_view {
+        match v.as_str() {
+            "grid" | "explorer" => s.library_view = v.clone(),
+            _ => {
+                return Err(Error::BadRequest(
+                    "library_view must be grid|explorer".into(),
+                ))
+            }
+        }
+    }
     sqlx::query_as::<_, UserSettings>(
         r#"
         UPDATE user_settings SET
@@ -185,6 +195,7 @@ pub async fn update_user_settings(
             theme = $4,
             vault_auto_lock_minutes = $5,
             default_landing = $6,
+            library_view = $7,
             updated_at = now()
         WHERE user_id = $1
         RETURNING *
@@ -196,6 +207,7 @@ pub async fn update_user_settings(
     .bind(&s.theme)
     .bind(s.vault_auto_lock_minutes)
     .bind(&s.default_landing)
+    .bind(&s.library_view)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))

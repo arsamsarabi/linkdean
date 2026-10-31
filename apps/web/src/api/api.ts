@@ -64,6 +64,7 @@ export const api = {
       theme: UserSettings['theme']
       vault_auto_lock_minutes: number
       default_landing: UserSettings['default_landing']
+      library_view: UserSettings['library_view']
     }>
   ): Promise<{ settings: UserSettings }> =>
     req('/users/me/settings', { method: 'PATCH', body: JSON.stringify(body) }, settingsEnvelopeSchema),

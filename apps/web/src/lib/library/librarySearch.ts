@@ -9,6 +9,8 @@ export type LibrarySearch = {
   category?: string | string[]
   /** One or many tags */
   tag?: string | string[]
+  /** Explorer folder id (`uncategorized` or category uuid). Omit / `all` = root. */
+  folder?: string
 }
 
 export function asStringList(v: unknown): string[] {
@@ -36,12 +38,15 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
   const category = asStringList(search.category)
   const tag = asStringList(search.tag)
   const q = typeof search.q === 'string' && search.q.trim() ? search.q : undefined
+  const folderRaw = typeof search.folder === 'string' ? search.folder.trim() : ''
+  const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
 
   return {
     q,
     sort: sort && sort !== 'updated_desc' ? sort : undefined,
     category: listToSearchParam(category),
     tag: listToSearchParam(tag),
+    folder,
   }
 }
 
@@ -51,13 +56,17 @@ export function buildLibrarySearch(input: {
   sort?: SortKey
   category?: string[]
   tag?: string[]
+  folder?: string
 }): LibrarySearch {
   const q = input.q?.trim() || undefined
   const sort = input.sort && input.sort !== 'updated_desc' ? input.sort : undefined
+  const folderRaw = input.folder?.trim() || undefined
+  const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
   return {
     q,
     sort,
     category: listToSearchParam(input.category || []),
     tag: listToSearchParam(input.tag || []),
+    folder,
   }
 }

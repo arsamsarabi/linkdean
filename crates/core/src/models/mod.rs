@@ -41,6 +41,7 @@ pub struct UserSettings {
     pub theme: String,
     pub vault_auto_lock_minutes: i32,
     pub default_landing: String,
+    pub library_view: String,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -65,6 +66,7 @@ pub struct UpdateSettings {
     pub theme: Option<String>,
     pub vault_auto_lock_minutes: Option<i32>,
     pub default_landing: Option<String>,
+    pub library_view: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

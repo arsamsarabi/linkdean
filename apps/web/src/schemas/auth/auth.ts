@@ -20,6 +20,7 @@ export const userSettingsSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']),
   vault_auto_lock_minutes: z.number(),
   default_landing: z.enum(['/', '/vault', '/import']),
+  library_view: z.enum(['grid', 'explorer']).default('grid'),
   updated_at: z.string(),
 })
 

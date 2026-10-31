@@ -1,0 +1,35 @@
+.root {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  gap: var(--mantine-spacing-lg);
+  align-items: start;
+  min-height: 320px;
+}
+
+.treePane {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-sm);
+  position: sticky;
+  top: 80px;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+}
+
+.contentPane {
+  min-width: 0;
+}
+
+.mobileTreeBtn {
+  align-self: flex-start;
+}
+
+@media (max-width: 47.99em) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+
+  .treePaneDesktop {
+    display: none;
+  }
+}

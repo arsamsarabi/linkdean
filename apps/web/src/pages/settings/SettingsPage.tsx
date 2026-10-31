@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import {
+  Checkbox,
   Divider,
   Group,
   NumberInput,
@@ -24,6 +25,8 @@ import type { UserSettings } from '@/schemas'
 const SETTINGS_TABS = ['general', 'categories', 'import', 'vault'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
+const DEFAULT_AUTO_LOCK_MINUTES = 15
+
 function isSettingsTab(v: unknown): v is SettingsTab {
   return typeof v === 'string' && (SETTINGS_TABS as readonly string[]).includes(v)
 }
@@ -39,6 +42,56 @@ function SettingsSkeleton(): ReactElement {
   )
 }
 
+function VaultAutoLockSettings({
+  minutes,
+  saving,
+  onChange,
+}: {
+  minutes: number
+  saving: boolean
+  onChange: (minutes: number) => void
+}): ReactElement {
+  const enabled = minutes > 0
+  const [draftMinutes, setDraftMinutes] = useState(minutes > 0 ? minutes : DEFAULT_AUTO_LOCK_MINUTES)
+
+  return (
+    <Paper p="xl" withBorder maw={480}>
+      <Stack gap="md">
+        <Checkbox
+          label="Auto-lock vault after inactivity"
+          description="When off, vault stays unlocked until you lock it or log out."
+          checked={enabled}
+          disabled={saving}
+          onChange={(e) => {
+            if (e.currentTarget.checked) {
+              const next = draftMinutes > 0 ? draftMinutes : DEFAULT_AUTO_LOCK_MINUTES
+              setDraftMinutes(next)
+              onChange(next)
+            } else {
+              onChange(0)
+            }
+          }}
+        />
+        <NumberInput
+          label="Timeout (minutes)"
+          description="Locks the vault after this many minutes with no activity."
+          min={1}
+          max={1440}
+          disabled={!enabled || saving}
+          value={draftMinutes}
+          onChange={(v) => setDraftMinutes(typeof v === 'number' ? v : DEFAULT_AUTO_LOCK_MINUTES)}
+          onBlur={() => {
+            if (!enabled) return
+            const next = draftMinutes >= 1 ? Math.min(draftMinutes, 1440) : DEFAULT_AUTO_LOCK_MINUTES
+            setDraftMinutes(next)
+            if (next !== minutes) onChange(next)
+          }}
+        />
+      </Stack>
+    </Paper>
+  )
+}
+
 export function SettingsPage(): ReactElement {
   const nav = useNavigate()
   const search = useSearch({ strict: false }) as { tab?: string }
@@ -47,12 +100,7 @@ export function SettingsPage(): ReactElement {
   const { setColorScheme } = useMantineColorScheme()
   const me = useMe()
   const settings = me.data?.settings
-  const [autoLock, setAutoLock] = useState(0)
   const save = useUpdateSettings()
-
-  useEffect(() => {
-    if (settings) setAutoLock(settings.vault_auto_lock_minutes)
-  }, [settings, settings?.vault_auto_lock_minutes])
 
   function patch(p: Partial<UserSettings>): void {
     if (save.isPending) return
@@ -143,17 +191,15 @@ export function SettingsPage(): ReactElement {
                   ]}
                 />
 
-                <NumberInput
-                  label="Vault auto-lock (minutes)"
-                  description="0 = never. Locks vault after idle."
-                  min={0}
-                  max={1440}
-                  value={autoLock}
-                  onChange={(v) => setAutoLock(typeof v === 'number' ? v : 0)}
-                  onBlur={() => {
-                    if (autoLock === settings.vault_auto_lock_minutes) return
-                    patch({ vault_auto_lock_minutes: autoLock })
-                  }}
+                <Select
+                  label="Library view"
+                  description="Default browse layout for bookmarks. Toolbar can override for the session."
+                  value={settings.library_view}
+                  onChange={(v) => v && patch({ library_view: v as UserSettings['library_view'] })}
+                  data={[
+                    { value: 'grid', label: 'Grid' },
+                    { value: 'explorer', label: 'Explorer (folders)' },
+                  ]}
                 />
 
                 {save.isPending ? (
@@ -177,7 +223,23 @@ export function SettingsPage(): ReactElement {
         </Tabs.Panel>
 
         <Tabs.Panel value="vault" pt="xl">
-          <VaultPanel />
+          <Stack gap="lg">
+            <VaultPanel />
+            {!settings ? (
+              <SettingsSkeleton />
+            ) : (
+              <VaultAutoLockSettings
+                minutes={settings.vault_auto_lock_minutes}
+                saving={save.isPending}
+                onChange={(vault_auto_lock_minutes) => patch({ vault_auto_lock_minutes })}
+              />
+            )}
+            {save.isPending ? (
+              <Text size="xs" c="dimmed">
+                Saving…
+              </Text>
+            ) : null}
+          </Stack>
         </Tabs.Panel>
       </Tabs>
     </Stack>

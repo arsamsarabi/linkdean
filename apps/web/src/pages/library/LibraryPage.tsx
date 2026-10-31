@@ -3,15 +3,12 @@ import {
   ActionIcon,
   Affix,
   Button,
-  Collapse,
   Group,
   Kbd,
   Modal,
-  MultiSelect,
   PasswordInput,
-  Pill,
+  SegmentedControl,
   Select,
-  SimpleGrid,
   Stack,
   Text,
   TextInput,
@@ -23,7 +20,6 @@ import { useDebouncedValue, useDisclosure, useHotkeys, useWindowScroll } from '@
 import { notifications } from '@mantine/notifications'
 import {
   IconArrowUp,
-  IconBookmark,
   IconBookmarkPlus,
   IconFilter,
   IconLockOpen,
@@ -32,21 +28,38 @@ import {
 } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
-  BookmarkCard,
   BookmarkDrawer,
-  BookmarkGridSkeleton,
   ConfirmModal,
-  EmptyState,
+  LibraryExplorerView,
   QueryErrorAlert,
   type BookmarkDraft,
 } from '@/components'
-import { useBookmarks, useCategories, useDeleteBookmark, useSearchBookmarks, useVaultUnlock } from '@/hooks'
-import { asStringList, buildLibrarySearch, categoryPath, categorySelectData, type SortKey } from '@/lib'
-import { collectTagOptions, draftFromBookmark, filterAndSortLibraryItems, type LibraryListItem } from '@/services'
+import {
+  useBookmarks,
+  useCategories,
+  useDeleteBookmark,
+  useMe,
+  useSearchBookmarks,
+  useVaultUnlock,
+} from '@/hooks'
+import { asStringList, buildLibrarySearch, categoryPath, type SortKey } from '@/lib'
+import {
+  FOLDER_ALL,
+  collectTagOptions,
+  draftFromBookmark,
+  filterAndSortLibraryItems,
+  normalizeFolderId,
+  type ExplorerFolderId,
+  type LibraryListItem,
+} from '@/services'
+import { useUi } from '@/stores'
+import { LibraryGridView } from './LibraryGridView'
 import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 const FILTER_PANEL_ID = 'library-filter-panel'
+
+type LibraryViewMode = 'grid' | 'explorer'
 
 export function LibraryPage(): ReactElement {
   const nav = useNavigate()
@@ -55,8 +68,11 @@ export function LibraryPage(): ReactElement {
     sort?: SortKey
     category?: string | string[]
     tag?: string | string[]
+    folder?: string
   }
 
+  const me = useMe()
+  const showHidden = useUi((s) => s.showHidden)
   const searchRef = useRef<HTMLInputElement>(null)
   const [scroll] = useWindowScroll()
 
@@ -64,8 +80,22 @@ export function LibraryPage(): ReactElement {
   const filterTags = useMemo(() => asStringList(searchParams.tag), [searchParams.tag])
   const sort: SortKey = searchParams.sort ?? 'updated_desc'
   const urlQ = searchParams.q ?? ''
+  const folderId = normalizeFolderId(searchParams.folder)
+
+  const settingsView: LibraryViewMode = me.data?.settings.library_view === 'explorer' ? 'explorer' : 'grid'
+  const [viewMode, setViewMode] = useState<LibraryViewMode>(settingsView)
+  const [viewFromSettings, setViewFromSettings] = useState<LibraryViewMode | null>(null)
+  if (me.data && viewFromSettings !== settingsView) {
+    setViewFromSettings(settingsView)
+    setViewMode(settingsView)
+  }
 
   const [q, setQ] = useState(urlQ)
+  const [qFromUrl, setQFromUrl] = useState(urlQ)
+  if (qFromUrl !== urlQ) {
+    setQFromUrl(urlQ)
+    setQ(urlQ)
+  }
   const [debouncedQ] = useDebouncedValue(q, 280)
   const [filterOpen, setFilterOpen] = useState(false)
   const [draftFilterCats, setDraftFilterCats] = useState<string[]>([])
@@ -85,10 +115,6 @@ export function LibraryPage(): ReactElement {
   const vaultUnlock = useVaultUnlock()
 
   useEffect(() => {
-    setQ(urlQ)
-  }, [urlQ])
-
-  useEffect(() => {
     const next = debouncedQ.trim() || undefined
     const cur = searchParams.q || undefined
     if (next === cur) return
@@ -99,12 +125,20 @@ export function LibraryPage(): ReactElement {
         sort,
         category: filterCats,
         tag: filterTags,
+        folder: folderId,
       }),
       replace: true,
     })
   }, [debouncedQ]) // oxlint-disable-line react-hooks/exhaustive-deps -- sync debounce → URL only
 
-  function setLibrarySearch(patch: { q?: string; sort?: SortKey; category?: string[]; tag?: string[] }): void {
+  function setLibrarySearch(patch: {
+    q?: string
+    sort?: SortKey
+    category?: string[]
+    tag?: string[]
+    /** Pass `all` or empty string to clear folder selection. */
+    folder?: string
+  }): void {
     void nav({
       to: '/library',
       search: buildLibrarySearch({
@@ -112,12 +146,15 @@ export function LibraryPage(): ReactElement {
         sort: patch.sort ?? sort,
         category: patch.category ?? filterCats,
         tag: patch.tag ?? filterTags,
+        folder: patch.folder !== undefined ? patch.folder || FOLDER_ALL : folderId,
       }),
     })
   }
 
   useEffect(() => {
-    if (search.data?.vault_prompt) setUnlockOpen(true)
+    if (!search.data?.vault_prompt) return
+    // oxlint-disable-next-line react/set-state-in-effect -- open modal from search vault_prompt flag
+    setUnlockOpen(true)
   }, [search.data?.vault_prompt])
 
   useHotkeys([
@@ -214,28 +251,44 @@ export function LibraryPage(): ReactElement {
     }
   }
 
+  function onFolderChange(id: ExplorerFolderId): void {
+    setLibrarySearch({ folder: id })
+  }
+
   const filterActive = filterCats.length > 0 || filterTags.length > 0
   const loading = bookmarks.isLoading || (searching && search.isFetching && !search.data)
   const emptyLibrary = !loading && !searching && !filterActive && list.length === 0
   const emptyFiltered = !loading && list.length === 0 && (searching || filterActive)
+  const explorerLoading = bookmarks.isLoading || cats.isLoading
 
   return (
     <Stack gap="xl">
       <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
         <Stack gap={4}>
           <Title order={2}>Library</Title>
-          {!loading && list.length > 0 ? (
+          {!loading && viewMode === 'grid' && list.length > 0 ? (
             <Text size="sm" c="dimmed" aria-live="polite">
               {list.length} bookmark{list.length === 1 ? '' : 's'}
               {searching ? ' matched' : ''}
             </Text>
           ) : null}
         </Stack>
-        <Tooltip label="New bookmark (N)">
-          <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={openCreate}>
-            Add bookmark
-          </Button>
-        </Tooltip>
+        <Group gap="sm" wrap="wrap">
+          <SegmentedControl
+            aria-label="Library view"
+            value={viewMode}
+            onChange={(v) => setViewMode(v as LibraryViewMode)}
+            data={[
+              { value: 'grid', label: 'Grid' },
+              { value: 'explorer', label: 'Explorer' },
+            ]}
+          />
+          <Tooltip label="New bookmark (N)">
+            <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={openCreate}>
+              Add bookmark
+            </Button>
+          </Tooltip>
+        </Group>
       </Group>
 
       {cats.isError ? (
@@ -279,18 +332,20 @@ export function LibraryPage(): ReactElement {
             className={styles.searchInput}
           />
           <Group gap="xs" wrap="nowrap">
-            <Tooltip label="Filter by category or tag">
-              <Button
-                variant={filterOpen || filterActive ? 'light' : 'default'}
-                leftSection={<IconFilter {...iconSm} />}
-                onClick={toggleFilter}
-                aria-expanded={filterOpen}
-                aria-controls={FILTER_PANEL_ID}
-              >
-                Filter
-                {filterActive ? ` (${filterCats.length + filterTags.length})` : ''}
-              </Button>
-            </Tooltip>
+            {viewMode === 'grid' ? (
+              <Tooltip label="Filter by category or tag">
+                <Button
+                  variant={filterOpen || filterActive ? 'light' : 'default'}
+                  leftSection={<IconFilter {...iconSm} />}
+                  onClick={toggleFilter}
+                  aria-expanded={filterOpen}
+                  aria-controls={FILTER_PANEL_ID}
+                >
+                  Filter
+                  {filterActive ? ` (${filterCats.length + filterTags.length})` : ''}
+                </Button>
+              </Tooltip>
+            ) : null}
             <Select
               aria-label="Sort"
               value={sort}
@@ -307,103 +362,57 @@ export function LibraryPage(): ReactElement {
             />
           </Group>
         </Group>
-
-        <Collapse expanded={filterOpen}>
-          <Stack id={FILTER_PANEL_ID} p="lg" gap="md" className={styles.filterPanel}>
-            <MultiSelect
-              label="Categories"
-              data={categorySelectData(cats.data || [])}
-              value={draftFilterCats}
-              onChange={setDraftFilterCats}
-              searchable
-              clearable
-            />
-            <MultiSelect
-              label="Tags"
-              data={allTags}
-              value={draftFilterTags}
-              onChange={setDraftFilterTags}
-              searchable
-              clearable
-            />
-            <Group justify="flex-end">
-              <Button variant="default" onClick={() => setFilterOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={applyFilter}>Apply</Button>
-            </Group>
-          </Stack>
-        </Collapse>
-
-        {filterActive ? (
-          <Group gap="xs">
-            {filterCats.map((id) => (
-              <Pill
-                key={id}
-                withRemoveButton
-                onRemove={() => setLibrarySearch({ category: filterCats.filter((x) => x !== id) })}
-              >
-                {catLabel.get(id) || id}
-              </Pill>
-            ))}
-            {filterTags.map((t) => (
-              <Pill
-                key={t}
-                withRemoveButton
-                onRemove={() => setLibrarySearch({ tag: filterTags.filter((x) => x !== t) })}
-              >
-                #{t}
-              </Pill>
-            ))}
-            <Button variant="subtle" size="compact-sm" onClick={() => setLibrarySearch({ category: [], tag: [] })}>
-              Clear filters
-            </Button>
-          </Group>
-        ) : null}
       </Stack>
 
-      {loading ? (
-        <BookmarkGridSkeleton />
-      ) : emptyLibrary ? (
-        <EmptyState
-          icon={<IconBookmark size={28} stroke={1.5} />}
-          title="No bookmarks yet"
-          description="Save the first link. Imports live under Settings."
-          action={{
-            label: 'Add bookmark',
-            onClick: openCreate,
-            leftSection: <IconBookmarkPlus {...iconSm} />,
-          }}
-        />
-      ) : emptyFiltered ? (
-        <EmptyState
-          icon={<IconSearch size={28} stroke={1.5} />}
-          title="Nothing matched"
-          description="Try a different search or clear filters."
-          action={
-            filterActive || q
-              ? {
-                  label: 'Clear search & filters',
-                  onClick: () => {
-                    setQ('')
-                    setLibrarySearch({ q: '', category: [], tag: [] })
-                  },
-                }
-              : undefined
-          }
+      {viewMode === 'explorer' ? (
+        <LibraryExplorerView
+          categories={cats.data || []}
+          bookmarks={bookmarks.data || []}
+          searchHits={search.data?.hits || []}
+          searching={searching}
+          searchQuery={debouncedQ}
+          folderId={folderId}
+          sort={sort}
+          showHidden={showHidden}
+          loading={explorerLoading}
+          onFolderChange={onFolderChange}
+          onEdit={openEdit}
+          onDelete={setDeleteId}
+          onCreate={openCreate}
         />
       ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
-          {list.map((b) => (
-            <BookmarkCard
-              key={b.id}
-              bookmark={b}
-              highlightQuery={searching ? debouncedQ : undefined}
-              onEdit={openEdit}
-              onDelete={setDeleteId}
-            />
-          ))}
-        </SimpleGrid>
+        <LibraryGridView
+          loading={loading}
+          list={list}
+          searching={searching}
+          searchQuery={debouncedQ}
+          emptyLibrary={emptyLibrary}
+          emptyFiltered={emptyFiltered}
+          filterOpen={filterOpen}
+          filterActive={filterActive}
+          filterPanelId={FILTER_PANEL_ID}
+          draftFilterCats={draftFilterCats}
+          draftFilterTags={draftFilterTags}
+          filterCats={filterCats}
+          filterTags={filterTags}
+          catLabel={catLabel}
+          categories={cats.data || []}
+          allTags={allTags}
+          onDraftCats={setDraftFilterCats}
+          onDraftTags={setDraftFilterTags}
+          onApplyFilter={applyFilter}
+          onCloseFilter={() => setFilterOpen(false)}
+          onClearFilters={() => setLibrarySearch({ category: [], tag: [] })}
+          onRemoveCat={(id) => setLibrarySearch({ category: filterCats.filter((x) => x !== id) })}
+          onRemoveTag={(t) => setLibrarySearch({ tag: filterTags.filter((x) => x !== t) })}
+          onClearSearchAndFilters={() => {
+            setQ('')
+            setLibrarySearch({ q: '', category: [], tag: [] })
+          }}
+          onCreate={openCreate}
+          onEdit={openEdit}
+          onDelete={setDeleteId}
+        />
       )}
 
       <BookmarkDrawer opened={drawerOpen} onClose={closeDrawer} categories={cats.data || []} initial={draft} />

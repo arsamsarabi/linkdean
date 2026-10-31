@@ -3,7 +3,7 @@ import { Container, type ContainerProps } from '@mantine/core'
 import styles from './PageContainer.module.css'
 
 /** Shared max-width for AppShell header + main content. */
-export const PAGE_MAX_WIDTH = 1140
+export const PAGE_MAX_WIDTH = 1440
 
 type Props = ContainerProps & {
   fadeIn?: boolean
