@@ -2,8 +2,8 @@ import { useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   Button,
+  Drawer,
   Group,
-  Modal,
   Select,
   Skeleton,
   Stack,
@@ -34,7 +34,7 @@ const accessOptions = [
   { value: 'write', label: 'Read-write' },
 ]
 
-export function ShareCategoryModal({
+export function ShareCategoryDrawer({
   categoryId,
   categoryName,
   opened,
@@ -64,20 +64,26 @@ export function ShareCategoryModal({
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title={`Share “${categoryName}”`} size="md">
+    <Drawer
+      opened={opened}
+      onClose={onClose}
+      title={`Share “${categoryName}”`}
+      position="right"
+      size="md"
+      padding="lg"
+    >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           Invite same-instance users by email. Read-only can view; read-write can edit bookmarks in
           this folder.
         </Text>
 
-        <Group align="flex-end" grow>
+        <Stack gap="sm">
           <TextInput
             label="Email"
             placeholder="user@example.com"
             value={email}
             onChange={(e) => setEmail(e.currentTarget.value)}
-            style={{ flex: 2 }}
           />
           <Select
             label="Access"
@@ -85,7 +91,6 @@ export function ShareCategoryModal({
             value={access}
             onChange={(v) => setAccess((v as ShareAccess) || 'read')}
             allowDeselect={false}
-            style={{ flex: 1 }}
           />
           <Button
             onClick={() => void onInvite()}
@@ -94,7 +99,7 @@ export function ShareCategoryModal({
           >
             Invite
           </Button>
-        </Group>
+        </Stack>
 
         {shares.isError ? (
           <QueryErrorAlert error={shares.error} onRetry={() => void shares.refetch()} />
@@ -164,6 +169,6 @@ export function ShareCategoryModal({
           </Stack>
         )}
       </Stack>
-    </Modal>
+    </Drawer>
   )
 }

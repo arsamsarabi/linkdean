@@ -1,2 +1,2 @@
 export { CategoryManager } from './CategoryManager'
-export { ShareCategoryModal } from './ShareCategoryModal'
+export { ShareCategoryDrawer } from './ShareCategoryDrawer'

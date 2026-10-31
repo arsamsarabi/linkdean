@@ -21,7 +21,7 @@ import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from '@/hooks'
 import { buildCategoryTree, categorySelectData, type CatNode } from '@/lib'
 import type { Category } from '@/schemas'
-import { ShareCategoryModal } from './ShareCategoryModal'
+import { ShareCategoryDrawer } from './ShareCategoryDrawer'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -154,7 +154,7 @@ export function CategoryManager(): ReactElement {
         loading={remove.isPending}
       />
 
-      <ShareCategoryModal
+      <ShareCategoryDrawer
         opened={!!shareCat}
         onClose={() => setShareCat(null)}
         categoryId={shareCat?.id ?? null}

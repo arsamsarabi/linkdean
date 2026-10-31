@@ -179,7 +179,7 @@ TypeScript is not sufficient for external data.
 
 ### Required practices
 
-- Manage focus in modals and dynamic UI
+- Manage focus in drawers, modals, and other dynamic UI
 - Announce important updates (`aria-live`)
 - Use descriptive labels and text
 - Ensure sufficient color contrast
@@ -293,6 +293,12 @@ TypeScript is not sufficient for external data.
 - Use CSS Modules for component styles
 - Do not introduce new styling systems without agreement
 - Avoid inline styles except for dynamic one-off cases
+
+### Overlays (forms vs confirmations)
+
+- Prefer **Drawers** (right, `size="md"`, `padding="lg"`) for create/edit/share forms and multi-field flows — match `BookmarkDrawer` / `ShareCategoryDrawer`
+- Prefer **Modals** only for short confirmations, alerts, or tiny one-shot prompts (`ConfirmModal`, unlock passphrase, crop confirm)
+- Do not put multi-field forms in Modals when a Drawer fits
 
 ---
 
