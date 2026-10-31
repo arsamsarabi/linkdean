@@ -74,8 +74,8 @@ export function ShareCategoryDrawer({
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          Invite same-instance users by email. Read-only can view; read-write can edit bookmarks in
-          this folder.
+          Invite same-instance users by email. Read-only can view. Read-write can edit bookmarks and
+          add subfolders (not vault, share, or delete).
         </Text>
 
         <Stack gap="sm">

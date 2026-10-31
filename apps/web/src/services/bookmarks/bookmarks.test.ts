@@ -16,6 +16,7 @@ describe('bookmarks drafts', () => {
   it('draftFromBookmark maps categories and fields', () => {
     const b: Bookmark = {
       id: 'b1',
+      owner_user_id: 'u1',
       url: 'https://example.com',
       title: 'Ex',
       description: 'd',
@@ -25,6 +26,7 @@ describe('bookmarks drafts', () => {
       has_preview: false,
       is_vault: false,
       tags: ['t'],
+      can_write: true,
       categories: [{ id: 'c1', name: 'C', path: 'C' }],
       category_id: 'c1',
       created_at: '2024-01-01T00:00:00Z',

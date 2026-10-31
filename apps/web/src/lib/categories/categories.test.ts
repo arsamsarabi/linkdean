@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Category } from '@/schemas'
-import { buildCategoryTree, categoryPath, categorySelectData } from './categories'
+import {
+  buildCategoryTree,
+  canWriteCategory,
+  categoryPath,
+  categorySelectData,
+  writableCategories,
+} from './categories'
 
 const cats: Category[] = [
   {
@@ -44,5 +50,21 @@ describe('categorySelectData', () => {
     const data = categorySelectData(cats)
     expect(data.find((d) => d.value === '2')?.label).toContain('(vault)')
     expect(data.find((d) => d.value === '2')?.label).toContain('(hidden)')
+  })
+})
+
+describe('canWriteCategory / writableCategories', () => {
+  it('treats owner and write as writable', () => {
+    expect(canWriteCategory({ ...cats[0]!, access: 'owner' })).toBe(true)
+    expect(canWriteCategory({ ...cats[0]!, access: 'write' })).toBe(true)
+    expect(canWriteCategory({ ...cats[0]!, access: 'read' })).toBe(false)
+  })
+
+  it('filters writable list', () => {
+    const mixed: Category[] = [
+      { ...cats[0]!, access: 'owner' },
+      { ...cats[1]!, id: 'ro', access: 'read' },
+    ]
+    expect(writableCategories(mixed).map((c) => c.id)).toEqual(['1'])
   })
 })

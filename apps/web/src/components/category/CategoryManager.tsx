@@ -41,11 +41,16 @@ export function CategoryManager(): ReactElement {
   const tree = useMemo(() => buildCategoryTree(cats.data || []), [cats.data])
   const parentOptions = useMemo(
     () => [
-      { value: '', label: '— root —' },
+      { value: '', label: '- root -' },
       ...categorySelectData((cats.data || []).filter((c) => c.access === 'owner' || c.access === 'write')),
     ],
     [cats.data]
   )
+  const parentCat = useMemo(
+    () => (parentId ? (cats.data || []).find((c) => c.id === parentId) : null),
+    [cats.data, parentId]
+  )
+  const canCreateVault = !parentCat || parentCat.access === 'owner'
 
   async function onCreate(): Promise<void> {
     try {
@@ -79,7 +84,7 @@ export function CategoryManager(): ReactElement {
   return (
     <Stack gap="lg">
       <Text size="sm" c="dimmed">
-        Nested folders for the library. Manage here — library filters by category. Share owned
+        Nested folders for the library. Manage here; library filters by category. Share owned
         folders with other users on this instance.
       </Text>
 
@@ -126,13 +131,23 @@ export function CategoryManager(): ReactElement {
           label="Parent"
           data={parentOptions}
           value={parentId ?? ''}
-          onChange={(v) => setParentId(v || null)}
+          onChange={(v) => {
+            const next = v || null
+            setParentId(next)
+            const p = next ? (cats.data || []).find((c) => c.id === next) : null
+            if (p && p.access !== 'owner') setVault(false)
+          }}
           searchable
           clearable
         />
         <Group gap="lg">
           <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
-          <Checkbox label="Vault" checked={vault} onChange={(e) => setVault(e.currentTarget.checked)} />
+          <Checkbox
+            label="Vault"
+            checked={vault}
+            disabled={!canCreateVault}
+            onChange={(e) => setVault(e.currentTarget.checked)}
+          />
         </Group>
         <Button
           leftSection={<IconFolderPlus {...iconSm} />}

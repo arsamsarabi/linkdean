@@ -110,8 +110,9 @@ pub async fn enrich_bookmark(
     }
 
     if let Ok(updated) = db::get_bookmark_raw(pool, user_id, bookmark_id).await {
-        if let Ok(Some(view)) = db::bookmark_to_view(pool, updated, None).await {
-            let _ = search.upsert_bookmark(user_id, &view).await;
+        let owner = updated.owner_user_id;
+        if let Ok(Some(view)) = db::bookmark_to_view(pool, updated, None, owner).await {
+            let _ = search.upsert_bookmark(&view).await;
         }
     }
     info!(%bookmark_id, "enriched bookmark metadata");

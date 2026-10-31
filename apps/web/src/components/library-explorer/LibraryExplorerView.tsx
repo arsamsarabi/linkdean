@@ -31,6 +31,8 @@ type Props = {
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   onCreate: () => void
+  canCreate?: boolean
+  folderReadOnly?: boolean
 }
 
 function BookmarkGrid({
@@ -67,6 +69,8 @@ export function LibraryExplorerView({
   onEdit,
   onDelete,
   onCreate,
+  canCreate = true,
+  folderReadOnly = false,
 }: Props): ReactElement {
   const selectedId: ExplorerFolderId = folderId || FOLDER_ALL
 
@@ -129,14 +133,18 @@ export function LibraryExplorerView({
           icon={<IconFolder size={28} stroke={1.5} />}
           title="No bookmarks yet"
           description="Save the first link. Imports live under Settings."
-          action={{ label: 'Add bookmark', onClick: onCreate }}
+          action={canCreate ? { label: 'Add bookmark', onClick: onCreate } : undefined}
         />
       ) : emptyFolder ? (
         <EmptyState
           icon={<IconFolder size={28} stroke={1.5} />}
-          title="Empty folder"
-          description="No subfolders or bookmarks here."
-          action={{ label: 'Add bookmark', onClick: onCreate }}
+          title={folderReadOnly ? 'Shared folder is empty' : 'Empty folder'}
+          description={
+            folderReadOnly
+              ? 'The owner has not added bookmarks here yet.'
+              : 'No subfolders or bookmarks here.'
+          }
+          action={canCreate ? { label: 'Add bookmark', onClick: onCreate } : undefined}
         />
       ) : (
         <Stack gap="lg">

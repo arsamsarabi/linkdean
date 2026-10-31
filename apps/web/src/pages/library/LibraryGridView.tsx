@@ -50,6 +50,7 @@ type Props = {
   onCreate: () => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  canCreate?: boolean
 }
 
 export function LibraryGridView({
@@ -80,6 +81,7 @@ export function LibraryGridView({
   onCreate,
   onEdit,
   onDelete,
+  canCreate = true,
 }: Props): ReactElement {
   return (
     <Stack gap="md">
@@ -133,13 +135,21 @@ export function LibraryGridView({
       ) : emptyLibrary ? (
         <EmptyState
           icon={<IconBookmark size={28} stroke={1.5} />}
-          title="No bookmarks yet"
-          description="Save the first link. Imports live under Settings."
-          action={{
-            label: 'Add bookmark',
-            onClick: onCreate,
-            leftSection: <IconBookmarkPlus {...iconSm} />,
-          }}
+          title={canCreate ? 'No bookmarks yet' : 'Nothing here yet'}
+          description={
+            canCreate
+              ? 'Save the first link. Imports live under Settings.'
+              : 'This shared folder has no bookmarks yet.'
+          }
+          action={
+            canCreate
+              ? {
+                  label: 'Add bookmark',
+                  onClick: onCreate,
+                  leftSection: <IconBookmarkPlus {...iconSm} />,
+                }
+              : undefined
+          }
         />
       ) : emptyFiltered ? (
         <EmptyState

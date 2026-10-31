@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { collectTagOptions, filterAndSortLibraryItems } from './libraryList'
 
 const base = {
+  owner_user_id: 'u1',
   categories: [] as { id: string; name: string; path: string }[],
   description: null,
   favicon_url: null,
   preview_image_url: null,
   has_preview: false,
   is_vault: false,
+  can_write: true,
   tags: [] as string[],
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-02T00:00:00Z',

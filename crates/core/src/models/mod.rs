@@ -257,6 +257,7 @@ pub struct CategoryRef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BookmarkView {
     pub id: Uuid,
+    pub owner_user_id: Uuid,
     /// Primary / first category (legacy + export). Prefer `categories`.
     pub category_id: Option<Uuid>,
     pub categories: Vec<CategoryRef>,
@@ -269,6 +270,8 @@ pub struct BookmarkView {
     pub has_preview: bool,
     pub is_vault: bool,
     pub tags: Vec<String>,
+    /// Whether the requesting user may mutate this bookmark.
+    pub can_write: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -386,6 +389,7 @@ pub struct SearchHit {
     pub tags: Vec<String>,
     pub category_id: Option<Uuid>,
     pub is_vault: bool,
+    pub can_write: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

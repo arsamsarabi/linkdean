@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="brand/graphics/the-link-dean.png" alt="The Link Dean — Linkdean mascot" width="420" />
+  <img src="brand/graphics/the-link-dean.png" alt="The Link Dean, Linkdean mascot" width="420" />
 </p>
 
 <h1 align="center">Linkdean</h1>
 
 <p align="center">
-  <strong>Self-hostable bookmarks for people who actually keep them.</strong><br />
-  Nested folders · vault · search · import/export · optional OIDC · sharing on your instance.
+  <strong>Self-hostable bookmark manager.</strong><br />
+  Nested folders, vault, search, import/export, optional OIDC, and same-instance sharing.
 </p>
 
 <p align="center">
@@ -30,32 +30,32 @@
 </p>
 
 <details>
-<summary><strong>Click here to find out how AI was used in the development of this app</strong></summary>
+<summary><strong>AI-assisted development</strong></summary>
 
 <br />
 
-I built this with the help of AI, but with hands-on supervision throughout the process. I’m a Staff Software Engineer with ~20 years of coding experience (13 years commercially), and I carefully reviewed the architecture, logic, CI/CD pipelines, tests, and code coverage. AI helped speed things up, but the technical decisions and reviews were mine.
+Development used AI tooling under staff-engineer supervision (~20 years experience, 13 commercial). Architecture, logic, CI/CD, tests, and coverage were reviewed by the maintainer. AI accelerated implementation; technical decisions and review remained human-owned.
 
 </details>
 
 ---
 
-## Why Linkdean?
+## Overview
 
-Browser bookmark bars rot. SaaS bookmark apps lock you in. **Linkdean** is a small, opinionated bookmarks server you run yourself — homelab-friendly, env-only secrets, no proprietary control plane.
+Linkdean is a small, self-hosted bookmarks server: Postgres, optional Meilisearch, Docker Compose, env-based secrets, no proprietary control plane.
 
-- **Your data, your box** — Postgres + optional Meilisearch, Docker Compose in minutes
-- **Organize for real** — nested categories, tags, hidden folders, grid + explorer views
-- **Sensitive links stay sensitive** — password-protected vault categories (Argon2id + AES-GCM)
-- **Bring your library** — Netscape HTML, Pocket CSV, Raindrop CSV, Linkdean JSON
-- **Sign in your way** — local accounts and/or OIDC (Authentik and friends)
-- **Collaborate** — share folders with other users on the same instance (read-only / read-write)
+- **Data locality:** Postgres and optional Meilisearch on the operator's infrastructure
+- **Organization:** nested categories, tags, hidden folders, grid and explorer views
+- **Vault:** passphrase-protected categories (Argon2id + AES-GCM)
+- **Import / export:** Netscape HTML, Pocket CSV, Raindrop CSV, Linkdean JSON
+- **Auth:** local accounts and optional OIDC
+- **Sharing:** invite same-instance users to a folder (read-only or read-write)
 
 ---
 
 ## Features
 
-| Area | What you get |
+| Area | Capability |
 | --- | --- |
 | **Library** | Nested categories, multi-category bookmarks, tags, grid + explorer layouts |
 | **Search** | Meilisearch full-text for non-vault bookmarks |
@@ -83,9 +83,9 @@ cd deploy/docker
 docker compose up -d --build
 ```
 
-Open **http://localhost:8080** → register the first user (becomes admin).
+Open **http://localhost:8080**. The first registered user becomes admin.
 
-### What the stack runs
+### Stack services
 
 | Service | Role | Default port |
 | --- | --- | --- |
@@ -94,19 +94,19 @@ Open **http://localhost:8080** → register the first user (becomes admin).
 | `meilisearch` | Search index | `7700` |
 | `chrome` | Optional CDP for page previews | `9222` |
 
-More detail: [docs/self-host.md](docs/self-host.md).
+See [docs/self-host.md](docs/self-host.md).
 
 ---
 
 ## Configuration
 
-All runtime config is **environment variables** (see [`.env.example`](.env.example)). No SaaS secret manager required.
+Runtime configuration is environment variables only (see [`.env.example`](.env.example)).
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | ✅ | Postgres connection string |
-| `SESSION_SECRET` | ✅ | Long random secret (reserved / cookie signing) |
-| `APP_URL` | ✅ | Public base URL (e.g. `http://localhost:8080`) |
+| `DATABASE_URL` | yes | Postgres connection string |
+| `SESSION_SECRET` | yes | Long random secret (cookie / session signing) |
+| `APP_URL` | yes | Public base URL (e.g. `http://localhost:8080`) |
 | `BIND` | | Listen address (default `0.0.0.0:8080`) |
 | `MEILI_URL` / `MEILI_MASTER_KEY` | | Meilisearch endpoint + key |
 | `STATIC_DIR` | | Built SPA directory (Compose sets this) |
@@ -122,7 +122,7 @@ All runtime config is **environment variables** (see [`.env.example`](.env.examp
 
 ## Development
 
-**Prereqs:** Rust (edition 2021), Node 20+, `pnpm`, Docker (for Postgres / Meili).
+**Prerequisites:** Rust (edition 2021), Node 20+, `pnpm`, Docker (Postgres / Meili).
 
 ```bash
 # Infra only
@@ -139,7 +139,7 @@ cargo run -p linkdean-api
 cd apps/web && pnpm install && pnpm dev
 ```
 
-Useful checks:
+Checks:
 
 ```bash
 cargo test --workspace
@@ -177,12 +177,12 @@ Full write-up: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Security notes
 
 - Sessions are opaque tokens; mutating routes require auth
-- Owner (and share ACL) filters every category / bookmark query — no client-supplied owner ids
+- Owner and share ACL filter every category / bookmark query; client-supplied owner ids are ignored
 - Vault payloads encrypted at rest; vault content is **not** sent to Meilisearch
 - Export never dumps vault bookmarks as plaintext
-- Treat import files as hostile input
+- Import files should be treated as untrusted input
 
-Found a vuln? Prefer a private report to the maintainers before a public issue.
+Vulnerability reports: prefer a private report to the maintainers before a public issue.
 
 ---
 
@@ -199,20 +199,20 @@ Found a vuln? Prefer a private report to the maintainers before a public issue.
 
 ## Roadmap
 
-**Shipped (v1):** nested cats + tags, Meili search, import/export, vault, hidden folders, local + OIDC auth, Compose path, library views, admin registration toggle.
+**Shipped (v1):** nested categories and tags, Meili search, import/export, vault, hidden folders, local + OIDC auth, Compose path, library views, admin registration toggle.
 
-**Next (v2+):** sharing polish → personal dashboards → shared dashboards → API keys → archive/downloads → browser extension → shared activity/social. Native mobile apps sit in an unplanned far-out bucket.
+**Planned (v2+):** sharing polish, personal dashboards, shared dashboards, API keys, archive/downloads, browser extension, shared activity/social. Native mobile apps are unplanned.
 
-See the full ordered list in [docs/ROADMAP.md](docs/ROADMAP.md).
+Full ordered list: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
 ## Contributing
 
-PRs welcome. Keep changes focused:
+Pull requests should stay focused:
 
-1. Match crate / frontend playbooks (`crates/AGENTS.md`, `apps/web/AGENTS.md`)
-2. Authz and vault invariants are non-negotiable — extend tests when touching access paths
+1. Follow crate / frontend playbooks (`crates/AGENTS.md`, `apps/web/AGENTS.md`)
+2. Preserve authz and vault invariants; extend tests when changing access paths
 3. Schema changes go through `migrations/` only
 4. Prefer small, reviewable PRs
 

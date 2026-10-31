@@ -184,9 +184,15 @@ pub async fn bookmark_to_view(
     pool: &PgPool,
     b: Bookmark,
     vault_key: Option<&[u8; 32]>,
+    viewer_id: Uuid,
 ) -> Result<Option<BookmarkView>> {
     let categories = categories_for_bookmark(pool, b.owner_user_id, b.id).await?;
     let category_id = categories.first().map(|c| c.id).or(b.category_id);
+    let can_write = if b.owner_user_id == viewer_id {
+        true
+    } else {
+        bookmark_can_write(pool, viewer_id, b.id).await?
+    };
 
     if b.is_vault {
         let key = match vault_key {
@@ -207,6 +213,7 @@ pub async fn bookmark_to_view(
                 .await?;
         return Ok(Some(BookmarkView {
             id: b.id,
+            owner_user_id: b.owner_user_id,
             category_id,
             categories,
             url: payload.url,
@@ -218,6 +225,7 @@ pub async fn bookmark_to_view(
             has_preview: b.has_preview,
             is_vault: true,
             tags: payload.tags,
+            can_write,
             created_at: b.created_at,
             updated_at: b.updated_at,
         }));
@@ -225,6 +233,7 @@ pub async fn bookmark_to_view(
     let tags = tags_for_bookmark(pool, b.id).await?;
     Ok(Some(BookmarkView {
         id: b.id,
+        owner_user_id: b.owner_user_id,
         category_id,
         categories,
         url: b.url,
@@ -236,6 +245,7 @@ pub async fn bookmark_to_view(
         has_preview: b.has_preview,
         is_vault: false,
         tags,
+        can_write,
         created_at: b.created_at,
         updated_at: b.updated_at,
     }))
@@ -332,7 +342,7 @@ pub async fn list_bookmarks(
         } else {
             None
         };
-        if let Some(v) = bookmark_to_view(pool, b, key).await? {
+        if let Some(v) = bookmark_to_view(pool, b, key, user_id).await? {
             out.push(v);
         }
     }
@@ -425,7 +435,7 @@ pub async fn create_bookmark(
     set_bookmark_categories(pool, user_id, bookmark.id, &cat_ids).await?;
     let bookmark = get_bookmark_raw(pool, user_id, bookmark.id).await?;
 
-    bookmark_to_view(pool, bookmark, vault_key)
+    bookmark_to_view(pool, bookmark, vault_key, user_id)
         .await?
         .ok_or(Error::VaultLocked)
 }
@@ -500,7 +510,7 @@ pub async fn update_bookmark(
             set_bookmark_categories(pool, user_id, id, &c.into_iter().collect::<Vec<_>>()).await?;
         }
         let b = get_bookmark_raw(pool, user_id, id).await?;
-        return bookmark_to_view(pool, b, vault_key)
+        return bookmark_to_view(pool, b, vault_key, user_id)
             .await?
             .ok_or(Error::VaultLocked);
     }
@@ -534,7 +544,7 @@ pub async fn update_bookmark(
         set_bookmark_categories(pool, user_id, id, &c.into_iter().collect::<Vec<_>>()).await?;
     }
     let b = get_bookmark_raw(pool, user_id, id).await?;
-    bookmark_to_view(pool, b, None)
+    bookmark_to_view(pool, b, None, user_id)
         .await?
         .ok_or(Error::NotFound)
 }

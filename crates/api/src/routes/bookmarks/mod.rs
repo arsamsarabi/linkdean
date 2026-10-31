@@ -55,7 +55,7 @@ async fn get_one(
 ) -> ApiResult<Json<BookmarkView>> {
     let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
     let key = state.vault_key(user.id).await;
-    let view = db::bookmark_to_view(&state.pool, raw, key.as_ref())
+    let view = db::bookmark_to_view(&state.pool, raw, key.as_ref(), user.id)
         .await?
         .ok_or(linkdean_core::Error::VaultLocked)?;
     Ok(Json(view))
@@ -69,7 +69,7 @@ async fn create(
     let key = state.vault_key(user.id).await;
     let view = db::create_bookmark(&state.pool, user.id, req, key.as_ref()).await?;
     if !view.is_vault {
-        if let Err(e) = state.search.upsert_bookmark(user.id, &view).await {
+        if let Err(e) = state.search.upsert_bookmark(&view).await {
             tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
         }
         let pool = state.pool.clone();
@@ -96,7 +96,7 @@ async fn update(
         if let Err(e) = state.search.delete_bookmark(id).await {
             tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
         }
-    } else if let Err(e) = state.search.upsert_bookmark(user.id, &view).await {
+    } else if let Err(e) = state.search.upsert_bookmark(&view).await {
         tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
     }
     Ok(Json(view))

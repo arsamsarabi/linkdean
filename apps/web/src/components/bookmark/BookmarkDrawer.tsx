@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { Box, Button, Drawer, LoadingOverlay, MultiSelect, Stack, TagsInput, Textarea, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useCreateBookmark, useUpdateBookmark } from '@/hooks'
-import { categorySelectData } from '@/lib'
+import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
 
@@ -97,8 +97,8 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
           />
           <MultiSelect
             label="Categories"
-            description="Can pick several. Nested path shown in label."
-            data={categorySelectData(categories)}
+            description="Can pick several. Nested path shown in label. Read-only shared folders are omitted."
+            data={categorySelectData(writableCategories(categories))}
             value={draft.category_ids}
             onChange={(category_ids) => setDraft((d) => ({ ...d, category_ids }))}
             searchable

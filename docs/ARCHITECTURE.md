@@ -1,6 +1,6 @@
 # Architecture
 
-Linkdean is a self-hostable bookmarks manager. Homelab-friendly, OSS-portable (env vars only — no Infisical SDK).
+Linkdean is a self-hostable bookmarks manager. Configuration uses environment variables only (no Infisical SDK).
 
 ## Stack
 
@@ -41,27 +41,27 @@ Browser ──► Vite (dev) or static SPA
               └── worker tasks (enrich title/favicon)
 ```
 
-Homelab: nova runs compose; ncc Traefik terminates TLS (`linkdean.arsam.app`). Authik OIDC optional.
+Homelab: nova runs compose; ncc Traefik terminates TLS (`linkdean.arsam.app`). Authentik OIDC is optional.
 
 ## Domain (v1)
 
-- **User** — local and/or OIDC; first user = `is_admin`; `onboarding_completed`; profile fields + avatar
-- **UserSettings** — per-user prefs (hidden, vault search, theme, auto-lock, landing)
-- **Category** — tree (`parent_id`); flags `is_hidden`, `is_vault`
-- **Tag** — per-user; M2M with bookmarks
-- **Bookmark** — url/title/notes/tags; vault rows store ciphertext instead of plaintext fields
-- **Vault** — per-user wrapped data key (Argon2id + AES-GCM)
-- **ImportJob** — import run stats
+- **User:** local and/or OIDC; first user = `is_admin`; `onboarding_completed`; profile fields + avatar
+- **UserSettings:** per-user prefs (hidden, vault search, theme, auto-lock, landing)
+- **Category:** tree (`parent_id`); flags `is_hidden`, `is_vault`
+- **Tag:** per-user; M2M with bookmarks
+- **Bookmark:** url/title/notes/tags; vault rows store ciphertext instead of plaintext fields
+- **Vault:** per-user wrapped data key (Argon2id + AES-GCM)
+- **ImportJob:** import run stats
 
 Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`/`write`) beside ownership; access covers the shared category and its non-vault descendants.
 
 ## Auth & sessions
 
-- Register / login → opaque session token (cookie + `Authorization: Bearer`)
-- First install → `/onboarding` wizard (admin account → optional vault → optional import)
+- Register / login issues an opaque session token (cookie + `Authorization: Bearer`)
+- First install uses `/onboarding` (admin account, optional vault, optional import)
 - OIDC: Authorization Code against `OIDC_*` env; callback `/api/auth/oidc/callback`
-- Profile (`/profile`) + settings (`/settings`); header avatar menu
-- Avatars: crop client-side → server resizes to 256×256 WebP under `AVATAR_DIR`
+- Profile (`/profile`) and settings (`/settings`); header avatar menu
+- Avatars: client crop, server resize to 256×256 WebP under `AVATAR_DIR`
 - Prefs in `user_settings` (show hidden, vault search mode, theme, auto-lock, landing)
 
 ## Hidden vs vault
@@ -71,11 +71,11 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 | Purpose | Declutter UI | Sensitive bookmarks |
 | Storage | Plaintext | Encrypted at rest |
 | Search | Meilisearch | Only while unlocked (Postgres scan) |
-| Access | “Show hidden” toggle | Passphrase unlock (server-held key for session) |
+| Access | Show-hidden toggle | Passphrase unlock (server-held key for session) |
 
 ## Search
 
-Writes upsert non-vault docs into Meilisearch index `bookmarks`, filtered by `owner_user_id`. Vault docs stay out of that index.
+Writes upsert non-vault docs into Meilisearch index `bookmarks` using the bookmark's `owner_user_id` and `category_ids`. Queries filter by owner or readable categories (owned + shared). Vault docs stay out of that index.
 
 ## Import / export
 

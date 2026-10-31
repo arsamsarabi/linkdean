@@ -1,3 +1,3 @@
-# Ideas for future work
+# Ideas
 
-Scratch space for new ideas. Promote into [ROADMAP.md](./ROADMAP.md) when prioritized.
+Scratch space for unprioritized ideas. Promote into [ROADMAP.md](./ROADMAP.md) when scheduled.

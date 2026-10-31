@@ -22,7 +22,7 @@ pub async fn search_vault_bookmarks(
     let q = query.to_ascii_lowercase();
     let mut out = Vec::new();
     for b in rows {
-        if let Some(v) = bookmark_to_view(pool, b, Some(vault_key)).await? {
+        if let Some(v) = bookmark_to_view(pool, b, Some(vault_key), user_id).await? {
             let hay = format!(
                 "{} {} {} {} {}",
                 v.title,

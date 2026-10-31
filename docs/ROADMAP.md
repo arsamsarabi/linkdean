@@ -1,6 +1,6 @@
 # Roadmap
 
-Ordered milestones = build order. Each milestone lists concrete deliverables.
+Ordered milestones define build order. Each milestone lists concrete deliverables.
 
 ## Shipped (v1)
 
@@ -19,9 +19,9 @@ Ordered milestones = build order. Each milestone lists concrete deliverables.
 
 ---
 
-## Milestone 1 — Sharing infra (v2 core)
+## Milestone 1: Sharing infra (v2 core)
 
-Foundation for collaboration. Personal dashboard does not *require* this technically; we still do sharing first so shared dashboards (M3) land on real ACL, not a second model.
+Foundation for collaboration. Sharing lands before personal dashboards so shared dashboards (Milestone 3) reuse the same ACL model rather than a parallel one.
 
 **Deliverables**
 
@@ -32,14 +32,14 @@ Foundation for collaboration. Personal dashboard does not *require* this technic
 
 **Out of this milestone**
 
-- Public bookmark list URLs → later (backlog)
-- Shared dashboards → Milestone 3
+- Public bookmark list URLs (backlog)
+- Shared dashboards (Milestone 3)
 
 ---
 
-## Milestone 2 — Personal dashboard
+## Milestone 2: Personal dashboard
 
-Glance / Authentik-style home for a single user.
+Home surface for a single user (glance-style sectioned grid).
 
 **Deliverables**
 
@@ -49,7 +49,7 @@ Glance / Authentik-style home for a single user.
 
 ---
 
-## Milestone 3 — Shared dashboards
+## Milestone 3: Shared dashboards
 
 Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX).
 
@@ -61,9 +61,9 @@ Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX).
 
 ---
 
-## Milestone 4 — API keys
+## Milestone 4: API keys
 
-Programmatic access to a user’s own data. Independent of sharing; scheduled after dashboards.
+Programmatic access to a user's own data. Independent of sharing; scheduled after dashboards.
 
 **Deliverables**
 
@@ -74,9 +74,9 @@ Programmatic access to a user’s own data. Independent of sharing; scheduled af
 
 ---
 
-## Milestone 5 — Archive & downloads (v3)
+## Milestone 5: Archive & downloads (v3)
 
-Heavy infra; keep after interactive product surfaces.
+Heavy infra; scheduled after interactive product surfaces.
 
 **Deliverables**
 
@@ -87,22 +87,22 @@ Heavy infra; keep after interactive product surfaces.
 
 ---
 
-## Milestone 6 — Browser extension
+## Milestone 6: Browser extension
 
 Lowest numbered priority among the planned interactive surfaces.
 
 **Deliverables**
 
-- “Save current tab” to Linkdean
+- Save current tab to Linkdean
 - Quick file-to-category from the extension
 
 ---
 
-## Milestone 7 — Shared activity & social
+## Milestone 7: Shared activity & social
 
-Depends on Milestone 1 (share/ACL). Stronger with Milestone 3 (shared dashboards) for activity surfaces, but notifications can start on shared folders/lists alone.
+Depends on Milestone 1 (share/ACL). Activity surfaces benefit from Milestone 3 (shared dashboards); notifications can start on shared folders/lists alone.
 
-Build order inside this milestone: notifications first, then discussion, then lightweight reactions; gamification last (or slip to backlog if scope balloons).
+Internal build order: notifications, discussion, lightweight reactions; gamification last (or backlog if scope expands).
 
 **Deliverables**
 
@@ -116,7 +116,7 @@ Build order inside this milestone: notifications first, then discussion, then li
 
 ## Backlog (unscheduled)
 
-Pick into a milestone when prioritized.
+Items may be promoted into a milestone when prioritized.
 
 **Product**
 
@@ -125,7 +125,7 @@ Pick into a milestone when prioritized.
 - Duplicate merge UI (API already lists duplicate URLs)
 - Broken-link checker (rate-limited worker)
 - Keyboard-first command palette (add, search, jump category)
-- Reading list / “unread” + pin / favorites
+- Reading list / unread + pin / favorites
 - Full-text notes and optional highlights
 - Favicon + OG image cache on disk (not hot-fetch forever)
 - Reimagine category management UX
@@ -156,12 +156,12 @@ Pick into a milestone when prioritized.
 - Backup recipe (pg_dump + meili dump) in docs
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
-- PWA install for “app-like” phone use
+- PWA install for app-like phone use
 
 ---
 
 ## Unplanned (far out)
 
-Not on the numbered track. Revisit only after planned milestones and backlog pressure ease.
+Outside the numbered track. Revisit after planned milestones and backlog pressure ease.
 
-- Native mobile apps (iOS / Android) — separate from responsive web + PWA
+- Native mobile apps (iOS / Android), separate from responsive web + PWA

@@ -8,6 +8,7 @@ export const categoryRefSchema = z.object({
 
 export const bookmarkSchema = z.object({
   id: z.string(),
+  owner_user_id: z.string(),
   category_id: z.string().nullish(),
   categories: z.array(categoryRefSchema),
   url: z.string(),
@@ -19,6 +20,7 @@ export const bookmarkSchema = z.object({
   has_preview: z.boolean(),
   is_vault: z.boolean(),
   tags: z.array(z.string()),
+  can_write: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -35,6 +37,7 @@ export const searchHitSchema = z.object({
   category_id: z.string().nullish(),
   categories: z.array(categoryRefSchema).optional(),
   is_vault: z.boolean(),
+  can_write: z.boolean(),
 })
 
 export const searchResponseSchema = z.object({

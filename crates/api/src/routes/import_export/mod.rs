@@ -65,7 +65,7 @@ async fn import(
     // reindex non-vault
     if let Ok(items) = db::list_bookmarks(&state.pool, user.id, None, false, None).await {
         for v in items {
-            if let Err(e) = state.search.upsert_bookmark(user.id, &v).await {
+            if let Err(e) = state.search.upsert_bookmark(&v).await {
                 tracing::warn!(bookmark_id = %v.id, error = %e, "meili reindex failed");
             }
         }

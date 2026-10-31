@@ -41,12 +41,14 @@ const cats: Category[] = [
 ]
 
 const baseBm = {
+  owner_user_id: 'u1',
   description: null,
   notes: null,
   favicon_url: null,
   preview_image_url: null,
   has_preview: false,
   is_vault: false,
+  can_write: true,
   tags: [] as string[],
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-02T00:00:00Z',

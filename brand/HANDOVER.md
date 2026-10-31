@@ -1,11 +1,11 @@
-# Linkdean identity — handover
+# Linkdean identity handover
 
 ## Direction
-**Snap Chain** — two open links mid-interlock (mouths ajar = snap). Approved from concept D (`d-snap-chain-v4`).
+**Snap Chain:** two open links mid-interlock (mouths ajar = snap). Approved from concept D (`d-snap-chain-v4`).
 
 ## Palette (from `apps/web/src/theme.ts`)
-- Purple Pain `#8458B3` — primary
-- Ice Cold `#A0D2EB` — accent mono
+- Purple Pain `#8458B3`: primary
+- Ice Cold `#A0D2EB`: accent mono
 - Freeze `#E5EAF5` · Heavy `#A28089` · Night `#1A1618`
 
 ## Deliverables
@@ -20,8 +20,8 @@
 | `apps/web/public/` | Wired favicons + `linkdean-symbol.svg` / `linkdean-logo.svg` |
 
 ## App wiring
-- `apps/web/index.html` — favicon / manifest / theme-color
-- `AppShell` + `LoginPage` — symbol beside title
+- `apps/web/index.html`: favicon / manifest / theme-color
+- `AppShell` + `LoginPage`: symbol beside title
 
 ## Notes
 - Wordmark = Rajdhani Bold outlined via opentype.js (not live `<text>`)

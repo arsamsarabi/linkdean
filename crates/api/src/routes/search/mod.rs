@@ -40,11 +40,23 @@ async fn search(
     let limit = clamp_limit(q.limit);
 
     if !q.q.trim().is_empty() {
-        match state.search.search(user.id, &q.q, limit).await {
+        // Owned + shared category ids so Meili can surface shared (and invitee-created) docs.
+        let readable = db::list_categories(&state.pool, user.id, true, false).await?;
+        let readable_ids: Vec<Uuid> = readable.into_iter().map(|c| c.id).collect();
+
+        match state
+            .search
+            .search(user.id, &readable_ids, &q.q, limit)
+            .await
+        {
             Ok(docs) => {
                 for d in docs {
+                    let id = Uuid::parse_str(&d.id).unwrap_or_else(|_| Uuid::nil());
+                    let can_write = db::bookmark_can_write(&state.pool, user.id, id)
+                        .await
+                        .unwrap_or(false);
                     hits.push(SearchHit {
-                        id: Uuid::parse_str(&d.id).unwrap_or_else(|_| Uuid::nil()),
+                        id,
                         title: d.title,
                         url: d.url,
                         description: if d.description.is_empty() {
@@ -61,6 +73,7 @@ async fn search(
                             .as_deref()
                             .and_then(|s| Uuid::parse_str(s).ok()),
                         is_vault: false,
+                        can_write,
                     });
                 }
             }
@@ -87,6 +100,7 @@ async fn search(
                             tags: v.tags,
                             category_id: v.category_id,
                             is_vault: true,
+                            can_write: v.can_write,
                         });
                     }
                 }
@@ -107,6 +121,7 @@ async fn search(
                             tags: v.tags,
                             category_id: v.category_id,
                             is_vault: true,
+                            can_write: v.can_write,
                         });
                     }
                 } else {

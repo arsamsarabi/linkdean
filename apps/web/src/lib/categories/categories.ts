@@ -4,6 +4,14 @@ export type CatNode = { cat: Category; children: CatNode[] }
 
 export type CategorySelectOption = { value: string; label: string }
 
+export function canWriteCategory(cat: Category): boolean {
+  return cat.access === 'owner' || cat.access === 'write'
+}
+
+export function writableCategories(cats: Category[]): Category[] {
+  return cats.filter(canWriteCategory)
+}
+
 export function buildCategoryTree(cats: Category[]): CatNode[] {
   const map = new Map<string, CatNode>()
   cats.forEach((c) => map.set(c.id, { cat: c, children: [] }))

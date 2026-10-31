@@ -43,11 +43,19 @@ import {
   useUpdateSettings,
   useVaultUnlock,
 } from '@/hooks'
-import { asStringList, buildLibrarySearch, categoryPath, type SortKey } from '@/lib'
+import {
+  asStringList,
+  buildLibrarySearch,
+  canWriteCategory,
+  categoryPath,
+  type SortKey,
+} from '@/lib'
 import {
   FOLDER_ALL,
+  FOLDER_UNCATEGORIZED,
   collectTagOptions,
   draftFromBookmark,
+  emptyDraft,
   filterAndSortLibraryItems,
   normalizeFolderId,
   type ExplorerFolderId,
@@ -173,32 +181,6 @@ export function LibraryPage(): ReactElement {
     setUnlockOpen(true)
   }, [search.data?.vault_prompt])
 
-  useHotkeys([
-    [
-      '/',
-      (e) => {
-        e.preventDefault()
-        searchRef.current?.focus()
-      },
-    ],
-    [
-      'mod+K',
-      (e) => {
-        e.preventDefault()
-        searchRef.current?.focus()
-      },
-    ],
-    [
-      'n',
-      (e) => {
-        const t = e.target as HTMLElement | null
-        if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
-        e.preventDefault()
-        openCreate()
-      },
-    ],
-  ])
-
   const allTags = useMemo(() => collectTagOptions(bookmarks.data || []), [bookmarks.data])
 
   const catLabel = useMemo(() => {
@@ -230,19 +212,69 @@ export function LibraryPage(): ReactElement {
     setFilterOpen(false)
   }
 
+  const folderCat = useMemo(() => {
+    if (!folderId || folderId === FOLDER_ALL || folderId === FOLDER_UNCATEGORIZED) return null
+    return (cats.data || []).find((c) => c.id === folderId) ?? null
+  }, [cats.data, folderId])
+
+  /** Create allowed at All / uncategorized; gated when browsing a specific shared folder. */
+  const canCreateInContext = !folderCat || canWriteCategory(folderCat)
+
   function openCreate(): void {
-    setDraft(null)
+    if (!canCreateInContext) return
+    if (folderCat && canWriteCategory(folderCat)) {
+      setDraft({ ...emptyDraft(), category_ids: [folderCat.id] })
+    } else {
+      setDraft(null)
+    }
     openDrawer()
   }
 
+  useHotkeys([
+    [
+      '/',
+      (e) => {
+        e.preventDefault()
+        searchRef.current?.focus()
+      },
+    ],
+    [
+      'mod+K',
+      (e) => {
+        e.preventDefault()
+        searchRef.current?.focus()
+      },
+    ],
+    [
+      'n',
+      (e) => {
+        const t = e.target as HTMLElement | null
+        if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
+        if (!canCreateInContext) return
+        e.preventDefault()
+        openCreate()
+      },
+    ],
+  ])
+
   function openEdit(id: string): void {
-    const b = (bookmarks.data || []).find((x) => x.id === id)
+    const fromList = (bookmarks.data || []).find((x) => x.id === id)
+    const fromSearch = (search.data?.hits || []).find((x) => x.id === id)
+    const b = fromList || fromSearch
     if (!b) {
       notifications.show({ color: 'red', message: 'Bookmark not found' })
       return
     }
-    setDraft(draftFromBookmark(b))
-    openDrawer()
+    if ('can_write' in b && b.can_write === false) {
+      notifications.show({ color: 'yellow', message: 'Read-only shared bookmark' })
+      return
+    }
+    if (fromList) {
+      setDraft(draftFromBookmark(fromList))
+      openDrawer()
+      return
+    }
+    notifications.show({ color: 'red', message: 'Open the bookmark from the library to edit' })
   }
 
   async function unlockForSearch(): Promise<void> {
@@ -299,11 +331,19 @@ export function LibraryPage(): ReactElement {
               { value: 'explorer', label: 'Explorer' },
             ]}
           />
-          <Tooltip label="New bookmark (N)">
-            <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={openCreate}>
-              Add bookmark
-            </Button>
-          </Tooltip>
+          {canCreateInContext ? (
+            <Tooltip label="New bookmark (N)">
+              <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={openCreate}>
+                Add bookmark
+              </Button>
+            </Tooltip>
+          ) : (
+            <Tooltip label="Read-only shared folder">
+              <Button leftSection={<IconBookmarkPlus {...iconSm} />} disabled>
+                Add bookmark
+              </Button>
+            </Tooltip>
+          )}
         </Group>
       </Group>
 
@@ -395,6 +435,8 @@ export function LibraryPage(): ReactElement {
           onEdit={openEdit}
           onDelete={setDeleteId}
           onCreate={openCreate}
+          canCreate={canCreateInContext}
+          folderReadOnly={!!folderCat && !canWriteCategory(folderCat)}
         />
       ) : (
         <LibraryGridView
@@ -404,6 +446,7 @@ export function LibraryPage(): ReactElement {
           searchQuery={debouncedQ}
           emptyLibrary={emptyLibrary}
           emptyFiltered={emptyFiltered}
+          canCreate={canCreateInContext}
           filterOpen={filterOpen}
           filterActive={filterActive}
           filterPanelId={FILTER_PANEL_ID}
@@ -488,19 +531,21 @@ export function LibraryPage(): ReactElement {
               </Tooltip>
             )}
           </Transition>
-          <Tooltip label="Add bookmark" position="left">
-            <ActionIcon
-              size="xl"
-              radius="xl"
-              variant="filled"
-              color="violet"
-              aria-label="Add bookmark"
-              onClick={openCreate}
-              hiddenFrom="sm"
-            >
-              <IconBookmarkPlus size={22} stroke={1.5} />
-            </ActionIcon>
-          </Tooltip>
+          {canCreateInContext ? (
+            <Tooltip label="Add bookmark" position="left">
+              <ActionIcon
+                size="xl"
+                radius="xl"
+                variant="filled"
+                color="violet"
+                aria-label="Add bookmark"
+                onClick={openCreate}
+                hiddenFrom="sm"
+              >
+                <IconBookmarkPlus size={22} stroke={1.5} />
+              </ActionIcon>
+            </Tooltip>
+          ) : null}
         </Group>
       </Affix>
     </Stack>

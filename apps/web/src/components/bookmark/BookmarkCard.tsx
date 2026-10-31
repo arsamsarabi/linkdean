@@ -42,6 +42,8 @@ export type BookmarkCardItem = {
   is_vault: boolean
   tags: string[]
   categories?: CategoryRef[]
+  /** When false, edit/delete stay hidden (read-only share). Default true for legacy callers. */
+  can_write?: boolean
 }
 
 type PreviewFallbackProps = {
@@ -76,6 +78,7 @@ type Props = {
 
 export function BookmarkCard({ bookmark: b, highlightQuery, onEdit, onDelete }: Props): ReactElement {
   const title = b.title || b.url
+  const canWrite = b.can_write !== false
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
   const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}`
@@ -156,16 +159,20 @@ export function BookmarkCard({ bookmark: b, highlightQuery, onEdit, onDelete }: 
                   </Menu.Item>
                 )}
               </CopyButton>
-              <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={() => onEdit(b.id)}>
-                Edit
-              </Menu.Item>
-              <Menu.Item
-                color="red"
-                leftSection={<IconTrash size={14} stroke={1.5} />}
-                onClick={() => onDelete(b.id)}
-              >
-                Delete
-              </Menu.Item>
+              {canWrite ? (
+                <>
+                  <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={() => onEdit(b.id)}>
+                    Edit
+                  </Menu.Item>
+                  <Menu.Item
+                    color="red"
+                    leftSection={<IconTrash size={14} stroke={1.5} />}
+                    onClick={() => onDelete(b.id)}
+                  >
+                    Delete
+                  </Menu.Item>
+                </>
+              ) : null}
             </Menu.Dropdown>
           </Menu>
         </Group>
