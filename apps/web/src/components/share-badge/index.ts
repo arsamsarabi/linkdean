@@ -1,0 +1,1 @@
+export { ShareBadge } from './ShareBadge'

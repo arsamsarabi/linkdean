@@ -27,6 +27,7 @@ export const bookmarkSchema = z.object({
 
 export const searchHitSchema = z.object({
   id: z.string(),
+  owner_user_id: z.string(),
   title: z.string(),
   url: z.string(),
   description: z.string().nullish(),

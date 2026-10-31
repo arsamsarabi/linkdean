@@ -380,6 +380,7 @@ pub struct VaultUnlockRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchHit {
     pub id: Uuid,
+    pub owner_user_id: Uuid,
     pub title: String,
     pub url: String,
     pub description: Option<String>,

@@ -456,6 +456,7 @@ export function LibraryPage(): ReactElement {
           onCreate={openCreate}
           canCreate={canCreateInContext}
           folderReadOnly={!!folderCat && !canWriteCategory(folderCat)}
+          viewerUserId={me.data?.user.id}
         />
       ) : (
         <LibraryGridView
@@ -466,6 +467,7 @@ export function LibraryPage(): ReactElement {
           emptyLibrary={emptyLibrary}
           emptyFiltered={emptyFiltered}
           canCreate={canCreateInContext}
+          viewerUserId={me.data?.user.id}
           filterOpen={filterOpen}
           filterActive={filterActive}
           filterPanelId={FILTER_PANEL_ID}

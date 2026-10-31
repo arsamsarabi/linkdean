@@ -51,6 +51,7 @@ type Props = {
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   canCreate?: boolean
+  viewerUserId?: string
 }
 
 export function LibraryGridView({
@@ -82,6 +83,7 @@ export function LibraryGridView({
   onEdit,
   onDelete,
   canCreate = true,
+  viewerUserId,
 }: Props): ReactElement {
   return (
     <Stack gap="md">
@@ -172,6 +174,7 @@ export function LibraryGridView({
               key={b.id}
               bookmark={b as BookmarkCardItem}
               highlightQuery={searching ? searchQuery : undefined}
+              viewerUserId={viewerUserId}
               onEdit={onEdit}
               onDelete={onDelete}
             />

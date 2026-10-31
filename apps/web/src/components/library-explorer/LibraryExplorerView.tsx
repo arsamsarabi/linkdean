@@ -35,23 +35,33 @@ type Props = {
   onCreate: () => void
   canCreate?: boolean
   folderReadOnly?: boolean
+  viewerUserId?: string
 }
 
 function BookmarkGrid({
   items,
   highlightQuery,
+  viewerUserId,
   onEdit,
   onDelete,
 }: {
   items: LibraryListItem[]
   highlightQuery?: string
+  viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }): ReactElement {
   return (
     <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
       {items.map((b) => (
-        <BookmarkCard key={b.id} bookmark={b} highlightQuery={highlightQuery} onEdit={onEdit} onDelete={onDelete} />
+        <BookmarkCard
+          key={b.id}
+          bookmark={b}
+          highlightQuery={highlightQuery}
+          viewerUserId={viewerUserId}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
     </SimpleGrid>
   )
@@ -89,6 +99,7 @@ export function LibraryExplorerView({
   onCreate,
   canCreate = true,
   folderReadOnly = false,
+  viewerUserId,
 }: Props): ReactElement {
   const selectedId: ExplorerFolderId = folderId || FOLDER_ALL
   const atAll = selectedId === FOLDER_ALL
@@ -143,7 +154,13 @@ export function LibraryExplorerView({
         <Text size="sm" c="dimmed">
           {sortedHits.length} result{sortedHits.length === 1 ? '' : 's'}
         </Text>
-        <BookmarkGrid items={sortedHits} highlightQuery={searchQuery} onEdit={onEdit} onDelete={onDelete} />
+        <BookmarkGrid
+          items={sortedHits}
+          highlightQuery={searchQuery}
+          viewerUserId={viewerUserId}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </Stack>
     )
   }
@@ -199,7 +216,12 @@ export function LibraryExplorerView({
                   Bookmarks
                 </Text>
               ) : null}
-              <BookmarkGrid items={sortedBookmarks} onEdit={onEdit} onDelete={onDelete} />
+              <BookmarkGrid
+                items={sortedBookmarks}
+                viewerUserId={viewerUserId}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
             </Stack>
           ) : null}
         </Stack>

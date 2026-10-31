@@ -27,6 +27,8 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
+import { ShareBadge } from '@/components/share-badge'
+import { inviteeShareAccess } from '@/lib'
 import type { CategoryRef } from '@/schemas'
 import { googleFavicon, hostname, previewSrcCandidates } from '@/services'
 import styles from './BookmarkCard.module.css'
@@ -42,6 +44,7 @@ export type BookmarkCardItem = {
   is_vault: boolean
   tags: string[]
   categories?: CategoryRef[]
+  owner_user_id?: string
   /** When false, edit/delete stay hidden (read-only share). Default true for legacy callers. */
   can_write?: boolean
 }
@@ -72,13 +75,22 @@ function PreviewFallback({ url, faviconUrl }: PreviewFallbackProps): ReactElemen
 type Props = {
   bookmark: BookmarkCardItem
   highlightQuery?: string
+  /** Current user — used to show Shared · RO/RW when item is from another owner. */
+  viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }
 
-export function BookmarkCard({ bookmark: b, highlightQuery, onEdit, onDelete }: Props): ReactElement {
+export function BookmarkCard({
+  bookmark: b,
+  highlightQuery,
+  viewerUserId,
+  onEdit,
+  onDelete,
+}: Props): ReactElement {
   const title = b.title || b.url
   const canWrite = b.can_write !== false
+  const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
   const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}`
@@ -208,6 +220,7 @@ export function BookmarkCard({ bookmark: b, highlightQuery, onEdit, onDelete }: 
         ) : null}
 
         <Group gap={4} mt="auto" pt={4}>
+          {share ? <ShareBadge access={share} size="sm" /> : null}
           {b.is_vault ? (
             <Tooltip label="Stored in vault">
               <Badge size="sm" leftSection={<IconLock size={10} stroke={1.5} />}>

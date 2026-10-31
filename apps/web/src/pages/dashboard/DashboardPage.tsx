@@ -24,7 +24,7 @@ import {
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { EmptyState, GlanceTile, QueryErrorAlert } from '@/components'
-import { useBookmarks, useDefaultDashboard, usePutDefaultDashboard } from '@/hooks'
+import { useBookmarks, useDefaultDashboard, useMe, usePutDefaultDashboard } from '@/hooks'
 import type { Dashboard } from '@/schemas'
 import {
   emptyDashboardDraft,
@@ -47,9 +47,11 @@ function draftFromDashboard(d: Dashboard): DashboardDraft {
 }
 
 export function DashboardPage(): ReactElement {
+  const me = useMe()
   const dashboard = useDefaultDashboard()
   const bookmarks = useBookmarks()
   const save = usePutDefaultDashboard()
+  const viewerUserId = me.data?.user.id
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<DashboardDraft | null>(null)
 
@@ -245,7 +247,7 @@ export function DashboardPage(): ReactElement {
                         </Text>
                       )
                     }
-                    return <GlanceTile key={id} bookmark={b} />
+                    return <GlanceTile key={id} bookmark={b} viewerUserId={viewerUserId} />
                   })}
                 </SimpleGrid>
               )}
@@ -295,7 +297,11 @@ export function DashboardPage(): ReactElement {
               ) : (
                 <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }} spacing="xs">
                   {section.items.map((item) => (
-                    <GlanceTile key={item.id} bookmark={item.bookmark} />
+                    <GlanceTile
+                      key={item.id}
+                      bookmark={item.bookmark}
+                      viewerUserId={viewerUserId}
+                    />
                   ))}
                 </SimpleGrid>
               )}

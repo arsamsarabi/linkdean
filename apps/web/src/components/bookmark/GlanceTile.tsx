@@ -1,6 +1,8 @@
 import { useState, type ReactElement } from 'react'
 import { Badge, Group, Image, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import { IconExternalLink, IconLock, IconWorld } from '@tabler/icons-react'
+import { ShareBadge } from '@/components/share-badge'
+import { inviteeShareAccess } from '@/lib'
 import { googleFavicon, hostname } from '@/services'
 import styles from './GlanceTile.module.css'
 
@@ -10,16 +12,20 @@ export type GlanceTileItem = {
   title: string
   favicon_url?: string | null
   is_vault: boolean
+  owner_user_id?: string
+  can_write?: boolean
 }
 
 type Props = {
   bookmark: GlanceTileItem
+  viewerUserId?: string
 }
 
-export function GlanceTile({ bookmark: b }: Props): ReactElement {
+export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
   const title = b.title || b.url
   const [iconFailed, setIconFailed] = useState(false)
   const iconSrc = !iconFailed ? b.favicon_url || googleFavicon(b.url) : undefined
+  const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
 
   return (
     <UnstyledButton
@@ -43,6 +49,7 @@ export function GlanceTile({ bookmark: b }: Props): ReactElement {
             <Text fw={600} size="sm" lineClamp={1} className={styles.title}>
               {title}
             </Text>
+            {share ? <ShareBadge access={share} /> : null}
             {b.is_vault ? (
               <Tooltip label="Stored in vault">
                 <Badge size="xs" variant="light" leftSection={<IconLock size={8} stroke={1.5} />}>

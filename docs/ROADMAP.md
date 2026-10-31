@@ -48,6 +48,7 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 - Arrange / edit layout of frequently visited links
 - Persisted per-user layout (`dashboards` + sections + items)
 - Glance tiles + section reorder; `default_landing` `/` vs `/library` (Settings + post-login)
+- Invitee share badges on cards / glance tiles / folder tiles (owner-side “I shared this” still open)
 
 ---
 

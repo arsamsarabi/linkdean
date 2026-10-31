@@ -18,6 +18,7 @@ import { notifications } from '@mantine/notifications'
 import { IconFolder, IconFolderPlus, IconShare, IconTrash } from '@tabler/icons-react'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { QueryErrorAlert } from '@/components/query-error-alert'
+import { ShareBadge } from '@/components/share-badge'
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from '@/hooks'
 import { buildCategoryTree, categorySelectData, type CatNode } from '@/lib'
 import type { Category } from '@/schemas'
@@ -267,15 +268,8 @@ function CatRow({ node, depth, onDelete, onShare, onRename }: CatRowProps): Reac
             {node.cat.name}
           </Text>
         )}
-        {node.cat.access === 'read' ? (
-          <Badge size="xs" variant="outline" color="blue">
-            shared · RO
-          </Badge>
-        ) : null}
-        {node.cat.access === 'write' ? (
-          <Badge size="xs" variant="light" color="blue">
-            shared · RW
-          </Badge>
+        {node.cat.access === 'read' || node.cat.access === 'write' ? (
+          <ShareBadge access={node.cat.access} />
         ) : null}
         {node.cat.is_hidden ? (
           <Badge size="xs" variant="outline" color="gray">
