@@ -21,6 +21,7 @@ import { useDebouncedValue, useDisclosure, useHotkeys, useWindowScroll } from '@
 import { notifications } from '@mantine/notifications'
 import {
   IconArrowUp,
+  IconBookmark,
   IconBookmarkPlus,
   IconCheck,
   IconCopy,
@@ -28,7 +29,9 @@ import {
   IconFolders,
   IconLayoutGrid,
   IconLockOpen,
+  IconPin,
   IconSearch,
+  IconStar,
   IconTags,
   IconTrash,
   IconX,
@@ -621,7 +624,7 @@ export function LibraryPage(): ReactElement {
       ) : null}
 
       <Stack gap="md">
-        <Group justify="space-between" align="center" wrap="wrap" gap="sm">
+        <Group justify="space-between" align="stretch" wrap="wrap" gap="sm">
           <TextInput
             ref={searchRef}
             placeholder="Search bookmarks…"
@@ -650,7 +653,7 @@ export function LibraryPage(): ReactElement {
             onChange={(e) => setQ(e.currentTarget.value)}
             className={styles.searchInput}
           />
-          <Group gap="xs" wrap="nowrap">
+          <Group gap="xs" wrap="nowrap" align="stretch">
             {viewMode === 'grid' ? (
               <Tooltip label="Filter by category or tag">
                 <Button
@@ -659,6 +662,7 @@ export function LibraryPage(): ReactElement {
                   onClick={toggleFilter}
                   aria-expanded={filterOpen}
                   aria-controls={FILTER_PANEL_ID}
+                  h="100%"
                 >
                   Filter
                   {filterActive
@@ -667,25 +671,28 @@ export function LibraryPage(): ReactElement {
                 </Button>
               </Tooltip>
             ) : null}
-            <Button.Group>
+            <Button.Group className={styles.flagFilters}>
               <Button
-                size="compact-sm"
                 variant={filterFlags.includes('unread') ? 'light' : 'default'}
+                leftSection={<IconBookmark {...iconSm} />}
                 onClick={() => toggleFlagFilter('unread')}
+                h="100%"
               >
                 Reading list
               </Button>
               <Button
-                size="compact-sm"
                 variant={filterFlags.includes('favorite') ? 'light' : 'default'}
+                leftSection={<IconStar {...iconSm} />}
                 onClick={() => toggleFlagFilter('favorite')}
+                h="100%"
               >
                 Favorites
               </Button>
               <Button
-                size="compact-sm"
                 variant={filterFlags.includes('pinned') ? 'light' : 'default'}
+                leftSection={<IconPin {...iconSm} />}
                 onClick={() => toggleFlagFilter('pinned')}
+                h="100%"
               >
                 Pinned
               </Button>
