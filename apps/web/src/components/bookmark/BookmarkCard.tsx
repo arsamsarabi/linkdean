@@ -27,9 +27,8 @@ import {
   IconTrash,
   IconWorld,
 } from '@tabler/icons-react'
-import type { CategoryRef } from '../../schemas'
-import { previewSrcCandidates } from '../../services/bookmarks/bookmarkPreview'
-import { googleFavicon, hostname } from '../../services/url-display/urlDisplay'
+import type { CategoryRef } from '@/schemas'
+import { previewSrcCandidates, googleFavicon, hostname } from '@/services'
 import styles from './BookmarkCard.module.css'
 
 export type BookmarkCardItem = {

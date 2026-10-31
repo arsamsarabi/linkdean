@@ -26,16 +26,11 @@ import {
   IconUpload,
   IconUserPlus,
 } from '@tabler/icons-react'
-import { getToken } from '../../lib/auth/authToken'
-import { AvatarCropModal } from '../../components/avatar'
-import { useBootstrap } from '../../hooks/auth/useBootstrap'
-import { useCompleteOnboarding, useRegister } from '../../hooks/auth/useAuth'
-import { useMe } from '../../hooks/auth/useMe'
-import { useImportBookmarks } from '../../hooks/import-export/useImportExport'
-import { useUploadAvatar } from '../../hooks/settings/useSettings'
-import { useVaultSetup } from '../../hooks/vault/useVault'
-import { validatePasswordPair } from '../../services/auth/authValidation'
-import motion from '../../styles/motion.module.css'
+import { getToken } from '@/lib'
+import { AvatarCropModal } from '@/components'
+import { useBootstrap, useCompleteOnboarding, useRegister, useMe, useImportBookmarks, useUploadAvatar, useVaultSetup } from '@/hooks'
+import { validatePasswordPair } from '@/services'
+import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

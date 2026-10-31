@@ -1,4 +1,4 @@
-import type { Bookmark } from '../../schemas'
+import type { Bookmark } from '@/schemas'
 
 export type BookmarkDraft = {
   id?: string

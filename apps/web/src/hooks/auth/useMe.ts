@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { api } from '../../api'
-import type { MeResponse } from '../../schemas'
+import { api } from '@/api'
+import type { MeResponse } from '@/schemas'
 
 export function useMe(enabled = true): UseQueryResult<MeResponse> {
   return useQuery({

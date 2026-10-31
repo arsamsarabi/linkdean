@@ -1,10 +1,10 @@
 import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useMantineColorScheme } from '@mantine/core'
 import type { UseQueryResult } from '@tanstack/react-query'
-import type { MeResponse, UserSettings } from '../../schemas'
-import { useUi } from '../../store'
-import { useMe } from '../auth/useMe'
-import { useVaultLock } from '../vault/useVault'
+import type { MeResponse, UserSettings } from '@/schemas'
+import { useUi } from '@/store'
+import { useMe } from '@/hooks/auth'
+import { useVaultLock } from '@/hooks/vault'
 
 /** Hydrate show-hidden, theme, vault unlock flag, and idle auto-lock from /auth/me. */
 export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> {

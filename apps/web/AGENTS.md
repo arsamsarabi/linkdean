@@ -259,8 +259,22 @@ TypeScript is not sufficient for external data.
 - Example: avatar UI → `components/avatar/` (`UserAvatar.tsx`, `AvatarCropModal.tsx`, `*.module.css`, optional `index.ts`)
 - Same pattern for pages (`pages/library/`), hooks (`hooks/auth/`), services (`services/bookmarks/`), schemas (`schemas/…`)
 - Co-locate CSS modules and tests with the component/module they belong to
-- Barrel `index.ts` optional when a folder exports more than one public symbol
 - Folder names: kebab-case matching purpose (`query-error-alert`, `import-export`)
+
+### Path aliases (mandatory)
+
+- Import app code via the `@/` alias (`@` → `src/`). Do **not** use cross-folder `../` or `../../` chains
+- Allowed relative imports: same-folder only (`./Foo.module.css`, `./authToken`, colocated tests)
+- Configure in Vite + Vitest (`resolve.alias`) and TypeScript (`paths`: `"@/*": ["./src/*"]` — no `baseUrl` on TS 7+)
+- Prefer barrel entrypoints: `@/components/avatar`, `@/hooks`, `@/services/bookmarks` — not deep file paths when a barrel exists
+
+### Barrel files (mandatory where it makes sense)
+
+- Every domain folder that exports public symbols gets an `index.ts` barrel
+- Layer roots (`components/`, `hooks/`, `services/`, `lib/`, `pages/`, `schemas/`, `api/`) should re-export their domains
+- Import from the barrel, not the leaf file: `@/hooks` or `@/hooks/auth`, not `@/hooks/auth/useMe`
+- Do not create barrels for test-only or CSS-only folders
+- Avoid circular barrels (a barrel must not re-export a module that imports that same barrel)
 
 ---
 

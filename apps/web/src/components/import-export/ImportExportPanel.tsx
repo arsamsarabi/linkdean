@@ -17,8 +17,8 @@ import {
   IconInfoCircle,
   IconUpload,
 } from '@tabler/icons-react'
-import { useExportBookmarks, useImportBookmarks } from '../../hooks/import-export/useImportExport'
-import { QueryErrorAlert } from '../query-error-alert'
+import { useExportBookmarks, useImportBookmarks } from '@/hooks'
+import { QueryErrorAlert } from '@/components/query-error-alert'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

@@ -2,22 +2,22 @@ import { req } from './client'
 import {
   authTokenResponseSchema,
   bootstrapStatusSchema,
-  meResponseSchema,
-  okSchema,
-  settingsEnvelopeSchema,
-  userEnvelopeSchema,
-  type UserPublic,
-  type UserSettings,
-} from '../schemas/auth/auth'
-import {
   bookmarkSchema,
+  categoriesSchema,
+  categorySchema,
   duplicatesSchema,
   importResultSchema,
+  meResponseSchema,
+  okSchema,
   searchResponseSchema,
+  settingsEnvelopeSchema,
+  userEnvelopeSchema,
+  vaultStatusSchema,
   type Bookmark,
-} from '../schemas/bookmarks/bookmarks'
-import { categoriesSchema, categorySchema, type Category } from '../schemas/categories/categories'
-import { vaultStatusSchema } from '../schemas/vault/vault'
+  type Category,
+  type UserPublic,
+  type UserSettings,
+} from '@/schemas'
 import { z } from 'zod'
 
 const bookmarksSchema = z.array(bookmarkSchema)

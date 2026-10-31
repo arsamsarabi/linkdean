@@ -5,9 +5,9 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query'
-import { api } from '../../api'
-import type { Category } from '../../schemas'
-import { useUi } from '../../store'
+import { api } from '@/api'
+import type { Category } from '@/schemas'
+import { useUi } from '@/store'
 
 export function useCategories(
   includeHidden?: boolean,

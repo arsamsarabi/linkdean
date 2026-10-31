@@ -12,5 +12,5 @@ export type {
   SearchResponse,
   ImportResult,
   VaultStatus,
-} from '../schemas'
+} from '@/schemas'
 export { api } from './api'

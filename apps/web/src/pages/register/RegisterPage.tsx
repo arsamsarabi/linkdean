@@ -14,12 +14,10 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
-import { AvatarCropModal } from '../../components/avatar'
-import { useBootstrap } from '../../hooks/auth/useBootstrap'
-import { useRegister } from '../../hooks/auth/useAuth'
-import { useUploadAvatar } from '../../hooks/settings/useSettings'
-import { validatePasswordPair } from '../../services/auth/authValidation'
-import motion from '../../styles/motion.module.css'
+import { AvatarCropModal } from '@/components'
+import { useBootstrap, useRegister, useUploadAvatar } from '@/hooks'
+import { validatePasswordPair } from '@/services'
+import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

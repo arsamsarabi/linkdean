@@ -1,4 +1,4 @@
-import type { Category } from '../../schemas'
+import type { Category } from '@/schemas'
 
 export type CatNode = { cat: Category; children: CatNode[] }
 

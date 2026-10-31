@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
-import { api } from '../../api'
-import { setToken } from '../../lib/auth/authToken'
-import type { AuthTokenResponse, UserPublic } from '../../schemas'
+import { api } from '@/api'
+import { setToken } from '@/lib'
+import type { AuthTokenResponse, UserPublic } from '@/schemas'
 
 type LoginBody = { email: string; password: string }
 type RegisterBody = { email: string; password: string; display_name?: string }

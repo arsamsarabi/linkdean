@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getToken } from '../../lib/auth/authToken'
+import { getToken } from '@/lib'
 
 export function useAvatarImage(
   hasAvatar: boolean,

@@ -5,9 +5,9 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query'
-import { api } from '../../api'
-import type { VaultStatus } from '../../schemas'
-import { useUi } from '../../store'
+import { api } from '@/api'
+import type { VaultStatus } from '@/schemas'
+import { useUi } from '@/store'
 
 function invalidateVaultRelated(qc: ReturnType<typeof useQueryClient>): void {
   void qc.invalidateQueries({ queryKey: ['vault'] })

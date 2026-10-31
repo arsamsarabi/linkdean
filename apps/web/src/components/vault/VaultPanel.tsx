@@ -22,8 +22,8 @@ import {
   useVaultSetup,
   useVaultStatus,
   useVaultUnlock,
-} from '../../hooks/vault/useVault'
-import { QueryErrorAlert } from '../query-error-alert'
+} from '@/hooks'
+import { QueryErrorAlert } from '@/components/query-error-alert'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

@@ -17,11 +17,9 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconRocket, IconUserPlus } from '@tabler/icons-react'
-import { LogoMark } from '../../components/logo-mark'
-import { QueryErrorAlert } from '../../components/query-error-alert'
-import { useLogin } from '../../hooks/auth/useAuth'
-import { useBootstrap } from '../../hooks/auth/useBootstrap'
-import motion from '../../styles/motion.module.css'
+import { LogoMark, QueryErrorAlert } from '@/components'
+import { useLogin, useBootstrap } from '@/hooks'
+import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

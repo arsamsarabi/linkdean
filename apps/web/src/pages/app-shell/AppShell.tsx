@@ -12,14 +12,9 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
-import { PageContainer } from '../../components/page-container'
-import { LogoMark } from '../../components/logo-mark'
-import { QueryErrorAlert } from '../../components/query-error-alert'
-import { ThemeMenuSwitch } from '../../components/theme-menu-switch'
-import { UserAvatar } from '../../components/avatar'
-import { useLogout } from '../../hooks/auth/useAuth'
-import { usePrefsHydration } from '../../hooks/prefs/usePrefs'
-import { useUi } from '../../store'
+import { PageContainer, LogoMark, QueryErrorAlert, ThemeMenuSwitch, UserAvatar } from '@/components'
+import { useLogout, usePrefsHydration } from '@/hooks'
+import { useUi } from '@/store'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 

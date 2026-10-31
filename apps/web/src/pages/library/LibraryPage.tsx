@@ -35,22 +35,31 @@ import {
   BookmarkCard,
   BookmarkDrawer,
   BookmarkGridSkeleton,
+  ConfirmModal,
+  EmptyState,
+  QueryErrorAlert,
   type BookmarkDraft,
-} from '../../components/bookmark'
-import { ConfirmModal } from '../../components/confirm-modal'
-import { EmptyState } from '../../components/empty-state'
-import { QueryErrorAlert } from '../../components/query-error-alert'
-import { useBookmarks, useDeleteBookmark, useSearchBookmarks } from '../../hooks/bookmarks/useBookmarks'
-import { useCategories } from '../../hooks/categories/useCategories'
-import { useVaultUnlock } from '../../hooks/vault/useVault'
-import { categoryPath, categorySelectData } from '../../lib/categories/categories'
-import { asStringList, buildLibrarySearch, type SortKey } from '../../lib/library/librarySearch'
-import { draftFromBookmark } from '../../services/bookmarks/bookmarks'
+} from '@/components'
+import {
+  useBookmarks,
+  useCategories,
+  useDeleteBookmark,
+  useSearchBookmarks,
+  useVaultUnlock,
+} from '@/hooks'
+import {
+  asStringList,
+  buildLibrarySearch,
+  categoryPath,
+  categorySelectData,
+  type SortKey,
+} from '@/lib'
 import {
   collectTagOptions,
+  draftFromBookmark,
   filterAndSortLibraryItems,
   type LibraryListItem,
-} from '../../services/library/libraryList'
+} from '@/services'
 import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
-import { api } from '../../api'
-import { getToken } from '../../lib/auth/authToken'
-import type { ImportResult } from '../../schemas'
+import { api } from '@/api'
+import { getToken } from '@/lib'
+import type { ImportResult } from '@/schemas'
 
 type ImportVars = { format: string; content: string }
 

@@ -25,17 +25,15 @@ import {
   IconTrash,
   IconUser,
 } from '@tabler/icons-react'
-import { AvatarCropModal } from '../../components/avatar'
-import { QueryErrorAlert } from '../../components/query-error-alert'
-import { UserAvatar } from '../../components/avatar'
-import { useMe } from '../../hooks/auth/useMe'
+import { AvatarCropModal, QueryErrorAlert, UserAvatar } from '@/components'
 import {
   useChangePassword,
   useDeleteAvatar,
+  useMe,
   useUpdateProfile,
   useUploadAvatar,
-} from '../../hooks/settings/useSettings'
-import { validatePasswordPair } from '../../services/auth/authValidation'
+} from '@/hooks'
+import { validatePasswordPair } from '@/services'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

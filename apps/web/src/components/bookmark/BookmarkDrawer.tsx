@@ -11,13 +11,13 @@ import {
   Textarea,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import type { Category } from '../../schemas'
-import { useCreateBookmark, useUpdateBookmark } from '../../hooks/bookmarks/useBookmarks'
-import { categorySelectData } from '../../lib/categories/categories'
-import { emptyDraft, type BookmarkDraft } from '../../services/bookmarks/bookmarks'
+import type { Category } from '@/schemas'
+import { useCreateBookmark, useUpdateBookmark } from '@/hooks'
+import { categorySelectData } from '@/lib'
+import { emptyDraft, type BookmarkDraft } from '@/services'
 
 export type { BookmarkDraft }
-export { draftFromBookmark } from '../../services/bookmarks/bookmarks'
+export { draftFromBookmark } from '@/services'
 
 type Props = {
   opened: boolean

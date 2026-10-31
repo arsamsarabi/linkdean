@@ -3,7 +3,7 @@ import Cropper, { type Area } from 'react-easy-crop'
 import { Button, Group, Modal, Slider, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconCheck, IconX } from '@tabler/icons-react'
-import { getCroppedBlob } from '../../services/avatar/avatarCrop'
+import { getCroppedBlob } from '@/services'
 import styles from './AvatarCropModal.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const

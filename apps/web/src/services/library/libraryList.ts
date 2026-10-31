@@ -1,5 +1,5 @@
-import type { Bookmark, SearchHit } from '../../schemas'
-import type { SortKey } from '../../lib/library/librarySearch'
+import type { Bookmark, SearchHit } from '@/schemas'
+import type { SortKey } from '@/lib'
 
 export type LibraryListItem = Bookmark | (SearchHit & { categories?: Bookmark['categories'] })
 

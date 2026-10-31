@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildCategoryTree, categoryPath, categorySelectData } from './categories'
-import type { Category } from '../../schemas'
+import type { Category } from '@/schemas'
 
 const cats: Category[] = [
   { id: '1', parent_id: null, name: 'Root', is_hidden: false, is_vault: false, position: 0 },

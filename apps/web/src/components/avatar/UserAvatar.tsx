@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { Avatar } from '@mantine/core'
-import { useAvatarImage } from '../../hooks/avatar/useAvatarImage'
+import { useAvatarImage } from '@/hooks'
 
 type Props = {
   hasAvatar: boolean

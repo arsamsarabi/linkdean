@@ -4,15 +4,8 @@ import {
   createRoute,
   redirect,
 } from '@tanstack/react-router'
-import { AppShell } from './pages/app-shell'
-import { LoginPage } from './pages/login'
-import { LibraryPage } from './pages/library'
-import { OnboardingPage } from './pages/onboarding'
-import { ProfilePage } from './pages/profile'
-import { SettingsPage } from './pages/settings'
-import { RegisterPage } from './pages/register'
-import { getToken } from './lib/auth/authToken'
-import { validateLibrarySearch } from './lib/library/librarySearch'
+import { AppShell, LoginPage, LibraryPage, OnboardingPage, ProfilePage, SettingsPage, RegisterPage } from '@/pages'
+import { getToken, validateLibrarySearch } from '@/lib'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,

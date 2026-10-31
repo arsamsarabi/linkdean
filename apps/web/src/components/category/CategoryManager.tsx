@@ -21,10 +21,10 @@ import {
   useCreateCategory,
   useDeleteCategory,
   useUpdateCategory,
-} from '../../hooks/categories/useCategories'
-import { buildCategoryTree, categorySelectData, type CatNode } from '../../lib/categories/categories'
-import { ConfirmModal } from '../confirm-modal'
-import { QueryErrorAlert } from '../query-error-alert'
+} from '@/hooks'
+import { buildCategoryTree, categorySelectData, type CatNode } from '@/lib'
+import { ConfirmModal } from '@/components/confirm-modal'
+import { QueryErrorAlert } from '@/components/query-error-alert'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

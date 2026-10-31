@@ -2,10 +2,8 @@ import type { ReactElement } from 'react'
 import { SegmentedControl, Stack, Text, useMantineColorScheme } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react'
-import type { UserSettings } from '../../schemas'
-import { useMe } from '../../hooks/auth/useMe'
-import { applyTheme } from '../../hooks/prefs/usePrefs'
-import { useUpdateSettings } from '../../hooks/settings/useSettings'
+import type { UserSettings } from '@/schemas'
+import { useMe, applyTheme, useUpdateSettings } from '@/hooks'
 
 const icon = { size: 14, stroke: 1.5 } as const
 

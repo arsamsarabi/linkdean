@@ -5,9 +5,9 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query'
-import { api } from '../../api'
-import type { Bookmark, SearchResponse } from '../../schemas'
-import { useUi } from '../../store'
+import { api } from '@/api'
+import type { Bookmark, SearchResponse } from '@/schemas'
+import { useUi } from '@/store'
 
 export function useBookmarks(
   categoryId?: string | null,

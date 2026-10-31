@@ -22,14 +22,9 @@ import {
   IconLock,
   IconSettings,
 } from '@tabler/icons-react'
-import type { UserSettings } from '../../schemas'
-import { CategoryManager } from '../../components/category'
-import { ImportExportPanel } from '../../components/import-export'
-import { QueryErrorAlert } from '../../components/query-error-alert'
-import { VaultPanel } from '../../components/vault'
-import { useMe } from '../../hooks/auth/useMe'
-import { applyTheme } from '../../hooks/prefs/usePrefs'
-import { useUpdateSettings } from '../../hooks/settings/useSettings'
+import type { UserSettings } from '@/schemas'
+import { CategoryManager, ImportExportPanel, QueryErrorAlert, VaultPanel } from '@/components'
+import { useMe, applyTheme, useUpdateSettings } from '@/hooks'
 
 const SETTINGS_TABS = ['general', 'categories', 'import', 'vault'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
