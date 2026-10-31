@@ -1,9 +1,33 @@
-import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { MeResponse, UserPublic, UserSettings } from '@/schemas'
+import type { MeResponse, PlatformSettings, UserPublic, UserSettings } from '@/schemas'
 import { useUi } from '@/stores'
 
 type SettingsEnvelope = { settings: UserSettings }
+type PlatformEnvelope = { settings: PlatformSettings }
+
+export function usePlatformSettings(enabled = true): UseQueryResult<PlatformEnvelope> {
+  return useQuery({
+    queryKey: ['admin', 'platform-settings'],
+    queryFn: () => api.getPlatformSettings(),
+    enabled,
+  })
+}
+
+export function useUpdatePlatformSettings(): UseMutationResult<
+  PlatformEnvelope,
+  Error,
+  { registration_open?: boolean }
+> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body) => api.updatePlatformSettings(body),
+    onSuccess: (res) => {
+      qc.setQueryData(['admin', 'platform-settings'], res)
+      void qc.invalidateQueries({ queryKey: ['bootstrap'] })
+    },
+  })
+}
 
 export function useUpdateSettings(): UseMutationResult<SettingsEnvelope, Error, Partial<UserSettings>> {
   const qc = useQueryClient()

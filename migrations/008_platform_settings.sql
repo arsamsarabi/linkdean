@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS platform_settings (
+    id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+    registration_open BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO platform_settings (id) VALUES (TRUE)
+ON CONFLICT (id) DO NOTHING;

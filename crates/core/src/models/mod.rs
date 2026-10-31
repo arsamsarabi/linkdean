@@ -70,6 +70,17 @@ pub struct UpdateSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PlatformSettings {
+    pub registration_open: bool,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdatePlatformSettings {
+    pub registration_open: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,

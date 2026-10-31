@@ -70,6 +70,7 @@ export function LoginPage(): ReactElement {
   }
 
   const oidc = bootstrap.data?.oidc_enabled ?? false
+  const registrationOpen = bootstrap.data?.registration_open ?? true
 
   return (
     <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className={motion.fadeIn}>
@@ -112,12 +113,14 @@ export function LoginPage(): ReactElement {
               </Button>
             </>
           ) : null}
-          <Anchor component="button" type="button" onClick={() => void nav({ to: '/register' })}>
-            <Group gap={6} justify="center">
-              <IconUserPlus size={14} stroke={1.5} />
-              Create an account
-            </Group>
-          </Anchor>
+          {registrationOpen ? (
+            <Anchor component="button" type="button" onClick={() => void nav({ to: '/register' })}>
+              <Group gap={6} justify="center">
+                <IconUserPlus size={14} stroke={1.5} />
+                Create an account
+              </Group>
+            </Anchor>
+          ) : null}
           <Anchor component="button" type="button" onClick={() => void nav({ to: '/onboarding' })}>
             <Group gap={6} justify="center">
               <IconRocket size={14} stroke={1.5} />

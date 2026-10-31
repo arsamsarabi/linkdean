@@ -9,12 +9,14 @@ import {
   importResultSchema,
   meResponseSchema,
   okSchema,
+  platformSettingsEnvelopeSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
   userEnvelopeSchema,
   vaultStatusSchema,
   type Bookmark,
   type Category,
+  type PlatformSettings,
   type UserPublic,
   type UserSettings,
 } from '@/schemas'
@@ -23,8 +25,18 @@ import { req } from './client'
 const bookmarksSchema = z.array(bookmarkSchema)
 
 export const api = {
-  bootstrap: (): Promise<{ needs_bootstrap: boolean; oidc_enabled: boolean }> =>
+  bootstrap: (): Promise<{ needs_bootstrap: boolean; oidc_enabled: boolean; registration_open: boolean }> =>
     req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
+
+  getPlatformSettings: (): Promise<{ settings: PlatformSettings }> =>
+    req('/admin/platform-settings', {}, platformSettingsEnvelopeSchema),
+
+  updatePlatformSettings: (body: { registration_open?: boolean }): Promise<{ settings: PlatformSettings }> =>
+    req(
+      '/admin/platform-settings',
+      { method: 'PATCH', body: JSON.stringify(body) },
+      platformSettingsEnvelopeSchema
+    ),
 
   register: (body: {
     email: string

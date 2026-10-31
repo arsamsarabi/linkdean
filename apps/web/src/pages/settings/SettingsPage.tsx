@@ -16,13 +16,19 @@ import {
   useMantineColorScheme,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconArrowsExchange, IconFolder, IconLock, IconSettings } from '@tabler/icons-react'
+import { IconArrowsExchange, IconFolder, IconLock, IconSettings, IconShield } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { CategoryManager, ImportExportPanel, QueryErrorAlert, VaultPanel } from '@/components'
-import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
+import {
+  applyTheme,
+  useMe,
+  usePlatformSettings,
+  useUpdatePlatformSettings,
+  useUpdateSettings,
+} from '@/hooks'
 import type { UserSettings } from '@/schemas'
 
-const SETTINGS_TABS = ['general', 'categories', 'import', 'vault'] as const
+const SETTINGS_TABS = ['general', 'categories', 'import', 'vault', 'admin'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 const DEFAULT_AUTO_LOCK_MINUTES = 15
@@ -92,13 +98,57 @@ function VaultAutoLockSettings({
   )
 }
 
+function AdminPlatformSettings(): ReactElement {
+  const platform = usePlatformSettings(true)
+  const save = useUpdatePlatformSettings()
+
+  if (platform.isError) {
+    return <QueryErrorAlert error={platform.error} onRetry={() => void platform.refetch()} title="Platform settings failed" />
+  }
+
+  if (!platform.data) {
+    return <SettingsSkeleton />
+  }
+
+  const open = platform.data.settings.registration_open
+
+  return (
+    <Paper p="xl" withBorder maw={560}>
+      <Stack gap="lg">
+        <Switch
+          label="Open registration"
+          description="When off, only existing users can sign in. First-install bootstrap still works."
+          checked={open}
+          disabled={save.isPending}
+          onChange={(e) => {
+            const registration_open = e.currentTarget.checked
+            save.mutate(
+              { registration_open },
+              {
+                onSuccess: () => notifications.show({ message: 'Platform settings saved' }),
+                onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+              }
+            )
+          }}
+        />
+        {save.isPending ? (
+          <Text size="xs" c="dimmed">
+            Saving…
+          </Text>
+        ) : null}
+      </Stack>
+    </Paper>
+  )
+}
+
 export function SettingsPage(): ReactElement {
   const nav = useNavigate()
   const search = useSearch({ strict: false }) as { tab?: string }
-  const tab: SettingsTab = isSettingsTab(search.tab) ? search.tab : 'general'
-
   const { setColorScheme } = useMantineColorScheme()
   const me = useMe()
+  const isAdmin = !!me.data?.user.is_admin
+  const requested: SettingsTab = isSettingsTab(search.tab) ? search.tab : 'general'
+  const tab: SettingsTab = requested === 'admin' && !isAdmin ? 'general' : requested
   const settings = me.data?.settings
   const save = useUpdateSettings()
 
@@ -115,6 +165,7 @@ export function SettingsPage(): ReactElement {
 
   function setTab(next: string | null): void {
     if (!isSettingsTab(next)) return
+    if (next === 'admin' && !isAdmin) return
     void nav({
       to: '/settings',
       search: next === 'general' ? {} : { tab: next },
@@ -146,6 +197,11 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="vault" leftSection={<IconLock size={16} stroke={1.5} />}>
             Vault
           </Tabs.Tab>
+          {isAdmin ? (
+            <Tabs.Tab value="admin" leftSection={<IconShield size={16} stroke={1.5} />}>
+              Admin
+            </Tabs.Tab>
+          ) : null}
         </Tabs.List>
 
         <Tabs.Panel value="general" pt="xl">
@@ -193,7 +249,7 @@ export function SettingsPage(): ReactElement {
 
                 <Select
                   label="Library view"
-                  description="Default browse layout for bookmarks. Toolbar can override for the session."
+                  description="Default browse layout. Library toolbar saves this preference."
                   value={settings.library_view}
                   onChange={(v) => v && patch({ library_view: v as UserSettings['library_view'] })}
                   data={[
@@ -241,6 +297,12 @@ export function SettingsPage(): ReactElement {
             ) : null}
           </Stack>
         </Tabs.Panel>
+
+        {isAdmin ? (
+          <Tabs.Panel value="admin" pt="xl">
+            <AdminPlatformSettings />
+          </Tabs.Panel>
+        ) : null}
       </Tabs>
     </Stack>
   )

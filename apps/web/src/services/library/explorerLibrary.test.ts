@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Bookmark, Category } from '@/schemas'
-import { FOLDER_ALL, FOLDER_UNCATEGORIZED, folderBreadcrumb, listFolderContents, normalizeFolderId } from './explorerLibrary'
+import {
+  FOLDER_ALL,
+  FOLDER_UNCATEGORIZED,
+  folderBreadcrumb,
+  listFolderContents,
+  normalizeFolderId,
+  sortExplorerFolders,
+  type ExplorerFolder,
+} from './explorerLibrary'
 
 const cats: Category[] = [
   { id: 'root', parent_id: null, name: 'Work', is_hidden: false, is_vault: false, position: 0 },
@@ -95,5 +103,37 @@ describe('normalizeFolderId', () => {
     expect(normalizeFolderId('all')).toBeUndefined()
     expect(normalizeFolderId('')).toBeUndefined()
     expect(normalizeFolderId('root')).toBe('root')
+  })
+})
+
+describe('sortExplorerFolders', () => {
+  const folders: ExplorerFolder[] = [
+    { id: 'z', name: 'Zebra', bookmarkCount: 0, isVault: false, isHidden: false },
+    { id: 'a', name: 'Alpha', bookmarkCount: 0, isVault: false, isHidden: false },
+    { id: FOLDER_UNCATEGORIZED, name: 'Uncategorized', bookmarkCount: 1, isVault: false, isHidden: false },
+  ]
+
+  it('sorts by name A–Z and keeps Uncategorized last', () => {
+    expect(sortExplorerFolders(folders, 'title_asc').map((f) => f.id)).toEqual([
+      'a',
+      'z',
+      FOLDER_UNCATEGORIZED,
+    ])
+  })
+
+  it('sorts by name Z–A and keeps Uncategorized last', () => {
+    expect(sortExplorerFolders(folders, 'title_desc').map((f) => f.id)).toEqual([
+      'z',
+      'a',
+      FOLDER_UNCATEGORIZED,
+    ])
+  })
+
+  it('date sorts fall back to name asc', () => {
+    expect(sortExplorerFolders(folders, 'updated_desc').map((f) => f.id)).toEqual([
+      'a',
+      'z',
+      FOLDER_UNCATEGORIZED,
+    ])
   })
 })

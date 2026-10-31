@@ -1,1 +1,9 @@
-export { useUpdateSettings, useUpdateProfile, useChangePassword, useUploadAvatar, useDeleteAvatar } from './useSettings'
+export {
+  usePlatformSettings,
+  useUpdatePlatformSettings,
+  useUpdateSettings,
+  useUpdateProfile,
+  useChangePassword,
+  useUploadAvatar,
+  useDeleteAvatar,
+} from './useSettings'

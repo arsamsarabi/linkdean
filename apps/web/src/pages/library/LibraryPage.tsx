@@ -40,6 +40,7 @@ import {
   useDeleteBookmark,
   useMe,
   useSearchBookmarks,
+  useUpdateSettings,
   useVaultUnlock,
 } from '@/hooks'
 import { asStringList, buildLibrarySearch, categoryPath, type SortKey } from '@/lib'
@@ -72,6 +73,7 @@ export function LibraryPage(): ReactElement {
   }
 
   const me = useMe()
+  const updateSettings = useUpdateSettings()
   const showHidden = useUi((s) => s.showHidden)
   const searchRef = useRef<HTMLInputElement>(null)
   const [scroll] = useWindowScroll()
@@ -88,6 +90,20 @@ export function LibraryPage(): ReactElement {
   if (me.data && viewFromSettings !== settingsView) {
     setViewFromSettings(settingsView)
     setViewMode(settingsView)
+  }
+
+  function onViewModeChange(next: LibraryViewMode): void {
+    setViewMode(next)
+    if (next === settingsView || updateSettings.isPending) return
+    updateSettings.mutate(
+      { library_view: next },
+      {
+        onError: () => {
+          setViewMode(settingsView)
+          notifications.show({ color: 'red', message: 'Could not save view preference' })
+        },
+      }
+    )
   }
 
   const [q, setQ] = useState(urlQ)
@@ -277,7 +293,7 @@ export function LibraryPage(): ReactElement {
           <SegmentedControl
             aria-label="Library view"
             value={viewMode}
-            onChange={(v) => setViewMode(v as LibraryViewMode)}
+            onChange={(v) => onViewModeChange(v as LibraryViewMode)}
             data={[
               { value: 'grid', label: 'Grid' },
               { value: 'explorer', label: 'Explorer' },

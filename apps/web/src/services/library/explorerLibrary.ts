@@ -1,4 +1,4 @@
-import { buildCategoryTree } from '@/lib'
+import { buildCategoryTree, type SortKey } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
 
 /** Virtual folder ids (not real category UUIDs). */
@@ -151,4 +151,14 @@ export function normalizeFolderId(raw: unknown): ExplorerFolderId | undefined {
   const v = raw.trim()
   if (v === FOLDER_ALL) return undefined
   return v
+}
+
+/** Sort folders by library sort key. Uncategorized stays last. Date sorts → name (folders have no timestamps). */
+export function sortExplorerFolders(folders: readonly ExplorerFolder[], sort: SortKey): ExplorerFolder[] {
+  const uncategorized = folders.filter((f) => f.id === FOLDER_UNCATEGORIZED)
+  const rest = folders.filter((f) => f.id !== FOLDER_UNCATEGORIZED)
+  const byNameAsc = (a: ExplorerFolder, b: ExplorerFolder) => a.name.localeCompare(b.name)
+  const byNameDesc = (a: ExplorerFolder, b: ExplorerFolder) => b.name.localeCompare(a.name)
+  const cmp = sort === 'title_desc' ? byNameDesc : byNameAsc
+  return [...rest].sort(cmp).concat(uncategorized)
 }

@@ -33,6 +33,16 @@ export const meResponseSchema = z.object({
 export const bootstrapStatusSchema = z.object({
   needs_bootstrap: z.boolean(),
   oidc_enabled: z.boolean(),
+  registration_open: z.boolean().default(true),
+})
+
+export const platformSettingsSchema = z.object({
+  registration_open: z.boolean(),
+  updated_at: z.string(),
+})
+
+export const platformSettingsEnvelopeSchema = z.object({
+  settings: platformSettingsSchema,
 })
 
 export const authTokenResponseSchema = z.object({
@@ -57,3 +67,4 @@ export type UserSettings = z.infer<typeof userSettingsSchema>
 export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
+export type PlatformSettings = z.infer<typeof platformSettingsSchema>

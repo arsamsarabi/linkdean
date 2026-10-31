@@ -10,6 +10,7 @@ import {
   filterAndSortLibraryItems,
   folderBreadcrumb,
   listFolderContents,
+  sortExplorerFolders,
   type ExplorerFolderId,
   type LibraryListItem,
 } from '@/services'
@@ -75,6 +76,10 @@ export function LibraryExplorerView({
     () => listFolderContents(selectedId, categories, bookmarks, showHidden),
     [selectedId, categories, bookmarks, showHidden]
   )
+  const sortedFolders = useMemo(
+    () => sortExplorerFolders(contents.folders, sort),
+    [contents.folders, sort]
+  )
   const sortedBookmarks = useMemo(
     () => filterAndSortLibraryItems({ items: contents.bookmarks, filterCats: [], filterTags: [], sort }),
     [contents.bookmarks, sort]
@@ -112,7 +117,7 @@ export function LibraryExplorerView({
     )
   }
 
-  const emptyFolder = contents.folders.length === 0 && sortedBookmarks.length === 0
+  const emptyFolder = sortedFolders.length === 0 && sortedBookmarks.length === 0
   const emptyLibrary = bookmarks.length === 0 && categories.length === 0
 
   return (
@@ -135,13 +140,13 @@ export function LibraryExplorerView({
         />
       ) : (
         <Stack gap="lg">
-          {contents.folders.length > 0 ? (
+          {sortedFolders.length > 0 ? (
             <Stack gap="sm">
               <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
                 Folders
               </Text>
               <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing="md">
-                {contents.folders.map((f) => (
+                {sortedFolders.map((f) => (
                   <ExplorerFolderTile key={f.id} folder={f} onOpen={onFolderChange} />
                 ))}
               </SimpleGrid>
@@ -149,7 +154,7 @@ export function LibraryExplorerView({
           ) : null}
           {sortedBookmarks.length > 0 ? (
             <Stack gap="sm">
-              {contents.folders.length > 0 ? (
+              {sortedFolders.length > 0 ? (
                 <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
                   Bookmarks
                 </Text>

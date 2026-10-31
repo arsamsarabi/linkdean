@@ -22,6 +22,24 @@ impl FromRequestParts<AppState> for AuthUser {
     }
 }
 
+/// Authenticated user that must be an admin.
+pub struct AdminUser(pub User);
+
+impl FromRequestParts<AppState> for AdminUser {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let AuthUser(user) = AuthUser::from_request_parts(parts, state).await?;
+        if !user.is_admin {
+            return Err(Error::Forbidden.into());
+        }
+        Ok(AdminUser(user))
+    }
+}
+
 pub fn extract_token(parts: &Parts) -> Option<String> {
     if let Some(h) = parts.headers.get(axum::http::header::AUTHORIZATION) {
         if let Ok(s) = h.to_str() {

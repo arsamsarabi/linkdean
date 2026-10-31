@@ -1,9 +1,22 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
-import { Anchor, Button, FileButton, Group, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
+import {
+  Anchor,
+  Button,
+  Center,
+  FileButton,
+  Group,
+  Loader,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
-import { AvatarCropModal } from '@/components'
+import { AvatarCropModal, QueryErrorAlert } from '@/components'
 import { useBootstrap, useRegister, useUploadAvatar } from '@/hooks'
 import { validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
@@ -54,6 +67,48 @@ export function RegisterPage(): ReactElement {
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
+  }
+
+  if (bootstrap.isLoading) {
+    return (
+      <Center mih="70vh">
+        <Loader color="violet" type="dots" />
+      </Center>
+    )
+  }
+
+  if (bootstrap.isError) {
+    return (
+      <Stack maw={420} mx="auto" mt={80} px="md">
+        <QueryErrorAlert
+          error={bootstrap.error}
+          onRetry={() => void bootstrap.refetch()}
+          title="Failed to check registration status"
+        />
+      </Stack>
+    )
+  }
+
+  const closed = !bootstrap.data?.needs_bootstrap && bootstrap.data?.registration_open === false
+  if (closed) {
+    return (
+      <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className={motion.fadeIn}>
+        <Stack gap={6}>
+          <Title order={1} c="violet">
+            Registration closed
+          </Title>
+          <Text c="dimmed">This Linkdean instance is not accepting new accounts.</Text>
+        </Stack>
+        <Paper p="xl" radius="md" withBorder>
+          <Anchor component="button" type="button" onClick={() => void nav({ to: '/login' })}>
+            <Group gap={6} justify="center">
+              <IconLogin size={14} stroke={1.5} />
+              Back to sign in
+            </Group>
+          </Anchor>
+        </Paper>
+      </Stack>
+    )
   }
 
   return (

@@ -27,17 +27,21 @@ pub fn router() -> Router<AppState> {
 
 async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     let count = db::count_users(&state.pool).await?;
+    let platform = db::get_platform_settings(&state.pool).await?;
     Ok(Json(json!({
         "needs_bootstrap": count == 0,
         "oidc_enabled": state.cfg.oidc_enabled(),
+        "registration_open": platform.registration_open,
     })))
 }
 
-async fn auth_config(State(state): State<AppState>) -> Json<Value> {
-    Json(json!({
+async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
+    let platform = db::get_platform_settings(&state.pool).await?;
+    Ok(Json(json!({
         "oidc_enabled": state.cfg.oidc_enabled(),
         "app_url": state.cfg.app_url,
-    }))
+        "registration_open": platform.registration_open,
+    })))
 }
 
 async fn register(
@@ -46,6 +50,13 @@ async fn register(
 ) -> ApiResult<impl IntoResponse> {
     if req.email.trim().is_empty() || req.password.len() < 8 {
         return Err(Error::BadRequest("email required; password min 8 chars".into()).into());
+    }
+    let count = db::count_users(&state.pool).await?;
+    if count > 0 {
+        let platform = db::get_platform_settings(&state.pool).await?;
+        if !platform.registration_open {
+            return Err(Error::Forbidden.into());
+        }
     }
     let user = db::create_user(
         &state.pool,
