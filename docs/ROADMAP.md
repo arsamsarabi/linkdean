@@ -16,19 +16,20 @@ Ordered milestones define build order. Each milestone lists concrete deliverable
 - Library grid + explorer views (preference persisted)
 - Admin: open registration toggle
 - Vault auto-lock setting (UI)
+- Same-instance category sharing (read / write ACL, share UI, Meili visibility, RO library gates)
 
 ---
 
-## Milestone 1: Sharing infra (v2 core)
+## Milestone 1: Sharing infra (v2 core) — done
 
-Foundation for collaboration. Sharing lands before personal dashboards so shared dashboards (Milestone 3) reuse the same ACL model rather than a parallel one.
+Foundation for collaboration. Sharing landed before personal dashboards so shared dashboards (Milestone 3) reuse the same ACL model.
 
-**Deliverables**
+**Delivered**
 
 - Share folders / lists with other users on the same instance
 - Invite model with access levels: read-only / read-write
 - Collaborative edit on shared collections (RW invitees)
-- Schema next to `owner_user_id` (share / membership tables) before UI polish
+- Schema next to `owner_user_id` (`category_shares`); library + explorer polish (RO gates, shared section)
 
 **Out of this milestone**
 

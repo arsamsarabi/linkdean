@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { Badge, Group, Text } from '@mantine/core'
-import { IconFolderFilled, IconLock } from '@tabler/icons-react'
+import { IconFolderFilled, IconLock, IconShare } from '@tabler/icons-react'
 import type { ExplorerFolder } from '@/services'
 import styles from './ExplorerFolderTile.module.css'
 
@@ -11,6 +11,9 @@ type Props = {
 
 export function ExplorerFolderTile({ folder, onOpen }: Props): ReactElement {
   const countLabel = `${folder.bookmarkCount} bookmark${folder.bookmarkCount === 1 ? '' : 's'}`
+  const sharedRo = folder.access === 'read'
+  const sharedRw = folder.access === 'write'
+  const showBadges = folder.isVault || folder.isHidden || sharedRo || sharedRw
 
   return (
     <button
@@ -27,8 +30,18 @@ export function ExplorerFolderTile({ folder, onOpen }: Props): ReactElement {
         <Text size="xs" c="dimmed" mt={2}>
           {countLabel}
         </Text>
-        {folder.isVault || folder.isHidden ? (
+        {showBadges ? (
           <Group gap={4} justify="center" mt={6}>
+            {sharedRo ? (
+              <Badge size="xs" variant="outline" color="blue" leftSection={<IconShare size={10} stroke={1.5} />}>
+                Shared · RO
+              </Badge>
+            ) : null}
+            {sharedRw ? (
+              <Badge size="xs" variant="light" color="blue" leftSection={<IconShare size={10} stroke={1.5} />}>
+                Shared · RW
+              </Badge>
+            ) : null}
             {folder.isVault ? (
               <Badge size="xs" variant="light" color="grape" leftSection={<IconLock size={10} stroke={1.5} />}>
                 Vault

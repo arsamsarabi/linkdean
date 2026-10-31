@@ -4,6 +4,7 @@ import {
   FOLDER_ALL,
   FOLDER_UNCATEGORIZED,
   folderBreadcrumb,
+  isSharedFolder,
   listFolderContents,
   normalizeFolderId,
   sortExplorerFolders,
@@ -37,6 +38,15 @@ const cats: Category[] = [
     is_vault: true,
     position: 2,
     access: 'owner',
+  },
+  {
+    id: 'shared',
+    parent_id: null,
+    name: 'Team',
+    is_hidden: false,
+    is_vault: false,
+    position: 3,
+    access: 'read',
   },
 ]
 
@@ -85,9 +95,12 @@ describe('listFolderContents', () => {
   it('lists top folders at All, no bookmarks; hides hidden cats', () => {
     const c = listFolderContents(FOLDER_ALL, cats, bookmarks, false)
     expect(c.bookmarks).toHaveLength(0)
-    expect(c.folders.map((f) => f.id)).toEqual(['root', FOLDER_UNCATEGORIZED])
+    expect(c.folders.map((f) => f.id)).toEqual(['root', 'shared', FOLDER_UNCATEGORIZED])
     expect(c.folders.find((f) => f.id === FOLDER_UNCATEGORIZED)?.bookmarkCount).toBe(1)
     expect(c.folders.find((f) => f.id === 'root')?.bookmarkCount).toBe(1)
+    expect(c.folders.find((f) => f.id === 'root')?.access).toBe('owner')
+    expect(c.folders.find((f) => f.id === 'shared')?.access).toBe('read')
+    expect(isSharedFolder(c.folders.find((f) => f.id === 'shared')!)).toBe(true)
   })
 
   it('includes hidden when showHidden', () => {

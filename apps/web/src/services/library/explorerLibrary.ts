@@ -1,5 +1,5 @@
 import { buildCategoryTree, type SortKey } from '@/lib'
-import type { Bookmark, Category } from '@/schemas'
+import type { Bookmark, Category, CategoryAccess } from '@/schemas'
 
 /** Virtual folder ids (not real category UUIDs). */
 export const FOLDER_ALL = 'all' as const
@@ -13,6 +13,12 @@ export type ExplorerFolder = {
   bookmarkCount: number
   isVault: boolean
   isHidden: boolean
+  /** Effective access; omitted for virtual folders (All / Uncategorized). */
+  access?: CategoryAccess
+}
+
+export function isSharedFolder(folder: ExplorerFolder): boolean {
+  return folder.access === 'read' || folder.access === 'write'
 }
 
 export type ExplorerContents = {
@@ -61,6 +67,7 @@ function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): Exp
     bookmarkCount: countDirectBookmarks(cat.id, bookmarks),
     isVault: cat.is_vault,
     isHidden: cat.is_hidden,
+    access: cat.access,
   }
 }
 

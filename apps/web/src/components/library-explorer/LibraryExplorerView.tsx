@@ -9,8 +9,10 @@ import {
   FOLDER_ALL,
   filterAndSortLibraryItems,
   folderBreadcrumb,
+  isSharedFolder,
   listFolderContents,
   sortExplorerFolders,
+  type ExplorerFolder,
   type ExplorerFolderId,
   type LibraryListItem,
 } from '@/services'
@@ -55,6 +57,22 @@ function BookmarkGrid({
   )
 }
 
+function FolderGrid({
+  folders,
+  onOpen,
+}: {
+  folders: ExplorerFolder[]
+  onOpen: (id: ExplorerFolderId) => void
+}): ReactElement {
+  return (
+    <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing="md">
+      {folders.map((f) => (
+        <ExplorerFolderTile key={f.id} folder={f} onOpen={onOpen} />
+      ))}
+    </SimpleGrid>
+  )
+}
+
 export function LibraryExplorerView({
   categories,
   bookmarks,
@@ -73,6 +91,7 @@ export function LibraryExplorerView({
   folderReadOnly = false,
 }: Props): ReactElement {
   const selectedId: ExplorerFolderId = folderId || FOLDER_ALL
+  const atAll = selectedId === FOLDER_ALL
 
   const byId = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
   const crumbs = useMemo(() => folderBreadcrumb(selectedId, byId), [selectedId, byId])
@@ -83,6 +102,14 @@ export function LibraryExplorerView({
   const sortedFolders = useMemo(
     () => sortExplorerFolders(contents.folders, sort),
     [contents.folders, sort]
+  )
+  const ownedFolders = useMemo(
+    () => (atAll ? sortedFolders.filter((f) => !isSharedFolder(f)) : sortedFolders),
+    [atAll, sortedFolders]
+  )
+  const sharedFolders = useMemo(
+    () => (atAll ? sortedFolders.filter(isSharedFolder) : []),
+    [atAll, sortedFolders]
   )
   const sortedBookmarks = useMemo(
     () => filterAndSortLibraryItems({ items: contents.bookmarks, filterCats: [], filterTags: [], sort }),
@@ -123,6 +150,7 @@ export function LibraryExplorerView({
 
   const emptyFolder = sortedFolders.length === 0 && sortedBookmarks.length === 0
   const emptyLibrary = bookmarks.length === 0 && categories.length === 0
+  const splitShared = atAll && sharedFolders.length > 0
 
   return (
     <Stack gap="md">
@@ -148,16 +176,20 @@ export function LibraryExplorerView({
         />
       ) : (
         <Stack gap="lg">
-          {sortedFolders.length > 0 ? (
+          {ownedFolders.length > 0 ? (
             <Stack gap="sm">
               <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                Folders
+                {splitShared ? 'Your folders' : 'Folders'}
               </Text>
-              <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing="md">
-                {sortedFolders.map((f) => (
-                  <ExplorerFolderTile key={f.id} folder={f} onOpen={onFolderChange} />
-                ))}
-              </SimpleGrid>
+              <FolderGrid folders={ownedFolders} onOpen={onFolderChange} />
+            </Stack>
+          ) : null}
+          {sharedFolders.length > 0 ? (
+            <Stack gap="sm">
+              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                Shared with you
+              </Text>
+              <FolderGrid folders={sharedFolders} onOpen={onFolderChange} />
             </Stack>
           ) : null}
           {sortedBookmarks.length > 0 ? (

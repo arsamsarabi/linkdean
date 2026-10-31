@@ -39,6 +39,9 @@ export function CategoryManager(): ReactElement {
   const remove = useDeleteCategory()
 
   const tree = useMemo(() => buildCategoryTree(cats.data || []), [cats.data])
+  const ownedRoots = useMemo(() => tree.filter((n) => n.cat.access === 'owner'), [tree])
+  const sharedRoots = useMemo(() => tree.filter((n) => n.cat.access !== 'owner'), [tree])
+  const splitShared = sharedRoots.length > 0
   const parentOptions = useMemo(
     () => [
       { value: '', label: '- root -' },
@@ -51,6 +54,14 @@ export function CategoryManager(): ReactElement {
     [cats.data, parentId]
   )
   const canCreateVault = !parentCat || parentCat.access === 'owner'
+
+  async function renameCategory(id: string, next: string): Promise<void> {
+    try {
+      await update.mutateAsync({ id, body: { name: next } })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
 
   async function onCreate(): Promise<void> {
     try {
@@ -98,24 +109,44 @@ export function CategoryManager(): ReactElement {
         </Stack>
       ) : (
         <ScrollArea.Autosize mah={320} type="auto" offsetScrollbars>
-          <Stack gap={6}>
+          <Stack gap="md">
             {tree.length === 0 ? <Text c="dimmed">No categories yet.</Text> : null}
-            {tree.map((n) => (
-              <CatRow
-                key={n.cat.id}
-                node={n}
-                depth={0}
-                onDelete={setDeleteId}
-                onShare={setShareCat}
-                onRename={async (id, next) => {
-                  try {
-                    await update.mutateAsync({ id, body: { name: next } })
-                  } catch (e) {
-                    notifications.show({ color: 'red', message: String(e) })
-                  }
-                }}
-              />
-            ))}
+            {ownedRoots.length > 0 ? (
+              <Stack gap={6}>
+                {splitShared ? (
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                    Your folders
+                  </Text>
+                ) : null}
+                {ownedRoots.map((n) => (
+                  <CatRow
+                    key={n.cat.id}
+                    node={n}
+                    depth={0}
+                    onDelete={setDeleteId}
+                    onShare={setShareCat}
+                    onRename={renameCategory}
+                  />
+                ))}
+              </Stack>
+            ) : null}
+            {sharedRoots.length > 0 ? (
+              <Stack gap={6}>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                  Shared with you
+                </Text>
+                {sharedRoots.map((n) => (
+                  <CatRow
+                    key={n.cat.id}
+                    node={n}
+                    depth={0}
+                    onDelete={setDeleteId}
+                    onShare={setShareCat}
+                    onRename={renameCategory}
+                  />
+                ))}
+              </Stack>
+            ) : null}
           </Stack>
         </ScrollArea.Autosize>
       )}
