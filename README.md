@@ -216,5 +216,5 @@ PRs welcome. Keep changes focused:
 <p align="center">
   <img src="brand/exports/png/linkdean-symbol-color-256.png" alt="Linkdean symbol" width="64" />
   <br />
-  <sub>Keep the good links. Share the rest carefully.</sub>
+  <sub>Your corner of the internet, organised.</sub>
 </p>
