@@ -3,6 +3,7 @@ import {
   ActionIcon,
   Affix,
   Button,
+  Center,
   Group,
   Kbd,
   Modal,
@@ -22,6 +23,8 @@ import {
   IconArrowUp,
   IconBookmarkPlus,
   IconFilter,
+  IconFolders,
+  IconLayoutGrid,
   IconLockOpen,
   IconSearch,
   IconX,
@@ -327,8 +330,24 @@ export function LibraryPage(): ReactElement {
             value={viewMode}
             onChange={(v) => onViewModeChange(v as LibraryViewMode)}
             data={[
-              { value: 'grid', label: 'Grid' },
-              { value: 'explorer', label: 'Explorer' },
+              {
+                value: 'grid',
+                label: (
+                  <Center style={{ gap: 6 }}>
+                    <IconLayoutGrid size={16} stroke={1.5} />
+                    <span>Grid</span>
+                  </Center>
+                ),
+              },
+              {
+                value: 'explorer',
+                label: (
+                  <Center style={{ gap: 6 }}>
+                    <IconFolders size={16} stroke={1.5} />
+                    <span>Explorer</span>
+                  </Center>
+                ),
+              },
             ]}
           />
           {canCreateInContext ? (
