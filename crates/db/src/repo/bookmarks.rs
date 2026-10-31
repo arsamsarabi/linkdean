@@ -39,6 +39,82 @@ async fn set_bookmark_tags(
     Ok(ensured.into_iter().map(|t| t.name).collect())
 }
 
+#[derive(Debug, Clone, Copy, Default, sqlx::FromRow)]
+struct BookmarkFlagsRow {
+    is_favorite: bool,
+    is_unread: bool,
+    is_pinned: bool,
+}
+
+async fn flags_for_viewer(
+    pool: &PgPool,
+    viewer_id: Uuid,
+    bookmark_id: Uuid,
+) -> Result<BookmarkFlagsRow> {
+    let row = sqlx::query_as::<_, BookmarkFlagsRow>(
+        r#"
+        SELECT is_favorite, is_unread, is_pinned
+        FROM bookmark_flags
+        WHERE user_id = $1 AND bookmark_id = $2
+        "#,
+    )
+    .bind(viewer_id)
+    .bind(bookmark_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(row.unwrap_or_default())
+}
+
+/// Upsert per-viewer flags. Any reader may set their own flags.
+async fn set_bookmark_flags(
+    pool: &PgPool,
+    user_id: Uuid,
+    bookmark_id: Uuid,
+    is_favorite: Option<bool>,
+    is_unread: Option<bool>,
+    is_pinned: Option<bool>,
+) -> Result<()> {
+    if !bookmark_can_read(pool, user_id, bookmark_id).await? {
+        return Err(Error::NotFound);
+    }
+    let current = flags_for_viewer(pool, user_id, bookmark_id).await?;
+    let next = BookmarkFlagsRow {
+        is_favorite: is_favorite.unwrap_or(current.is_favorite),
+        is_unread: is_unread.unwrap_or(current.is_unread),
+        is_pinned: is_pinned.unwrap_or(current.is_pinned),
+    };
+    if !next.is_favorite && !next.is_unread && !next.is_pinned {
+        sqlx::query("DELETE FROM bookmark_flags WHERE user_id = $1 AND bookmark_id = $2")
+            .bind(user_id)
+            .bind(bookmark_id)
+            .execute(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+        return Ok(());
+    }
+    sqlx::query(
+        r#"
+        INSERT INTO bookmark_flags (user_id, bookmark_id, is_favorite, is_unread, is_pinned)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (user_id, bookmark_id) DO UPDATE
+          SET is_favorite = EXCLUDED.is_favorite,
+              is_unread = EXCLUDED.is_unread,
+              is_pinned = EXCLUDED.is_pinned,
+              updated_at = now()
+        "#,
+    )
+    .bind(user_id)
+    .bind(bookmark_id)
+    .bind(next.is_favorite)
+    .bind(next.is_unread)
+    .bind(next.is_pinned)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(())
+}
+
 async fn tags_for_bookmark(pool: &PgPool, bookmark_id: Uuid) -> Result<Vec<String>> {
     let rows: Vec<(String,)> = sqlx::query_as(
         r#"
@@ -201,6 +277,7 @@ pub async fn bookmark_to_view(
     };
     let owner_display_name =
         super::users::owner_display_name_for_viewer(pool, b.owner_user_id, viewer_id).await?;
+    let flags = flags_for_viewer(pool, viewer_id, b.id).await?;
 
     if b.is_vault {
         let key = match vault_key {
@@ -236,6 +313,9 @@ pub async fn bookmark_to_view(
             can_write,
             shared_out,
             owner_display_name: owner_display_name.clone(),
+            is_favorite: flags.is_favorite,
+            is_unread: flags.is_unread,
+            is_pinned: flags.is_pinned,
             deleted_at: b.deleted_at,
             created_at: b.created_at,
             updated_at: b.updated_at,
@@ -259,6 +339,9 @@ pub async fn bookmark_to_view(
         can_write,
         shared_out,
         owner_display_name,
+        is_favorite: flags.is_favorite,
+        is_unread: flags.is_unread,
+        is_pinned: flags.is_pinned,
         deleted_at: b.deleted_at,
         created_at: b.created_at,
         updated_at: b.updated_at,
@@ -453,11 +536,36 @@ pub async fn create_bookmark(
     };
 
     set_bookmark_categories(pool, user_id, bookmark.id, &cat_ids).await?;
+    if req.is_favorite || req.is_unread || req.is_pinned {
+        let _ = set_bookmark_flags(
+            pool,
+            user_id,
+            bookmark.id,
+            Some(req.is_favorite),
+            Some(req.is_unread),
+            Some(req.is_pinned),
+        )
+        .await?;
+    }
     let bookmark = get_bookmark_raw(pool, user_id, bookmark.id).await?;
 
     bookmark_to_view(pool, bookmark, vault_key, user_id)
         .await?
         .ok_or(Error::VaultLocked)
+}
+
+fn update_has_content(req: &UpdateBookmark) -> bool {
+    req.url.is_some()
+        || req.title.is_some()
+        || req.description.is_some()
+        || req.notes.is_some()
+        || req.category_id.is_some()
+        || req.category_ids.is_some()
+        || req.tags.is_some()
+}
+
+fn update_has_flags(req: &UpdateBookmark) -> bool {
+    req.is_favorite.is_some() || req.is_unread.is_some() || req.is_pinned.is_some()
 }
 
 pub async fn update_bookmark(
@@ -467,13 +575,43 @@ pub async fn update_bookmark(
     req: UpdateBookmark,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<BookmarkView> {
-    if !bookmark_can_write(pool, user_id, id).await? {
-        // Distinguish RO share (forbidden) from outsider (not found).
-        if bookmark_can_read(pool, user_id, id).await? {
-            return Err(Error::Forbidden);
+    let content = update_has_content(&req);
+    let flags = update_has_flags(&req);
+    if !content && !flags {
+        return Err(Error::BadRequest("empty update".into()));
+    }
+
+    // Flag-only patches: any reader. Content: writers only.
+    if content {
+        if !bookmark_can_write(pool, user_id, id).await? {
+            if bookmark_can_read(pool, user_id, id).await? {
+                return Err(Error::Forbidden);
+            }
+            return Err(Error::NotFound);
         }
+    } else if !bookmark_can_read(pool, user_id, id).await? {
         return Err(Error::NotFound);
     }
+
+    if flags {
+        let _ = set_bookmark_flags(
+            pool,
+            user_id,
+            id,
+            req.is_favorite,
+            req.is_unread,
+            req.is_pinned,
+        )
+        .await?;
+    }
+    if !content {
+        let existing = get_bookmark_raw(pool, user_id, id).await?;
+        let key = if existing.is_vault { vault_key } else { None };
+        return bookmark_to_view(pool, existing, key, user_id)
+            .await?
+            .ok_or(Error::VaultLocked);
+    }
+
     let existing = get_bookmark_raw(pool, user_id, id).await?;
     // Vault mutations only by bookmark owner with their key.
     if existing.is_vault && existing.owner_user_id != user_id {

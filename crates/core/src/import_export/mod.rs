@@ -157,7 +157,8 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                     category_id: None,
                     category_ids: vec![],
                     tags,
-                },
+                    ..Default::default()
+            },
                 cat_path,
             ));
         }
@@ -208,6 +209,7 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
                 category_id: None,
                 category_ids: vec![],
                 tags: b.tags,
+                ..Default::default()
             },
             cat_path,
         ));
@@ -247,6 +249,7 @@ pub fn parse_pocket_csv(raw: &str) -> Result<ParsedImport> {
                 category_id: None,
                 category_ids: vec![],
                 tags,
+                ..Default::default()
             },
             None,
         ));
@@ -320,6 +323,7 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
                 category_id: None,
                 category_ids: vec![],
                 tags,
+                ..Default::default()
             },
             folder,
         ));

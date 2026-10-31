@@ -78,6 +78,7 @@ async fn default_dashboard_roundtrip_and_authz() {
             category_id: Some(cat.id),
             category_ids: vec![cat.id],
             tags: vec![],
+            ..Default::default()
         },
         None,
     )
@@ -94,6 +95,7 @@ async fn default_dashboard_roundtrip_and_authz() {
             category_id: Some(cat.id),
             category_ids: vec![cat.id],
             tags: vec![],
+            ..Default::default()
         },
         None,
     )
@@ -300,6 +302,7 @@ async fn dashboard_share_read_write_and_revoke() {
             category_id: Some(cat.id),
             category_ids: vec![cat.id],
             tags: vec![],
+            ..Default::default()
         },
         None,
     )

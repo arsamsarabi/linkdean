@@ -335,6 +335,13 @@ pub struct BookmarkView {
     /// Present for invitees — owner's display name (or email local-part).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_display_name: Option<String>,
+    /// Per-viewer flags (reading list / favorites / pin).
+    #[serde(default)]
+    pub is_favorite: bool,
+    #[serde(default)]
+    pub is_unread: bool,
+    #[serde(default)]
+    pub is_pinned: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -374,7 +381,7 @@ pub struct VaultPayload {
     pub tags: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CreateBookmark {
     pub url: String,
     pub title: Option<String>,
@@ -383,10 +390,17 @@ pub struct CreateBookmark {
     pub category_id: Option<Uuid>,
     #[serde(default)]
     pub category_ids: Vec<Uuid>,
+    #[serde(default)]
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub is_favorite: bool,
+    #[serde(default)]
+    pub is_unread: bool,
+    #[serde(default)]
+    pub is_pinned: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UpdateBookmark {
     pub url: Option<String>,
     pub title: Option<String>,
@@ -395,6 +409,9 @@ pub struct UpdateBookmark {
     pub category_id: Option<Option<Uuid>>,
     pub category_ids: Option<Vec<Uuid>>,
     pub tags: Option<Vec<String>>,
+    pub is_favorite: Option<bool>,
+    pub is_unread: Option<bool>,
+    pub is_pinned: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

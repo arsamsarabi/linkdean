@@ -473,6 +473,7 @@ pub async fn fork_category(
                 category_id: mapped_cats.first().copied(),
                 category_ids: mapped_cats,
                 tags: view.tags,
+                ..Default::default()
             },
             None,
         )

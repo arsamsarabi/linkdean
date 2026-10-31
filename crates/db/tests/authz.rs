@@ -79,6 +79,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
             category_id: Some(cat.id),
             category_ids: vec![cat.id],
             tags: vec![],
+            ..Default::default()
         },
         None,
     )
@@ -107,6 +108,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
                 category_id: None,
                 category_ids: None,
                 tags: None,
+                ..Default::default()
             },
             None,
         )
@@ -215,6 +217,7 @@ async fn share_read_and_write_membership() {
             category_id: Some(cat.id),
             category_ids: vec![cat.id],
             tags: vec![],
+            ..Default::default()
         },
         None,
     )
@@ -265,6 +268,7 @@ async fn share_read_and_write_membership() {
                 category_id: None,
                 category_ids: None,
                 tags: None,
+                ..Default::default()
             },
             None,
         )
@@ -325,6 +329,7 @@ async fn share_read_and_write_membership() {
             category_id: None,
             category_ids: None,
             tags: None,
+            ..Default::default()
         },
         None,
     )
@@ -357,6 +362,7 @@ async fn share_read_and_write_membership() {
             category_id: Some(cat.id),
             category_ids: vec![cat.id],
             tags: vec![],
+            ..Default::default()
         },
         None,
     )
