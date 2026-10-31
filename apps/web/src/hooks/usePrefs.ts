@@ -1,22 +1,25 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useMantineColorScheme } from '@mantine/core'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type UserSettings } from '../api'
+import type { UseQueryResult } from '@tanstack/react-query'
+import type { MeResponse, UserSettings } from '../schemas'
 import { useUi } from '../store'
+import { useMe } from './useMe'
+import { useVaultLock } from './useVault'
 
 /** Hydrate show-hidden, theme, vault unlock flag, and idle auto-lock from /auth/me. */
-export function usePrefsHydration(enabled: boolean) {
-  const qc = useQueryClient()
+export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> {
   const setShowHidden = useUi((s) => s.setShowHidden)
   const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const { setColorScheme } = useMantineColorScheme()
   const appliedTheme = useRef<string | null>(null)
-  const me = useQuery({
-    queryKey: ['me'],
-    queryFn: api.me,
-    enabled,
-  })
+  const me = useMe(enabled)
+  const vaultLock = useVaultLock()
+  const lockRef = useRef(vaultLock.mutateAsync)
+
+  useEffect(() => {
+    lockRef.current = vaultLock.mutateAsync
+  }, [vaultLock.mutateAsync])
 
   useEffect(() => {
     if (!me.data) return
@@ -24,17 +27,16 @@ export function usePrefsHydration(enabled: boolean) {
     const show = me.data.settings.show_hidden
     const theme = me.data.settings.theme
 
-    // Only write when value changes — Zustand set() always new state object.
     const st = useUi.getState()
     if (st.vaultUnlocked !== unlocked) setVaultUnlocked(unlocked)
     if (st.showHidden !== show) setShowHidden(show)
 
-    // Sync from server; menu switcher also writes theme — keep ref in sync
     if (appliedTheme.current !== theme) {
       appliedTheme.current = theme
       applyTheme(theme, setColorScheme)
     }
   }, [
+    me.data,
     me.data?.vault_unlocked,
     me.data?.settings.show_hidden,
     me.data?.settings.theme,
@@ -43,15 +45,15 @@ export function usePrefsHydration(enabled: boolean) {
     setColorScheme,
   ])
 
-  useVaultAutoLock(me.data?.settings, vaultUnlocked, qc)
+  useVaultAutoLock(me.data?.settings, vaultUnlocked, lockRef)
 
   return me
 }
 
-function applyTheme(
+export function applyTheme(
   theme: UserSettings['theme'],
   setColorScheme: (v: 'light' | 'dark' | 'auto') => void,
-) {
+): void {
   if (theme === 'system') setColorScheme('auto')
   else setColorScheme(theme)
 }
@@ -59,8 +61,8 @@ function applyTheme(
 function useVaultAutoLock(
   settings: UserSettings | undefined,
   vaultUnlocked: boolean,
-  qc: ReturnType<typeof useQueryClient>,
-) {
+  lockRef: MutableRefObject<() => Promise<unknown>>,
+): void {
   const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const minutes = settings?.vault_auto_lock_minutes ?? 0
@@ -71,19 +73,17 @@ function useVaultAutoLock(
       return
     }
 
-    const reset = () => {
+    const reset = (): void => {
       if (timer.current) clearTimeout(timer.current)
-      timer.current = setTimeout(async () => {
-        try {
-          await api.vaultLock()
-        } catch {
-          /* ignore */
-        }
-        setVaultUnlocked(false)
-        qc.invalidateQueries({ queryKey: ['vault'] })
-        qc.invalidateQueries({ queryKey: ['me'] })
-        qc.invalidateQueries({ queryKey: ['categories'] })
-        qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      timer.current = setTimeout(() => {
+        void lockRef
+          .current()
+          .catch((e: unknown) => {
+            console.error('Vault auto-lock failed', e)
+          })
+          .finally(() => {
+            setVaultUnlocked(false)
+          })
       }, minutes * 60_000)
     }
 
@@ -94,7 +94,5 @@ function useVaultAutoLock(
       events.forEach((e) => window.removeEventListener(e, reset))
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [vaultUnlocked, minutes, setVaultUnlocked, qc])
+  }, [vaultUnlocked, minutes, setVaultUnlocked, lockRef])
 }
-
-export { applyTheme }

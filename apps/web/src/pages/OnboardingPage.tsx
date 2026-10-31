@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Button,
@@ -26,12 +26,25 @@ import {
   IconUpload,
   IconUserPlus,
 } from '@tabler/icons-react'
-import { api, getToken, setToken } from '../api'
+import { getToken } from '../lib/authToken'
 import { AvatarCropModal } from '../components/AvatarCropModal'
+import { useBootstrap } from '../hooks/useBootstrap'
+import { useCompleteOnboarding, useRegister } from '../hooks/useAuth'
+import { useMe } from '../hooks/useMe'
+import { useImportBookmarks } from '../hooks/useImportExport'
+import { useUploadAvatar } from '../hooks/useSettings'
+import { useVaultSetup } from '../hooks/useVault'
+import { validatePasswordPair } from '../services/authValidation'
+import motion from '../styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
-export function OnboardingPage() {
+const VAULT_PW_MESSAGES = {
+  tooShort: 'Vault passphrase min 8 chars',
+  mismatch: 'Passphrases mismatch',
+} as const
+
+export function OnboardingPage(): ReactElement {
   const nav = useNavigate()
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -52,61 +65,65 @@ export function OnboardingPage() {
   const [format, setFormat] = useState<string | null>('netscape')
   const [file, setFile] = useState<File | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const s = await api.bootstrap()
-        if (s.needs_bootstrap) {
-          if (!cancelled) {
-            setStep(0)
-            setReady(true)
-          }
-          return
-        }
-        const token = getToken()
-        if (!token) {
-          nav({ to: '/login' })
-          return
-        }
-        const me = await api.me()
-        if (me.user.onboarding_completed) {
-          nav({ to: '/library' })
-          return
-        }
-        if (!cancelled) {
-          setStep(2)
-          setReady(true)
-        }
-      } catch {
-        nav({ to: '/login' })
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [nav])
+  const bootstrap = useBootstrap()
+  const me = useMe(!!getToken())
+  const register = useRegister()
+  const uploadAvatar = useUploadAvatar()
+  const vaultSetup = useVaultSetup()
+  const importBookmarks = useImportBookmarks()
+  const completeOnboarding = useCompleteOnboarding()
 
-  async function createAdmin() {
-    if (password.length < 8) {
-      notifications.show({ color: 'red', message: 'Password min 8 chars' })
+  useEffect(() => {
+    if (bootstrap.isLoading) return
+    if (bootstrap.isError) {
+      void nav({ to: '/login' })
       return
     }
-    if (password !== password2) {
-      notifications.show({ color: 'red', message: 'Passwords mismatch' })
+    if (!bootstrap.data) return
+
+    if (bootstrap.data.needs_bootstrap) {
+      setStep(0)
+      setReady(true)
+      return
+    }
+
+    const token = getToken()
+    if (!token) {
+      void nav({ to: '/login' })
+      return
+    }
+
+    if (me.isLoading) return
+    if (me.isError) {
+      void nav({ to: '/login' })
+      return
+    }
+    if (!me.data) return
+
+    if (me.data.user.onboarding_completed) {
+      void nav({ to: '/library' })
+      return
+    }
+    setStep(2)
+    setReady(true)
+  }, [bootstrap.isLoading, bootstrap.isError, bootstrap.data, me.isLoading, me.isError, me.data, nav])
+
+  async function createAdmin(): Promise<void> {
+    const check = validatePasswordPair(password, password2)
+    if (!check.ok) {
+      notifications.show({ color: 'red', message: check.message })
       return
     }
     setBusy(true)
     try {
-      const res = await api.register({
+      const res = await register.mutateAsync({
         email,
         password,
         display_name: displayName || undefined,
       })
-      setToken(res.token)
       if (pendingAvatar) {
         try {
-          await api.uploadAvatar(pendingAvatar)
+          await uploadAvatar.mutateAsync(pendingAvatar)
         } catch (e) {
           notifications.show({
             color: 'yellow',
@@ -125,18 +142,15 @@ export function OnboardingPage() {
     }
   }
 
-  async function setupVault() {
-    if (vaultPass.length < 8) {
-      notifications.show({ color: 'red', message: 'Vault passphrase min 8 chars' })
-      return
-    }
-    if (vaultPass !== vaultPass2) {
-      notifications.show({ color: 'red', message: 'Passphrases mismatch' })
+  async function setupVault(): Promise<void> {
+    const check = validatePasswordPair(vaultPass, vaultPass2, VAULT_PW_MESSAGES)
+    if (!check.ok) {
+      notifications.show({ color: 'red', message: check.message })
       return
     }
     setBusy(true)
     try {
-      await api.vaultSetup(vaultPass)
+      await vaultSetup.mutateAsync(vaultPass)
       notifications.show({ message: 'Vault ready' })
       setStep(3)
     } catch (e) {
@@ -146,16 +160,16 @@ export function OnboardingPage() {
     }
   }
 
-  async function doImportOrSkip(skip: boolean) {
+  async function doImportOrSkip(skip: boolean): Promise<void> {
     setBusy(true)
     try {
       if (!skip && file && format) {
         const content = await file.text()
-        const res = await api.import(format, content)
+        const res = await importBookmarks.mutateAsync({ format, content })
         notifications.show({ message: `Imported ${res.imported}/${res.total}` })
       }
-      await api.completeOnboarding()
-      nav({ to: '/library' })
+      await completeOnboarding.mutateAsync()
+      void nav({ to: '/library' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     } finally {
@@ -172,7 +186,7 @@ export function OnboardingPage() {
   }
 
   return (
-    <Stack maw={560} mx="auto" mt={48} px="md" pb={48} gap="lg" className="ld-fade-in">
+    <Stack maw={560} mx="auto" mt={48} px="md" pb={48} gap="lg" className={motion.fadeIn}>
       <Stack gap={6}>
         <Title order={1} c="violet">
           Welcome to Linkdean
@@ -245,7 +259,7 @@ export function OnboardingPage() {
                     </Button>
                   )}
                 </FileButton>
-                {pendingAvatar && (
+                {pendingAvatar ? (
                   <Button
                     variant="subtle"
                     color="red"
@@ -257,12 +271,12 @@ export function OnboardingPage() {
                   >
                     Clear
                   </Button>
-                )}
+                ) : null}
               </Group>
               <Button
                 leftSection={<IconUserPlus {...iconSm} />}
                 loading={busy}
-                onClick={createAdmin}
+                onClick={() => void createAdmin()}
                 disabled={!email || !password}
               >
                 Create admin account
@@ -291,7 +305,7 @@ export function OnboardingPage() {
                 <Button
                   leftSection={<IconLockPlus {...iconSm} />}
                   loading={busy}
-                  onClick={setupVault}
+                  onClick={() => void setupVault()}
                 >
                   Enable vault
                 </Button>
@@ -328,7 +342,7 @@ export function OnboardingPage() {
                   leftSection={<IconUpload {...iconSm} />}
                   loading={busy}
                   disabled={!file}
-                  onClick={() => doImportOrSkip(false)}
+                  onClick={() => void doImportOrSkip(false)}
                 >
                   Import & finish
                 </Button>
@@ -336,7 +350,7 @@ export function OnboardingPage() {
                   variant="light"
                   leftSection={<IconPlayerSkipForward {...iconSm} />}
                   loading={busy}
-                  onClick={() => doImportOrSkip(true)}
+                  onClick={() => void doImportOrSkip(true)}
                 >
                   Skip & finish
                 </Button>
@@ -354,7 +368,7 @@ export function OnboardingPage() {
           setCropFile(null)
           resetRef.current?.()
         }}
-        onCropped={async (blob) => {
+        onCropped={(blob) => {
           setPendingAvatar(blob)
           notifications.show({ message: 'Avatar cropped — uploads with account' })
         }}

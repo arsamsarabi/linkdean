@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
 import {
   Alert,
   Button,
@@ -17,43 +17,35 @@ import {
   IconInfoCircle,
   IconUpload,
 } from '@tabler/icons-react'
-import { api, getToken } from '../api'
+import { useExportBookmarks, useImportBookmarks } from '../hooks/useImportExport'
+import { QueryErrorAlert } from './QueryErrorAlert'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
-export function ImportExportPanel() {
+export function ImportExportPanel(): ReactElement {
   const [format, setFormat] = useState<string | null>('netscape')
   const [file, setFile] = useState<File | null>(null)
-  const [busy, setBusy] = useState(false)
+  const importMut = useImportBookmarks()
+  const { exportBookmarks, isExporting, exportError, clearExportError } = useExportBookmarks()
 
-  async function doImport() {
+  async function doImport(): Promise<void> {
     if (!file || !format) return
-    setBusy(true)
     try {
       const content = await file.text()
-      const res = await api.import(format, content)
+      const res = await importMut.mutateAsync({ format, content })
       notifications.show({
         message: `Imported ${res.imported}/${res.total} (failed ${res.failed})`,
       })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
-    } finally {
-      setBusy(false)
     }
   }
 
-  function exportFile(fmt: string) {
-    const token = getToken()
-    const a = document.createElement('a')
-    a.href = api.exportUrl(fmt)
-    if (token) {
-      fetch(api.exportUrl(fmt), { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => r.blob())
-        .then((blob) => {
-          a.href = URL.createObjectURL(blob)
-          a.download = fmt === 'html' ? 'linkdean-bookmarks.html' : 'linkdean-export.json'
-          a.click()
-        })
+  async function exportFile(fmt: string): Promise<void> {
+    try {
+      await exportBookmarks(fmt)
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
     }
   }
 
@@ -87,9 +79,9 @@ export function ImportExportPanel() {
           />
           <Button
             leftSection={<IconUpload {...iconSm} />}
-            loading={busy}
+            loading={importMut.isPending}
             disabled={!file}
-            onClick={doImport}
+            onClick={() => void doImport()}
           >
             Import
           </Button>
@@ -107,18 +99,29 @@ export function ImportExportPanel() {
           <Alert icon={<IconInfoCircle size={16} />} color="violet" variant="light">
             Vault bookmarks skipped on export — ciphertext stays private.
           </Alert>
+          {exportError ? (
+            <QueryErrorAlert
+              error={exportError}
+              onRetry={() => {
+                clearExportError()
+              }}
+              title="Export failed"
+            />
+          ) : null}
           <Group>
             <Button
               variant="light"
               leftSection={<IconFileExport {...iconSm} />}
-              onClick={() => exportFile('json')}
+              loading={isExporting}
+              onClick={() => void exportFile('json')}
             >
               JSON
             </Button>
             <Button
               variant="light"
               leftSection={<IconFileExport {...iconSm} />}
-              onClick={() => exportFile('html')}
+              loading={isExporting}
+              onClick={() => void exportFile('html')}
             >
               Netscape HTML
             </Button>

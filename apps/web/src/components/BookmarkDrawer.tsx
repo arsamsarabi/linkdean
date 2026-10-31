@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState, type ReactElement } from 'react'
 import {
   Box,
   Button,
@@ -12,93 +11,68 @@ import {
   Textarea,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { api, type Bookmark, type Category } from '../api'
+import type { Category } from '../schemas'
+import { useCreateBookmark, useUpdateBookmark } from '../hooks/useBookmarks'
 import { categorySelectData } from '../lib/categories'
+import { emptyDraft, type BookmarkDraft } from '../services/bookmarks'
 
-export type BookmarkDraft = {
-  id?: string
-  url: string
-  title: string
-  description: string
-  tags: string[]
-  category_ids: string[]
-}
+export type { BookmarkDraft }
+export { draftFromBookmark } from '../services/bookmarks'
 
-const emptyDraft = (): BookmarkDraft => ({
-  url: '',
-  title: '',
-  description: '',
-  tags: [],
-  category_ids: [],
-})
-
-export function draftFromBookmark(b: Bookmark): BookmarkDraft {
-  return {
-    id: b.id,
-    url: b.url,
-    title: b.title || '',
-    description: b.description || '',
-    tags: b.tags || [],
-    category_ids: (b.categories || []).map((c) => c.id),
-  }
-}
-
-export function BookmarkDrawer({
-  opened,
-  onClose,
-  categories,
-  initial,
-}: {
+type Props = {
   opened: boolean
   onClose: () => void
   categories: Category[]
   initial: BookmarkDraft | null
-}) {
-  const qc = useQueryClient()
+}
+
+export function BookmarkDrawer({ opened, onClose, categories, initial }: Props): ReactElement {
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
   const editing = !!draft.id
+  const createBookmark = useCreateBookmark()
+  const updateBookmark = useUpdateBookmark()
+  const pending = createBookmark.isPending || updateBookmark.isPending
 
   useEffect(() => {
     if (opened) setDraft(initial ? { ...initial, tags: [...initial.tags] } : emptyDraft())
   }, [opened, initial])
 
-  const save = useMutation({
-    mutationFn: async () => {
-      const tags = draft.tags.map((t) => t.trim()).filter(Boolean)
-      const body = {
-        url: draft.url.trim(),
-        title: draft.title.trim() || undefined,
-        description: draft.description.trim() || undefined,
-        category_ids: draft.category_ids,
-        tags,
-      }
+  async function save(): Promise<void> {
+    const tags = draft.tags.map((t) => t.trim()).filter(Boolean)
+    const body = {
+      url: draft.url.trim(),
+      title: draft.title.trim() || undefined,
+      description: draft.description.trim() || undefined,
+      category_ids: draft.category_ids,
+      tags,
+    }
+    try {
       if (draft.id) {
-        return api.updateBookmark(draft.id, {
+        await updateBookmark.mutateAsync({
+          id: draft.id,
+          body: {
+            url: body.url,
+            title: body.title || '',
+            description: body.description ?? null,
+            category_ids: body.category_ids,
+            tags: body.tags,
+          },
+        })
+      } else {
+        await createBookmark.mutateAsync({
           url: body.url,
-          title: body.title || '',
-          description: body.description ?? null,
+          title: body.title,
+          description: body.description,
           category_ids: body.category_ids,
           tags: body.tags,
         })
       }
-      return api.createBookmark({
-        url: body.url,
-        title: body.title,
-        description: body.description,
-        category_ids: body.category_ids,
-        tags: body.tags,
-      })
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['bookmarks'] })
-      qc.invalidateQueries({ queryKey: ['search'] })
-      window.setTimeout(() => qc.invalidateQueries({ queryKey: ['bookmarks'] }), 2500)
-      window.setTimeout(() => qc.invalidateQueries({ queryKey: ['bookmarks'] }), 6000)
       notifications.show({ message: editing ? 'Updated' : 'Saved' })
       onClose()
-    },
-    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-  })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
 
   return (
     <Drawer
@@ -110,7 +84,7 @@ export function BookmarkDrawer({
       padding="lg"
     >
       <Box pos="relative">
-        <LoadingOverlay visible={save.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
+        <LoadingOverlay visible={pending} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
           <TextInput
             label="URL"
@@ -149,9 +123,9 @@ export function BookmarkDrawer({
           />
           <Button
             mt="sm"
-            onClick={() => save.mutate()}
+            onClick={() => void save()}
             disabled={!draft.url.trim()}
-            loading={save.isPending}
+            loading={pending}
           >
             {editing ? 'Save changes' : 'Add bookmark'}
           </Button>

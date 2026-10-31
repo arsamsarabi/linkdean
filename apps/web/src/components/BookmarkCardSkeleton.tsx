@@ -1,19 +1,14 @@
 import { Card, Group, SimpleGrid, Skeleton, Stack } from '@mantine/core'
+import type { ReactElement } from 'react'
+import styles from './BookmarkCard.module.css'
 
-export function BookmarkCardSkeleton() {
+export function BookmarkCardSkeleton(): ReactElement {
   return (
-    <Card
-      withBorder
-      padding="sm"
-      radius="md"
-      h="100%"
-      className="ld-card"
-      style={{ display: 'flex', flexDirection: 'column' }}
-    >
+    <Card withBorder padding="sm" radius="md" h="100%" className={styles.card}>
       <Card.Section>
         <Skeleton height={140} radius={0} />
       </Card.Section>
-      <Stack gap={8} mt="sm" style={{ flex: 1 }}>
+      <Stack gap={8} mt="sm" className={styles.body}>
         <Skeleton height={16} width="85%" />
         <Skeleton height={12} width="45%" />
         <Skeleton height={12} width="70%" />
@@ -26,7 +21,7 @@ export function BookmarkCardSkeleton() {
   )
 }
 
-export function BookmarkGridSkeleton({ count = 8 }: { count?: number }) {
+export function BookmarkGridSkeleton({ count = 8 }: { count?: number }): ReactElement {
   return (
     <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
       {Array.from({ length: count }, (_, i) => (

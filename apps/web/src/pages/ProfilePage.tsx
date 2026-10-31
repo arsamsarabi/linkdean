@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import {
   Alert,
   Button,
@@ -26,9 +25,17 @@ import {
   IconTrash,
   IconUser,
 } from '@tabler/icons-react'
-import { api } from '../api'
 import { AvatarCropModal } from '../components/AvatarCropModal'
+import { QueryErrorAlert } from '../components/QueryErrorAlert'
 import { UserAvatar } from '../components/UserAvatar'
+import { useMe } from '../hooks/useMe'
+import {
+  useChangePassword,
+  useDeleteAvatar,
+  useUpdateProfile,
+  useUploadAvatar,
+} from '../hooks/useSettings'
+import { validatePasswordPair } from '../services/authValidation'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -36,7 +43,7 @@ const TIMEZONES = Intl.supportedValuesOf
   ? Intl.supportedValuesOf('timeZone')
   : ['UTC', 'Europe/Amsterdam', 'America/New_York', 'Asia/Tokyo']
 
-function ProfileSkeleton() {
+function ProfileSkeleton(): ReactElement {
   return (
     <Stack gap="lg" maw={560}>
       <Group>
@@ -51,10 +58,13 @@ function ProfileSkeleton() {
   )
 }
 
-export function ProfilePage() {
-  const qc = useQueryClient()
-  const me = useQuery({ queryKey: ['me'], queryFn: api.me })
+export function ProfilePage(): ReactElement {
+  const me = useMe()
   const user = me.data?.user
+  const saveProfile = useUpdateProfile()
+  const changePw = useChangePassword()
+  const uploadAvatar = useUploadAvatar()
+  const deleteAvatar = useDeleteAvatar()
 
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
@@ -76,49 +86,20 @@ export function ProfilePage() {
     setEmail(user.email)
   }, [user])
 
-  const saveProfile = useMutation({
-    mutationFn: () =>
-      api.updateProfile({
-        display_name: displayName || null,
-        bio: bio || null,
-        timezone: timezone || null,
-        email,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['me'] })
-      notifications.show({ message: 'Profile saved' })
-    },
-    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-  })
-
-  const changePw = useMutation({
-    mutationFn: () =>
-      api.changePassword({ current_password: currentPw, new_password: newPw }),
-    onSuccess: () => {
-      setCurrentPw('')
-      setNewPw('')
-      setNewPw2('')
-      notifications.show({ message: 'Password updated' })
-    },
-    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-  })
-
-  async function onCropped(blob: Blob) {
+  async function onCropped(blob: Blob): Promise<void> {
     try {
-      await api.uploadAvatar(blob)
+      await uploadAvatar.mutateAsync(blob)
       setAvatarBust(Date.now())
-      qc.invalidateQueries({ queryKey: ['me'] })
       notifications.show({ message: 'Avatar updated' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
   }
 
-  async function removeAvatar() {
+  async function removeAvatar(): Promise<void> {
     try {
-      await api.deleteAvatar()
+      await deleteAvatar.mutateAsync()
       setAvatarBust(Date.now())
-      qc.invalidateQueries({ queryKey: ['me'] })
       notifications.show({ message: 'Avatar removed' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
@@ -135,6 +116,10 @@ export function ProfilePage() {
         </ThemeIcon>
         <Title order={2}>Profile</Title>
       </Group>
+
+      {me.isError ? (
+        <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} />
+      ) : null}
 
       {!user ? (
         <ProfileSkeleton />
@@ -166,16 +151,16 @@ export function ProfilePage() {
                       </Button>
                     )}
                   </FileButton>
-                  {user.has_avatar && (
+                  {user.has_avatar ? (
                     <Button
                       variant="subtle"
                       color="red"
                       leftSection={<IconTrash {...iconSm} />}
-                      onClick={removeAvatar}
+                      onClick={() => void removeAvatar()}
                     >
                       Remove
                     </Button>
-                  )}
+                  ) : null}
                 </Stack>
               </Group>
 
@@ -214,7 +199,20 @@ export function ProfilePage() {
               <Button
                 leftSection={<IconDeviceFloppy {...iconSm} />}
                 loading={saveProfile.isPending}
-                onClick={() => saveProfile.mutate()}
+                onClick={() => {
+                  saveProfile.mutate(
+                    {
+                      display_name: displayName || null,
+                      bio: bio || null,
+                      timezone: timezone || null,
+                      email,
+                    },
+                    {
+                      onSuccess: () => notifications.show({ message: 'Profile saved' }),
+                      onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                    },
+                  )
+                }}
               >
                 Save profile
               </Button>
@@ -251,11 +249,23 @@ export function ProfilePage() {
                   loading={changePw.isPending}
                   disabled={newPw.length < 8 || newPw !== newPw2 || !currentPw}
                   onClick={() => {
-                    if (newPw !== newPw2) {
-                      notifications.show({ color: 'red', message: 'Passwords mismatch' })
+                    const check = validatePasswordPair(newPw, newPw2)
+                    if (!check.ok) {
+                      notifications.show({ color: 'red', message: check.message })
                       return
                     }
-                    changePw.mutate()
+                    changePw.mutate(
+                      { current_password: currentPw, new_password: newPw },
+                      {
+                        onSuccess: () => {
+                          setCurrentPw('')
+                          setNewPw('')
+                          setNewPw2('')
+                          notifications.show({ message: 'Password updated' })
+                        },
+                        onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                      },
+                    )
                   }}
                 >
                   Update password

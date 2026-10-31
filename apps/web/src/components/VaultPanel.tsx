@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, type ReactElement } from 'react'
 import {
   Alert,
   Badge,
@@ -18,65 +17,50 @@ import {
   IconLockOpen,
   IconLockPlus,
 } from '@tabler/icons-react'
-import { api } from '../api'
-import { useUi } from '../store'
+import {
+  useVaultLock,
+  useVaultSetup,
+  useVaultStatus,
+  useVaultUnlock,
+} from '../hooks/useVault'
+import { QueryErrorAlert } from './QueryErrorAlert'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
-export function VaultPanel() {
-  const qc = useQueryClient()
-  const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
+export function VaultPanel(): ReactElement {
   const [pass, setPass] = useState('')
-  const [busy, setBusy] = useState(false)
-  const status = useQuery({ queryKey: ['vault'], queryFn: api.vaultStatus })
+  const status = useVaultStatus()
+  const setupMut = useVaultSetup()
+  const unlockMut = useVaultUnlock()
+  const lockMut = useVaultLock()
+  const busy = setupMut.isPending || unlockMut.isPending || lockMut.isPending
 
-  async function setup() {
-    setBusy(true)
+  async function setup(): Promise<void> {
     try {
-      await api.vaultSetup(pass)
-      setVaultUnlocked(true)
+      await setupMut.mutateAsync(pass)
       setPass('')
-      qc.invalidateQueries({ queryKey: ['vault'] })
-      qc.invalidateQueries({ queryKey: ['me'] })
       notifications.show({ message: 'Vault ready + unlocked' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
-    } finally {
-      setBusy(false)
     }
   }
 
-  async function unlock() {
-    setBusy(true)
+  async function unlock(): Promise<void> {
     try {
-      await api.vaultUnlock(pass)
-      setVaultUnlocked(true)
+      await unlockMut.mutateAsync(pass)
       setPass('')
-      qc.invalidateQueries({ queryKey: ['vault'] })
-      qc.invalidateQueries({ queryKey: ['me'] })
-      qc.invalidateQueries({ queryKey: ['categories'] })
       notifications.show({ message: 'Vault unlocked' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
-    } finally {
-      setBusy(false)
     }
   }
 
-  async function lock() {
-    setBusy(true)
+  async function lock(): Promise<void> {
     try {
-      await api.vaultLock()
-      setVaultUnlocked(false)
-      qc.invalidateQueries({ queryKey: ['vault'] })
-      qc.invalidateQueries({ queryKey: ['me'] })
-      qc.invalidateQueries({ queryKey: ['categories'] })
-      qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      await lockMut.mutateAsync()
       notifications.show({ message: 'Vault locked' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
-    } finally {
-      setBusy(false)
     }
   }
 
@@ -86,6 +70,10 @@ export function VaultPanel() {
         Password-protected categories. AES-GCM at rest. Not in Meilisearch until unlocked
         (then Postgres search).
       </Alert>
+
+      {status.isError ? (
+        <QueryErrorAlert error={status.error} onRetry={() => void status.refetch()} />
+      ) : null}
 
       <Paper p="xl" withBorder pos="relative">
         <Stack gap="lg">
@@ -114,7 +102,7 @@ export function VaultPanel() {
           {!status.data?.configured ? (
             <Button
               leftSection={<IconLockPlus {...iconSm} />}
-              onClick={setup}
+              onClick={() => void setup()}
               disabled={pass.length < 8}
               loading={busy}
             >
@@ -123,7 +111,7 @@ export function VaultPanel() {
           ) : (
             <Button
               leftSection={<IconLockOpen {...iconSm} />}
-              onClick={unlock}
+              onClick={() => void unlock()}
               disabled={pass.length < 8 || !!status.data?.unlocked}
               loading={busy}
             >
@@ -133,7 +121,7 @@ export function VaultPanel() {
           <Button
             variant="light"
             leftSection={<IconLock {...iconSm} />}
-            onClick={lock}
+            onClick={() => void lock()}
             disabled={!status.data?.unlocked}
             loading={busy}
           >

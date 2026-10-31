@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactElement } from 'react'
 import { Outlet, Link, useNavigate } from '@tanstack/react-router'
 import {
   AppShell as MantineAppShell,
@@ -11,35 +11,33 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
-import {
-  IconLogout,
-  IconSettings,
-  IconUser,
-} from '@tabler/icons-react'
-import { api, setToken } from '../api'
+import { IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
 import { PageContainer } from '../components/PageContainer'
+import { LogoMark } from '../components/LogoMark'
+import { QueryErrorAlert } from '../components/QueryErrorAlert'
 import { ThemeMenuSwitch } from '../components/ThemeMenuSwitch'
 import { UserAvatar } from '../components/UserAvatar'
+import { useLogout } from '../hooks/useAuth'
 import { usePrefsHydration } from '../hooks/usePrefs'
 import { useUi } from '../store'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 
-export function AppShell() {
+export function AppShell(): ReactElement {
   const nav = useNavigate()
   const me = usePrefsHydration(true)
+  const logout = useLogout()
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
 
   useEffect(() => {
     if (me.data && !me.data.user.onboarding_completed) {
-      nav({ to: '/onboarding' })
+      void nav({ to: '/onboarding' })
     }
   }, [me.data, nav])
 
-  async function logout() {
-    await api.logout().catch(() => {})
-    setToken(null)
-    nav({ to: '/login' })
+  async function onLogout(): Promise<void> {
+    await logout.mutateAsync()
+    void nav({ to: '/login' })
   }
 
   const user = me.data?.user
@@ -53,13 +51,7 @@ export function AppShell() {
           <Group h="100%" justify="space-between">
             <UnstyledButton component={Link} to="/library" aria-label="Library">
               <Group gap="sm" wrap="nowrap">
-                <img
-                  src="/linkdean-symbol.svg"
-                  alt=""
-                  width={28}
-                  height={28}
-                  style={{ display: 'block' }}
-                />
+                <LogoMark size={28} />
                 <Title order={3} c="violet">
                   Linkdean
                 </Title>
@@ -81,20 +73,14 @@ export function AppShell() {
                         processing
                         withBorder
                       >
-                        <UserAvatar
-                          hasAvatar={!!user?.has_avatar}
-                          label={label}
-                          alt={label}
-                        />
+                        <UserAvatar hasAvatar={!!user?.has_avatar} label={label} alt={label} />
                       </Indicator>
                     </UnstyledButton>
                   </Tooltip>
                 </Menu.Target>
                 <Menu.Dropdown>
                   <Menu.Label>{user?.display_name || user?.email || 'User'}</Menu.Label>
-                  {vaultUnlocked ? (
-                    <Menu.Label c="green">Vault unlocked</Menu.Label>
-                  ) : null}
+                  {vaultUnlocked ? <Menu.Label c="green">Vault unlocked</Menu.Label> : null}
                   <Menu.Item
                     component={Link}
                     to="/profile"
@@ -114,7 +100,7 @@ export function AppShell() {
                   <Menu.Divider />
                   <Menu.Item
                     color="red"
-                    onClick={logout}
+                    onClick={() => void onLogout()}
                     leftSection={<IconLogout {...iconProps} />}
                   >
                     Logout
@@ -127,7 +113,10 @@ export function AppShell() {
       </MantineAppShell.Header>
 
       <MantineAppShell.Main>
-        <PageContainer pb="xl" className="ld-fade-in">
+        <PageContainer pb="xl" fadeIn>
+          {me.isError ? (
+            <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} title="Failed to load account" />
+          ) : null}
           {loading ? (
             <Group justify="center" py={80}>
               <Loader color="violet" type="dots" />

@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState, type ReactElement } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   Divider,
@@ -14,6 +13,7 @@ import {
   Text,
   ThemeIcon,
   Title,
+  useMantineColorScheme,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import {
@@ -22,13 +22,14 @@ import {
   IconLock,
   IconSettings,
 } from '@tabler/icons-react'
-import { api, type UserSettings } from '../api'
+import type { UserSettings } from '../schemas'
 import { CategoryManager } from '../components/CategoryManager'
 import { ImportExportPanel } from '../components/ImportExportPanel'
+import { QueryErrorAlert } from '../components/QueryErrorAlert'
 import { VaultPanel } from '../components/VaultPanel'
+import { useMe } from '../hooks/useMe'
 import { applyTheme } from '../hooks/usePrefs'
-import { useMantineColorScheme } from '@mantine/core'
-import { useUi } from '../store'
+import { useUpdateSettings } from '../hooks/useSettings'
 
 const SETTINGS_TABS = ['general', 'categories', 'import', 'vault'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
@@ -37,7 +38,7 @@ function isSettingsTab(v: unknown): v is SettingsTab {
   return typeof v === 'string' && (SETTINGS_TABS as readonly string[]).includes(v)
 }
 
-function SettingsSkeleton() {
+function SettingsSkeleton(): ReactElement {
   return (
     <Stack gap="md" maw={560}>
       <Skeleton height={48} />
@@ -48,45 +49,35 @@ function SettingsSkeleton() {
   )
 }
 
-export function SettingsPage() {
-  const qc = useQueryClient()
+export function SettingsPage(): ReactElement {
   const nav = useNavigate()
   const search = useSearch({ strict: false }) as { tab?: string }
   const tab: SettingsTab = isSettingsTab(search.tab) ? search.tab : 'general'
 
-  const setShowHidden = useUi((s) => s.setShowHidden)
   const { setColorScheme } = useMantineColorScheme()
-  const me = useQuery({ queryKey: ['me'], queryFn: api.me })
+  const me = useMe()
   const settings = me.data?.settings
   const [autoLock, setAutoLock] = useState(0)
+  const save = useUpdateSettings()
 
   useEffect(() => {
     if (settings) setAutoLock(settings.vault_auto_lock_minutes)
-  }, [settings?.vault_auto_lock_minutes])
+  }, [settings, settings?.vault_auto_lock_minutes])
 
-  const save = useMutation({
-    mutationFn: (patch: Partial<UserSettings>) => api.updateSettings(patch),
-    onSuccess: (res) => {
-      qc.setQueryData(['me'], (old: typeof me.data) =>
-        old ? { ...old, settings: res.settings } : old,
-      )
-      if (useUi.getState().showHidden !== res.settings.show_hidden) {
-        setShowHidden(res.settings.show_hidden)
-      }
-      applyTheme(res.settings.theme, setColorScheme)
-      notifications.show({ message: 'Settings saved' })
-    },
-    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-  })
-
-  function patch(p: Partial<UserSettings>) {
+  function patch(p: Partial<UserSettings>): void {
     if (save.isPending) return
-    save.mutate(p)
+    save.mutate(p, {
+      onSuccess: (res) => {
+        applyTheme(res.settings.theme, setColorScheme)
+        notifications.show({ message: 'Settings saved' })
+      },
+      onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+    })
   }
 
-  function setTab(next: string | null) {
+  function setTab(next: string | null): void {
     if (!isSettingsTab(next)) return
-    nav({
+    void nav({
       to: '/settings',
       search: next === 'general' ? {} : { tab: next },
     })
@@ -100,6 +91,10 @@ export function SettingsPage() {
         </ThemeIcon>
         <Title order={2}>Settings</Title>
       </Group>
+
+      {me.isError ? (
+        <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} />
+      ) : null}
 
       <Tabs value={tab} onChange={setTab}>
         <Tabs.List>

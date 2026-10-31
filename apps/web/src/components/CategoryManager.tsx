@@ -1,5 +1,4 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   Badge,
@@ -13,30 +12,33 @@ import {
   Text,
   TextInput,
   Tooltip,
+  UnstyledButton,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconFolder, IconFolderPlus, IconTrash } from '@tabler/icons-react'
-import { api } from '../api'
-import { ConfirmModal } from './ConfirmModal'
+import {
+  useCategories,
+  useCreateCategory,
+  useDeleteCategory,
+  useUpdateCategory,
+} from '../hooks/useCategories'
 import { buildCategoryTree, categorySelectData, type CatNode } from '../lib/categories'
-import { useUi } from '../store'
+import { ConfirmModal } from './ConfirmModal'
+import { QueryErrorAlert } from './QueryErrorAlert'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
-export function CategoryManager() {
-  const qc = useQueryClient()
-  const vaultUnlocked = useUi((s) => s.vaultUnlocked)
+export function CategoryManager(): ReactElement {
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState<string | null>(null)
   const [hidden, setHidden] = useState(false)
   const [vault, setVault] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
 
-  const cats = useQuery({
-    queryKey: ['categories', true, vaultUnlocked],
-    queryFn: () => api.categories(true, vaultUnlocked),
-  })
+  const cats = useCategories(true)
+  const create = useCreateCategory()
+  const update = useUpdateCategory()
+  const remove = useDeleteCategory()
 
   const tree = useMemo(() => buildCategoryTree(cats.data || []), [cats.data])
   const parentOptions = useMemo(
@@ -44,38 +46,32 @@ export function CategoryManager() {
     [cats.data],
   )
 
-  const create = useMutation({
-    mutationFn: () =>
-      api.createCategory({
+  async function onCreate(): Promise<void> {
+    try {
+      await create.mutateAsync({
         name: name.trim(),
         parent_id: parentId || null,
         is_hidden: hidden,
         is_vault: vault,
-      }),
-    onSuccess: () => {
+      })
       setName('')
       setParentId(null)
       setHidden(false)
       setVault(false)
-      qc.invalidateQueries({ queryKey: ['categories'] })
       notifications.show({ message: 'Category created' })
-    },
-    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-  })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
 
-  async function confirmDelete() {
+  async function confirmDelete(): Promise<void> {
     if (!deleteId) return
-    setDeleting(true)
     try {
-      await api.deleteCategory(deleteId)
-      qc.invalidateQueries({ queryKey: ['categories'] })
-      qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      await remove.mutateAsync(deleteId)
       notifications.show({ message: 'Category deleted' })
       setDeleteId(null)
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
-    } finally {
-      setDeleting(false)
     }
   }
 
@@ -84,6 +80,10 @@ export function CategoryManager() {
       <Text size="sm" c="dimmed">
         Nested folders for the library. Manage here — library filters by category.
       </Text>
+
+      {cats.isError ? (
+        <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} />
+      ) : null}
 
       {cats.isLoading ? (
         <Stack gap="xs">
@@ -102,9 +102,11 @@ export function CategoryManager() {
                 depth={0}
                 onDelete={setDeleteId}
                 onRename={async (id, next) => {
-                  await api.updateCategory(id, { name: next })
-                  qc.invalidateQueries({ queryKey: ['categories'] })
-                  qc.invalidateQueries({ queryKey: ['bookmarks'] })
+                  try {
+                    await update.mutateAsync({ id, body: { name: next } })
+                  } catch (e) {
+                    notifications.show({ color: 'red', message: String(e) })
+                  }
                 }}
               />
             ))}
@@ -141,7 +143,7 @@ export function CategoryManager() {
         </Group>
         <Button
           leftSection={<IconFolderPlus {...iconSm} />}
-          onClick={() => create.mutate()}
+          onClick={() => void onCreate()}
           disabled={!name.trim()}
           loading={create.isPending}
         >
@@ -152,29 +154,35 @@ export function CategoryManager() {
       <ConfirmModal
         opened={!!deleteId}
         onClose={() => setDeleteId(null)}
-        onConfirm={confirmDelete}
+        onConfirm={() => void confirmDelete()}
         title="Delete category?"
         body="Bookmarks in this category keep their links but lose this folder assignment."
         confirmLabel="Delete"
-        loading={deleting}
+        loading={remove.isPending}
       />
     </Stack>
   )
 }
 
-function CatRow({
-  node,
-  depth,
-  onDelete,
-  onRename,
-}: {
+type CatRowProps = {
   node: CatNode
   depth: number
   onDelete: (id: string) => void
   onRename: (id: string, name: string) => Promise<void>
-}) {
+}
+
+function CatRow({ node, depth, onDelete, onRename }: CatRowProps): ReactElement {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(node.cat.name)
+
+  async function commitRename(): Promise<void> {
+    setEditing(false)
+    if (name.trim() && name.trim() !== node.cat.name) {
+      await onRename(node.cat.id, name.trim())
+    } else {
+      setName(node.cat.name)
+    }
+  }
 
   return (
     <>
@@ -185,15 +193,8 @@ function CatRow({
             size="xs"
             value={name}
             onChange={(e) => setName(e.currentTarget.value)}
-            onBlur={async () => {
-              setEditing(false)
-              if (name.trim() && name.trim() !== node.cat.name) {
-                await onRename(node.cat.id, name.trim())
-              } else {
-                setName(node.cat.name)
-              }
-            }}
-            onKeyDown={async (e) => {
+            onBlur={() => void commitRename()}
+            onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
               if (e.key === 'Escape') {
                 setName(node.cat.name)
@@ -204,14 +205,14 @@ function CatRow({
             autoFocus
           />
         ) : (
-          <Text
-            size="sm"
-            style={{ flex: 1, cursor: 'pointer' }}
+          <UnstyledButton
+            type="button"
             onClick={() => setEditing(true)}
-            title="Click to rename"
+            aria-label={`Rename ${node.cat.name}`}
+            style={{ flex: 1, textAlign: 'left' }}
           >
-            {node.cat.name}
-          </Text>
+            <Text size="sm">{node.cat.name}</Text>
+          </UnstyledButton>
         )}
         {node.cat.is_hidden ? (
           <Badge size="xs" variant="outline" color="gray">

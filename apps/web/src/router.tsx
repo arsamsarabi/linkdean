@@ -11,7 +11,7 @@ import { OnboardingPage } from './pages/OnboardingPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { RegisterPage } from './pages/RegisterPage'
-import { getToken } from './api'
+import { getToken } from './lib/authToken'
 import { validateLibrarySearch } from './lib/librarySearch'
 
 const rootRoute = createRootRoute({

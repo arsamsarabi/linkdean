@@ -1,19 +1,20 @@
 import { create } from 'zustand'
 
+/**
+ * UI mirror of server prefs only — not source of truth.
+ * Synced from usePrefsHydration (/auth/me) and settings/vault mutations that invalidate ['me'].
+ * Do not write showHidden/vaultUnlocked from ad-hoc UI without also updating server state.
+ */
 type UiState = {
   showHidden: boolean
   vaultUnlocked: boolean
-  selectedCategoryId: string | null
   setShowHidden: (v: boolean) => void
   setVaultUnlocked: (v: boolean) => void
-  setSelectedCategoryId: (id: string | null) => void
 }
 
 export const useUi = create<UiState>((set) => ({
   showHidden: false,
   vaultUnlocked: false,
-  selectedCategoryId: null,
   setShowHidden: (showHidden) => set({ showHidden }),
   setVaultUnlocked: (vaultUnlocked) => set({ vaultUnlocked }),
-  setSelectedCategoryId: (selectedCategoryId) => set({ selectedCategoryId }),
 }))

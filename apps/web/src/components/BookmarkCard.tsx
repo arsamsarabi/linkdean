@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   ActionIcon,
@@ -27,7 +27,10 @@ import {
   IconTrash,
   IconWorld,
 } from '@tabler/icons-react'
-import { bookmarkPreviewSrc, type CategoryRef } from '../api'
+import type { CategoryRef } from '../schemas'
+import { previewSrcCandidates } from '../services/bookmarkPreview'
+import { googleFavicon, hostname } from '../services/urlDisplay'
+import styles from './BookmarkCard.module.css'
 
 export type BookmarkCardItem = {
   id: string
@@ -42,41 +45,17 @@ export type BookmarkCardItem = {
   categories?: CategoryRef[]
 }
 
-function hostname(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return url
-  }
-}
-
-function googleFavicon(url: string) {
-  const host = hostname(url)
-  if (!host || host === url) return undefined
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
-}
-
-function PreviewFallback({
-  url,
-  faviconUrl,
-}: {
+type PreviewFallbackProps = {
   url: string
   faviconUrl?: string | null
-}) {
+}
+
+function PreviewFallback({ url, faviconUrl }: PreviewFallbackProps): ReactElement {
   const [iconFailed, setIconFailed] = useState(false)
   const iconSrc = !iconFailed ? faviconUrl || googleFavicon(url) : undefined
 
   return (
-    <Group
-      justify="center"
-      align="center"
-      h="100%"
-      gap="sm"
-      style={{
-        background:
-          'linear-gradient(145deg, var(--mantine-color-violet-1), var(--mantine-color-orchid-1))',
-      }}
-    >
+    <Group justify="center" align="center" h="100%" gap="sm" className={styles.previewFallback}>
       {iconSrc ? (
         <Image
           src={iconSrc}
@@ -96,27 +75,21 @@ function PreviewFallback({
   )
 }
 
+type Props = {
+  bookmark: BookmarkCardItem
+  highlightQuery?: string
+  onEdit: (id: string) => void
+  onDelete: (id: string) => void
+}
+
 export function BookmarkCard({
   bookmark: b,
   highlightQuery,
   onEdit,
   onDelete,
-}: {
-  bookmark: BookmarkCardItem
-  highlightQuery?: string
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
-}) {
+}: Props): ReactElement {
   const title = b.title || b.url
-  const candidates = useMemo(() => {
-    const list: string[] = []
-    const primary = bookmarkPreviewSrc(b)
-    if (primary) list.push(primary)
-    if (b.has_preview && b.preview_image_url && b.preview_image_url !== primary) {
-      list.push(b.preview_image_url)
-    }
-    return list
-  }, [b])
+  const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
   const [srcIndex, setSrcIndex] = useState(0)
   const previewSrc = candidates[srcIndex]
@@ -129,21 +102,14 @@ export function BookmarkCard({
   const q = highlightQuery?.trim()
 
   return (
-    <Card
-      withBorder
-      padding="sm"
-      radius="md"
-      h="100%"
-      className="ld-card"
-      style={{ display: 'flex', flexDirection: 'column' }}
-    >
+    <Card withBorder padding="sm" radius="md" h="100%" className={styles.card}>
       <Card.Section>
         <UnstyledButton
           component="a"
           href={b.url}
           target="_blank"
           rel="noreferrer"
-          style={{ display: 'block', width: '100%' }}
+          className={styles.previewLink}
           aria-label={`Open ${title}`}
         >
           <AspectRatio ratio={16 / 9}>
@@ -164,33 +130,23 @@ export function BookmarkCard({
         </UnstyledButton>
       </Card.Section>
 
-      <Stack gap={8} mt="md" style={{ flex: 1 }}>
+      <Stack gap={8} mt="md" className={styles.body}>
         <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
           <UnstyledButton
             component="a"
             href={b.url}
             target="_blank"
             rel="noreferrer"
-            className="ld-link"
-            style={{ flex: 1, minWidth: 0 }}
+            className={styles.titleLink}
           >
             <Group gap={6} wrap="nowrap" align="flex-start">
-              <IconExternalLink
-                size={14}
-                stroke={1.5}
-                style={{ flexShrink: 0, marginTop: 3 }}
-              />
+              <IconExternalLink size={14} stroke={1.5} className={styles.externalIcon} />
               {q ? (
-                <Highlight
-                  highlight={q}
-                  fw={600}
-                  lineClamp={2}
-                  style={{ lineHeight: 1.35 }}
-                >
+                <Highlight highlight={q} fw={600} lineClamp={2} className={styles.titleText}>
                   {title}
                 </Highlight>
               ) : (
-                <Text fw={600} lineClamp={2} style={{ lineHeight: 1.35 }}>
+                <Text fw={600} lineClamp={2} className={styles.titleText}>
                   {title}
                 </Text>
               )}
@@ -262,18 +218,9 @@ export function BookmarkCard({
                 to="/library"
                 search={{ category: c.id }}
                 onClick={(e) => e.stopPropagation()}
-                style={{ textDecoration: 'none' }}
+                className={styles.categoryLink}
               >
-                <Pill
-                  size="sm"
-                  styles={{
-                    root: {
-                      cursor: 'pointer',
-                      backgroundColor: 'var(--mantine-color-violet-filled)',
-                      color: 'var(--mantine-color-gray-0)',
-                    },
-                  }}
-                >
+                <Pill size="sm" className={styles.categoryPill}>
                   {c.path}
                 </Pill>
               </Link>

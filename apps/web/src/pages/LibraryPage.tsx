@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
   Affix,
@@ -32,26 +31,29 @@ import {
   IconSearch,
   IconX,
 } from '@tabler/icons-react'
-import { api, type Bookmark, type SearchHit } from '../api'
 import { BookmarkCard } from '../components/BookmarkCard'
 import { BookmarkGridSkeleton } from '../components/BookmarkCardSkeleton'
-import {
-  BookmarkDrawer,
-  draftFromBookmark,
-  type BookmarkDraft,
-} from '../components/BookmarkDrawer'
+import { BookmarkDrawer, type BookmarkDraft } from '../components/BookmarkDrawer'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { EmptyState } from '../components/EmptyState'
+import { QueryErrorAlert } from '../components/QueryErrorAlert'
+import { useBookmarks, useDeleteBookmark, useSearchBookmarks } from '../hooks/useBookmarks'
+import { useCategories } from '../hooks/useCategories'
+import { useVaultUnlock } from '../hooks/useVault'
 import { categoryPath, categorySelectData } from '../lib/categories'
 import { asStringList, buildLibrarySearch, type SortKey } from '../lib/librarySearch'
-import { useUi } from '../store'
+import { draftFromBookmark } from '../services/bookmarks'
+import {
+  collectTagOptions,
+  filterAndSortLibraryItems,
+  type LibraryListItem,
+} from '../services/libraryList'
+import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
+const FILTER_PANEL_ID = 'library-filter-panel'
 
-type ListItem = Bookmark | (SearchHit & { categories?: Bookmark['categories'] })
-
-export function LibraryPage() {
-  const qc = useQueryClient()
+export function LibraryPage(): ReactElement {
   const nav = useNavigate()
   const searchParams = useSearch({ strict: false }) as {
     q?: string
@@ -60,9 +62,6 @@ export function LibraryPage() {
     tag?: string | string[]
   }
 
-  const showHidden = useUi((s) => s.showHidden)
-  const vaultUnlocked = useUi((s) => s.vaultUnlocked)
-  const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
   const searchRef = useRef<HTMLInputElement>(null)
   const [scroll] = useWindowScroll()
 
@@ -85,7 +84,13 @@ export function LibraryPage() {
   const [unlockOpen, setUnlockOpen] = useState(false)
   const [vaultPass, setVaultPass] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
+
+  const cats = useCategories()
+  const bookmarks = useBookmarks()
+  const searching = debouncedQ.trim().length > 1
+  const search = useSearchBookmarks(debouncedQ, searching)
+  const deleteBookmark = useDeleteBookmark()
+  const vaultUnlock = useVaultUnlock()
 
   useEffect(() => {
     setQ(urlQ)
@@ -112,7 +117,7 @@ export function LibraryPage() {
     sort?: SortKey
     category?: string[]
     tag?: string[]
-  }) {
+  }): void {
     void nav({
       to: '/library',
       search: buildLibrarySearch({
@@ -123,23 +128,6 @@ export function LibraryPage() {
       }),
     })
   }
-
-  const cats = useQuery({
-    queryKey: ['categories', showHidden, vaultUnlocked],
-    queryFn: () => api.categories(showHidden, vaultUnlocked),
-  })
-
-  const bookmarks = useQuery({
-    queryKey: ['bookmarks', vaultUnlocked],
-    queryFn: () => api.bookmarks(null, vaultUnlocked),
-  })
-
-  const searching = debouncedQ.trim().length > 1
-  const search = useQuery({
-    queryKey: ['search', debouncedQ],
-    queryFn: () => api.search(debouncedQ),
-    enabled: searching,
-  })
 
   useEffect(() => {
     if (search.data?.vault_prompt) setUnlockOpen(true)
@@ -171,13 +159,7 @@ export function LibraryPage() {
     ],
   ])
 
-  const allTags = useMemo(() => {
-    const set = new Set<string>()
-    for (const b of bookmarks.data || []) {
-      for (const t of b.tags || []) set.add(t)
-    }
-    return [...set].sort().map((t) => ({ value: t, label: t }))
-  }, [bookmarks.data])
+  const allTags = useMemo(() => collectTagOptions(bookmarks.data || []), [bookmarks.data])
 
   const catLabel = useMemo(() => {
     const list = cats.data || []
@@ -187,65 +169,35 @@ export function LibraryPage() {
     return map
   }, [cats.data])
 
-  const list = useMemo(() => {
-    let items: ListItem[] = searching
+  const list = useMemo((): LibraryListItem[] => {
+    const items: LibraryListItem[] = searching
       ? search.data?.hits || []
       : bookmarks.data || []
-
-    if (filterCats.length) {
-      items = items.filter((b) => {
-        const ids = new Set(
-          (b.categories || []).map((c) => c.id).concat(b.category_id ? [b.category_id] : []),
-        )
-        return filterCats.some((id) => ids.has(id))
-      })
-    }
-    if (filterTags.length) {
-      items = items.filter((b) => filterTags.every((t) => (b.tags || []).includes(t)))
-    }
-
-    const sorted = [...items]
-    sorted.sort((a, b) => {
-      const at = (a.title || a.url).toLowerCase()
-      const bt = (b.title || b.url).toLowerCase()
-      const au = 'updated_at' in a && a.updated_at ? a.updated_at : ''
-      const bu = 'updated_at' in b && b.updated_at ? b.updated_at : ''
-      const ac = 'created_at' in a && a.created_at ? a.created_at : ''
-      const bc = 'created_at' in b && b.created_at ? b.created_at : ''
-      switch (sort) {
-        case 'title_asc':
-          return at.localeCompare(bt)
-        case 'title_desc':
-          return bt.localeCompare(at)
-        case 'updated_asc':
-          return au.localeCompare(bu)
-        case 'created_desc':
-          return bc.localeCompare(ac)
-        case 'updated_desc':
-        default:
-          return bu.localeCompare(au)
-      }
+    return filterAndSortLibraryItems({
+      items,
+      filterCats,
+      filterTags,
+      sort,
     })
-    return sorted
   }, [bookmarks.data, search.data, searching, filterCats, filterTags, sort])
 
-  function toggleFilter() {
+  function toggleFilter(): void {
     setDraftFilterCats(filterCats)
     setDraftFilterTags(filterTags)
     setFilterOpen((o) => !o)
   }
 
-  function applyFilter() {
+  function applyFilter(): void {
     setLibrarySearch({ category: draftFilterCats, tag: draftFilterTags })
     setFilterOpen(false)
   }
 
-  function openCreate() {
+  function openCreate(): void {
     setDraft(null)
     openDrawer()
   }
 
-  function openEdit(id: string) {
+  function openEdit(id: string): void {
     const b = (bookmarks.data || []).find((x) => x.id === id)
     if (!b) {
       notifications.show({ color: 'red', message: 'Bookmark not found' })
@@ -255,35 +207,25 @@ export function LibraryPage() {
     openDrawer()
   }
 
-  async function unlockForSearch() {
+  async function unlockForSearch(): Promise<void> {
     try {
-      await api.vaultUnlock(vaultPass)
-      setVaultUnlocked(true)
+      await vaultUnlock.mutateAsync(vaultPass)
       setVaultPass('')
       setUnlockOpen(false)
-      qc.invalidateQueries({ queryKey: ['vault'] })
-      qc.invalidateQueries({ queryKey: ['me'] })
-      qc.invalidateQueries({ queryKey: ['categories'] })
-      qc.invalidateQueries({ queryKey: ['search'] })
       notifications.show({ message: 'Vault unlocked' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(): Promise<void> {
     if (!deleteId) return
-    setDeleting(true)
     try {
-      await api.deleteBookmark(deleteId)
-      qc.invalidateQueries({ queryKey: ['bookmarks'] })
-      qc.invalidateQueries({ queryKey: ['search'] })
+      await deleteBookmark.mutateAsync(deleteId)
       notifications.show({ message: 'Bookmark deleted' })
       setDeleteId(null)
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
-    } finally {
-      setDeleting(false)
     }
   }
 
@@ -298,7 +240,7 @@ export function LibraryPage() {
         <Stack gap={4}>
           <Title order={2}>Library</Title>
           {!loading && list.length > 0 ? (
-            <Text size="sm" c="dimmed">
+            <Text size="sm" c="dimmed" aria-live="polite">
               {list.length} bookmark{list.length === 1 ? '' : 's'}
               {searching ? ' matched' : ''}
             </Text>
@@ -310,6 +252,20 @@ export function LibraryPage() {
           </Button>
         </Tooltip>
       </Group>
+
+      {cats.isError ? (
+        <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} title="Categories failed" />
+      ) : null}
+      {bookmarks.isError && !searching ? (
+        <QueryErrorAlert
+          error={bookmarks.error}
+          onRetry={() => void bookmarks.refetch()}
+          title="Bookmarks failed"
+        />
+      ) : null}
+      {search.isError && searching ? (
+        <QueryErrorAlert error={search.error} onRetry={() => void search.refetch()} title="Search failed" />
+      ) : null}
 
       <Stack gap="md">
         <Group justify="space-between" align="center" wrap="wrap" gap="sm">
@@ -339,7 +295,7 @@ export function LibraryPage() {
             rightSectionPointerEvents={q ? 'all' : 'none'}
             value={q}
             onChange={(e) => setQ(e.currentTarget.value)}
-            style={{ flex: 1, minWidth: 200, maxWidth: 440 }}
+            className={styles.searchInput}
           />
           <Group gap="xs" wrap="nowrap">
             <Tooltip label="Filter by category or tag">
@@ -347,6 +303,8 @@ export function LibraryPage() {
                 variant={filterOpen || filterActive ? 'light' : 'default'}
                 leftSection={<IconFilter {...iconSm} />}
                 onClick={toggleFilter}
+                aria-expanded={filterOpen}
+                aria-controls={FILTER_PANEL_ID}
               >
                 Filter
                 {filterActive ? ` (${filterCats.length + filterTags.length})` : ''}
@@ -370,14 +328,7 @@ export function LibraryPage() {
         </Group>
 
         <Collapse expanded={filterOpen}>
-          <Stack
-            p="lg"
-            gap="md"
-            style={{
-              border: '1px solid var(--mantine-color-default-border)',
-              borderRadius: 'var(--mantine-radius-md)',
-            }}
-          >
+          <Stack id={FILTER_PANEL_ID} p="lg" gap="md" className={styles.filterPanel}>
             <MultiSelect
               label="Categories"
               data={categorySelectData(cats.data || [])}
@@ -490,11 +441,11 @@ export function LibraryPage() {
       <ConfirmModal
         opened={!!deleteId}
         onClose={() => setDeleteId(null)}
-        onConfirm={confirmDelete}
+        onConfirm={() => void confirmDelete()}
         title="Delete bookmark?"
         body="This removes the bookmark permanently. You cannot undo this."
         confirmLabel="Delete"
-        loading={deleting}
+        loading={deleteBookmark.isPending}
       />
 
       <Modal
@@ -517,8 +468,9 @@ export function LibraryPage() {
             </Button>
             <Button
               leftSection={<IconLockOpen {...iconSm} />}
-              onClick={unlockForSearch}
+              onClick={() => void unlockForSearch()}
               disabled={vaultPass.length < 8}
+              loading={vaultUnlock.isPending}
             >
               Unlock
             </Button>
@@ -529,10 +481,10 @@ export function LibraryPage() {
       <Affix position={{ bottom: 24, right: 24 }}>
         <Group gap="sm">
           <Transition transition="slide-up" mounted={scroll.y > 320}>
-            {(styles) => (
+            {(transitionStyles) => (
               <Tooltip label="Back to top">
                 <ActionIcon
-                  style={styles}
+                  style={transitionStyles}
                   size="lg"
                   radius="xl"
                   variant="filled"

@@ -1,6 +1,8 @@
-import type { Category } from '../api'
+import type { Category } from '../schemas'
 
 export type CatNode = { cat: Category; children: CatNode[] }
+
+export type CategorySelectOption = { value: string; label: string }
 
 export function buildCategoryTree(cats: Category[]): CatNode[] {
   const map = new Map<string, CatNode>()
@@ -29,7 +31,7 @@ export function categoryPath(cat: Category, byId: Map<string, Category>): string
 }
 
 /** Flat options for MultiSelect — label is nested path. */
-export function categorySelectData(cats: Category[]) {
+export function categorySelectData(cats: Category[]): CategorySelectOption[] {
   const byId = new Map(cats.map((c) => [c.id, c]))
   return cats
     .map((c) => ({

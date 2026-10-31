@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Anchor,
@@ -14,64 +14,63 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
-import { api, setToken } from '../api'
 import { AvatarCropModal } from '../components/AvatarCropModal'
+import { useBootstrap } from '../hooks/useBootstrap'
+import { useRegister } from '../hooks/useAuth'
+import { useUploadAvatar } from '../hooks/useSettings'
+import { validatePasswordPair } from '../services/authValidation'
+import motion from '../styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
-export function RegisterPage() {
+export function RegisterPage(): ReactElement {
   const nav = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [busy, setBusy] = useState(false)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null)
   const resetRef = useRef<() => void>(null)
+  const bootstrap = useBootstrap()
+  const register = useRegister()
+  const uploadAvatar = useUploadAvatar()
 
   useEffect(() => {
-    api.bootstrap().then((s) => {
-      if (s.needs_bootstrap) nav({ to: '/onboarding' })
-    })
-  }, [nav])
+    if (bootstrap.data?.needs_bootstrap) {
+      void nav({ to: '/onboarding' })
+    }
+  }, [bootstrap.data, nav])
 
-  async function submit() {
-    if (password.length < 8) {
-      notifications.show({ color: 'red', message: 'Password min 8 chars' })
+  async function submit(): Promise<void> {
+    const check = validatePasswordPair(password, password2)
+    if (!check.ok) {
+      notifications.show({ color: 'red', message: check.message })
       return
     }
-    if (password !== password2) {
-      notifications.show({ color: 'red', message: 'Passwords mismatch' })
-      return
-    }
-    setBusy(true)
     try {
-      const res = await api.register({
+      const res = await register.mutateAsync({
         email,
         password,
         display_name: displayName || undefined,
       })
-      setToken(res.token)
       if (pendingAvatar) {
         try {
-          await api.uploadAvatar(pendingAvatar)
+          await uploadAvatar.mutateAsync(pendingAvatar)
         } catch (e) {
           notifications.show({ color: 'yellow', message: `Account created; avatar failed: ${e}` })
         }
       }
-      if (!res.user.onboarding_completed) nav({ to: '/onboarding' })
-      else nav({ to: '/library' })
+      if (!res.user.onboarding_completed) void nav({ to: '/onboarding' })
+      else void nav({ to: '/library' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
-    } finally {
-      setBusy(false)
     }
   }
 
   return (
-    <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className="ld-fade-in">
+    <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className={motion.fadeIn}>
       <Stack gap={6}>
         <Title order={1} c="violet">
           Create account
@@ -137,13 +136,13 @@ export function RegisterPage() {
           </Group>
           <Button
             leftSection={<IconUserPlus {...iconSm} />}
-            loading={busy}
-            onClick={submit}
+            loading={register.isPending}
+            onClick={() => void submit()}
             disabled={!email || !password}
           >
             Sign up
           </Button>
-          <Anchor component="button" type="button" onClick={() => nav({ to: '/login' })}>
+          <Anchor component="button" type="button" onClick={() => void nav({ to: '/login' })}>
             <Group gap={6} justify="center">
               <IconLogin size={14} stroke={1.5} />
               Already have an account? Sign in
@@ -160,7 +159,7 @@ export function RegisterPage() {
           setCropFile(null)
           resetRef.current?.()
         }}
-        onCropped={async (blob) => {
+        onCropped={(blob) => {
           setPendingAvatar(blob)
           notifications.show({ message: 'Avatar cropped — will upload on sign up' })
         }}

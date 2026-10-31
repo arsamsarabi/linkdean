@@ -1,4 +1,16 @@
 import { Button, Group, Modal, Stack, Text } from '@mantine/core'
+import type { ReactElement } from 'react'
+
+type Props = {
+  opened: boolean
+  onClose: () => void
+  onConfirm: () => void
+  title: string
+  body: string
+  confirmLabel?: string
+  confirmColor?: string
+  loading?: boolean
+}
 
 export function ConfirmModal({
   opened,
@@ -9,16 +21,7 @@ export function ConfirmModal({
   confirmLabel = 'Confirm',
   confirmColor = 'red',
   loading,
-}: {
-  opened: boolean
-  onClose: () => void
-  onConfirm: () => void
-  title: string
-  body: string
-  confirmLabel?: string
-  confirmColor?: string
-  loading?: boolean
-}) {
+}: Props): ReactElement {
   return (
     <Modal opened={opened} onClose={onClose} title={title} centered>
       <Stack gap="lg">

@@ -1,19 +1,17 @@
 import { Button, Stack, Text, ThemeIcon, Title } from '@mantine/core'
-import type { ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
+import styles from './EmptyState.module.css'
 
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-}: {
+type Props = {
   icon: ReactNode
   title: string
   description?: string
   action?: { label: string; onClick: () => void; leftSection?: ReactNode }
-}) {
+}
+
+export function EmptyState({ icon, title, description, action }: Props): ReactElement {
   return (
-    <Stack align="center" gap="md" py={64} px="md" className="ld-fade-in">
+    <Stack align="center" gap="md" py={64} px="md" className={styles.root}>
       <ThemeIcon size={56} radius="xl" variant="light" color="violet">
         {icon}
       </ThemeIcon>

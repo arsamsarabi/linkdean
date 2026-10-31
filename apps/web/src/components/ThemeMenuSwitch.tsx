@@ -1,37 +1,31 @@
-import { SegmentedControl, Stack, Text } from '@mantine/core'
-import { useMantineColorScheme } from '@mantine/core'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react'
+import type { ReactElement } from 'react'
+import { SegmentedControl, Stack, Text, useMantineColorScheme } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { api, type UserSettings } from '../api'
+import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react'
+import type { UserSettings } from '../schemas'
+import { useMe } from '../hooks/useMe'
 import { applyTheme } from '../hooks/usePrefs'
+import { useUpdateSettings } from '../hooks/useSettings'
 
 const icon = { size: 14, stroke: 1.5 } as const
 
 type ThemeValue = UserSettings['theme']
 
-export function ThemeMenuSwitch() {
-  const qc = useQueryClient()
+export function ThemeMenuSwitch(): ReactElement {
   const { setColorScheme } = useMantineColorScheme()
-  const me = useQuery({ queryKey: ['me'], queryFn: api.me })
+  const me = useMe()
   const value: ThemeValue = me.data?.settings.theme ?? 'system'
+  const save = useUpdateSettings()
 
-  const save = useMutation({
-    mutationFn: (theme: ThemeValue) => api.updateSettings({ theme }),
-    onSuccess: (res) => {
-      qc.setQueryData(['me'], (old: unknown) => {
-        if (!old || typeof old !== 'object') return old
-        return { ...(old as object), settings: res.settings }
-      })
-      applyTheme(res.settings.theme, setColorScheme)
-    },
-    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-  })
-
-  function onChange(v: string) {
+  function onChange(v: string): void {
     const theme = v as ThemeValue
     applyTheme(theme, setColorScheme)
-    save.mutate(theme)
+    save.mutate(
+      { theme },
+      {
+        onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+      },
+    )
   }
 
   return (
@@ -45,9 +39,18 @@ export function ThemeMenuSwitch() {
         value={value}
         onChange={onChange}
         data={[
-          { value: 'light', label: <IconSun {...icon} title="Light" /> },
-          { value: 'dark', label: <IconMoon {...icon} title="Dark" /> },
-          { value: 'system', label: <IconDeviceDesktop {...icon} title="System" /> },
+          {
+            value: 'light',
+            label: <IconSun {...icon} aria-label="Light theme" />,
+          },
+          {
+            value: 'dark',
+            label: <IconMoon {...icon} aria-label="Dark theme" />,
+          },
+          {
+            value: 'system',
+            label: <IconDeviceDesktop {...icon} aria-label="System theme" />,
+          },
         ]}
       />
     </Stack>
