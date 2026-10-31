@@ -52,11 +52,18 @@ Home surface for a single user (glance-style sectioned grid). `/` is the dashboa
 - App shell: **Dashboard** nav next to Library; logo click honors `default_landing` (done)
 - Owner-side share cue on bookmarks / folders you have shared out (done; dashboard cards with M3)
 
+**Multi-dashboard (same milestone; schema already allows many rows + one default)**
+
+- User may own several dashboards; exactly one is pinned / active at a time
+- Dashboard page shows the pinned layout; switcher (dropdown) lists all personal dashboards
+- Setting: which dashboard is the default pin (distinct from `default_landing` home route)
+- Create / rename / delete dashboards (keep at least one; deleting pin falls back to another or recreates default)
+
 ---
 
 ## Milestone 3: Shared dashboards
 
-Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX).
+Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX), including multi-dashboard.
 
 **Deliverables**
 
@@ -64,6 +71,7 @@ Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX).
 - Creator controls invitee access: read-only / read-write
 - Invitees see shared layout; RW can rearrange per ACL rules
 - Shared-dashboard visual cues consistent with folder/bookmark share badges
+- Invitees can switch among dashboards shared with them (alongside own, once multi-dashboard ships)
 
 ---
 
