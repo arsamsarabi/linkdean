@@ -135,38 +135,39 @@ export function BookmarkCard({ bookmark: b, highlightQuery, onEdit, onDelete }: 
               )}
             </Group>
           </UnstyledButton>
-          <Group gap={2} wrap="nowrap">
-            <CopyButton value={b.url} timeout={1500}>
-              {({ copied, copy }) => (
-                <Tooltip label={copied ? 'Copied' : 'Copy URL'}>
-                  <ActionIcon variant="subtle" color={copied ? 'green' : 'gray'} aria-label="Copy URL" onClick={copy}>
-                    {copied ? <IconCheck size={16} stroke={1.5} /> : <IconCopy size={16} stroke={1.5} />}
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </CopyButton>
-            <Menu shadow="md" width={160} position="bottom-end" withinPortal>
-              <Menu.Target>
-                <Tooltip label="Actions">
-                  <ActionIcon variant="subtle" color="gray" aria-label="Bookmark actions">
-                    <IconDotsVertical size={16} stroke={1.5} />
-                  </ActionIcon>
-                </Tooltip>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={() => onEdit(b.id)}>
-                  Edit
-                </Menu.Item>
-                <Menu.Item
-                  color="red"
-                  leftSection={<IconTrash size={14} stroke={1.5} />}
-                  onClick={() => onDelete(b.id)}
-                >
-                  Delete
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Group>
+          <Menu shadow="md" width={160} position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Tooltip label="Actions">
+                <ActionIcon variant="subtle" color="gray" aria-label="Bookmark actions">
+                  <IconDotsVertical size={16} stroke={1.5} />
+                </ActionIcon>
+              </Tooltip>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <CopyButton value={b.url} timeout={1500}>
+                {({ copied, copy }) => (
+                  <Menu.Item
+                    leftSection={
+                      copied ? <IconCheck size={14} stroke={1.5} /> : <IconCopy size={14} stroke={1.5} />
+                    }
+                    onClick={copy}
+                  >
+                    {copied ? 'Copied' : 'Copy URL'}
+                  </Menu.Item>
+                )}
+              </CopyButton>
+              <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={() => onEdit(b.id)}>
+                Edit
+              </Menu.Item>
+              <Menu.Item
+                color="red"
+                leftSection={<IconTrash size={14} stroke={1.5} />}
+                onClick={() => onDelete(b.id)}
+              >
+                Delete
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Group>
 
         <Text size="xs" c="dimmed" lineClamp={1}>
