@@ -190,19 +190,24 @@ export function LibraryPage(): ReactElement {
     const list = cats.data || []
     const byId = new Map(list.map((c) => [c.id, c]))
     const map = new Map<string, string>()
+    map.set(FOLDER_UNCATEGORIZED, 'Unsorted')
     for (const c of list) map.set(c.id, categoryPath(c, byId))
     return map
   }, [cats.data])
 
   const list = useMemo((): LibraryListItem[] => {
     const items: LibraryListItem[] = searching ? search.data?.hits || [] : bookmarks.data || []
+    const cats =
+      folderId === FOLDER_UNCATEGORIZED && !filterCats.includes(FOLDER_UNCATEGORIZED)
+        ? [...filterCats, FOLDER_UNCATEGORIZED]
+        : filterCats
     return filterAndSortLibraryItems({
       items,
-      filterCats,
+      filterCats: cats,
       filterTags,
       sort,
     })
-  }, [bookmarks.data, search.data, searching, filterCats, filterTags, sort])
+  }, [bookmarks.data, search.data, searching, filterCats, filterTags, sort, folderId])
 
   function toggleFilter(): void {
     setDraftFilterCats(filterCats)

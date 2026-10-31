@@ -131,7 +131,7 @@ describe('folderBreadcrumb', () => {
     ])
     expect(folderBreadcrumb(FOLDER_UNCATEGORIZED, byId)).toEqual([
       { id: FOLDER_ALL, name: 'All' },
-      { id: FOLDER_UNCATEGORIZED, name: 'Uncategorized' },
+      { id: FOLDER_UNCATEGORIZED, name: 'Unsorted' },
     ])
     expect(folderBreadcrumb(undefined, byId)).toEqual([{ id: FOLDER_ALL, name: 'All' }])
   })
@@ -149,10 +149,10 @@ describe('sortExplorerFolders', () => {
   const folders: ExplorerFolder[] = [
     { id: 'z', name: 'Zebra', bookmarkCount: 0, isVault: false, isHidden: false },
     { id: 'a', name: 'Alpha', bookmarkCount: 0, isVault: false, isHidden: false },
-    { id: FOLDER_UNCATEGORIZED, name: 'Uncategorized', bookmarkCount: 1, isVault: false, isHidden: false },
+    { id: FOLDER_UNCATEGORIZED, name: 'Unsorted', bookmarkCount: 1, isVault: false, isHidden: false },
   ]
 
-  it('sorts by name A–Z and keeps Uncategorized last', () => {
+  it('sorts by name A–Z and keeps Unsorted last', () => {
     expect(sortExplorerFolders(folders, 'title_asc').map((f) => f.id)).toEqual([
       'a',
       'z',
@@ -160,7 +160,7 @@ describe('sortExplorerFolders', () => {
     ])
   })
 
-  it('sorts by name Z–A and keeps Uncategorized last', () => {
+  it('sorts by name Z–A and keeps Unsorted last', () => {
     expect(sortExplorerFolders(folders, 'title_desc').map((f) => f.id)).toEqual([
       'z',
       'a',

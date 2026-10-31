@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FOLDER_UNCATEGORIZED } from './explorerLibrary'
 import { collectTagOptions, filterAndSortLibraryItems } from './libraryList'
 
 const base = {
@@ -56,6 +57,35 @@ describe('filterAndSortLibraryItems', () => {
       sort: 'title_asc',
     })
     expect(result.map((i) => i.id)).toEqual(['2', '1'])
+  })
+
+  it('filters Unsorted (no categories)', () => {
+    const items = [
+      {
+        ...base,
+        id: '1',
+        url: 'https://a.example',
+        title: 'Filed',
+        category_id: 'c1',
+        categories: [{ id: 'c1', name: 'C1', path: 'C1' }],
+      },
+      {
+        ...base,
+        id: '2',
+        url: 'https://b.example',
+        title: 'Loose',
+        category_id: null,
+        categories: [],
+      },
+    ]
+
+    const result = filterAndSortLibraryItems({
+      items,
+      filterCats: [FOLDER_UNCATEGORIZED],
+      filterTags: [],
+      sort: 'title_asc',
+    })
+    expect(result.map((i) => i.id)).toEqual(['2'])
   })
 })
 

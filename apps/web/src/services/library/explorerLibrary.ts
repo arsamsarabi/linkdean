@@ -13,7 +13,7 @@ export type ExplorerFolder = {
   bookmarkCount: number
   isVault: boolean
   isHidden: boolean
-  /** Effective access; omitted for virtual folders (All / Uncategorized). */
+  /** Effective access; omitted for virtual folders (All / Unsorted). */
   access?: CategoryAccess
   /** Owner has shared this folder (or an ancestor) out. */
   sharedOut?: boolean
@@ -74,7 +74,7 @@ function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): Exp
   }
 }
 
-/** Top-level folders at All, plus Uncategorized. */
+/** Top-level folders at All, plus Unsorted. */
 function rootFolders(
   cats: readonly Category[],
   bookmarks: readonly ExplorerBookmarkRef[],
@@ -86,7 +86,7 @@ function rootFolders(
     ...roots,
     {
       id: FOLDER_UNCATEGORIZED,
-      name: 'Uncategorized',
+      name: 'Unsorted',
       bookmarkCount: bookmarks.filter(isUncategorized).length,
       isVault: false,
       isHidden: false,
@@ -138,7 +138,7 @@ export function folderBreadcrumb(
   if (id === FOLDER_ALL) return [home]
 
   if (id === FOLDER_UNCATEGORIZED) {
-    return [home, { id: FOLDER_UNCATEGORIZED, name: 'Uncategorized' }]
+    return [home, { id: FOLDER_UNCATEGORIZED, name: 'Unsorted' }]
   }
 
   const parts: BreadcrumbSegment[] = []
@@ -163,7 +163,7 @@ export function normalizeFolderId(raw: unknown): ExplorerFolderId | undefined {
   return v
 }
 
-/** Sort folders by library sort key. Uncategorized stays last. Date sorts → name (folders have no timestamps). */
+/** Sort folders by library sort key. Unsorted stays last. Date sorts → name (folders have no timestamps). */
 export function sortExplorerFolders(folders: readonly ExplorerFolder[], sort: SortKey): ExplorerFolder[] {
   const uncategorized = folders.filter((f) => f.id === FOLDER_UNCATEGORIZED)
   const rest = folders.filter((f) => f.id !== FOLDER_UNCATEGORIZED)

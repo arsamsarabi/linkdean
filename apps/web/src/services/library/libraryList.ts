@@ -1,5 +1,6 @@
 import type { SortKey } from '@/lib'
 import type { Bookmark, SearchHit } from '@/schemas'
+import { FOLDER_UNCATEGORIZED, isUncategorized } from './explorerLibrary'
 
 export type LibraryListItem = Bookmark | (SearchHit & { categories?: Bookmark['categories'] })
 
@@ -14,9 +15,13 @@ export function filterAndSortLibraryItems(input: LibraryListInput): LibraryListI
   let items: LibraryListItem[] = [...input.items]
 
   if (input.filterCats.length) {
+    const wantUnsorted = input.filterCats.includes(FOLDER_UNCATEGORIZED)
+    const catIds = input.filterCats.filter((id) => id !== FOLDER_UNCATEGORIZED)
     items = items.filter((b) => {
+      if (wantUnsorted && isUncategorized(b)) return true
+      if (!catIds.length) return false
       const ids = new Set((b.categories || []).map((c) => c.id).concat(b.category_id ? [b.category_id] : []))
-      return input.filterCats.some((id) => ids.has(id))
+      return catIds.some((id) => ids.has(id))
     })
   }
   if (input.filterTags.length) {

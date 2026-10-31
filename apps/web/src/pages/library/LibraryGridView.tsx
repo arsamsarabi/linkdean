@@ -17,7 +17,7 @@ import {
 } from '@/components'
 import { categorySelectData } from '@/lib'
 import type { Category } from '@/schemas'
-import type { LibraryListItem } from '@/services'
+import { FOLDER_UNCATEGORIZED, type LibraryListItem } from '@/services'
 import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -91,7 +91,7 @@ export function LibraryGridView({
         <Stack id={filterPanelId} p="lg" gap="md" className={styles.filterPanel}>
           <MultiSelect
             label="Categories"
-            data={categorySelectData(categories)}
+            data={[{ value: FOLDER_UNCATEGORIZED, label: 'Unsorted' }, ...categorySelectData(categories)]}
             value={draftFilterCats}
             onChange={onDraftCats}
             searchable
