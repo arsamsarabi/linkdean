@@ -27,7 +27,7 @@ import {
   IconX,
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { ConfirmModal, EmptyState, GlanceTile, QueryErrorAlert } from '@/components'
+import { BookmarkCard, ConfirmModal, EmptyState, QueryErrorAlert } from '@/components'
 import {
   useBookmarks,
   useCreateDashboard,
@@ -43,6 +43,7 @@ import type { Dashboard } from '@/schemas'
 import {
   emptyDashboardDraft,
   moveSection,
+  newDraftSection,
   toPutDashboardLayout,
   type DashboardDraft,
 } from '@/services'
@@ -58,6 +59,13 @@ function draftFromDashboard(d: Dashboard): DashboardDraft {
       bookmark_ids: s.items.map((i) => i.bookmark.id),
     })),
   }
+}
+
+function buildEditDraft(data: Dashboard | undefined): DashboardDraft {
+  if (!data) return emptyDashboardDraft()
+  const next = draftFromDashboard(data)
+  if (next.sections.length > 0) return next
+  return { ...next, sections: [newDraftSection('Favourites')] }
 }
 
 export function DashboardPage(): ReactElement {
@@ -81,16 +89,10 @@ export function DashboardPage(): ReactElement {
   const patch = usePatchDashboard()
   const remove = useDeleteDashboard()
   const viewerUserId = me.data?.user.id
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<DashboardDraft | null>(null)
+  /** null = view mode; set = edit mode (single source of truth). */
+  const [editDraft, setEditDraft] = useState<DashboardDraft | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
-
-  useEffect(() => {
-    if (!editing && dashboard.data) {
-      // oxlint-disable-next-line react/set-state-in-effect -- sync draft when leaving edit or first load
-      setDraft(null)
-    }
-  }, [editing, dashboard.data])
+  const editing = editDraft !== null
 
   const bookmarkOptions = useMemo(() => {
     return (bookmarks.data || []).map((b) => ({
@@ -111,13 +113,22 @@ export function DashboardPage(): ReactElement {
   }, [list.data])
 
   function startEdit(): void {
-    setDraft(dashboard.data ? draftFromDashboard(dashboard.data) : emptyDashboardDraft())
-    setEditing(true)
+    try {
+      setEditDraft(buildEditDraft(dashboard.data))
+    } catch (e) {
+      notifications.show({ color: 'red', message: `Could not start edit: ${String(e)}` })
+    }
   }
 
   function cancelEdit(): void {
-    setEditing(false)
-    setDraft(null)
+    setEditDraft(null)
+  }
+
+  function addSection(): void {
+    setEditDraft((prev) => {
+      if (!prev) return prev
+      return { ...prev, sections: [...prev.sections, newDraftSection()] }
+    })
   }
 
   function selectDashboard(id: string | null): void {
@@ -130,12 +141,11 @@ export function DashboardPage(): ReactElement {
   }
 
   async function onSave(): Promise<void> {
-    if (!draft || !activeId) return
+    if (!editDraft || !activeId) return
     try {
-      await save.mutateAsync({ id: activeId, body: toPutDashboardLayout(draft) })
+      await save.mutateAsync({ id: activeId, body: toPutDashboardLayout(editDraft) })
       notifications.show({ message: 'Dashboard saved' })
-      setEditing(false)
-      setDraft(null)
+      setEditDraft(null)
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
@@ -172,8 +182,7 @@ export function DashboardPage(): ReactElement {
       const next = remaining.find((d) => d.is_default)?.id || remaining[0]?.id
       setActiveId(next)
       setDeleteOpen(false)
-      setEditing(false)
-      setDraft(null)
+      setEditDraft(null)
       notifications.show({ message: 'Dashboard deleted' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
@@ -209,18 +218,19 @@ export function DashboardPage(): ReactElement {
   }
 
   const view = dashboard.data
-  const empty = view.sections.length === 0 || view.sections.every((s) => s.items.length === 0)
+  const empty = view.sections.length === 0
   const isPinned = view.is_default
+  const draft = editDraft
 
   return (
     <Stack gap="lg">
       <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
         <Stack gap={4} style={{ flex: 1, minWidth: 220 }}>
-          {editing && draft ? (
+          {draft ? (
             <TextInput
               aria-label="Dashboard title"
               value={draft.title}
-              onChange={(e) => setDraft({ ...draft, title: e.currentTarget.value })}
+              onChange={(e) => setEditDraft({ ...draft, title: e.currentTarget.value })}
               styles={{ input: { fontSize: '1.5rem', fontWeight: 700 } }}
             />
           ) : (
@@ -273,12 +283,13 @@ export function DashboardPage(): ReactElement {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
-          {editing ? (
+          {draft ? (
             <>
-              <Button variant="default" leftSection={<IconX {...iconSm} />} onClick={cancelEdit}>
+              <Button type="button" variant="default" leftSection={<IconX {...iconSm} />} onClick={cancelEdit}>
                 Cancel
               </Button>
               <Button
+                type="button"
                 leftSection={<IconDeviceFloppy {...iconSm} />}
                 onClick={() => void onSave()}
                 loading={save.isPending}
@@ -287,15 +298,23 @@ export function DashboardPage(): ReactElement {
               </Button>
             </>
           ) : (
-            <Button leftSection={<IconPencil {...iconSm} />} variant="light" onClick={startEdit}>
+            <Button type="button" leftSection={<IconPencil {...iconSm} />} variant="light" onClick={startEdit}>
               Edit layout
             </Button>
           )}
         </Group>
       </Group>
 
-      {editing && draft ? (
+      {draft ? (
         <Stack gap="md">
+          <Text size="sm" c="violet" fw={600}>
+            Editing layout — pick bookmarks, then Save. Manage bookmarks in the library.
+          </Text>
+          {bookmarkOptions.length === 0 ? (
+            <Text size="sm" c="orange">
+              No bookmarks in your library yet. Add some in the library, then return here to pin them.
+            </Text>
+          ) : null}
           {draft.sections.map((section, idx) => (
             <Stack
               key={section.key}
@@ -311,7 +330,7 @@ export function DashboardPage(): ReactElement {
                   onChange={(e) => {
                     const next = [...draft.sections]
                     next[idx] = { ...section, title: e.currentTarget.value }
-                    setDraft({ ...draft, sections: next })
+                    setEditDraft({ ...draft, sections: next })
                   }}
                 />
                 <Group gap={4} wrap="nowrap">
@@ -321,7 +340,7 @@ export function DashboardPage(): ReactElement {
                       aria-label="Move section up"
                       disabled={idx === 0}
                       onClick={() =>
-                        setDraft({ ...draft, sections: moveSection(draft.sections, idx, -1) })
+                        setEditDraft({ ...draft, sections: moveSection(draft.sections, idx, -1) })
                       }
                     >
                       <IconArrowUp size={16} stroke={1.5} />
@@ -333,7 +352,7 @@ export function DashboardPage(): ReactElement {
                       aria-label="Move section down"
                       disabled={idx === draft.sections.length - 1}
                       onClick={() =>
-                        setDraft({ ...draft, sections: moveSection(draft.sections, idx, 1) })
+                        setEditDraft({ ...draft, sections: moveSection(draft.sections, idx, 1) })
                       }
                     >
                       <IconArrowDown size={16} stroke={1.5} />
@@ -345,7 +364,7 @@ export function DashboardPage(): ReactElement {
                       color="red"
                       aria-label="Remove section"
                       onClick={() =>
-                        setDraft({
+                        setEditDraft({
                           ...draft,
                           sections: draft.sections.filter((_, i) => i !== idx),
                         })
@@ -366,15 +385,15 @@ export function DashboardPage(): ReactElement {
                 onChange={(bookmark_ids) => {
                   const next = [...draft.sections]
                   next[idx] = { ...section, bookmark_ids }
-                  setDraft({ ...draft, sections: next })
+                  setEditDraft({ ...draft, sections: next })
                 }}
               />
               {section.bookmark_ids.length === 0 ? (
                 <Text size="xs" c="dimmed">
-                  No bookmarks yet — pick a few above for a dense glance row.
+                  No bookmarks yet — pick a few above.
                 </Text>
               ) : (
-                <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, lg: 4 }} spacing="xs">
+                <SimpleGrid cols={{ base: 2, sm: 4, lg: 6, xl: 8 }} spacing="sm">
                   {section.bookmark_ids.map((id) => {
                     const b = bookmarkById.get(id)
                     if (!b) {
@@ -384,7 +403,15 @@ export function DashboardPage(): ReactElement {
                         </Text>
                       )
                     }
-                    return <GlanceTile key={id} bookmark={b} viewerUserId={viewerUserId} />
+                    return (
+                      <BookmarkCard
+                        key={id}
+                        bookmark={{ ...b, can_write: false }}
+                        viewerUserId={viewerUserId}
+                        onEdit={() => undefined}
+                        onDelete={() => undefined}
+                      />
+                    )
                   })}
                 </SimpleGrid>
               )}
@@ -395,19 +422,7 @@ export function DashboardPage(): ReactElement {
               No sections. Add one to start pinning links.
             </Text>
           ) : null}
-          <Button
-            variant="light"
-            leftSection={<IconPlus {...iconSm} />}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                sections: [
-                  ...draft.sections,
-                  { key: crypto.randomUUID(), title: 'New section', bookmark_ids: [] },
-                ],
-              })
-            }
-          >
+          <Button type="button" variant="light" leftSection={<IconPlus {...iconSm} />} onClick={addSection}>
             Add section
           </Button>
         </Stack>
@@ -432,12 +447,14 @@ export function DashboardPage(): ReactElement {
                   No bookmarks in this section.
                 </Text>
               ) : (
-                <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }} spacing="xs">
+                <SimpleGrid cols={{ base: 2, sm: 4, lg: 6, xl: 8 }} spacing="sm">
                   {section.items.map((item) => (
-                    <GlanceTile
+                    <BookmarkCard
                       key={item.id}
-                      bookmark={item.bookmark}
+                      bookmark={{ ...item.bookmark, can_write: false }}
                       viewerUserId={viewerUserId}
+                      onEdit={() => undefined}
+                      onDelete={() => undefined}
                     />
                   ))}
                 </SimpleGrid>

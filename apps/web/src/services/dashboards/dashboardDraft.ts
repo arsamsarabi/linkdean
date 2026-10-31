@@ -1,3 +1,5 @@
+import { newClientId } from '@/lib/id'
+
 export type DashboardDraftSection = {
   key: string
   title: string
@@ -12,8 +14,12 @@ export type DashboardDraft = {
 export function emptyDashboardDraft(): DashboardDraft {
   return {
     title: 'Home',
-    sections: [{ key: crypto.randomUUID(), title: 'Favourites', bookmark_ids: [] }],
+    sections: [{ key: newClientId(), title: 'Favourites', bookmark_ids: [] }],
   }
+}
+
+export function newDraftSection(title = 'New section'): DashboardDraftSection {
+  return { key: newClientId(), title, bookmark_ids: [] }
 }
 
 export function moveSection<T>(sections: readonly T[], index: number, delta: number): T[] {
