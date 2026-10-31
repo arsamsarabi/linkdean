@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { draftFromBookmark, emptyDraft } from './bookmarks'
 import type { Bookmark } from '@/schemas'
+import { draftFromBookmark, emptyDraft } from './bookmarks'
 
 describe('bookmarks drafts', () => {
   it('emptyDraft returns blank fields', () => {

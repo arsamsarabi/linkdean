@@ -9,10 +9,7 @@ import { api } from '@/api'
 import type { Bookmark, SearchResponse } from '@/schemas'
 import { useUi } from '@/store'
 
-export function useBookmarks(
-  categoryId?: string | null,
-  includeVault?: boolean,
-): UseQueryResult<Bookmark[]> {
+export function useBookmarks(categoryId?: string | null, includeVault?: boolean): UseQueryResult<Bookmark[]> {
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const vault = includeVault ?? vaultUnlocked
   return useQuery({
@@ -24,10 +21,7 @@ export function useBookmarks(
   })
 }
 
-export function useSearchBookmarks(
-  q: string,
-  enabled: boolean,
-): UseQueryResult<SearchResponse> {
+export function useSearchBookmarks(q: string, enabled: boolean): UseQueryResult<SearchResponse> {
   return useQuery({
     queryKey: ['search', q],
     queryFn: () => api.search(q),

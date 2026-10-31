@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
-import { Link } from '@tanstack/react-router'
 import {
   ActionIcon,
   AspectRatio,
@@ -27,8 +26,9 @@ import {
   IconTrash,
   IconWorld,
 } from '@tabler/icons-react'
+import { Link } from '@tanstack/react-router'
 import type { CategoryRef } from '@/schemas'
-import { previewSrcCandidates, googleFavicon, hostname } from '@/services'
+import { googleFavicon, hostname, previewSrcCandidates } from '@/services'
 import styles from './BookmarkCard.module.css'
 
 export type BookmarkCardItem = {
@@ -56,14 +56,7 @@ function PreviewFallback({ url, faviconUrl }: PreviewFallbackProps): ReactElemen
   return (
     <Group justify="center" align="center" h="100%" gap="sm" className={styles.previewFallback}>
       {iconSrc ? (
-        <Image
-          src={iconSrc}
-          alt=""
-          w={32}
-          h={32}
-          fit="contain"
-          onError={() => setIconFailed(true)}
-        />
+        <Image src={iconSrc} alt="" w={32} h={32} fit="contain" onError={() => setIconFailed(true)} />
       ) : (
         <IconWorld size={28} stroke={1.5} color="var(--mantine-color-dimmed)" />
       )}
@@ -81,12 +74,7 @@ type Props = {
   onDelete: (id: string) => void
 }
 
-export function BookmarkCard({
-  bookmark: b,
-  highlightQuery,
-  onEdit,
-  onDelete,
-}: Props): ReactElement {
+export function BookmarkCard({ bookmark: b, highlightQuery, onEdit, onDelete }: Props): ReactElement {
   const title = b.title || b.url
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
@@ -131,13 +119,7 @@ export function BookmarkCard({
 
       <Stack gap={8} mt="md" className={styles.body}>
         <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
-          <UnstyledButton
-            component="a"
-            href={b.url}
-            target="_blank"
-            rel="noreferrer"
-            className={styles.titleLink}
-          >
+          <UnstyledButton component="a" href={b.url} target="_blank" rel="noreferrer" className={styles.titleLink}>
             <Group gap={6} wrap="nowrap" align="flex-start">
               <IconExternalLink size={14} stroke={1.5} className={styles.externalIcon} />
               {q ? (
@@ -155,17 +137,8 @@ export function BookmarkCard({
             <CopyButton value={b.url} timeout={1500}>
               {({ copied, copy }) => (
                 <Tooltip label={copied ? 'Copied' : 'Copy URL'}>
-                  <ActionIcon
-                    variant="subtle"
-                    color={copied ? 'green' : 'gray'}
-                    aria-label="Copy URL"
-                    onClick={copy}
-                  >
-                    {copied ? (
-                      <IconCheck size={16} stroke={1.5} />
-                    ) : (
-                      <IconCopy size={16} stroke={1.5} />
-                    )}
+                  <ActionIcon variant="subtle" color={copied ? 'green' : 'gray'} aria-label="Copy URL" onClick={copy}>
+                    {copied ? <IconCheck size={16} stroke={1.5} /> : <IconCopy size={16} stroke={1.5} />}
                   </ActionIcon>
                 </Tooltip>
               )}
@@ -179,10 +152,7 @@ export function BookmarkCard({
                 </Tooltip>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item
-                  leftSection={<IconPencil size={14} stroke={1.5} />}
-                  onClick={() => onEdit(b.id)}
-                >
+                <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={() => onEdit(b.id)}>
                   Edit
                 </Menu.Item>
                 <Menu.Item

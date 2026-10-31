@@ -1,11 +1,6 @@
-import {
-  Outlet,
-  createRootRoute,
-  createRoute,
-  redirect,
-} from '@tanstack/react-router'
-import { AppShell, LoginPage, LibraryPage, OnboardingPage, ProfilePage, SettingsPage, RegisterPage } from '@/pages'
+import { createRootRoute, createRoute, Outlet, redirect } from '@tanstack/react-router'
 import { getToken, validateLibrarySearch } from '@/lib'
+import { AppShell, LibraryPage, LoginPage, OnboardingPage, ProfilePage, RegisterPage, SettingsPage } from '@/pages'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -89,12 +84,5 @@ export const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
   onboardingRoute,
-  appRoute.addChildren([
-    libraryIndexRoute,
-    libraryRoute,
-    importRoute,
-    vaultRoute,
-    profileRoute,
-    settingsRoute,
-  ]),
+  appRoute.addChildren([libraryIndexRoute, libraryRoute, importRoute, vaultRoute, profileRoute, settingsRoute]),
 ])

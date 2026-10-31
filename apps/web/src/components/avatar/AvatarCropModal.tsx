@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react'
-import Cropper, { type Area } from 'react-easy-crop'
 import { Button, Group, Modal, Slider, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconCheck, IconX } from '@tabler/icons-react'
+import Cropper, { type Area } from 'react-easy-crop'
 import { getCroppedBlob } from '@/services'
 import styles from './AvatarCropModal.module.css'
 
@@ -79,12 +79,7 @@ export function AvatarCropModal({ opened, file, onClose, onCropped }: Props): Re
           <Button variant="default" leftSection={<IconX {...iconSm} />} onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            leftSection={<IconCheck {...iconSm} />}
-            loading={busy}
-            onClick={() => void save()}
-            disabled={!area}
-          >
+          <Button leftSection={<IconCheck {...iconSm} />} loading={busy} onClick={() => void save()} disabled={!area}>
             Save avatar
           </Button>
         </Group>

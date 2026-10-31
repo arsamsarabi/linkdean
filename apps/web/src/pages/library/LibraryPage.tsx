@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   ActionIcon,
   Affix,
@@ -31,6 +30,7 @@ import {
   IconSearch,
   IconX,
 } from '@tabler/icons-react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   BookmarkCard,
   BookmarkDrawer,
@@ -40,26 +40,9 @@ import {
   QueryErrorAlert,
   type BookmarkDraft,
 } from '@/components'
-import {
-  useBookmarks,
-  useCategories,
-  useDeleteBookmark,
-  useSearchBookmarks,
-  useVaultUnlock,
-} from '@/hooks'
-import {
-  asStringList,
-  buildLibrarySearch,
-  categoryPath,
-  categorySelectData,
-  type SortKey,
-} from '@/lib'
-import {
-  collectTagOptions,
-  draftFromBookmark,
-  filterAndSortLibraryItems,
-  type LibraryListItem,
-} from '@/services'
+import { useBookmarks, useCategories, useDeleteBookmark, useSearchBookmarks, useVaultUnlock } from '@/hooks'
+import { asStringList, buildLibrarySearch, categoryPath, categorySelectData, type SortKey } from '@/lib'
+import { collectTagOptions, draftFromBookmark, filterAndSortLibraryItems, type LibraryListItem } from '@/services'
 import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -77,10 +60,7 @@ export function LibraryPage(): ReactElement {
   const searchRef = useRef<HTMLInputElement>(null)
   const [scroll] = useWindowScroll()
 
-  const filterCats = useMemo(
-    () => asStringList(searchParams.category),
-    [searchParams.category],
-  )
+  const filterCats = useMemo(() => asStringList(searchParams.category), [searchParams.category])
   const filterTags = useMemo(() => asStringList(searchParams.tag), [searchParams.tag])
   const sort: SortKey = searchParams.sort ?? 'updated_desc'
   const urlQ = searchParams.q ?? ''
@@ -122,14 +102,9 @@ export function LibraryPage(): ReactElement {
       }),
       replace: true,
     })
-  }, [debouncedQ]) // eslint-disable-line react-hooks/exhaustive-deps -- sync debounce → URL only
+  }, [debouncedQ]) // oxlint-disable-line react-hooks/exhaustive-deps -- sync debounce → URL only
 
-  function setLibrarySearch(patch: {
-    q?: string
-    sort?: SortKey
-    category?: string[]
-    tag?: string[]
-  }): void {
+  function setLibrarySearch(patch: { q?: string; sort?: SortKey; category?: string[]; tag?: string[] }): void {
     void nav({
       to: '/library',
       search: buildLibrarySearch({
@@ -182,9 +157,7 @@ export function LibraryPage(): ReactElement {
   }, [cats.data])
 
   const list = useMemo((): LibraryListItem[] => {
-    const items: LibraryListItem[] = searching
-      ? search.data?.hits || []
-      : bookmarks.data || []
+    const items: LibraryListItem[] = searching ? search.data?.hits || [] : bookmarks.data || []
     return filterAndSortLibraryItems({
       items,
       filterCats,
@@ -269,11 +242,7 @@ export function LibraryPage(): ReactElement {
         <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} title="Categories failed" />
       ) : null}
       {bookmarks.isError && !searching ? (
-        <QueryErrorAlert
-          error={bookmarks.error}
-          onRetry={() => void bookmarks.refetch()}
-          title="Bookmarks failed"
-        />
+        <QueryErrorAlert error={bookmarks.error} onRetry={() => void bookmarks.refetch()} title="Bookmarks failed" />
       ) : null}
       {search.isError && searching ? (
         <QueryErrorAlert error={search.error} onRetry={() => void search.refetch()} title="Search failed" />
@@ -372,9 +341,7 @@ export function LibraryPage(): ReactElement {
               <Pill
                 key={id}
                 withRemoveButton
-                onRemove={() =>
-                  setLibrarySearch({ category: filterCats.filter((x) => x !== id) })
-                }
+                onRemove={() => setLibrarySearch({ category: filterCats.filter((x) => x !== id) })}
               >
                 {catLabel.get(id) || id}
               </Pill>
@@ -388,11 +355,7 @@ export function LibraryPage(): ReactElement {
                 #{t}
               </Pill>
             ))}
-            <Button
-              variant="subtle"
-              size="compact-sm"
-              onClick={() => setLibrarySearch({ category: [], tag: [] })}
-            >
+            <Button variant="subtle" size="compact-sm" onClick={() => setLibrarySearch({ category: [], tag: [] })}>
               Clear filters
             </Button>
           </Group>
@@ -443,12 +406,7 @@ export function LibraryPage(): ReactElement {
         </SimpleGrid>
       )}
 
-      <BookmarkDrawer
-        opened={drawerOpen}
-        onClose={closeDrawer}
-        categories={cats.data || []}
-        initial={draft}
-      />
+      <BookmarkDrawer opened={drawerOpen} onClose={closeDrawer} categories={cats.data || []} initial={draft} />
 
       <ConfirmModal
         opened={!!deleteId}
@@ -460,11 +418,7 @@ export function LibraryPage(): ReactElement {
         loading={deleteBookmark.isPending}
       />
 
-      <Modal
-        opened={unlockOpen}
-        onClose={() => setUnlockOpen(false)}
-        title="Unlock vault for search"
-      >
+      <Modal opened={unlockOpen} onClose={() => setUnlockOpen(false)} title="Unlock vault for search">
         <Stack gap="md">
           <Text size="sm" c="dimmed">
             Settings say vault should be included in search. Unlock to include vault hits.

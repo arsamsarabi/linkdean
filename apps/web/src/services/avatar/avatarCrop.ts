@@ -24,10 +24,6 @@ export async function getCroppedBlob(imageSrc: string, crop: CropArea): Promise<
   if (!ctx) throw new Error('canvas unavailable')
   ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, size, size)
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('encode failed'))),
-      'image/jpeg',
-      0.95,
-    )
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/jpeg', 0.95)
   })
 }

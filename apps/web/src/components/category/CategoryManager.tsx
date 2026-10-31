@@ -16,15 +16,10 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconFolder, IconFolderPlus, IconTrash } from '@tabler/icons-react'
-import {
-  useCategories,
-  useCreateCategory,
-  useDeleteCategory,
-  useUpdateCategory,
-} from '@/hooks'
-import { buildCategoryTree, categorySelectData, type CatNode } from '@/lib'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { QueryErrorAlert } from '@/components/query-error-alert'
+import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from '@/hooks'
+import { buildCategoryTree, categorySelectData, type CatNode } from '@/lib'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -43,7 +38,7 @@ export function CategoryManager(): ReactElement {
   const tree = useMemo(() => buildCategoryTree(cats.data || []), [cats.data])
   const parentOptions = useMemo(
     () => [{ value: '', label: '— root —' }, ...categorySelectData(cats.data || [])],
-    [cats.data],
+    [cats.data]
   )
 
   async function onCreate(): Promise<void> {
@@ -81,9 +76,7 @@ export function CategoryManager(): ReactElement {
         Nested folders for the library. Manage here — library filters by category.
       </Text>
 
-      {cats.isError ? (
-        <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} />
-      ) : null}
+      {cats.isError ? <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} /> : null}
 
       {cats.isLoading ? (
         <Stack gap="xs">
@@ -130,16 +123,8 @@ export function CategoryManager(): ReactElement {
           clearable
         />
         <Group gap="lg">
-          <Checkbox
-            label="Hidden"
-            checked={hidden}
-            onChange={(e) => setHidden(e.currentTarget.checked)}
-          />
-          <Checkbox
-            label="Vault"
-            checked={vault}
-            onChange={(e) => setVault(e.currentTarget.checked)}
-          />
+          <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
+          <Checkbox label="Vault" checked={vault} onChange={(e) => setVault(e.currentTarget.checked)} />
         </Group>
         <Button
           leftSection={<IconFolderPlus {...iconSm} />}
@@ -237,13 +222,7 @@ function CatRow({ node, depth, onDelete, onRename }: CatRowProps): ReactElement 
         </Tooltip>
       </Group>
       {node.children.map((c) => (
-        <CatRow
-          key={c.cat.id}
-          node={c}
-          depth={depth + 1}
-          onDelete={onDelete}
-          onRename={onRename}
-        />
+        <CatRow key={c.cat.id} node={c} depth={depth + 1} onDelete={onDelete} onRename={onRename} />
       ))}
     </>
   )

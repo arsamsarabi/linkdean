@@ -12,15 +12,7 @@ type Props = {
   alt?: string
 }
 
-export function UserAvatar({
-  hasAvatar,
-  label,
-  size,
-  radius = 'xl',
-  bust,
-  color = 'blue',
-  alt,
-}: Props): ReactElement {
+export function UserAvatar({ hasAvatar, label, size, radius = 'xl', bust, color = 'blue', alt }: Props): ReactElement {
   const src = useAvatarImage(hasAvatar, bust)
 
   const initials = label

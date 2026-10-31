@@ -1,5 +1,4 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   Divider,
   Group,
@@ -16,15 +15,11 @@ import {
   useMantineColorScheme,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconArrowsExchange,
-  IconFolder,
-  IconLock,
-  IconSettings,
-} from '@tabler/icons-react'
-import type { UserSettings } from '@/schemas'
+import { IconArrowsExchange, IconFolder, IconLock, IconSettings } from '@tabler/icons-react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { CategoryManager, ImportExportPanel, QueryErrorAlert, VaultPanel } from '@/components'
-import { useMe, applyTheme, useUpdateSettings } from '@/hooks'
+import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
+import type { UserSettings } from '@/schemas'
 
 const SETTINGS_TABS = ['general', 'categories', 'import', 'vault'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
@@ -87,9 +82,7 @@ export function SettingsPage(): ReactElement {
         <Title order={2}>Settings</Title>
       </Group>
 
-      {me.isError ? (
-        <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} />
-      ) : null}
+      {me.isError ? <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} /> : null}
 
       <Tabs value={tab} onChange={setTab}>
         <Tabs.List>

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import {
   Button,
   Center,
@@ -26,9 +25,18 @@ import {
   IconUpload,
   IconUserPlus,
 } from '@tabler/icons-react'
-import { getToken } from '@/lib'
+import { useNavigate } from '@tanstack/react-router'
 import { AvatarCropModal } from '@/components'
-import { useBootstrap, useCompleteOnboarding, useRegister, useMe, useImportBookmarks, useUploadAvatar, useVaultSetup } from '@/hooks'
+import {
+  useBootstrap,
+  useCompleteOnboarding,
+  useImportBookmarks,
+  useMe,
+  useRegister,
+  useUploadAvatar,
+  useVaultSetup,
+} from '@/hooks'
+import { getToken } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
 
@@ -187,8 +195,7 @@ export function OnboardingPage(): ReactElement {
           Welcome to Linkdean
         </Title>
         <Text c="dimmed">
-          First account becomes <strong>admin</strong>. Nested cats, Meilisearch, vault for sensitive
-          links.
+          First account becomes <strong>admin</strong>. Nested cats, Meilisearch, vault for sensitive links.
         </Text>
       </Stack>
 
@@ -196,9 +203,7 @@ export function OnboardingPage(): ReactElement {
         <Stepper.Step label="Welcome" description="What this is">
           <Paper p="xl" mt="md" withBorder>
             <Stack>
-              <Text>
-                Self-hosted bookmarks. You own the data. Import from browser / Pocket / Raindrop next.
-              </Text>
+              <Text>Self-hosted bookmarks. You own the data. Import from browser / Pocket / Raindrop next.</Text>
               <Text size="sm" c="dimmed">
                 Next: create your admin account.
               </Text>
@@ -218,12 +223,7 @@ export function OnboardingPage(): ReactElement {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.currentTarget.value)}
               />
-              <TextInput
-                label="Email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.currentTarget.value)}
-              />
+              <TextInput label="Email" required value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
               <PasswordInput
                 label="Password"
                 required
@@ -283,9 +283,7 @@ export function OnboardingPage(): ReactElement {
         <Stepper.Step label="Vault" description="Optional">
           <Paper p="xl" mt="md" withBorder>
             <Stack>
-              <Text>
-                Vault categories encrypt titles/URLs at rest. Skip now — set up later under Vault.
-              </Text>
+              <Text>Vault categories encrypt titles/URLs at rest. Skip now — set up later under Vault.</Text>
               <PasswordInput
                 label="Vault passphrase"
                 value={vaultPass}
@@ -297,18 +295,10 @@ export function OnboardingPage(): ReactElement {
                 onChange={(e) => setVaultPass2(e.currentTarget.value)}
               />
               <Group>
-                <Button
-                  leftSection={<IconLockPlus {...iconSm} />}
-                  loading={busy}
-                  onClick={() => void setupVault()}
-                >
+                <Button leftSection={<IconLockPlus {...iconSm} />} loading={busy} onClick={() => void setupVault()}>
                   Enable vault
                 </Button>
-                <Button
-                  variant="subtle"
-                  leftSection={<IconPlayerSkipForward {...iconSm} />}
-                  onClick={() => setStep(3)}
-                >
+                <Button variant="subtle" leftSection={<IconPlayerSkipForward {...iconSm} />} onClick={() => setStep(3)}>
                   Skip for now
                 </Button>
               </Group>

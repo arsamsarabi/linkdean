@@ -52,11 +52,7 @@
 }
 
 .previewFallback {
-  background: linear-gradient(
-    145deg,
-    var(--mantine-color-violet-1),
-    var(--mantine-color-orchid-1)
-  );
+  background: linear-gradient(145deg, var(--mantine-color-violet-1), var(--mantine-color-orchid-1));
 }
 
 .categoryPill {

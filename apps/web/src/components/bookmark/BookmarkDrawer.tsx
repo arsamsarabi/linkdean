@@ -1,19 +1,9 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import {
-  Box,
-  Button,
-  Drawer,
-  LoadingOverlay,
-  MultiSelect,
-  Stack,
-  TagsInput,
-  TextInput,
-  Textarea,
-} from '@mantine/core'
+import { Box, Button, Drawer, LoadingOverlay, MultiSelect, Stack, TagsInput, Textarea, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import type { Category } from '@/schemas'
 import { useCreateBookmark, useUpdateBookmark } from '@/hooks'
 import { categorySelectData } from '@/lib'
+import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
 
 export type { BookmarkDraft }
@@ -121,12 +111,7 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
             onChange={(tags) => setDraft((d) => ({ ...d, tags }))}
             clearable
           />
-          <Button
-            mt="sm"
-            onClick={() => void save()}
-            disabled={!draft.url.trim()}
-            loading={pending}
-          >
+          <Button mt="sm" onClick={() => void save()} disabled={!draft.url.trim()} loading={pending}>
             {editing ? 'Save changes' : 'Add bookmark'}
           </Button>
         </Stack>

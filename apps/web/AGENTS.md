@@ -332,7 +332,10 @@ When modifying JS files:
 
 ## 17. Developer experience
 
-- Follow ESLint and Prettier rules
+- **Format:** Prettier (`.prettierrc`) — includes import sorting via `@ianvs/prettier-plugin-sort-imports`
+- **Lint:** Oxlint (`.oxlintrc.json`) — correctness only; `style` category off so it does not fight Prettier
+- Do not enable Oxlint formatting / `sort-imports` rules; Prettier owns whitespace, quotes, semis, trailing commas, and import order
+- Scripts: `pnpm format` / `pnpm format:check`, `pnpm lint`, `pnpm lint:all` (format check then lint)
 - Use consistent commit messages
 - Keep PRs small and focused
 
@@ -366,4 +369,3 @@ A task is complete only when:
 - Accessibility is verified
 - Edge cases are handled
 - Code is reviewed and approved
-

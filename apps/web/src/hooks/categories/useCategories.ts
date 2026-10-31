@@ -9,10 +9,7 @@ import { api } from '@/api'
 import type { Category } from '@/schemas'
 import { useUi } from '@/store'
 
-export function useCategories(
-  includeHidden?: boolean,
-  includeVault?: boolean,
-): UseQueryResult<Category[]> {
+export function useCategories(includeHidden?: boolean, includeVault?: boolean): UseQueryResult<Category[]> {
   const showHidden = useUi((s) => s.showHidden)
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const hidden = includeHidden ?? showHidden

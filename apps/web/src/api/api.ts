@@ -1,8 +1,8 @@
-import { req } from './client'
+import { z } from 'zod'
 import {
   authTokenResponseSchema,
-  bootstrapStatusSchema,
   bookmarkSchema,
+  bootstrapStatusSchema,
   categoriesSchema,
   categorySchema,
   duplicatesSchema,
@@ -18,7 +18,7 @@ import {
   type UserPublic,
   type UserSettings,
 } from '@/schemas'
-import { z } from 'zod'
+import { req } from './client'
 
 const bookmarksSchema = z.array(bookmarkSchema)
 
@@ -33,14 +33,10 @@ export const api = {
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/register', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 
-  login: (body: {
-    email: string
-    password: string
-  }): Promise<{ user: UserPublic; token: string }> =>
+  login: (body: { email: string; password: string }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/login', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 
-  logout: (): Promise<{ ok: boolean }> =>
-    req('/auth/logout', { method: 'POST' }, okSchema),
+  logout: (): Promise<{ ok: boolean }> => req('/auth/logout', { method: 'POST' }, okSchema),
 
   me: (): Promise<{ user: UserPublic; settings: UserSettings; vault_unlocked: boolean }> =>
     req('/auth/me', {}, meResponseSchema),
@@ -56,14 +52,10 @@ export const api = {
   }): Promise<{ user: UserPublic }> =>
     req('/users/me', { method: 'PATCH', body: JSON.stringify(body) }, userEnvelopeSchema),
 
-  changePassword: (body: {
-    current_password: string
-    new_password: string
-  }): Promise<{ ok: boolean }> =>
+  changePassword: (body: { current_password: string; new_password: string }): Promise<{ ok: boolean }> =>
     req('/users/me/password', { method: 'POST', body: JSON.stringify(body) }, okSchema),
 
-  getSettings: (): Promise<{ settings: UserSettings }> =>
-    req('/users/me/settings', {}, settingsEnvelopeSchema),
+  getSettings: (): Promise<{ settings: UserSettings }> => req('/users/me/settings', {}, settingsEnvelopeSchema),
 
   updateSettings: (
     body: Partial<{
@@ -72,13 +64,9 @@ export const api = {
       theme: UserSettings['theme']
       vault_auto_lock_minutes: number
       default_landing: UserSettings['default_landing']
-    }>,
+    }>
   ): Promise<{ settings: UserSettings }> =>
-    req(
-      '/users/me/settings',
-      { method: 'PATCH', body: JSON.stringify(body) },
-      settingsEnvelopeSchema,
-    ),
+    req('/users/me/settings', { method: 'PATCH', body: JSON.stringify(body) }, settingsEnvelopeSchema),
 
   uploadAvatar: async (blob: Blob): Promise<{ user: UserPublic }> => {
     const fd = new FormData()
@@ -86,15 +74,10 @@ export const api = {
     return req('/users/me/avatar', { method: 'POST', body: fd }, userEnvelopeSchema)
   },
 
-  deleteAvatar: (): Promise<{ user: UserPublic }> =>
-    req('/users/me/avatar', { method: 'DELETE' }, userEnvelopeSchema),
+  deleteAvatar: (): Promise<{ user: UserPublic }> => req('/users/me/avatar', { method: 'DELETE' }, userEnvelopeSchema),
 
   categories: (include_hidden = false, include_vault = false): Promise<Category[]> =>
-    req(
-      `/categories?include_hidden=${include_hidden}&include_vault=${include_vault}`,
-      {},
-      categoriesSchema,
-    ),
+    req(`/categories?include_hidden=${include_hidden}&include_vault=${include_vault}`, {}, categoriesSchema),
 
   createCategory: (body: Partial<Category> & { name: string }): Promise<Category> =>
     req('/categories', { method: 'POST', body: JSON.stringify(body) }, categorySchema),
@@ -106,12 +89,10 @@ export const api = {
       parent_id: string | null
       is_hidden: boolean
       position: number
-    }>,
-  ): Promise<Category> =>
-    req(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, categorySchema),
+    }>
+  ): Promise<Category> => req(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, categorySchema),
 
-  deleteCategory: (id: string): Promise<void> =>
-    req(`/categories/${id}`, { method: 'DELETE' }),
+  deleteCategory: (id: string): Promise<void> => req(`/categories/${id}`, { method: 'DELETE' }),
 
   bookmarks: (category_id?: string | null, include_vault = false): Promise<Bookmark[]> => {
     const q = new URLSearchParams()
@@ -128,8 +109,7 @@ export const api = {
     category_id?: string | null
     category_ids?: string[]
     tags: string[]
-  }): Promise<Bookmark> =>
-    req('/bookmarks', { method: 'POST', body: JSON.stringify(body) }, bookmarkSchema),
+  }): Promise<Bookmark> => req('/bookmarks', { method: 'POST', body: JSON.stringify(body) }, bookmarkSchema),
 
   updateBookmark: (
     id: string,
@@ -140,23 +120,19 @@ export const api = {
       notes: string | null
       category_ids: string[]
       tags: string[]
-    }>,
-  ): Promise<Bookmark> =>
-    req(`/bookmarks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, bookmarkSchema),
+    }>
+  ): Promise<Bookmark> => req(`/bookmarks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, bookmarkSchema),
 
-  deleteBookmark: (id: string): Promise<void> =>
-    req(`/bookmarks/${id}`, { method: 'DELETE' }),
+  deleteBookmark: (id: string): Promise<void> => req(`/bookmarks/${id}`, { method: 'DELETE' }),
 
-  search: (q: string) =>
-    req(`/search?q=${encodeURIComponent(q)}`, {}, searchResponseSchema),
+  search: (q: string) => req(`/search?q=${encodeURIComponent(q)}`, {}, searchResponseSchema),
 
   import: (format: string, content: string): Promise<{ total: number; imported: number; failed: number }> =>
     req('/import', { method: 'POST', body: JSON.stringify({ format, content }) }, importResultSchema),
 
   exportUrl: (format: string): string => `/api/export?format=${format}`,
 
-  vaultStatus: (): Promise<{ configured: boolean; unlocked: boolean }> =>
-    req('/vault/status', {}, vaultStatusSchema),
+  vaultStatus: (): Promise<{ configured: boolean; unlocked: boolean }> => req('/vault/status', {}, vaultStatusSchema),
 
   vaultSetup: (passphrase: string): Promise<unknown> =>
     req('/vault/setup', { method: 'POST', body: JSON.stringify({ passphrase }) }),
@@ -166,6 +142,5 @@ export const api = {
 
   vaultLock: (): Promise<unknown> => req('/vault/lock', { method: 'POST' }),
 
-  duplicates: (): Promise<{ urls: string[] }> =>
-    req('/bookmarks/duplicates', {}, duplicatesSchema),
+  duplicates: (): Promise<{ urls: string[] }> => req('/bookmarks/duplicates', {}, duplicatesSchema),
 }

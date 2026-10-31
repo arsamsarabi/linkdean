@@ -36,7 +36,7 @@ describe('getCroppedBlob', () => {
             for (const cb of this.listeners.load || []) cb()
           })
         }
-      },
+      }
     )
 
     const blob = await getCroppedBlob('blob:test', { x: 0, y: 0, width: 50, height: 50 })

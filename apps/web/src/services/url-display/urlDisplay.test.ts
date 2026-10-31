@@ -13,8 +13,6 @@ describe('hostname', () => {
 
 describe('googleFavicon', () => {
   it('builds favicon URL', () => {
-    expect(googleFavicon('https://www.example.com')).toBe(
-      'https://www.google.com/s2/favicons?domain=example.com&sz=64',
-    )
+    expect(googleFavicon('https://www.example.com')).toBe('https://www.google.com/s2/favicons?domain=example.com&sz=64')
   })
 })

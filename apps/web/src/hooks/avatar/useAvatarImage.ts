@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getToken } from '@/lib'
 
-export function useAvatarImage(
-  hasAvatar: boolean,
-  bust?: number | string,
-): string | undefined {
+export function useAvatarImage(hasAvatar: boolean, bust?: number | string): string | undefined {
   const [src, setSrc] = useState<string | undefined>()
 
   useEffect(() => {

@@ -1,0 +1,11 @@
+# deps / build
+node_modules
+dist
+coverage
+*.tsbuildinfo
+
+# lockfile
+pnpm-lock.yaml
+
+# generated
+*routeTree.gen.ts*

@@ -1,10 +1,4 @@
-export const SORT_KEYS = [
-  'updated_desc',
-  'updated_asc',
-  'title_asc',
-  'title_desc',
-  'created_desc',
-] as const
+export const SORT_KEYS = ['updated_desc', 'updated_asc', 'title_asc', 'title_desc', 'created_desc'] as const
 
 export type SortKey = (typeof SORT_KEYS)[number]
 
@@ -37,10 +31,7 @@ export function listToSearchParam(xs: string[]): string | string[] | undefined {
 
 export function validateLibrarySearch(search: Record<string, unknown>): LibrarySearch {
   const sortRaw = typeof search.sort === 'string' ? search.sort : undefined
-  const sort =
-    sortRaw && (SORT_KEYS as readonly string[]).includes(sortRaw)
-      ? (sortRaw as SortKey)
-      : undefined
+  const sort = sortRaw && (SORT_KEYS as readonly string[]).includes(sortRaw) ? (sortRaw as SortKey) : undefined
 
   const category = asStringList(search.category)
   const tag = asStringList(search.tag)

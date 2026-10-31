@@ -1,7 +1,8 @@
 /* Satoshi — body */
 @font-face {
   font-family: 'Satoshi';
-  src: url('/fonts/satoshi/Satoshi-Variable.woff2') format('woff2-variations'),
+  src:
+    url('/fonts/satoshi/Satoshi-Variable.woff2') format('woff2-variations'),
     url('/fonts/satoshi/Satoshi-Variable.woff2') format('woff2'),
     url('/fonts/satoshi/Satoshi-Variable.woff') format('woff');
   font-weight: 300 900;
@@ -11,7 +12,8 @@
 
 @font-face {
   font-family: 'Satoshi';
-  src: url('/fonts/satoshi/Satoshi-VariableItalic.woff2') format('woff2-variations'),
+  src:
+    url('/fonts/satoshi/Satoshi-VariableItalic.woff2') format('woff2-variations'),
     url('/fonts/satoshi/Satoshi-VariableItalic.woff2') format('woff2'),
     url('/fonts/satoshi/Satoshi-VariableItalic.woff') format('woff');
   font-weight: 300 900;
@@ -22,7 +24,8 @@
 /* Rajdhani — headings */
 @font-face {
   font-family: 'Rajdhani';
-  src: url('/fonts/rajdhani/Rajdhani-Variable.woff2') format('woff2-variations'),
+  src:
+    url('/fonts/rajdhani/Rajdhani-Variable.woff2') format('woff2-variations'),
     url('/fonts/rajdhani/Rajdhani-Variable.woff2') format('woff2'),
     url('/fonts/rajdhani/Rajdhani-Variable.woff') format('woff');
   font-weight: 300 700;

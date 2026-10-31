@@ -1,5 +1,5 @@
-import { Container, type ContainerProps } from '@mantine/core'
 import type { ReactElement } from 'react'
+import { Container, type ContainerProps } from '@mantine/core'
 import styles from './PageContainer.module.css'
 
 /** Shared max-width for AppShell header + main content. */

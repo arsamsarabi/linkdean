@@ -1,5 +1,5 @@
-import { Card, Group, SimpleGrid, Skeleton, Stack } from '@mantine/core'
 import type { ReactElement } from 'react'
+import { Card, Group, SimpleGrid, Skeleton, Stack } from '@mantine/core'
 import styles from './BookmarkCard.module.css'
 
 export function BookmarkCardSkeleton(): ReactElement {

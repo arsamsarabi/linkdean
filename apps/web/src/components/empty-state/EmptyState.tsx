@@ -1,5 +1,5 @@
-import { Button, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import type { ReactElement, ReactNode } from 'react'
+import { Button, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import styles from './EmptyState.module.css'
 
 type Props = {

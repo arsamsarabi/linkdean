@@ -15,11 +15,7 @@ function parseWithSchema<T>(schema: z.ZodType<T>, data: unknown, path: string): 
   return result.data
 }
 
-export async function req<T>(
-  path: string,
-  init: RequestInit = {},
-  schema?: z.ZodType<T>,
-): Promise<T> {
+export async function req<T>(path: string, init: RequestInit = {}, schema?: z.ZodType<T>): Promise<T> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')

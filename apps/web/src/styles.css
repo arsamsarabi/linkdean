@@ -29,8 +29,7 @@ h6 {
 [data-mantine-color-scheme='light'] body {
   background:
     radial-gradient(1100px 520px at 8% -8%, #d0bdf433, transparent),
-    radial-gradient(900px 480px at 92% 0%, #a2808922, transparent),
-    #e5eaf5;
+    radial-gradient(900px 480px at 92% 0%, #a2808922, transparent), #e5eaf5;
 }
 
 /*

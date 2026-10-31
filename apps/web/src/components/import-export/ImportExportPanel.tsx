@@ -1,24 +1,9 @@
 import { useState, type ReactElement } from 'react'
-import {
-  Alert,
-  Button,
-  FileInput,
-  Group,
-  Paper,
-  Select,
-  Stack,
-  ThemeIcon,
-  Title,
-} from '@mantine/core'
+import { Alert, Button, FileInput, Group, Paper, Select, Stack, ThemeIcon, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconDownload,
-  IconFileExport,
-  IconInfoCircle,
-  IconUpload,
-} from '@tabler/icons-react'
-import { useExportBookmarks, useImportBookmarks } from '@/hooks'
+import { IconDownload, IconFileExport, IconInfoCircle, IconUpload } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
+import { useExportBookmarks, useImportBookmarks } from '@/hooks'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

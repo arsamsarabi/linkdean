@@ -1,19 +1,8 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import {
-  Anchor,
-  Button,
-  FileButton,
-  Group,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { Anchor, Button, FileButton, Group, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
+import { useNavigate } from '@tanstack/react-router'
 import { AvatarCropModal } from '@/components'
 import { useBootstrap, useRegister, useUploadAvatar } from '@/hooks'
 import { validatePasswordPair } from '@/services'
@@ -77,17 +66,8 @@ export function RegisterPage(): ReactElement {
       </Stack>
       <Paper p="xl" radius="md" withBorder>
         <Stack gap="md">
-          <TextInput
-            label="Display name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.currentTarget.value)}
-          />
-          <TextInput
-            label="Email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.currentTarget.value)}
-          />
+          <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.currentTarget.value)} />
+          <TextInput label="Email" required value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
           <PasswordInput
             label="Password"
             required

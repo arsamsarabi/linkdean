@@ -1,5 +1,5 @@
-import { Button, Group, Modal, Stack, Text } from '@mantine/core'
 import type { ReactElement } from 'react'
+import { Button, Group, Modal, Stack, Text } from '@mantine/core'
 
 type Props = {
   opened: boolean

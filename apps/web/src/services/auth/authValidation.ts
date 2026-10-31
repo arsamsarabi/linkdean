@@ -1,6 +1,4 @@
-export type PasswordPairResult =
-  | { ok: true }
-  | { ok: false; message: string }
+export type PasswordPairResult = { ok: true } | { ok: false; message: string }
 
 export type PasswordPairMessages = {
   tooShort: string
@@ -16,7 +14,7 @@ const DEFAULT_MESSAGES: PasswordPairMessages = {
 export function validatePasswordPair(
   password: string,
   confirm: string,
-  messages: PasswordPairMessages = DEFAULT_MESSAGES,
+  messages: PasswordPairMessages = DEFAULT_MESSAGES
 ): PasswordPairResult {
   if (password.length < 8) {
     return { ok: false, message: messages.tooShort }

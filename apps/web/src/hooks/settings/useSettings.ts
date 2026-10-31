@@ -1,23 +1,17 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { UserPublic, UserSettings, MeResponse } from '@/schemas'
+import type { MeResponse, UserPublic, UserSettings } from '@/schemas'
 import { useUi } from '@/store'
 
 type SettingsEnvelope = { settings: UserSettings }
 
-export function useUpdateSettings(): UseMutationResult<
-  SettingsEnvelope,
-  Error,
-  Partial<UserSettings>
-> {
+export function useUpdateSettings(): UseMutationResult<SettingsEnvelope, Error, Partial<UserSettings>> {
   const qc = useQueryClient()
   const setShowHidden = useUi((s) => s.setShowHidden)
   return useMutation({
     mutationFn: (patch: Partial<UserSettings>) => api.updateSettings(patch),
     onSuccess: (res) => {
-      qc.setQueryData(['me'], (old: MeResponse | undefined) =>
-        old ? { ...old, settings: res.settings } : old,
-      )
+      qc.setQueryData(['me'], (old: MeResponse | undefined) => (old ? { ...old, settings: res.settings } : old))
       if (useUi.getState().showHidden !== res.settings.show_hidden) {
         setShowHidden(res.settings.show_hidden)
       }

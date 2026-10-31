@@ -1,10 +1,9 @@
 import { useEffect, type ReactElement } from 'react'
-import { Outlet, Link, useNavigate } from '@tanstack/react-router'
 import {
-  AppShell as MantineAppShell,
   Group,
   Indicator,
   Loader,
+  AppShell as MantineAppShell,
   Menu,
   Skeleton,
   Title,
@@ -12,7 +11,8 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { IconLogout, IconSettings, IconUser } from '@tabler/icons-react'
-import { PageContainer, LogoMark, QueryErrorAlert, ThemeMenuSwitch, UserAvatar } from '@/components'
+import { Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { LogoMark, PageContainer, QueryErrorAlert, ThemeMenuSwitch, UserAvatar } from '@/components'
 import { useLogout, usePrefsHydration } from '@/hooks'
 import { useUi } from '@/store'
 
@@ -60,14 +60,7 @@ export function AppShell(): ReactElement {
                 <Menu.Target>
                   <Tooltip label="Account" position="bottom">
                     <UnstyledButton aria-label="Account menu">
-                      <Indicator
-                        disabled={!vaultUnlocked}
-                        color="green"
-                        size={10}
-                        offset={4}
-                        processing
-                        withBorder
-                      >
+                      <Indicator disabled={!vaultUnlocked} color="green" size={10} offset={4} processing withBorder>
                         <UserAvatar hasAvatar={!!user?.has_avatar} label={label} alt={label} />
                       </Indicator>
                     </UnstyledButton>
@@ -76,28 +69,16 @@ export function AppShell(): ReactElement {
                 <Menu.Dropdown>
                   <Menu.Label>{user?.display_name || user?.email || 'User'}</Menu.Label>
                   {vaultUnlocked ? <Menu.Label c="green">Vault unlocked</Menu.Label> : null}
-                  <Menu.Item
-                    component={Link}
-                    to="/profile"
-                    leftSection={<IconUser {...iconProps} />}
-                  >
+                  <Menu.Item component={Link} to="/profile" leftSection={<IconUser {...iconProps} />}>
                     Profile
                   </Menu.Item>
-                  <Menu.Item
-                    component={Link}
-                    to="/settings"
-                    leftSection={<IconSettings {...iconProps} />}
-                  >
+                  <Menu.Item component={Link} to="/settings" leftSection={<IconSettings {...iconProps} />}>
                     Settings
                   </Menu.Item>
                   <Menu.Divider />
                   <ThemeMenuSwitch />
                   <Menu.Divider />
-                  <Menu.Item
-                    color="red"
-                    onClick={() => void onLogout()}
-                    leftSection={<IconLogout {...iconProps} />}
-                  >
+                  <Menu.Item color="red" onClick={() => void onLogout()} leftSection={<IconLogout {...iconProps} />}>
                     Logout
                   </Menu.Item>
                 </Menu.Dropdown>

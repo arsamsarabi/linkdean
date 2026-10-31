@@ -4,12 +4,15 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "oxlint",
+    "lint:all": "pnpm format:check && pnpm lint",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test": "vitest run"
   },
   "dependencies": {
     "@mantine/core": "^9.7.4",
@@ -26,6 +29,7 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
@@ -35,6 +39,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^30.1.3",
     "oxlint": "^1.89.0",
+    "prettier": "^3.9.10",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"

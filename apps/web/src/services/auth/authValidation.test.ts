@@ -21,7 +21,7 @@ describe('validatePasswordPair', () => {
       validatePasswordPair('longenough', 'longenough', {
         tooShort: 'Vault passphrase min 8 chars',
         mismatch: 'Passphrases mismatch',
-      }),
+      })
     ).toEqual({ ok: true })
   })
 })

@@ -17,22 +17,9 @@ import {
   Title,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconDeviceFloppy,
-  IconInfoCircle,
-  IconKey,
-  IconPhoto,
-  IconTrash,
-  IconUser,
-} from '@tabler/icons-react'
+import { IconDeviceFloppy, IconInfoCircle, IconKey, IconPhoto, IconTrash, IconUser } from '@tabler/icons-react'
 import { AvatarCropModal, QueryErrorAlert, UserAvatar } from '@/components'
-import {
-  useChangePassword,
-  useDeleteAvatar,
-  useMe,
-  useUpdateProfile,
-  useUploadAvatar,
-} from '@/hooks'
+import { useChangePassword, useDeleteAvatar, useMe, useUpdateProfile, useUploadAvatar } from '@/hooks'
 import { validatePasswordPair } from '@/services'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -115,9 +102,7 @@ export function ProfilePage(): ReactElement {
         <Title order={2}>Profile</Title>
       </Group>
 
-      {me.isError ? (
-        <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} />
-      ) : null}
+      {me.isError ? <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} /> : null}
 
       {!user ? (
         <ProfileSkeleton />
@@ -126,12 +111,7 @@ export function ProfilePage(): ReactElement {
           <Paper p="xl" withBorder>
             <Stack gap="lg">
               <Group gap="lg" align="flex-start">
-                <UserAvatar
-                  hasAvatar={!!user.has_avatar}
-                  label={label}
-                  size={80}
-                  bust={avatarBust}
-                />
+                <UserAvatar hasAvatar={!!user.has_avatar} label={label} size={80} bust={avatarBust} />
                 <Stack gap="xs">
                   <FileButton
                     resetRef={resetRef}
@@ -186,11 +166,7 @@ export function ProfilePage(): ReactElement {
                     value={timezone}
                     onChange={setTimezone}
                   />
-                  <TextInput
-                    label="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.currentTarget.value)}
-                  />
+                  <TextInput label="Email" value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
                 </Stack>
               </Fieldset>
 
@@ -208,7 +184,7 @@ export function ProfilePage(): ReactElement {
                     {
                       onSuccess: () => notifications.show({ message: 'Profile saved' }),
                       onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-                    },
+                    }
                   )
                 }}
               >
@@ -262,7 +238,7 @@ export function ProfilePage(): ReactElement {
                           notifications.show({ message: 'Password updated' })
                         },
                         onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-                      },
+                      }
                     )
                   }}
                 >

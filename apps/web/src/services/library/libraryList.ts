@@ -1,5 +1,5 @@
-import type { Bookmark, SearchHit } from '@/schemas'
 import type { SortKey } from '@/lib'
+import type { Bookmark, SearchHit } from '@/schemas'
 
 export type LibraryListItem = Bookmark | (SearchHit & { categories?: Bookmark['categories'] })
 
@@ -15,9 +15,7 @@ export function filterAndSortLibraryItems(input: LibraryListInput): LibraryListI
 
   if (input.filterCats.length) {
     items = items.filter((b) => {
-      const ids = new Set(
-        (b.categories || []).map((c) => c.id).concat(b.category_id ? [b.category_id] : []),
-      )
+      const ids = new Set((b.categories || []).map((c) => c.id).concat(b.category_id ? [b.category_id] : []))
       return input.filterCats.some((id) => ids.has(id))
     })
   }
@@ -51,7 +49,7 @@ export function filterAndSortLibraryItems(input: LibraryListInput): LibraryListI
 }
 
 export function collectTagOptions(
-  bookmarks: readonly { tags?: readonly string[] }[],
+  bookmarks: readonly { tags?: readonly string[] }[]
 ): { value: string; label: string }[] {
   const set = new Set<string>()
   for (const b of bookmarks) {

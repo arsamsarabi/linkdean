@@ -59,9 +59,7 @@ describe('filterAndSortLibraryItems', () => {
 
 describe('collectTagOptions', () => {
   it('dedupes and sorts tags', () => {
-    expect(
-      collectTagOptions([{ tags: ['b', 'a'] }, { tags: ['a', 'c'] }, { tags: undefined }]),
-    ).toEqual([
+    expect(collectTagOptions([{ tags: ['b', 'a'] }, { tags: ['a', 'c'] }, { tags: undefined }])).toEqual([
       { value: 'a', label: 'a' },
       { value: 'b', label: 'b' },
       { value: 'c', label: 'c' },

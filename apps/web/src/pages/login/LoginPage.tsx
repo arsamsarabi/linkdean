@@ -1,5 +1,4 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import {
   Alert,
   Anchor,
@@ -17,8 +16,9 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconRocket, IconUserPlus } from '@tabler/icons-react'
+import { useNavigate } from '@tanstack/react-router'
 import { LogoMark, QueryErrorAlert } from '@/components'
-import { useLogin, useBootstrap } from '@/hooks'
+import { useBootstrap, useLogin } from '@/hooks'
 import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -101,22 +101,13 @@ export function LoginPage(): ReactElement {
             onChange={(e) => setPassword(e.currentTarget.value)}
             onKeyDown={(e) => e.key === 'Enter' && void submit()}
           />
-          <Button
-            leftSection={<IconLogin {...iconSm} />}
-            loading={login.isPending}
-            onClick={() => void submit()}
-          >
+          <Button leftSection={<IconLogin {...iconSm} />} loading={login.isPending} onClick={() => void submit()}>
             Sign in
           </Button>
           {oidc ? (
             <>
               <Divider label="or" labelPosition="center" />
-              <Button
-                component="a"
-                href="/api/auth/oidc/start"
-                variant="light"
-                leftSection={<IconLogin {...iconSm} />}
-              >
+              <Button component="a" href="/api/auth/oidc/start" variant="light" leftSection={<IconLogin {...iconSm} />}>
                 Sign in with OIDC
               </Button>
             </>

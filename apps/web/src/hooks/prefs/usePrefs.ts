@@ -1,10 +1,10 @@
 import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useMantineColorScheme } from '@mantine/core'
 import type { UseQueryResult } from '@tanstack/react-query'
-import type { MeResponse, UserSettings } from '@/schemas'
-import { useUi } from '@/store'
 import { useMe } from '@/hooks/auth'
 import { useVaultLock } from '@/hooks/vault'
+import type { MeResponse, UserSettings } from '@/schemas'
+import { useUi } from '@/store'
 
 /** Hydrate show-hidden, theme, vault unlock flag, and idle auto-lock from /auth/me. */
 export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> {
@@ -50,10 +50,7 @@ export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> 
   return me
 }
 
-export function applyTheme(
-  theme: UserSettings['theme'],
-  setColorScheme: (v: 'light' | 'dark' | 'auto') => void,
-): void {
+export function applyTheme(theme: UserSettings['theme'], setColorScheme: (v: 'light' | 'dark' | 'auto') => void): void {
   if (theme === 'system') setColorScheme('auto')
   else setColorScheme(theme)
 }
@@ -61,7 +58,7 @@ export function applyTheme(
 function useVaultAutoLock(
   settings: UserSettings | undefined,
   vaultUnlocked: boolean,
-  lockRef: MutableRefObject<() => Promise<unknown>>,
+  lockRef: MutableRefObject<() => Promise<unknown>>
 ): void {
   const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)

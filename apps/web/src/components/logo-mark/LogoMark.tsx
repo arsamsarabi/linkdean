@@ -7,13 +7,5 @@ type Props = {
 }
 
 export function LogoMark({ size = 28, alt = '' }: Props): ReactElement {
-  return (
-    <img
-      src="/linkdean-symbol.svg"
-      alt={alt}
-      width={size}
-      height={size}
-      className={styles.img}
-    />
-  )
+  return <img src="/linkdean-symbol.svg" alt={alt} width={size} height={size} className={styles.img} />
 }

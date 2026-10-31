@@ -1,29 +1,9 @@
 import { useState, type ReactElement } from 'react'
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Paper,
-  PasswordInput,
-  Skeleton,
-  Stack,
-  Text,
-} from '@mantine/core'
+import { Alert, Badge, Button, Group, Paper, PasswordInput, Skeleton, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconInfoCircle,
-  IconLock,
-  IconLockOpen,
-  IconLockPlus,
-} from '@tabler/icons-react'
-import {
-  useVaultLock,
-  useVaultSetup,
-  useVaultStatus,
-  useVaultUnlock,
-} from '@/hooks'
+import { IconInfoCircle, IconLock, IconLockOpen, IconLockPlus } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
+import { useVaultLock, useVaultSetup, useVaultStatus, useVaultUnlock } from '@/hooks'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -67,13 +47,10 @@ export function VaultPanel(): ReactElement {
   return (
     <Stack gap="lg" maw={480}>
       <Alert icon={<IconInfoCircle size={16} />} color="violet" variant="light">
-        Password-protected categories. AES-GCM at rest. Not in Meilisearch until unlocked
-        (then Postgres search).
+        Password-protected categories. AES-GCM at rest. Not in Meilisearch until unlocked (then Postgres search).
       </Alert>
 
-      {status.isError ? (
-        <QueryErrorAlert error={status.error} onRetry={() => void status.refetch()} />
-      ) : null}
+      {status.isError ? <QueryErrorAlert error={status.error} onRetry={() => void status.refetch()} /> : null}
 
       <Paper p="xl" withBorder pos="relative">
         <Stack gap="lg">
@@ -93,11 +70,7 @@ export function VaultPanel(): ReactElement {
             </Group>
           )}
 
-          <PasswordInput
-            label="Passphrase"
-            value={pass}
-            onChange={(e) => setPass(e.currentTarget.value)}
-          />
+          <PasswordInput label="Passphrase" value={pass} onChange={(e) => setPass(e.currentTarget.value)} />
 
           {!status.data?.configured ? (
             <Button

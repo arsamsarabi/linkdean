@@ -2,8 +2,8 @@ import type { ReactElement } from 'react'
 import { SegmentedControl, Stack, Text, useMantineColorScheme } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react'
+import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
-import { useMe, applyTheme, useUpdateSettings } from '@/hooks'
 
 const icon = { size: 14, stroke: 1.5 } as const
 
@@ -22,7 +22,7 @@ export function ThemeMenuSwitch(): ReactElement {
       { theme },
       {
         onError: (e) => notifications.show({ color: 'red', message: String(e) }),
-      },
+      }
     )
   }
 
