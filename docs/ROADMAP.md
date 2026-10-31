@@ -38,26 +38,25 @@ Foundation for collaboration. Sharing landed before personal dashboards so share
 
 ---
 
-## Milestone 2: Personal dashboard (in progress)
+## Milestone 2: Personal dashboard (ready to close — confirm feel)
 
 Home surface for a single user (glance-style sectioned grid). `/` is the dashboard; library stays at `/library`.
 
-**Deliverables**
+**Delivered**
 
 - User dashboard: sectioned grid of selected bookmarks
 - Arrange / edit layout of frequently visited links
 - Persisted per-user layout (`dashboards` + sections + items)
 - Glance tiles + section reorder; `default_landing` `/` vs `/library` (Settings + post-login)
 - Invitee share badges on cards / glance tiles / folder tiles
-- App shell: **Dashboard** nav next to Library; logo click honors `default_landing` (done)
-- Owner-side share cue on bookmarks / folders you have shared out (done; dashboard cards with M3)
+- App shell: **Dashboard** nav next to Library; logo click honors `default_landing`
+- Owner-side share cue on bookmarks / folders you have shared out (dashboard cards with M3)
+- Multi-dashboard: many boards, one default pin; page switcher + create / pin / delete; Settings default-dashboard select; rename via edit-layout title; delete pin falls back or recreates Home
 
-**Multi-dashboard (same milestone; schema already allows many rows + one default)**
+**Before marking done**
 
-- User may own several dashboards; exactly one is pinned / default at a time (done)
-- Dashboard page switcher + create / pin / delete; edit layout per board (done)
-- Settings: default dashboard pin (distinct from `default_landing` home route) (done)
-- Create / rename / delete dashboards (keep at least one; deleting pin falls back to another or recreates default) (done; rename via edit layout title)
+- Quick UX QA (switcher, pin, empty board, RO shared folders in library still gated)
+- User confirm → mark **done**, then Milestone 3
 
 ---
 
@@ -114,7 +113,7 @@ Lowest numbered priority among the planned interactive surfaces.
 
 ## Milestone 7: Shared activity & social
 
-Depends on Milestone 1 (share/ACL). Activity surfaces benefit from Milestone 3 (shared dashboards); notifications can start on shared folders/lists alone.
+Depends on Milestone 1 (share/ACL). Activity surfaces benefit from Milestone 3 (shared dashboards); notifications can start on shared folders/lists alone. Email delivery depends on Platform SMTP (backlog).
 
 Internal build order: notifications, discussion, lightweight reactions; gamification last (or backlog if scope expands).
 
@@ -135,6 +134,7 @@ Items may be promoted into a milestone when prioritized.
 **Product**
 
 - Public bookmark list URLs (after sharing infra is solid)
+- Pending email invites for bookmark / list / dashboard shares (not public URLs): invite by address; if recipient has no account, they register and claim access
 - Bulk edit / multi-select move, tag, delete
 - Duplicate merge UI (API already lists duplicate URLs)
 - Duplicate / fork a list (esp. shared → personal copy the invitee keeps)
@@ -170,6 +170,7 @@ Items may be promoted into a milestone when prioritized.
 - Official `docker compose` one-liner docs + healthchecks in README badge style
 - Prometheus metrics / basic ops endpoint
 - Backup recipe (pg_dump + meili dump) in docs
+- SMTP / outbound email config (for invites + Milestone 7 notifications)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
 - Burger / collapse nav for mobile and very small viewports
