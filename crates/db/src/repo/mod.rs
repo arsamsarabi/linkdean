@@ -20,6 +20,7 @@ mod tags;
 mod trash;
 mod users;
 mod vault;
+mod vault_global;
 
 pub use activity::*;
 pub use api_keys::*;
@@ -42,3 +43,4 @@ pub use tags::*;
 pub use trash::*;
 pub use users::*;
 pub use vault::*;
+pub use vault_global::*;
