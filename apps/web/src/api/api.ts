@@ -405,7 +405,7 @@ export const api = {
     req('/bookmarks/duplicates', {}, duplicatesSchema),
 
   brokenBookmarks: (): Promise<Bookmark[]> =>
-    req('/bookmarks/broken', {}, z.array(bookmarkSchema)),
+    req('/bookmarks/broken-links', {}, z.array(bookmarkSchema)),
 
   checkBookmarkLink: (id: string): Promise<Bookmark> =>
     req(`/bookmarks/${id}/check-link`, { method: 'POST' }, bookmarkSchema),

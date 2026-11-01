@@ -17,7 +17,10 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/bookmarks", get(list).post(create))
         .route("/bookmarks/duplicates", get(duplicates))
+        // Literal paths must stay registered as their own routes (not under `{id}`) so
+        // axum never tries to parse names like `broken` as a Uuid → bare 400.
         .route("/bookmarks/broken", get(broken))
+        .route("/bookmarks/broken-links", get(broken))
         .route("/bookmarks/{id}/check-link", post(check_link))
         .route(
             "/bookmarks/{id}/preview",

@@ -51,14 +51,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - Mobile-friendly layout pass
 - backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file.
 
-**possible bugs**
-
-- Error when opening the broken-link list drawer:
-```
-Broken-link list failed
-Bad Request
-```
-
 ---
 
 ## Final UI/UX pass
