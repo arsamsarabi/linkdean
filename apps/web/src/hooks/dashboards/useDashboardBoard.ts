@@ -32,17 +32,6 @@ export function useDashboardBoard() {
   const [shareOpen, setShareOpen] = useState(false)
   const [socialOpen, setSocialOpen] = useState(false)
 
-  const bookmarkOptions = useMemo(() => {
-    return (bookmarks.data || []).map((b) => ({
-      value: b.id,
-      label: b.title || b.url,
-    }))
-  }, [bookmarks.data])
-
-  const bookmarkById = useMemo(() => {
-    return new Map((bookmarks.data || []).map((b) => [b.id, b]))
-  }, [bookmarks.data])
-
   const switcherData = useMemo(() => {
     return (list.data || []).map((d) => {
       const shared = d.access === 'read' || d.access === 'write'
@@ -113,8 +102,7 @@ export function useDashboardBoard() {
   return {
     list,
     activeId,
-    bookmarkOptions,
-    bookmarkById,
+    libraryBookmarks: bookmarks.data,
     switcherData,
     create,
     patch,

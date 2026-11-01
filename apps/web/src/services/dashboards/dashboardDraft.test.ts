@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { moveSection, toPutDashboardLayout, type DashboardDraft } from './dashboardDraft'
+import type { Bookmark, Dashboard } from '@/schemas'
+import { mergeDashboardBookmarks, moveSection, toPutDashboardLayout, type DashboardDraft } from './dashboardDraft'
 
 describe('moveSection', () => {
   it('swaps adjacent sections up and down', () => {
@@ -28,5 +29,21 @@ describe('toPutDashboardLayout', () => {
       title: 'Home',
       sections: [{ title: 'Keep', bookmark_ids: ['b1'] }],
     })
+  })
+})
+
+describe('mergeDashboardBookmarks', () => {
+  const mine = { id: 'mine', title: 'Mine', url: 'https://mine.test' } as Bookmark
+  const pinned = { id: 'pinned', title: 'Pinned', url: 'https://pinned.test' } as Bookmark
+  const dashboard = {
+    sections: [{ items: [{ bookmark: pinned }, { bookmark: { ...mine, title: 'Stale' } }] }],
+  } as unknown as Dashboard
+
+  it('adds pins missing from the library and keeps library copies', () => {
+    expect(mergeDashboardBookmarks([mine], dashboard)).toEqual([mine, pinned])
+  })
+
+  it('returns the library when no dashboard has loaded', () => {
+    expect(mergeDashboardBookmarks([mine], undefined)).toEqual([mine])
   })
 })

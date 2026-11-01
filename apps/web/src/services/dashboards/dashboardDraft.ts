@@ -1,4 +1,5 @@
 import { newClientId } from '@/lib/id'
+import type { Bookmark, Dashboard } from '@/schemas'
 
 export type DashboardDraftSection = {
   key: string
@@ -47,4 +48,18 @@ export function toPutDashboardLayout(draft: DashboardDraft): {
       }))
       .filter((s) => s.title.length > 0),
   }
+}
+
+/**
+ * The editor's library plus everything pinned on the dashboard. Pins on a shared
+ * dashboard usually belong to its owner, so they are not in the editor's library.
+ */
+export function mergeDashboardBookmarks(library: Bookmark[], dashboard: Dashboard | undefined): Bookmark[] {
+  const byId = new Map(library.map((b) => [b.id, b]))
+  for (const section of dashboard?.sections ?? []) {
+    for (const { bookmark } of section.items) {
+      if (!byId.has(bookmark.id)) byId.set(bookmark.id, bookmark)
+    }
+  }
+  return [...byId.values()]
 }

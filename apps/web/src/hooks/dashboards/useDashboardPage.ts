@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { useMe } from '@/hooks/auth'
+import { mergeDashboardBookmarks } from '@/services'
 import { useDashboard, usePutDashboard } from './useDashboard'
 import { useDashboardBoard } from './useDashboardBoard'
 import { useDashboardEdit } from './useDashboardEdit'
@@ -18,6 +20,13 @@ export function useDashboardPage() {
   const view = dashboard.data
   const access = board.accessFlags(view)
 
+  const bookmarks = useMemo(
+    () => mergeDashboardBookmarks(board.libraryBookmarks ?? [], view),
+    [board.libraryBookmarks, view]
+  )
+  const bookmarkOptions = useMemo(() => bookmarks.map((b) => ({ value: b.id, label: b.title || b.url })), [bookmarks])
+  const bookmarkById = useMemo(() => new Map(bookmarks.map((b) => [b.id, b])), [bookmarks])
+
   return {
     list: board.list,
     dashboard,
@@ -30,8 +39,8 @@ export function useDashboardPage() {
     setShareOpen: board.setShareOpen,
     socialOpen: board.socialOpen,
     setSocialOpen: board.setSocialOpen,
-    bookmarkOptions: board.bookmarkOptions,
-    bookmarkById: board.bookmarkById,
+    bookmarkOptions,
+    bookmarkById,
     switcherData: board.switcherData,
     save,
     create: board.create,
