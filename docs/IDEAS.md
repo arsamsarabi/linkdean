@@ -28,7 +28,3 @@ Scratch space for unprioritized ideas. Promote into [ROADMAP.md](./ROADMAP.md) w
 
 - add a second way to unlock the vault by using this library https://www.npmjs.com/package/@arsams/konami-codes-react
 
-## UX bugs
-
-- when filtering the grid view if there are no items in the list the layout of the page (toolbar, etc.) shifts upwards. Fix the bug so there is no layout shift.
-

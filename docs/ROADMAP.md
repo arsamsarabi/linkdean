@@ -12,7 +12,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - Pending email invites for bookmark / list / dashboard shares (not public URLs): invite by address; if recipient has no account, they register and claim access
 - Broken-link checker (rate-limited worker)
 - Full-text notes and optional highlights
-- pwa support
 
 **Vault & privacy**
 
@@ -31,11 +30,9 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Platform**
 
-- Prometheus metrics (counters / histograms). Partial: `/api/ready` dependency probe
 - SMTP / outbound email config (for invites + notification delivery)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
-- PWA install for app-like phone use
 
 ---
 

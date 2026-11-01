@@ -108,8 +108,10 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Docker Compose stack (API, Postgres, Meilisearch, optional Chrome)
 - Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
+- Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms + process metrics)
 - Avatars and preview volumes; backup recipe in [self-host.md](./self-host.md)
 - Mobile burger nav for small viewports
+- PWA install: web manifest + service worker (standalone / “Add to Home Screen”)
 
 ---
 
