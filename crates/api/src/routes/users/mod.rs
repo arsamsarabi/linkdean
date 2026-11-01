@@ -1,14 +1,17 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
-use axum::extract::{Multipart, Path, State};
+use axum::extract::{Multipart, Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::avatar::{self, process_avatar};
-use linkdean_core::{ChangePassword, Error, UpdateProfile, UpdateSettings};
+use linkdean_core::{
+    ChangePassword, Error, ProfileBookmarksPage, ProfileView, UpdateProfile, UpdateSettings,
+};
 use linkdean_db::{self as db};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
@@ -37,6 +40,11 @@ pub fn router() -> Router<AppState> {
         .route("/users/{id}/block-status", get(block_status))
         .route("/users/{id}/mute", post(mute_user).delete(unmute_user))
         .route("/users/{id}/mute-status", get(mute_status))
+        .route("/users/{id}/profile", get(user_profile))
+        .route("/users/{id}/bookmarks", get(user_bookmarks))
+        .route("/users/{id}/followers", get(user_followers))
+        .route("/users/{id}/following", get(user_following))
+        .route("/users/{id}/avatar", get(user_avatar))
 }
 
 async fn update_me(
@@ -144,10 +152,18 @@ async fn get_avatar(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<impl IntoResponse> {
-    if !user.has_avatar {
+    avatar_response(&state, user.id, user.has_avatar).await
+}
+
+async fn avatar_response(
+    state: &AppState,
+    user_id: Uuid,
+    has_avatar: bool,
+) -> ApiResult<impl IntoResponse> {
+    if !has_avatar {
         return Err(Error::NotFound.into());
     }
-    let path = state.avatar_path(user.id);
+    let path = state.avatar_path(user_id);
     let bytes = tokio::fs::read(&path).await.map_err(|_| Error::NotFound)?;
     let mut headers = HeaderMap::new();
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/webp"));
@@ -269,4 +285,56 @@ async fn mute_status(
 ) -> ApiResult<Json<Value>> {
     let relation = db::mute_relation(&state.pool, user.id, id).await?;
     Ok(Json(json!({ "mute": relation })))
+}
+
+#[derive(Debug, Deserialize)]
+struct ProfileBookmarksQuery {
+    limit: Option<i64>,
+    offset: Option<i64>,
+}
+
+async fn user_profile(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<ProfileView>> {
+    Ok(Json(db::get_profile(&state.pool, user.id, id).await?))
+}
+
+async fn user_bookmarks(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Query(query): Query<ProfileBookmarksQuery>,
+) -> ApiResult<Json<ProfileBookmarksPage>> {
+    let page =
+        db::profile_visible_bookmarks(&state.pool, user.id, id, query.limit, query.offset).await?;
+    Ok(Json(page))
+}
+
+async fn user_followers(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let users = db::profile_followers(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "users": users })))
+}
+
+async fn user_following(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let users = db::profile_following(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "users": users })))
+}
+
+async fn user_avatar(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<impl IntoResponse> {
+    let target = db::require_viewable_profile(&state.pool, user.id, id).await?;
+    avatar_response(&state, target.id, target.has_avatar).await
 }
