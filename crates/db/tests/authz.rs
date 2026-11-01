@@ -73,7 +73,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
             name: format!("AuthzCat-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
@@ -221,7 +221,7 @@ async fn share_read_and_write_membership() {
             name: format!("SharedCat-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
@@ -370,7 +370,7 @@ async fn share_read_and_write_membership() {
             name: format!("ChildByB-{}", Uuid::new_v4()),
             parent_id: Some(cat.id),
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
@@ -478,6 +478,7 @@ async fn cannot_share_vault_category() {
     db::setup_vault(&pool, user_a.id, "vault-passphrase")
         .await
         .expect("vault");
+    let vault = db::get_vault(&pool, user_a.id).await.expect("get vault");
     let vault_cat = db::create_category(
         &pool,
         user_a.id,
@@ -485,7 +486,7 @@ async fn cannot_share_vault_category() {
             name: format!("VaultCat-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: true,
+            vault_id: Some(vault.id),
             icon: None,
         },
     )
@@ -563,7 +564,7 @@ async fn public_list_slug_is_unlisted_and_revocable() {
             name: format!("PublicList-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
@@ -663,7 +664,7 @@ async fn pending_share_invite_claims_on_register() {
             name: format!("PendList-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )

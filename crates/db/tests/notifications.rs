@@ -68,7 +68,7 @@ async fn category_share_emits_invite_access_revoke() {
             name: format!("Shared-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
@@ -175,7 +175,7 @@ async fn shared_bookmark_edit_notifies_owner() {
             name: format!("Edit-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )

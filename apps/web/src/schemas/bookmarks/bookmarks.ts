@@ -21,6 +21,7 @@ export const bookmarkSchema = z.object({
   preview_image_url: z.string().nullish(),
   has_preview: z.boolean(),
   is_vault: z.boolean(),
+  vault_id: z.string().nullish(),
   tags: z.array(z.string()),
   can_write: z.boolean(),
   shared_out: z.boolean().default(false),
@@ -52,6 +53,7 @@ export const searchHitSchema = z.object({
   category_id: z.string().nullish(),
   categories: z.array(categoryRefSchema).optional(),
   is_vault: z.boolean(),
+  vault_id: z.string().nullish(),
   can_write: z.boolean(),
 })
 

@@ -109,7 +109,7 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                     name,
                     parent_id: None, // resolved later by path
                     is_hidden: false,
-                    is_vault: false,
+                    vault_id: None,
                     icon: None,
                 });
                 // stash parent path in category_paths as "path\0parent"
@@ -191,7 +191,7 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
             name: c.name.clone(),
             parent_id: None,
             is_hidden: c.is_hidden,
-            is_vault: false, // vault contents not exported plaintext
+            vault_id: None, // vault contents not exported plaintext
             icon: c.icon.clone(),
         });
         parsed.category_paths.push(key);
@@ -300,7 +300,7 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
                     name: f.clone(),
                     parent_id: None,
                     is_hidden: false,
-                    is_vault: false,
+                    vault_id: None,
                     icon: None,
                 });
                 parsed.category_paths.push(f.clone());

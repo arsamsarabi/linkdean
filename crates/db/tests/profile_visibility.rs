@@ -77,7 +77,7 @@ async fn category(pool: &PgPool, owner: &User) -> Uuid {
             name: format!("Visibility-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )

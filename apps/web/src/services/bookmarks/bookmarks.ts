@@ -16,6 +16,7 @@ export type BookmarkDraft = {
   updated_at?: string
   can_write?: boolean
   is_vault?: boolean
+  vault_id?: string | null
   owner_user_id?: string
 }
 

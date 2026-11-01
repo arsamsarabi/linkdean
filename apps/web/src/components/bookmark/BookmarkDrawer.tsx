@@ -6,6 +6,7 @@ import {
   Drawer,
   LoadingOverlay,
   MultiSelect,
+  Select,
   Stack,
   Switch,
   TagsInput,
@@ -20,6 +21,7 @@ import {
   useSyncDuringRender,
   useUpdateBookmark,
   useUploadBookmarkPreview,
+  useVaults,
 } from '@/hooks'
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
@@ -39,6 +41,7 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
   const [pendingPreview, setPendingPreview] = useState<Blob | null>(null)
   const editing = !!draft.id
+  const vaults = useVaults(opened)
   const me = useMe(true)
   const canSetPrivate = editing && !draft.is_vault && draft.owner_user_id === me.data?.user.id
   const createBookmark = useCreateBookmark()
@@ -88,6 +91,7 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
           title: body.title,
           description: body.description,
           category_ids: body.category_ids,
+          vault_id: body.category_ids.length === 0 ? (draft.vault_id ?? null) : null,
           tags: body.tags,
           is_favorite: draft.is_favorite,
           is_unread: draft.is_unread,
@@ -196,6 +200,16 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
             searchable
             clearable
           />
+          {!editing && draft.category_ids.length === 0 ? (
+            <Select
+              label="Vault"
+              placeholder="Not in a vault"
+              clearable
+              data={(vaults.data?.vaults ?? []).filter((v) => v.unlocked).map((v) => ({ value: v.id, label: v.name }))}
+              value={draft.vault_id ?? null}
+              onChange={(vault_id) => setDraft((d) => ({ ...d, vault_id }))}
+            />
+          ) : null}
           <TagsInput
             label="Tags"
             description="Type a tag and press Enter"

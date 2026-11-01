@@ -47,7 +47,7 @@ async fn bookmark_category_dashboard_activity_flow() {
             name: format!("Folder-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
@@ -58,6 +58,7 @@ async fn bookmark_category_dashboard_activity_flow() {
         &pool,
         user.id,
         CreateBookmark {
+            vault_id: None,
             url: "https://example.com/activity".into(),
             title: Some("Activity BM".into()),
             description: None,

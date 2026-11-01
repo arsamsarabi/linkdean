@@ -31,6 +31,7 @@ export function useSearchBookmarks(q: string, enabled: boolean): UseQueryResult<
 
 type CreateBookmarkBody = {
   url: string
+  vault_id?: string | null
   title?: string
   description?: string
   notes?: string

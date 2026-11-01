@@ -67,7 +67,7 @@ pub async fn apply_parsed_import(
                 name: leaf_name(path).to_string(),
                 parent_id,
                 is_hidden: cat.is_hidden,
-                is_vault: false,
+                vault_id: None,
                 icon: cat.icon,
             },
         )

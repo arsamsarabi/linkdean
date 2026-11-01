@@ -865,6 +865,9 @@ pub struct CreateBookmark {
     pub is_unread: bool,
     #[serde(default)]
     pub is_pinned: bool,
+    /// For a loose vault bookmark. Categories inside a vault imply their vault.
+    #[serde(default)]
+    pub vault_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -888,7 +891,8 @@ pub struct CreateCategory {
     pub name: String,
     pub parent_id: Option<Uuid>,
     pub is_hidden: bool,
-    pub is_vault: bool,
+    #[serde(default)]
+    pub vault_id: Option<Uuid>,
     #[serde(default)]
     pub icon: Option<String>,
 }

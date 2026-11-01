@@ -1,8 +1,8 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Box, Button, Checkbox, Drawer, Group, LoadingOverlay, Select, Stack, TextInput } from '@mantine/core'
+import { Box, Button, Checkbox, Drawer, LoadingOverlay, Select, Stack, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconFolderPlus } from '@tabler/icons-react'
-import { useCreateCategory, useSyncDuringRender } from '@/hooks'
+import { useCreateCategory, useSyncDuringRender, useVaults } from '@/hooks'
 import { categorySelectData, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
 import { CategoryIconPicker } from './CategoryIconPicker'
@@ -21,7 +21,8 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState<string | null>(null)
   const [hidden, setHidden] = useState(false)
-  const [vault, setVault] = useState(false)
+  const [vaultId, setVaultId] = useState<string | null>(null)
+  const vaults = useVaults(opened)
   const [icon, setIcon] = useState<CategoryIconKey | null>(null)
   const create = useCreateCategory()
 
@@ -34,14 +35,14 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
   )
 
   const parentCat = useMemo(() => (parentId ? categories.find((c) => c.id === parentId) : null), [categories, parentId])
-  const canCreateVault = !parentCat || parentCat.access === 'owner'
+  const canChooseVault = !parentCat
 
   useSyncDuringRender([opened, defaultParentId], () => {
     if (!opened) return
     setName('')
     setParentId(defaultParentId)
     setHidden(false)
-    setVault(false)
+    setVaultId(null)
     setIcon(null)
   })
 
@@ -51,7 +52,7 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
         name: name.trim(),
         parent_id: parentId || null,
         is_hidden: hidden,
-        is_vault: vault,
+        vault_id: parentCat ? (parentCat.vault_id ?? null) : vaultId,
         icon: icon ?? null,
       })
       notifications.show({ message: 'Category created' })
@@ -78,10 +79,8 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
             data={parentOptions}
             value={parentId ?? ''}
             onChange={(v) => {
-              const next = v || null
-              setParentId(next)
-              const p = next ? categories.find((c) => c.id === next) : null
-              if (p && p.access !== 'owner') setVault(false)
+              setParentId(v || null)
+              setVaultId(null)
             }}
             searchable
             clearable
@@ -90,15 +89,16 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
             value={icon}
             onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
           />
-          <Group gap="lg">
-            <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
-            <Checkbox
-              label="Vault"
-              checked={vault}
-              disabled={!canCreateVault}
-              onChange={(e) => setVault(e.currentTarget.checked)}
-            />
-          </Group>
+          <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
+          <Select
+            label="Vault"
+            placeholder={parentCat ? 'Follows the parent category' : 'Not in a vault'}
+            clearable
+            disabled={!canChooseVault}
+            data={(vaults.data?.vaults ?? []).filter((v) => v.unlocked).map((v) => ({ value: v.id, label: v.name }))}
+            value={vaultId}
+            onChange={setVaultId}
+          />
           <Button
             leftSection={<IconFolderPlus {...iconSm} />}
             onClick={() => void onCreate()}

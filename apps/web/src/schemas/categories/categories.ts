@@ -10,6 +10,7 @@ export const categorySchema = z.object({
   is_hidden: z.boolean(),
   visibility: z.enum(['private', 'followers', 'members']).default('private'),
   is_vault: z.boolean(),
+  vault_id: z.string().nullish(),
   icon: z.string().nullish(),
   position: z.number(),
   created_at: z.string().optional(),

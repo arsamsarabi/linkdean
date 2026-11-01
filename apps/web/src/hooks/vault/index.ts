@@ -1,1 +1,1 @@
-export { useVaultStatus, useVaultSetup, useVaultUnlock, useVaultLock } from './useVault'
+export * from './useVault'

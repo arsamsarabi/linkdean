@@ -17,6 +17,7 @@ import {
   createApiKeyResponseSchema,
   createCategoryShareOutcomeSchema,
   createDashboardShareOutcomeSchema,
+  createdVaultSchema,
   createRegistrationInviteResponseSchema,
   dashboardSchema,
   dashboardShareSchema,
@@ -26,6 +27,7 @@ import {
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
   forkCategoryResultSchema,
+  globalPassphraseSchema,
   importResultSchema,
   markAllReadSchema,
   meResponseSchema,
@@ -39,6 +41,7 @@ import {
   profileSchema,
   profileSummariesEnvelopeSchema,
   publicListSchema,
+  recoveryKeySchema,
   registrationInvitesEnvelopeSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
@@ -48,6 +51,7 @@ import {
   trashPurgeResultSchema,
   unreadCountSchema,
   userEnvelopeSchema,
+  vaultsEnvelopeSchema,
   vaultStatusSchema,
   type ActivityAction,
   type ActivityEvent,
@@ -94,6 +98,7 @@ import {
   type TrashKind,
   type UserPublic,
   type UserSettings,
+  type Vault,
 } from '@/schemas'
 import { req } from './client'
 
@@ -393,6 +398,7 @@ export const api = {
     description?: string
     notes?: string
     category_id?: string | null
+    vault_id?: string | null
     category_ids?: string[]
     tags: string[]
     is_favorite?: boolean
@@ -443,6 +449,54 @@ export const api = {
     req('/vault/unlock', { method: 'POST', body: JSON.stringify({ passphrase }) }),
 
   vaultLock: (): Promise<unknown> => req('/vault/lock', { method: 'POST' }),
+
+  vaults: (): Promise<{ vaults: Vault[] }> => req('/vaults', {}, vaultsEnvelopeSchema),
+
+  createVault: (body: { name: string; passphrase: string }): Promise<{ vault: Vault; recovery_key: string }> =>
+    req('/vaults', { method: 'POST', body: JSON.stringify(body) }, createdVaultSchema),
+
+  renameVault: (id: string, name: string): Promise<unknown> =>
+    req(`/vaults/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+
+  deleteVault: (id: string, body: { name: string; password?: string }): Promise<unknown> =>
+    req(`/vaults/${id}`, { method: 'DELETE', body: JSON.stringify(body) }),
+
+  unlockVault: (id: string, passphrase: string): Promise<unknown> =>
+    req(`/vaults/${id}/unlock`, { method: 'POST', body: JSON.stringify({ passphrase }) }),
+
+  lockVault: (id: string): Promise<unknown> => req(`/vaults/${id}/lock`, { method: 'POST' }),
+
+  lockAllVaults: (): Promise<unknown> => req('/vaults/lock-all', { method: 'POST' }),
+
+  recoverVault: (id: string, body: { recovery_key: string; new_passphrase: string }): Promise<unknown> =>
+    req(`/vaults/${id}/recover`, { method: 'POST', body: JSON.stringify(body) }),
+
+  newRecoveryKey: (id: string): Promise<{ recovery_key: string }> =>
+    req(`/vaults/${id}/recovery-key`, { method: 'POST' }, recoveryKeySchema),
+
+  globalPassphrase: (): Promise<{ enabled: boolean }> => req('/vaults/global', {}, globalPassphraseSchema),
+
+  enableGlobalPassphrase: (passphrase: string): Promise<unknown> =>
+    req('/vaults/global', { method: 'POST', body: JSON.stringify({ passphrase }) }),
+
+  changeGlobalPassphrase: (body: { current_passphrase: string; new_passphrase: string }): Promise<unknown> =>
+    req('/vaults/global', { method: 'PUT', body: JSON.stringify(body) }),
+
+  disableGlobalPassphrase: (): Promise<unknown> => req('/vaults/global', { method: 'DELETE' }),
+
+  unlockAllVaults: (passphrase: string): Promise<unknown> =>
+    req('/vaults/global/unlock', { method: 'POST', body: JSON.stringify({ passphrase }) }),
+
+  joinGlobal: (id: string, passphrase: string): Promise<unknown> =>
+    req(`/vaults/${id}/global`, { method: 'POST', body: JSON.stringify({ passphrase }) }),
+
+  leaveGlobal: (id: string): Promise<unknown> => req(`/vaults/${id}/global`, { method: 'DELETE' }),
+
+  moveToVault: (body: {
+    category_ids: string[]
+    bookmark_ids: string[]
+    destination_vault_id: string | null
+  }): Promise<unknown> => req('/vaults/move', { method: 'POST', body: JSON.stringify(body) }),
 
   duplicates: (): Promise<{ urls: string[]; groups: DuplicateGroup[] }> =>
     req('/bookmarks/duplicates', {}, duplicatesSchema),

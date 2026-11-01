@@ -208,20 +208,19 @@ async fn set_bookmark_categories(
         }
     }
 
-    let mut any_vault = false;
-    let mut any_non_vault = false;
+    let (bookmark_vault,): (Option<Uuid>,) =
+        sqlx::query_as("SELECT vault_id FROM bookmarks WHERE id = $1")
+            .bind(bookmark_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
     for id in &unique {
         let (cat, _) = require_category_write(pool, user_id, *id).await?;
-        if cat.is_vault {
-            any_vault = true;
-        } else {
-            any_non_vault = true;
+        if cat.vault_id != bookmark_vault {
+            return Err(Error::BadRequest(
+                "a bookmark can only sit in categories of its own vault".into(),
+            ));
         }
-    }
-    if any_vault && any_non_vault {
-        return Err(Error::BadRequest(
-            "cannot mix vault and non-vault categories on one bookmark".into(),
-        ));
     }
 
     sqlx::query("DELETE FROM bookmark_categories WHERE bookmark_id = $1")
@@ -539,15 +538,24 @@ pub async fn create_bookmark(
     keyring: &VaultKeyring,
 ) -> Result<BookmarkView> {
     let cat_ids = resolve_category_ids(&req.category_ids, req.category_id);
-    let mut vault_id = None;
+    let mut vault_id = req.vault_id;
+    let mut first = true;
     for cid in &cat_ids {
         let (cat, access) = require_category_write(pool, user_id, *cid).await?;
-        if cat.is_vault {
-            if !access.is_owner() {
-                return Err(Error::Forbidden);
-            }
-            vault_id = cat.vault_id;
+        if cat.is_vault && !access.is_owner() {
+            return Err(Error::Forbidden);
         }
+        if first && req.vault_id.is_none() {
+            vault_id = cat.vault_id;
+        } else if cat.vault_id != vault_id {
+            return Err(Error::BadRequest(
+                "a bookmark can only sit in categories of its own vault".into(),
+            ));
+        }
+        first = false;
+    }
+    if let Some(id) = vault_id {
+        super::vault::get_user_vault(pool, user_id, id).await?;
     }
 
     let title = req.title.clone().unwrap_or_else(|| req.url.clone());
@@ -1316,6 +1324,7 @@ pub async fn save_bookmark_copy(
         pool,
         user_id,
         CreateBookmark {
+            vault_id: None,
             url: source.url,
             title: Some(source.title),
             description: source.description,

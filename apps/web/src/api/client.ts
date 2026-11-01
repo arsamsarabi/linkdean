@@ -15,6 +15,17 @@ function parseWithSchema<T>(schema: z.ZodType<T>, data: unknown, path: string): 
   return result.data
 }
 
+export class ApiError extends Error {
+  readonly status: number
+  readonly body: unknown
+
+  constructor(message: string, status: number, body: unknown) {
+    super(message)
+    this.status = status
+    this.body = body
+  }
+}
+
 export async function req<T>(path: string, init: RequestInit = {}, schema?: z.ZodType<T>): Promise<T> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
@@ -25,15 +36,21 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
   const res = await fetch(`/api${path}`, { ...init, headers, credentials: 'include' })
   if (!res.ok) {
     let msg = res.statusText
+    let body: unknown
     try {
-      const j: unknown = await res.json()
-      if (j && typeof j === 'object' && 'error' in j && typeof (j as { error: unknown }).error === 'string') {
-        msg = (j as { error: string }).error
+      body = await res.json()
+      if (
+        body &&
+        typeof body === 'object' &&
+        'error' in body &&
+        typeof (body as { error: unknown }).error === 'string'
+      ) {
+        msg = (body as { error: string }).error
       }
     } catch {
       /* ignore body parse */
     }
-    throw new Error(msg)
+    throw new ApiError(msg, res.status, body)
   }
   if (res.status === 204) {
     if (schema) return parseWithSchema(schema, undefined, path)

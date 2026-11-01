@@ -196,34 +196,25 @@ pub async fn create_category(
     user_id: Uuid,
     req: CreateCategory,
 ) -> Result<CategoryView> {
+    if let Some(vault_id) = req.vault_id {
+        super::vault::get_user_vault(pool, user_id, vault_id).await?;
+    }
     let owner_user_id = if let Some(pid) = req.parent_id {
         let (parent, access) = require_category_write(pool, user_id, pid).await?;
-        if parent.is_vault && !req.is_vault {
+        if parent.vault_id != req.vault_id {
             return Err(Error::BadRequest(
-                "non-vault category cannot nest under vault".into(),
+                "a subcategory stays in its parent's vault".into(),
             ));
         }
-        if req.is_vault && !access.is_owner() {
+        if req.vault_id.is_some() && !access.is_owner() {
             return Err(Error::Forbidden);
         }
         // Child under shared folder stays under folder owner's tree.
         parent.owner_user_id
     } else {
-        if req.is_vault {
-            // vault roots only for self
-        }
         user_id
     };
 
-    if owner_user_id != user_id && req.is_vault {
-        return Err(Error::Forbidden);
-    }
-
-    let vault_id = if req.is_vault {
-        Some(super::vault::get_vault(pool, user_id).await?.id)
-    } else {
-        None
-    };
     let icon = normalize_category_icon(req.icon);
     let cat = sqlx::query_as::<_, Category>(
         r#"
@@ -236,9 +227,9 @@ pub async fn create_category(
     .bind(req.parent_id)
     .bind(req.name)
     .bind(req.is_hidden)
-    .bind(req.is_vault)
+    .bind(req.vault_id.is_some())
     .bind(icon)
-    .bind(vault_id)
+    .bind(req.vault_id)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -644,7 +635,7 @@ pub async fn fork_category(
                     name,
                     parent_id: new_parent,
                     is_hidden: cat.is_hidden,
-                    is_vault: false,
+                    vault_id: None,
                     icon: cat.icon.clone(),
                 },
             )

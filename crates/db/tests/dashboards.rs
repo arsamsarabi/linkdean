@@ -74,7 +74,7 @@ async fn default_dashboard_roundtrip_and_authz() {
             name: format!("DashCat-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
@@ -300,7 +300,7 @@ async fn dashboard_share_read_write_and_revoke() {
             name: format!("DashShareCat-{}", Uuid::new_v4()),
             parent_id: None,
             is_hidden: false,
-            is_vault: false,
+            vault_id: None,
             icon: None,
         },
     )
