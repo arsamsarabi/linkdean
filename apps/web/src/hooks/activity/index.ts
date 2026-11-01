@@ -1,1 +1,7 @@
-export { useActivity, type ActivityListParams } from './useActivity'
+export {
+  useActivity,
+  usePrefetchActivity,
+  prefetchActivity,
+  activityQueryKey,
+  type ActivityListParams,
+} from './useActivity'

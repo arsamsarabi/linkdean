@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   Badge,
@@ -12,10 +12,8 @@ import {
 } from '@mantine/core'
 import { IconHistory } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
-import { useActivity } from '@/hooks'
+import { useActivity, usePrefetchActivity } from '@/hooks'
 import type { ActivityAction, ActivitySubjectType } from '@/schemas'
-
-const SKELETON_GRACE_MS = 500
 
 type Props = {
   opened: boolean
@@ -55,18 +53,11 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
   const [subject, setSubject] = useState<SubjectFilter>('all')
   const [action, setAction] = useState<ActionFilter>('all')
   const list = useActivity(opened, { subjectType: subject, action })
-  // No cached/placeholder rows yet → wait before skeleton so fast fetches don't flash.
-  const awaitingFirstPaint = list.isFetching && !list.data
-  const [showSkeleton, setShowSkeleton] = useState(false)
 
-  useEffect(() => {
-    if (!awaitingFirstPaint) {
-      setShowSkeleton(false)
-      return
-    }
-    const t = window.setTimeout(() => setShowSkeleton(true), SKELETON_GRACE_MS)
-    return () => window.clearTimeout(t)
-  }, [awaitingFirstPaint])
+  // Skeleton only on true cold start (no cache / no placeholder). Prefetch + keepPreviousData
+  // cover hover-open and filter hops — no delayed timer needed.
+  const showSkeleton = list.isPending
+  const swappingFilters = list.isFetching && list.isPlaceholderData
 
   return (
     <Drawer opened={opened} onClose={onClose} position="right" size="md" title="History" padding="md">
@@ -120,7 +111,13 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
           </Text>
         ) : null}
 
-        <Stack gap="xs">
+        <Stack
+          gap="xs"
+          style={{
+            opacity: swappingFilters ? 0.55 : 1,
+            transition: 'opacity 120ms ease',
+          }}
+        >
           {(list.data?.events ?? []).map((e) => (
             <Box
               key={e.id}
@@ -157,8 +154,18 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
 }
 
 export function HistoryButton({ onClick }: { onClick: () => void }): ReactElement {
+  const prefetch = usePrefetchActivity()
   return (
-    <ActionIcon variant="subtle" size="lg" radius="md" aria-label="History" onClick={onClick}>
+    <ActionIcon
+      variant="subtle"
+      size="lg"
+      radius="md"
+      aria-label="History"
+      onClick={onClick}
+      onMouseEnter={prefetch}
+      onFocus={prefetch}
+      onPointerDown={prefetch}
+    >
       <IconHistory size={20} stroke={1.5} />
     </ActionIcon>
   )
