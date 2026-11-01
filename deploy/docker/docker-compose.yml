@@ -8,8 +8,6 @@ services:
       POSTGRES_USER: linkdean
       POSTGRES_PASSWORD: linkdean
       POSTGRES_DB: linkdean
-    ports:
-      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,11 +20,9 @@ services:
     image: getmeili/meilisearch:v1.11
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev_master_key_change_me}
-      MEILI_ENV: development
+      MEILI_ENV: production
     volumes:
       - meili:/meili_data
-    ports:
-      - "7700:7700"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health"]
       interval: 5s
