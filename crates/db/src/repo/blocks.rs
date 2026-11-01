@@ -2,13 +2,9 @@ use linkdean_core::{BlockRelation, Error, FollowUserView, MuteRelation, Result};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::users::{find_user_by_id, user_share_label};
+use super::users::{find_user_by_id, share_invitee_label};
 
-pub async fn is_blocked(
-    pool: &PgPool,
-    blocker_id: Uuid,
-    blocked_id: Uuid,
-) -> Result<bool> {
+pub async fn is_blocked(pool: &PgPool, blocker_id: Uuid, blocked_id: Uuid) -> Result<bool> {
     let row: Option<(i32,)> = sqlx::query_as(
         r#"
         SELECT 1 FROM user_blocks
@@ -116,10 +112,7 @@ pub async fn block_user(
         .await?
         .ok_or(Error::NotFound)?;
 
-    let mut tx = pool
-        .begin()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
 
     sqlx::query(
         r#"
@@ -219,9 +212,7 @@ pub async fn block_user(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    tx.commit()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
 
     block_relation(pool, blocker_id, blocked_id).await
 }
@@ -276,11 +267,7 @@ pub async fn mute_user(pool: &PgPool, muter_id: Uuid, muted_id: Uuid) -> Result<
     mute_relation(pool, muter_id, muted_id).await
 }
 
-pub async fn unmute_user(
-    pool: &PgPool,
-    muter_id: Uuid,
-    muted_id: Uuid,
-) -> Result<MuteRelation> {
+pub async fn unmute_user(pool: &PgPool, muter_id: Uuid, muted_id: Uuid) -> Result<MuteRelation> {
     if muter_id == muted_id {
         return Err(Error::BadRequest("cannot unmute yourself".into()));
     }
@@ -301,51 +288,48 @@ pub async fn unmute_user(
     mute_relation(pool, muter_id, muted_id).await
 }
 
-async fn map_user_rows(
-    pool: &PgPool,
-    rows: Vec<(Uuid, chrono::DateTime<chrono::Utc>)>,
-) -> Result<Vec<FollowUserView>> {
-    let mut out = Vec::with_capacity(rows.len());
-    for (id, created_at) in rows {
-        let label = match find_user_by_id(pool, id).await? {
-            Some(u) => user_share_label(&u),
-            None => "User".into(),
-        };
-        out.push(FollowUserView {
+type TargetRow = (Uuid, Option<String>, String, chrono::DateTime<chrono::Utc>);
+
+fn to_user_views(rows: Vec<TargetRow>) -> Vec<FollowUserView> {
+    rows.into_iter()
+        .map(|(id, display_name, email, created_at)| FollowUserView {
             id,
-            display_name: label,
+            display_name: share_invitee_label(display_name.as_deref(), &email, "Owner"),
             created_at,
-        });
-    }
-    Ok(out)
+        })
+        .collect()
 }
 
 pub async fn list_blocked(pool: &PgPool, user_id: Uuid) -> Result<Vec<FollowUserView>> {
-    let rows: Vec<(Uuid, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+    let rows: Vec<TargetRow> = sqlx::query_as(
         r#"
-        SELECT blocked_id, created_at FROM user_blocks
-        WHERE blocker_id = $1
-        ORDER BY created_at DESC
+        SELECT u.id, u.display_name, u.email, ub.created_at
+        FROM user_blocks ub
+        JOIN users u ON u.id = ub.blocked_id
+        WHERE ub.blocker_id = $1
+        ORDER BY ub.created_at DESC
         "#,
     )
     .bind(user_id)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
-    map_user_rows(pool, rows).await
+    Ok(to_user_views(rows))
 }
 
 pub async fn list_muted(pool: &PgPool, user_id: Uuid) -> Result<Vec<FollowUserView>> {
-    let rows: Vec<(Uuid, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+    let rows: Vec<TargetRow> = sqlx::query_as(
         r#"
-        SELECT muted_id, created_at FROM user_mutes
-        WHERE muter_id = $1
-        ORDER BY created_at DESC
+        SELECT u.id, u.display_name, u.email, um.created_at
+        FROM user_mutes um
+        JOIN users u ON u.id = um.muted_id
+        WHERE um.muter_id = $1
+        ORDER BY um.created_at DESC
         "#,
     )
     .bind(user_id)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
-    map_user_rows(pool, rows).await
+    Ok(to_user_views(rows))
 }

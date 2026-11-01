@@ -212,7 +212,7 @@ pub async fn claim_pending_share_invites(pool: &PgPool, email: &str, user_id: Uu
     let mut claimed = 0u32;
     for row in rows {
         if super::blocks::is_blocked_either_way(pool, user_id, row.invited_by_user_id).await? {
-            // Mark claimed without applying so invite cannot linger.
+            // Revoke without applying so invite cannot linger.
             sqlx::query(
                 r#"
                 UPDATE pending_share_invites
