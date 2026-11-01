@@ -3,8 +3,9 @@ import { Box, Button, Checkbox, Drawer, Group, LoadingOverlay, Select, Stack, Te
 import { notifications } from '@mantine/notifications'
 import { IconFolderPlus } from '@tabler/icons-react'
 import { useCreateCategory } from '@/hooks'
-import { categorySelectData } from '@/lib'
+import { categorySelectData, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
+import { CategoryIconPicker } from './CategoryIconPicker'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -26,6 +27,7 @@ export function CategoryDrawer({
   const [parentId, setParentId] = useState<string | null>(null)
   const [hidden, setHidden] = useState(false)
   const [vault, setVault] = useState(false)
+  const [icon, setIcon] = useState<CategoryIconKey | null>(null)
   const create = useCreateCategory()
 
   const parentOptions = useMemo(
@@ -48,6 +50,7 @@ export function CategoryDrawer({
     setParentId(defaultParentId)
     setHidden(false)
     setVault(false)
+    setIcon(null)
   }, [opened, defaultParentId])
 
   async function onCreate(): Promise<void> {
@@ -57,6 +60,7 @@ export function CategoryDrawer({
         parent_id: parentId || null,
         is_hidden: hidden,
         is_vault: vault,
+        icon: icon ?? null,
       })
       notifications.show({ message: 'Category created' })
       onClose()
@@ -96,6 +100,10 @@ export function CategoryDrawer({
             }}
             searchable
             clearable
+          />
+          <CategoryIconPicker
+            value={icon}
+            onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
           />
           <Group gap="lg">
             <Checkbox

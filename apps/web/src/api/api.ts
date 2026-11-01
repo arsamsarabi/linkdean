@@ -220,6 +220,7 @@ export const api = {
       parent_id: string | null
       is_hidden: boolean
       position: number
+      icon: string | null
     }>
   ): Promise<Category> => req(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, categorySchema),
 

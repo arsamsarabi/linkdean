@@ -39,6 +39,7 @@ type UpdateCategoryVars = {
     parent_id: string | null
     is_hidden: boolean
     position: number
+    icon: string | null
   }>
 }
 

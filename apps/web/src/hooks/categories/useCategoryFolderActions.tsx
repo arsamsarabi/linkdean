@@ -1,9 +1,11 @@
 import { useState, type ReactElement } from 'react'
 import { Button, Group, Modal, Stack, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { CategoryIconPicker } from '@/components/category/CategoryIconPicker'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { ShareCategoryDrawer } from '@/components/category/ShareCategoryDrawer'
 import { SocialDrawer } from '@/components/social'
+import { isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
 import { useDeleteCategory, useForkCategory, useUpdateCategory } from './useCategories'
 
@@ -29,6 +31,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
   const [socialCat, setSocialCat] = useState<Category | null>(null)
   const [renameCat, setRenameCat] = useState<Category | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [renameIcon, setRenameIcon] = useState<CategoryIconKey | null>(null)
 
   const update = useUpdateCategory()
   const remove = useDeleteCategory()
@@ -37,17 +40,28 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
   function openRename(cat: Category): void {
     setRenameCat(cat)
     setRenameValue(cat.name)
+    setRenameIcon(isCategoryIconKey(cat.icon) ? cat.icon : null)
   }
 
   async function confirmRename(): Promise<void> {
     if (!renameCat) return
     const next = renameValue.trim()
-    if (!next || next === renameCat.name) {
+    const prevIcon = isCategoryIconKey(renameCat.icon) ? renameCat.icon : null
+    const nameChanged = !!next && next !== renameCat.name
+    const iconChanged = renameIcon !== prevIcon
+    if (!nameChanged && !iconChanged) {
       setRenameCat(null)
       return
     }
+    if (!next) return
     try {
-      await update.mutateAsync({ id: renameCat.id, body: { name: next } })
+      await update.mutateAsync({
+        id: renameCat.id,
+        body: {
+          ...(nameChanged ? { name: next } : {}),
+          ...(iconChanged ? { icon: renameIcon } : {}),
+        },
+      })
       setRenameCat(null)
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
@@ -92,7 +106,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
       <Modal
         opened={!!renameCat}
         onClose={() => setRenameCat(null)}
-        title="Rename category"
+        title="Edit category"
         centered
       >
         <Stack gap="lg">
@@ -105,6 +119,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
             }}
             data-autofocus
           />
+          <CategoryIconPicker value={renameIcon} onChange={setRenameIcon} />
           <Group justify="flex-end" gap="sm">
             <Button variant="default" onClick={() => setRenameCat(null)} disabled={update.isPending}>
               Cancel

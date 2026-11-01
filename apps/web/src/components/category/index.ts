@@ -4,5 +4,6 @@ export {
   categoryFolderMenuVisible,
   type CategoryFolderMenuProps,
 } from './CategoryFolderMenu'
+export { CategoryIconPicker } from './CategoryIconPicker'
 export { CategoryManager } from './CategoryManager'
 export { ShareCategoryDrawer } from './ShareCategoryDrawer'

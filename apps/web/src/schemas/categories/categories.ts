@@ -9,6 +9,7 @@ export const categorySchema = z.object({
   name: z.string(),
   is_hidden: z.boolean(),
   is_vault: z.boolean(),
+  icon: z.string().nullish(),
   position: z.number(),
   access: categoryAccessSchema.default('owner'),
   shared_out: z.boolean().default(false),

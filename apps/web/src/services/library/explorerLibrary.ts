@@ -13,6 +13,7 @@ export type ExplorerFolder = {
   bookmarkCount: number
   isVault: boolean
   isHidden: boolean
+  icon?: string | null
   /** Effective access; omitted for virtual folders (All / Unsorted). */
   access?: CategoryAccess
   /** Owner has shared this folder (or an ancestor) out. */
@@ -74,6 +75,7 @@ function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): Exp
     bookmarkCount: countDirectBookmarks(cat.id, bookmarks),
     isVault: cat.is_vault,
     isHidden: cat.is_hidden,
+    icon: cat.icon,
     access: cat.access,
     sharedOut: cat.shared_out,
     sharedWith: cat.shared_with,

@@ -1,0 +1,29 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.25rem, 1fr));
+  gap: 0.35rem;
+}
+
+.cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--mantine-radius-sm);
+  border: 1px solid var(--mantine-color-default-border);
+  color: var(--mantine-color-dimmed);
+  background: var(--mantine-color-body);
+  cursor: pointer;
+}
+
+.cell:hover {
+  color: var(--mantine-color-text);
+  border-color: var(--mantine-color-violet-4);
+}
+
+.selected {
+  color: var(--mantine-color-violet-filled);
+  border-color: var(--mantine-color-violet-filled);
+  background: var(--mantine-color-violet-light);
+}

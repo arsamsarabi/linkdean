@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react'
 import { Badge, Group, Text } from '@mantine/core'
-import { IconFolderFilled, IconLock } from '@tabler/icons-react'
+import { IconLock } from '@tabler/icons-react'
 import {
   CategoryFolderMenu,
   type CategoryFolderMenuProps,
 } from '@/components/category/CategoryFolderMenu'
 import { ShareBadge } from '@/components/share-badge'
+import { CategoryIcon } from '@/lib'
 import type { CategoryAccess } from '@/schemas'
 import styles from './FolderTile.module.css'
 
@@ -16,6 +17,7 @@ export type FolderTileProps = {
   onOpen: (id: string) => void
   isVault?: boolean
   isHidden?: boolean
+  icon?: string | null
   access?: CategoryAccess
   sharedOut?: boolean
   sharedWith?: readonly string[]
@@ -32,6 +34,7 @@ export function FolderTile({
   onOpen,
   isVault = false,
   isHidden = false,
+  icon,
   access,
   sharedOut = false,
   sharedWith,
@@ -56,7 +59,7 @@ export function FolderTile({
       aria-label={`Open folder ${name}, ${countLabel}`}
     >
       {menuProps ? <CategoryFolderMenu {...menuProps} /> : null}
-      <IconFolderFilled className={styles.icon} size={40} aria-hidden />
+      <CategoryIcon icon={icon} className={styles.icon} size={40} aria-hidden />
       <div className={styles.name}>
         <Text size="sm" fw={600} lineClamp={2}>
           {name}

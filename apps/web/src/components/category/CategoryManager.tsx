@@ -90,6 +90,7 @@ export function CategoryManager(): ReactElement {
             onOpen={setFolderId}
             isVault={cat.is_vault}
             isHidden={cat.is_hidden}
+            icon={cat.icon}
             access={cat.access}
             sharedOut={cat.shared_out}
             sharedWith={cat.shared_with}

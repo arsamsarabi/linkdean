@@ -21,6 +21,7 @@ export function ExplorerFolderTile({ folder, onOpen, menu }: Props): ReactElemen
       onOpen={onOpen}
       isVault={folder.isVault}
       isHidden={folder.isHidden}
+      icon={folder.icon}
       access={folder.access}
       sharedOut={folder.sharedOut}
       sharedWith={folder.sharedWith}
