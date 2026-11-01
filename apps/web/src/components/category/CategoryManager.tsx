@@ -35,7 +35,7 @@ export function CategoryManager(): ReactElement {
     },
   })
 
-  const all = cats.data || []
+  const all = useMemo(() => cats.data || [], [cats.data])
   const byId = useMemo(() => new Map(all.map((c) => [c.id, c])), [all])
   const counts = useMemo(() => childCountMap(all), [all])
   const tree = useMemo(() => buildCategoryTree(all), [all])

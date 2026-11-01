@@ -14,7 +14,7 @@ use super::dashboard_shares::{
 use super::shares::bookmark_can_read;
 
 async fn fetch_bookmark_row(pool: &PgPool, id: Uuid) -> Result<Option<Bookmark>> {
-    sqlx::query_as::<_, Bookmark>("SELECT * FROM bookmarks WHERE id = $1")
+    sqlx::query_as::<_, Bookmark>("SELECT * FROM bookmarks WHERE id = $1 AND deleted_at IS NULL")
         .bind(id)
         .fetch_optional(pool)
         .await
@@ -379,10 +379,10 @@ pub async fn put_dashboard(
             }
             // Owner / readers of the bookmark, or write invitees rearranging owner's non-vault pins.
             let readable = bookmark_can_read(pool, user_id, *bookmark_id).await?;
-            let owner_pin = match fetch_bookmark_row(pool, *bookmark_id).await? {
-                Some(b) if !b.is_vault && b.owner_user_id == dash.owner_user_id => true,
-                _ => false,
-            };
+            let owner_pin = matches!(
+                fetch_bookmark_row(pool, *bookmark_id).await?,
+                Some(b) if !b.is_vault && b.owner_user_id == dash.owner_user_id
+            );
             if !readable && !owner_pin {
                 return Err(Error::BadRequest(
                     "bookmark not found or not readable".into(),

@@ -73,7 +73,7 @@ export function AppShell(): ReactElement {
           onDashboard={onDashboard}
           onLibrary={onLibrary}
           label={label}
-          displayName={user?.display_name}
+          displayName={user?.display_name ?? undefined}
           email={user?.email}
           hasAvatar={!!user?.has_avatar}
           vaultUnlocked={vaultUnlocked}

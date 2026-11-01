@@ -77,7 +77,7 @@ pub async fn list_trash(pool: &PgPool, user_id: Uuid) -> Result<Vec<TrashItem>> 
             deleted_at: r.deleted_at,
         });
     }
-    out.sort_by(|a, b| b.deleted_at.cmp(&a.deleted_at));
+    out.sort_by_key(|b| std::cmp::Reverse(b.deleted_at));
     Ok(out)
 }
 

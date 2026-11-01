@@ -1,5 +1,5 @@
 use aes_gcm::aead::{Aead, KeyInit};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
+use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -105,22 +105,25 @@ fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
 }
 
 fn encrypt(key_bytes: &[u8], plaintext: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
-    let key = Key::<Aes256Gcm>::from_slice(key_bytes);
-    let cipher = Aes256Gcm::new(key);
+    let cipher = Aes256Gcm::new_from_slice(key_bytes).map_err(|e| Error::msg(e.to_string()))?;
     let nonce_bytes = random_bytes(NONCE_LEN);
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let nonce: [u8; NONCE_LEN] = nonce_bytes
+        .as_slice()
+        .try_into()
+        .map_err(|_| Error::msg("invalid nonce length"))?;
     let ciphertext = cipher
-        .encrypt(nonce, plaintext)
+        .encrypt(&Nonce::from(nonce), plaintext)
         .map_err(|e| Error::msg(e.to_string()))?;
     Ok((ciphertext, nonce_bytes))
 }
 
 fn decrypt(key_bytes: &[u8], ciphertext: &[u8], nonce_bytes: &[u8]) -> Result<Vec<u8>> {
-    let key = Key::<Aes256Gcm>::from_slice(key_bytes);
-    let cipher = Aes256Gcm::new(key);
-    let nonce = Nonce::from_slice(nonce_bytes);
+    let cipher = Aes256Gcm::new_from_slice(key_bytes).map_err(|_| Error::VaultUnlockFailed)?;
+    let nonce: [u8; NONCE_LEN] = nonce_bytes
+        .try_into()
+        .map_err(|_| Error::VaultUnlockFailed)?;
     cipher
-        .decrypt(nonce, ciphertext)
+        .decrypt(&Nonce::from(nonce), ciphertext)
         .map_err(|_| Error::VaultUnlockFailed)
 }
 
@@ -179,5 +182,13 @@ mod tests {
         assert_eq!(back.url, payload.url);
         assert_eq!(back.title, payload.title);
         assert_eq!(back.tags, payload.tags);
+    }
+
+    #[test]
+    fn decrypt_rejects_bad_key_or_nonce_length() {
+        let bad_nonce = super::decrypt(&[0u8; super::KEY_LEN], b"x", &[0u8; 4]);
+        assert!(matches!(bad_nonce, Err(crate::Error::VaultUnlockFailed)));
+        let bad_key = super::decrypt(&[0u8; 4], b"x", &[0u8; super::NONCE_LEN]);
+        assert!(matches!(bad_key, Err(crate::Error::VaultUnlockFailed)));
     }
 }

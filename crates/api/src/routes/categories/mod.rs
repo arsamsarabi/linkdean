@@ -75,13 +75,14 @@ async fn create(
     AuthUser(user): AuthUser,
     Json(req): Json<CreateCategory>,
 ) -> ApiResult<Json<CategoryView>> {
-    if req.is_vault && state.vault_key(user.id).await.is_none() {
-        if !db::user_has_vault(&state.pool, user.id).await? {
-            return Err(linkdean_core::Error::BadRequest(
-                "setup vault before creating vault categories".into(),
-            )
-            .into());
-        }
+    if req.is_vault
+        && state.vault_key(user.id).await.is_none()
+        && !db::user_has_vault(&state.pool, user.id).await?
+    {
+        return Err(linkdean_core::Error::BadRequest(
+            "setup vault before creating vault categories".into(),
+        )
+        .into());
     }
     let cat = db::create_category(&state.pool, user.id, req).await?;
     Ok(Json(cat))

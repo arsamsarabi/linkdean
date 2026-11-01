@@ -31,7 +31,7 @@ export function TrashPage(): ReactElement {
   const [purgeConfirm, setPurgeConfirm] = useState<TrashItem[] | null>(null)
 
   const retention = me.data?.settings.trash_retention_days ?? 30
-  const items = trash.data || []
+  const items = useMemo(() => trash.data || [], [trash.data])
   const allKeys = useMemo(() => items.map(itemKey), [items])
   const allSelected = allKeys.length > 0 && allKeys.every((k) => selected.has(k))
 

@@ -464,7 +464,7 @@ pub async fn list_bookmarks(
                     owned.push(b);
                 }
             }
-            owned.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+            owned.sort_by_key(|b| std::cmp::Reverse(b.updated_at));
         }
         owned
     };
@@ -473,8 +473,6 @@ pub async fn list_bookmarks(
     for b in rows {
         let key = if b.is_vault && b.owner_user_id == user_id {
             vault_key
-        } else if b.is_vault {
-            None
         } else {
             None
         };
@@ -570,7 +568,7 @@ pub async fn create_bookmark(
 
     set_bookmark_categories(pool, user_id, bookmark.id, &cat_ids).await?;
     if req.is_favorite || req.is_unread || req.is_pinned {
-        let _ = set_bookmark_flags(
+        set_bookmark_flags(
             pool,
             user_id,
             bookmark.id,
@@ -716,7 +714,7 @@ pub async fn update_bookmark(
     }
 
     if flags {
-        let _ = set_bookmark_flags(
+        set_bookmark_flags(
             pool,
             user_id,
             id,

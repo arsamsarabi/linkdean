@@ -20,7 +20,7 @@ export function AdminUsersPanel(): ReactElement {
   const patchUser = useUpdateAdminUser()
   const [userQuery, setUserQuery] = useState('')
   const [page, setPage] = useState(1)
-  const allUsers = users.data?.users ?? []
+  const allUsers = useMemo(() => users.data?.users ?? [], [users.data?.users])
   const adminCount = allUsers.filter((u) => u.is_admin).length
 
   const filteredUsers = useMemo(() => allUsers.filter((u) => matchesAdminUser(u, userQuery)), [allUsers, userQuery])

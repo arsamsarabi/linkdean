@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
-import { Box, Button, Checkbox, Drawer, Group, LoadingOverlay, Select, Stack, Text, TextInput } from '@mantine/core'
+import { Box, Button, Checkbox, Drawer, LoadingOverlay, Select, Stack, Text, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconDeviceFloppy } from '@tabler/icons-react'
 import { useCategories, useUpdateCategory } from '@/hooks'
@@ -23,7 +23,7 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
   const [hidden, setHidden] = useState(false)
   const [icon, setIcon] = useState<CategoryIconKey | null>(null)
 
-  const all = cats.data ?? []
+  const all = useMemo(() => cats.data ?? [], [cats.data])
   const isOwner = category?.access === 'owner'
 
   const parentOptions = useMemo(() => {

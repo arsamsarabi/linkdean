@@ -74,7 +74,7 @@ export function ShareCategoryDrawer({
           onRetry={() => void s.publicLink.refetch()}
           enabled={!!s.publicLink.data?.enabled}
           publicUrl={s.publicUrl}
-          publicPath={s.publicPath}
+          publicPath={s.publicPath ?? undefined}
           busy={s.publicBusy}
           rotatePending={s.rotatePublic.isPending}
           onToggle={(next) => void s.onTogglePublic(next)}

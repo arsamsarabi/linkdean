@@ -6,6 +6,9 @@ use linkdean_core::{CreateApiKey, Error, UpdateAdminUser};
 use linkdean_db::{self as db};
 use uuid::Uuid;
 
+/// `set_api_keys_enabled` flips a platform-wide setting, so tests in this file run one at a time.
+static PLATFORM_GATE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 async fn pool_or_skip() -> Option<sqlx::PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
         eprintln!("skipping api_keys tests: DATABASE_URL unset");
@@ -29,6 +32,7 @@ async fn create_auth_revoke_api_key() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
+    let _gate = PLATFORM_GATE.lock().await;
 
     let user = db::create_user(
         &pool,
@@ -70,6 +74,7 @@ async fn platform_and_user_gates_block_keys() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
+    let _gate = PLATFORM_GATE.lock().await;
 
     let user = db::create_user(
         &pool,
