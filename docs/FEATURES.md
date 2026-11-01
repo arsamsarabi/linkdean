@@ -124,6 +124,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Import / export
 
 - Import: Netscape HTML, Linkdean JSON, Pocket CSV, Raindrop CSV
+- Imported bookmarks get metadata and previews in the background
 - Export: Netscape HTML, Linkdean JSON
 
 ---

@@ -667,6 +667,28 @@ pub async fn backfill_previews(pool: PgPool, search: SearchClient, opts: EnrichO
     let Ok(rows) = db::list_bookmarks_needing_preview(&pool).await else {
         return;
     };
+    enrich_rows(pool, search, opts, rows).await;
+}
+
+/// Enrich one user's bookmarks that have no preview yet, such as after an import.
+pub async fn enrich_user_bookmarks(
+    pool: PgPool,
+    search: SearchClient,
+    opts: EnrichOpts,
+    user_id: Uuid,
+) {
+    match db::list_user_bookmarks_needing_preview(&pool, user_id).await {
+        Ok(rows) => enrich_rows(pool, search, opts, rows).await,
+        Err(e) => warn!(%user_id, "list bookmarks to enrich: {e}"),
+    }
+}
+
+async fn enrich_rows(
+    pool: PgPool,
+    search: SearchClient,
+    opts: EnrichOpts,
+    rows: Vec<(Uuid, Uuid)>,
+) {
     if rows.is_empty() {
         return;
     }

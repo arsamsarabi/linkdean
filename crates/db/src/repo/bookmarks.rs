@@ -1168,6 +1168,29 @@ pub async fn list_bookmarks_needing_preview(pool: &PgPool) -> Result<Vec<(Uuid, 
     Ok(rows)
 }
 
+/// One user's bookmarks still missing a preview, such as those just imported.
+pub async fn list_user_bookmarks_needing_preview(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<Vec<(Uuid, Uuid)>> {
+    let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(
+        r#"
+        SELECT owner_user_id, id FROM bookmarks
+        WHERE owner_user_id = $1
+          AND is_vault = FALSE
+          AND has_preview = FALSE
+          AND deleted_at IS NULL
+          AND url <> ''
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(rows)
+}
+
 /// Claim a batch of bookmarks due for link checking (never-checked first, then stale).
 /// Soft failures (`link_check_fail_count > 0` but not yet confirmed) recheck after
 /// `soft_recheck_after`; healthy / confirmed rows use `recheck_after`.

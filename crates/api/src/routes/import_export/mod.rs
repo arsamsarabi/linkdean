@@ -71,6 +71,14 @@ async fn import(
         }
     }
 
+    // Imports can be large, so fetch metadata and previews after responding.
+    tokio::spawn(linkdean_worker::enrich_user_bookmarks(
+        state.pool.clone(),
+        state.search.clone(),
+        state.enrich_opts(),
+        user.id,
+    ));
+
     Ok(Json(json!({
         "job_id": job.id,
         "total": total,
