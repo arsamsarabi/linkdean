@@ -15,7 +15,7 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { AvatarCropModal, QueryErrorAlert } from '@/components'
 import { useBootstrap, useRegister, useUploadAvatar } from '@/hooks'
@@ -27,10 +27,12 @@ const iconSm = { size: 16, stroke: 1.5 } as const
 
 export function RegisterPage(): ReactElement {
   const nav = useNavigate()
+  const search = useSearch({ strict: false }) as { invite?: string }
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [inviteCode, setInviteCode] = useState(search.invite ?? '')
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null)
@@ -38,6 +40,12 @@ export function RegisterPage(): ReactElement {
   const bootstrap = useBootstrap()
   const register = useRegister()
   const uploadAvatar = useUploadAvatar()
+
+  useEffect(() => {
+    if (search.invite && search.invite !== inviteCode) {
+      setInviteCode(search.invite)
+    }
+  }, [search.invite]) // oxlint-disable-line react-hooks/exhaustive-deps -- sync URL → field once
 
   useEffect(() => {
     if (bootstrap.data?.needs_bootstrap) {
@@ -56,6 +64,7 @@ export function RegisterPage(): ReactElement {
         email,
         password,
         display_name: displayName || undefined,
+        invite_code: inviteCode.trim() || undefined,
       })
       if (pendingAvatar) {
         try {
@@ -96,22 +105,46 @@ export function RegisterPage(): ReactElement {
   }
 
   const closed = !bootstrap.data?.needs_bootstrap && bootstrap.data?.registration_open === false
-  if (closed) {
+  const hasInvite = inviteCode.trim().length > 0
+  if (closed && !hasInvite) {
     return (
       <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className={motion.fadeIn}>
         <Stack gap={6}>
           <Title order={1} c="violet">
             Registration closed
           </Title>
-          <Text c="dimmed">This Linkdean instance is not accepting new accounts.</Text>
+          <Text c="dimmed">
+            This instance is invite-only. Ask an admin for an invite link, or paste a code below.
+          </Text>
         </Stack>
         <Paper p="xl" radius="md" withBorder>
-          <Anchor component="button" type="button" onClick={() => void nav({ to: '/login' })}>
-            <Group gap={6} justify="center">
-              <IconLogin size={14} stroke={1.5} />
-              Back to sign in
-            </Group>
-          </Anchor>
+          <Stack gap="md">
+            <TextInput
+              label="Invite code"
+              placeholder="ldi_…"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.currentTarget.value)}
+              data-autofocus
+            />
+            <Button
+              variant="light"
+              disabled={!inviteCode.trim()}
+              onClick={() => {
+                void nav({
+                  to: '/register',
+                  search: { invite: inviteCode.trim() },
+                })
+              }}
+            >
+              Continue with invite
+            </Button>
+            <Anchor component="button" type="button" onClick={() => void nav({ to: '/login' })}>
+              <Group gap={6} justify="center">
+                <IconLogin size={14} stroke={1.5} />
+                Back to sign in
+              </Group>
+            </Anchor>
+          </Stack>
         </Paper>
       </Stack>
     )
@@ -123,10 +156,21 @@ export function RegisterPage(): ReactElement {
         <Title order={1} c="violet">
           Create account
         </Title>
-        <Text c="dimmed">Join this Linkdean instance.</Text>
+        <Text c="dimmed">
+          {closed ? 'Join with your invite.' : 'Join this Linkdean instance.'}
+        </Text>
       </Stack>
       <Paper p="xl" radius="md" withBorder>
         <Stack gap="md">
+          {closed || hasInvite ? (
+            <TextInput
+              label="Invite code"
+              description={closed ? 'Required for this instance' : 'Optional'}
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.currentTarget.value)}
+              required={closed}
+            />
+          ) : null}
           <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.currentTarget.value)} />
           <TextInput label="Email" required value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
           <PasswordInput
@@ -177,7 +221,7 @@ export function RegisterPage(): ReactElement {
             leftSection={<IconUserPlus {...iconSm} />}
             loading={register.isPending}
             onClick={() => void submit()}
-            disabled={!email || !password}
+            disabled={!email || !password || (closed && !inviteCode.trim())}
           >
             Sign up
           </Button>

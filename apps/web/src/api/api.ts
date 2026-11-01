@@ -3,6 +3,8 @@ import {
   adminReindexSchema,
   adminUserEnvelopeSchema,
   adminUsersEnvelopeSchema,
+  createRegistrationInviteResponseSchema,
+  registrationInvitesEnvelopeSchema,
   apiKeysEnvelopeSchema,
   authTokenResponseSchema,
   bookmarkSchema,
@@ -39,6 +41,8 @@ import {
   type Category,
   type CategoryShare,
   type CreateApiKeyResponse,
+  type CreateRegistrationInviteResponse,
+  type RegistrationInvite,
   type CreateDashboard,
   type Dashboard,
   type DashboardShare,
@@ -89,6 +93,22 @@ export const api = {
 
   reindexSearch: (): Promise<{ ok: boolean; upserted: number; failed: number }> =>
     req('/admin/search/reindex', { method: 'POST' }, adminReindexSchema),
+
+  listRegistrationInvites: (): Promise<{ invites: RegistrationInvite[] }> =>
+    req('/admin/invites', {}, registrationInvitesEnvelopeSchema),
+
+  createRegistrationInvite: (body: {
+    email?: string
+    expires_in_days?: number
+  }): Promise<CreateRegistrationInviteResponse> =>
+    req(
+      '/admin/invites',
+      { method: 'POST', body: JSON.stringify(body) },
+      createRegistrationInviteResponseSchema
+    ),
+
+  revokeRegistrationInvite: (id: string): Promise<{ ok: boolean }> =>
+    req(`/admin/invites/${id}`, { method: 'DELETE' }, okSchema),
 
   listApiKeys: (): Promise<{ keys: ApiKey[] }> => req('/api-keys', {}, apiKeysEnvelopeSchema),
 
@@ -154,6 +174,7 @@ export const api = {
     email: string
     password: string
     display_name?: string
+    invite_code?: string
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/register', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 

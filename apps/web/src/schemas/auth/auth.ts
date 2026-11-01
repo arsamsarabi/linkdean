@@ -91,6 +91,28 @@ export const adminReindexSchema = z.object({
   failed: z.number(),
 })
 
+export const registrationInviteSchema = z.object({
+  id: z.string(),
+  code_prefix: z.string(),
+  email: z.string().nullish(),
+  created_by_user_id: z.string(),
+  expires_at: z.string(),
+  used_at: z.string().nullish(),
+  used_by_user_id: z.string().nullish(),
+  revoked_at: z.string().nullish(),
+  created_at: z.string(),
+  status: z.string(),
+})
+
+export const registrationInvitesEnvelopeSchema = z.object({
+  invites: z.array(registrationInviteSchema),
+})
+
+export const createRegistrationInviteResponseSchema = z.object({
+  invite: registrationInviteSchema,
+  code: z.string(),
+})
+
 export const authTokenResponseSchema = z.object({
   user: userPublicSchema,
   token: z.string(),
@@ -117,3 +139,5 @@ export type PlatformSettings = z.infer<typeof platformSettingsSchema>
 export type ApiKey = z.infer<typeof apiKeySchema>
 export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>
+export type RegistrationInvite = z.infer<typeof registrationInviteSchema>
+export type CreateRegistrationInviteResponse = z.infer<typeof createRegistrationInviteResponseSchema>

@@ -4,8 +4,10 @@ import type {
   AdminUserSummary,
   ApiKey,
   CreateApiKeyResponse,
+  CreateRegistrationInviteResponse,
   MeResponse,
   PlatformSettings,
+  RegistrationInvite,
   UserPublic,
   UserSettings,
 } from '@/schemas'
@@ -69,6 +71,38 @@ export function useReindexSearch(): UseMutationResult<
 > {
   return useMutation({
     mutationFn: () => api.reindexSearch(),
+  })
+}
+
+export function useRegistrationInvites(enabled = true): UseQueryResult<{ invites: RegistrationInvite[] }> {
+  return useQuery({
+    queryKey: ['admin', 'invites'],
+    queryFn: () => api.listRegistrationInvites(),
+    enabled,
+  })
+}
+
+export function useCreateRegistrationInvite(): UseMutationResult<
+  CreateRegistrationInviteResponse,
+  Error,
+  { email?: string; expires_in_days?: number }
+> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body) => api.createRegistrationInvite(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'invites'] })
+    },
+  })
+}
+
+export function useRevokeRegistrationInvite(): UseMutationResult<{ ok: boolean }, Error, string> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => api.revokeRegistrationInvite(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'invites'] })
+    },
   })
 }
 
