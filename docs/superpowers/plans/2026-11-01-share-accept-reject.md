@@ -827,7 +827,7 @@ export function useRestoreShareInvite(): UseMutationResult<unknown, Error, strin
 }
 ```
 
-Check `hooks/dashboards` for its real query key root and use that in place of `'dashboards'` if it differs. Add `index.ts` and export it from `hooks/index.ts`.
+Add `index.ts` and export it from `hooks/index.ts`.
 
 - [ ] **Step 4: Verify and commit**
 
@@ -840,7 +840,7 @@ Commit: `Add the web data layer for share invites.`
 
 ### Task 6: Invite UI
 
-**Files:** Create `components/notifications/ShareInvitesList.tsx` and its test, `pages/profile/ProfileDeclinedInvitesCard.tsx`. Modify `components/notifications/NotificationsDrawer.tsx`, `pages/app-shell/AppShell.tsx`, `pages/profile/ProfilePage.tsx`, `hooks/categories/useShareCategoryDrawer.ts:57`, the dashboard share drawer hook.
+**Files:** Create `components/notifications/ShareInvitesList.tsx` and its test, `pages/profile/ProfileDeclinedInvitesCard.tsx`. Modify `components/notifications/NotificationsDrawer.tsx`, `pages/app-shell/AppShell.tsx`, `pages/profile/ProfilePage.tsx`, `hooks/categories/useShareCategoryDrawer.ts:57`, `components/dashboard/ShareDashboardDrawer.tsx:43`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -977,7 +977,7 @@ Render `<ShareInvitesList />` in `NotificationsDrawer.tsx` directly above the fi
 In `pages/app-shell/AppShell.tsx`, add `useShareInvites` to the hooks import, and pass the header:
 
 ```tsx
-  const invites = useShareInvites(!!user)
+  const invites = useShareInvites(!!me.data)
   const pendingInvites = invites.data?.invites.filter((i) => !i.rejected_at).length ?? 0
 ```
 
@@ -985,7 +985,7 @@ In `pages/app-shell/AppShell.tsx`, add `useShareInvites` to the hooks import, an
           unreadCount={(unread.data?.count ?? 0) + pendingInvites}
 ```
 
-Place the two hook lines with the file's other hooks, using its own name for the signed-in check.
+Place the two hook lines directly after `const unread` at `AppShell.tsx:27`, and change the prop at `AppShell.tsx:80`.
 
 - [ ] **Step 4: Add the declined card**
 
@@ -1040,7 +1040,7 @@ Render it in `ProfilePage.tsx` directly after `<ProfileBlocksCard />`.
 
 - [ ] **Step 5: Update the share drawer message**
 
-In `hooks/categories/useShareCategoryDrawer.ts:57`, and the matching line in the dashboard share hook, use `'Invite sent. They get access once they accept.'` for `outcome.status === 'pending'`.
+In `hooks/categories/useShareCategoryDrawer.ts:57` and `components/dashboard/ShareDashboardDrawer.tsx:43`, use `'Invite sent. They get access once they accept.'` for `outcome.status === 'pending'`.
 
 - [ ] **Step 6: Verify and commit**
 
