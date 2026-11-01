@@ -535,7 +535,7 @@ export function LibraryPage(): ReactElement {
   function categoryMenuFor(cat: Category) {
     const socialEnabled = cat.shared_out || cat.access === 'read' || cat.access === 'write'
     return {
-      onRename: () => categoryActions.openRename(cat),
+      onEdit: () => categoryActions.openEdit(cat),
       onShare: () => categoryActions.openShare(cat),
       onSocial: socialEnabled ? () => categoryActions.openSocial(cat) : undefined,
       onFork: () => categoryActions.forkCategory(cat),

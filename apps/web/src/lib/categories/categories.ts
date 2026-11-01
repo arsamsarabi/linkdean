@@ -48,3 +48,25 @@ export function categorySelectData(cats: Category[]): CategorySelectOption[] {
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }
+
+/** Self + descendant ids — exclude when picking a new parent. */
+export function categorySubtreeIds(cats: Category[], rootId: string): Set<string> {
+  const children = new Map<string, string[]>()
+  for (const c of cats) {
+    if (!c.parent_id) continue
+    const list = children.get(c.parent_id) ?? []
+    list.push(c.id)
+    children.set(c.parent_id, list)
+  }
+  const out = new Set<string>([rootId])
+  const stack = [rootId]
+  while (stack.length > 0) {
+    const id = stack.pop()!
+    for (const child of children.get(id) ?? []) {
+      if (out.has(child)) continue
+      out.add(child)
+      stack.push(child)
+    }
+  }
+  return out
+}

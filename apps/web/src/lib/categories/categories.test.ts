@@ -5,6 +5,7 @@ import {
   canWriteCategory,
   categoryPath,
   categorySelectData,
+  categorySubtreeIds,
   writableCategories,
 } from './categories'
 
@@ -70,5 +71,12 @@ describe('canWriteCategory / writableCategories', () => {
       { ...cats[1]!, id: 'ro', access: 'read' },
     ]
     expect(writableCategories(mixed).map((c) => c.id)).toEqual(['1'])
+  })
+})
+
+describe('categorySubtreeIds', () => {
+  it('includes self and descendants', () => {
+    expect([...categorySubtreeIds(cats, '1')].sort()).toEqual(['1', '2'])
+    expect([...categorySubtreeIds(cats, '2')]).toEqual(['2'])
   })
 })

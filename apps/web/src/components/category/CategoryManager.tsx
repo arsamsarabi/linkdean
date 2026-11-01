@@ -66,7 +66,7 @@ export function CategoryManager(): ReactElement {
   function tileMenu(cat: Category) {
     const socialEnabled = cat.shared_out || cat.access === 'read' || cat.access === 'write'
     return {
-      onRename: () => actions.openRename(cat),
+      onEdit: () => actions.openEdit(cat),
       onShare: () => actions.openShare(cat),
       onSocial: socialEnabled ? () => actions.openSocial(cat) : undefined,
       onFork: () => actions.forkCategory(cat),

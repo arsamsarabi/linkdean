@@ -7,7 +7,7 @@ export type CategoryFolderMenuProps = {
   name: string
   access: CategoryAccess
   isVault: boolean
-  onRename?: () => void
+  onEdit?: () => void
   onShare?: () => void
   onSocial?: () => void
   onFork?: () => void
@@ -21,7 +21,7 @@ export function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boole
   const isOwner = props.access === 'owner'
   const canWrite = isOwner || props.access === 'write'
   return (
-    (canWrite && !!props.onRename) ||
+    (canWrite && !!props.onEdit) ||
     (!props.isVault && !!props.onFork) ||
     (isOwner && !props.isVault && !!props.onShare) ||
     !!props.onSocial ||
@@ -32,7 +32,7 @@ export function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boole
 export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement | null {
   if (!categoryFolderMenuVisible(props)) return null
 
-  const { name, access, isVault, onRename, onShare, onSocial, onFork, onDelete, forkPending, className } =
+  const { name, access, isVault, onEdit, onShare, onSocial, onFork, onDelete, forkPending, className } =
     props
   const isOwner = access === 'owner'
   const canWrite = isOwner || access === 'write'
@@ -53,9 +53,9 @@ export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement
       <Menu shadow="md" width={180} position="bottom-end" withinPortal>
         <Menu.Target>{target}</Menu.Target>
         <Menu.Dropdown>
-          {canWrite && onRename ? (
-            <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={onRename}>
-              Rename
+          {canWrite && onEdit ? (
+            <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={onEdit}>
+              Edit
             </Menu.Item>
           ) : null}
           {!isVault && onFork ? (

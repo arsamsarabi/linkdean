@@ -1,4 +1,5 @@
 export { CategoryDrawer } from './CategoryDrawer'
+export { EditCategoryDrawer } from './EditCategoryDrawer'
 export {
   CategoryFolderMenu,
   categoryFolderMenuVisible,
