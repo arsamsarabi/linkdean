@@ -4,11 +4,22 @@
 //! Skips when unset so CI without a DB stays green.
 
 use linkdean_core::{
-    CategoryAccess, CreateBookmark, CreateCategory, CreateCategoryShare, Error, ShareAccess,
-    UpdateBookmark, UpdateCategory, UpdateCategoryShare,
+    CategoryAccess, CreateBookmark, CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome,
+    Error, ShareAccess, UpdateBookmark, UpdateCategory, UpdateCategoryShare,
 };
 use linkdean_db::{self as db};
 use uuid::Uuid;
+
+fn expect_active_share(
+    outcome: CreateCategoryShareOutcome,
+) -> linkdean_core::CategoryShareView {
+    match outcome {
+        CreateCategoryShareOutcome::Active { share } => share,
+        CreateCategoryShareOutcome::Pending { invite } => {
+            panic!("expected active share, got pending {}", invite.invitee_email)
+        }
+    }
+}
 
 async fn pool_or_skip() -> Option<sqlx::PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
@@ -238,17 +249,19 @@ async fn share_read_and_write_membership() {
     ));
 
     // A shares with B as read
-    let share = db::create_share(
-        &pool,
-        user_a.id,
-        cat.id,
-        CreateCategoryShare {
-            email: user_b.email.clone(),
-            access: ShareAccess::Read,
-        },
-    )
-    .await
-    .expect("create read share");
+    let share = expect_active_share(
+        db::create_share(
+            &pool,
+            user_a.id,
+            cat.id,
+            CreateCategoryShare {
+                email: user_b.email.clone(),
+                access: ShareAccess::Read,
+            },
+        )
+        .await
+        .expect("create read share"),
+    );
     assert_eq!(share.access, ShareAccess::Read);
     assert_eq!(share.invitee_user_id, user_b.id);
 
@@ -466,6 +479,21 @@ async fn cannot_share_vault_category() {
         Err(Error::BadRequest(_))
     ));
 
+    // Unknown email on vault still BadRequest (pending not allowed for vault).
+    assert!(matches!(
+        db::create_share(
+            &pool,
+            user_a.id,
+            vault_cat.id,
+            CreateCategoryShare {
+                email: format!("nobody-{}@authz.test", Uuid::new_v4()),
+                access: ShareAccess::Read,
+            },
+        )
+        .await,
+        Err(Error::BadRequest(_))
+    ));
+
     assert!(matches!(
         db::enable_category_public_link(&pool, user_a.id, vault_cat.id).await,
         Err(Error::BadRequest(_))
@@ -581,5 +609,88 @@ async fn public_list_slug_is_unlisted_and_revocable() {
     ));
 
     let _ = db::delete_bookmark(&pool, user_a.id, bm.id).await;
+    let _ = db::delete_category(&pool, user_a.id, cat.id).await;
+}
+
+#[tokio::test]
+async fn pending_share_invite_claims_on_register() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+
+    let user_a = db::create_user(
+        &pool,
+        &unique_email("pend-a"),
+        Some("password-a-long"),
+        Some("Pend A"),
+        None,
+        None,
+    )
+    .await
+    .expect("user a");
+
+    let cat = db::create_category(
+        &pool,
+        user_a.id,
+        CreateCategory {
+            name: format!("PendList-{}", Uuid::new_v4()),
+            parent_id: None,
+            is_hidden: false,
+            is_vault: false,
+            icon: None,
+        },
+    )
+    .await
+    .expect("cat");
+
+    let pending_email = unique_email("pend-invitee");
+    let outcome = db::create_share(
+        &pool,
+        user_a.id,
+        cat.id,
+        CreateCategoryShare {
+            email: pending_email.clone(),
+            access: ShareAccess::Write,
+        },
+    )
+    .await
+    .expect("pending invite");
+    let CreateCategoryShareOutcome::Pending { invite } = outcome else {
+        panic!("expected pending invite for unknown email");
+    };
+    assert_eq!(invite.invitee_email, pending_email);
+    assert_eq!(invite.access, ShareAccess::Write);
+
+    let user_b = db::create_user(
+        &pool,
+        &pending_email,
+        Some("password-b-long"),
+        Some("Pend B"),
+        None,
+        None,
+    )
+    .await
+    .expect("user b");
+
+    let claimed = db::claim_pending_share_invites(&pool, &pending_email, user_b.id)
+        .await
+        .expect("claim");
+    assert_eq!(claimed, 1);
+
+    let view = db::get_category(&pool, user_b.id, cat.id)
+        .await
+        .expect("claimed access");
+    assert_eq!(view.access, CategoryAccess::Write);
+
+    let pending_left = db::list_pending_for_subject(
+        &pool,
+        user_a.id,
+        linkdean_core::PendingShareSubjectType::Category,
+        cat.id,
+    )
+    .await
+    .expect("list pending");
+    assert!(pending_left.is_empty());
+
     let _ = db::delete_category(&pool, user_a.id, cat.id).await;
 }

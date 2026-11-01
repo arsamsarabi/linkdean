@@ -224,16 +224,27 @@ pub async fn create_dashboard_share(
     owner_user_id: Uuid,
     dashboard_id: Uuid,
     req: CreateDashboardShare,
-) -> Result<DashboardShareView> {
+) -> Result<linkdean_core::CreateDashboardShareOutcome> {
+    use linkdean_core::{CreateDashboardShareOutcome, PendingShareSubjectType};
+
     let dash = require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
 
     let email = req.email.trim().to_ascii_lowercase();
-    if email.is_empty() {
-        return Err(Error::BadRequest("email required".into()));
+    if email.is_empty() || !email.contains('@') {
+        return Err(Error::BadRequest("valid email required".into()));
     }
-    let invitee = find_user_by_email(pool, &email)
-        .await?
-        .ok_or(Error::NotFound)?;
+    let Some(invitee) = find_user_by_email(pool, &email).await? else {
+        let invite = super::pending_shares::upsert_pending_share_invite(
+            pool,
+            owner_user_id,
+            PendingShareSubjectType::Dashboard,
+            dashboard_id,
+            &email,
+            req.access,
+        )
+        .await?;
+        return Ok(CreateDashboardShareOutcome::Pending { invite });
+    };
     if invitee.id == owner_user_id {
         return Err(Error::BadRequest("cannot share with yourself".into()));
     }
@@ -284,7 +295,7 @@ pub async fn create_dashboard_share(
         )
         .await;
     }
-    Ok(view)
+    Ok(CreateDashboardShareOutcome::Active { share: view })
 }
 
 pub async fn update_dashboard_share(

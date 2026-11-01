@@ -3,11 +3,23 @@
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
 use linkdean_core::{
-    CategoryAccess, CreateBookmark, CreateCategory, CreateDashboard, CreateDashboardShare, Error,
-    PatchDashboard, PutDashboardLayout, PutDashboardSection, ShareAccess, UpdateDashboardShare,
+    CategoryAccess, CreateBookmark, CreateCategory, CreateDashboard, CreateDashboardShare,
+    CreateDashboardShareOutcome, Error, PatchDashboard, PutDashboardLayout, PutDashboardSection,
+    ShareAccess, UpdateDashboardShare,
 };
 use linkdean_db::{self as db};
 use uuid::Uuid;
+
+fn expect_active_dash_share(
+    outcome: CreateDashboardShareOutcome,
+) -> linkdean_core::DashboardShareView {
+    match outcome {
+        CreateDashboardShareOutcome::Active { share } => share,
+        CreateDashboardShareOutcome::Pending { invite } => {
+            panic!("expected active share, got pending {}", invite.invitee_email)
+        }
+    }
+}
 
 async fn pool_or_skip() -> Option<sqlx::PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
@@ -335,17 +347,19 @@ async fn dashboard_share_read_write_and_revoke() {
         Err(Error::NotFound)
     ));
 
-    let share = db::create_dashboard_share(
-        &pool,
-        user_a.id,
-        home.id,
-        CreateDashboardShare {
-            email: user_b.email.clone(),
-            access: ShareAccess::Read,
-        },
-    )
-    .await
-    .expect("share read");
+    let share = expect_active_dash_share(
+        db::create_dashboard_share(
+            &pool,
+            user_a.id,
+            home.id,
+            CreateDashboardShare {
+                email: user_b.email.clone(),
+                access: ShareAccess::Read,
+            },
+        )
+        .await
+        .expect("share read"),
+    );
     assert_eq!(share.access, ShareAccess::Read);
 
     let as_b = db::get_dashboard(&pool, user_b.id, home.id, None)

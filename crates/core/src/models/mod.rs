@@ -351,6 +351,89 @@ pub struct UpdateCategoryShare {
     pub access: ShareAccess,
 }
 
+/// Subject for a pending (pre-account) share invite.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PendingShareSubjectType {
+    Category,
+    Dashboard,
+}
+
+impl PendingShareSubjectType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Category => "category",
+            Self::Dashboard => "dashboard",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "category" => Ok(Self::Category),
+            "dashboard" => Ok(Self::Dashboard),
+            _ => Err("subject_type must be category or dashboard".into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PendingShareInvite {
+    pub id: Uuid,
+    pub subject_type: String,
+    pub subject_id: Uuid,
+    pub invitee_email: String,
+    pub access: String,
+    pub invited_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub claimed_at: Option<DateTime<Utc>>,
+    pub claimed_by_user_id: Option<Uuid>,
+    pub revoked_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingShareInviteView {
+    pub id: Uuid,
+    pub subject_type: PendingShareSubjectType,
+    pub subject_id: Uuid,
+    pub invitee_email: String,
+    pub access: ShareAccess,
+    pub invited_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategorySharesEnvelope {
+    pub shares: Vec<CategoryShareView>,
+    pub pending: Vec<PendingShareInviteView>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum CreateCategoryShareOutcome {
+    Active { share: CategoryShareView },
+    Pending { invite: PendingShareInviteView },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardSharesEnvelope {
+    pub shares: Vec<DashboardShareView>,
+    pub pending: Vec<PendingShareInviteView>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum CreateDashboardShareOutcome {
+    Active { share: DashboardShareView },
+    Pending { invite: PendingShareInviteView },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdatePendingShareInvite {
+    pub access: ShareAccess,
+}
+
 /// Owner-facing public-link state for a category (list).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CategoryPublicLinkView {

@@ -5,10 +5,13 @@ use axum::extract::{Path, State};
 use axum::routing::{get, patch};
 use axum::{Json, Router};
 use linkdean_core::{
-    CreateDashboard, CreateDashboardShare, DashboardShareView, DashboardSummary, DashboardView,
-    PatchDashboard, PutDashboardLayout, UpdateDashboardShare,
+    CreateDashboard, CreateDashboardShare, CreateDashboardShareOutcome, DashboardShareView,
+    DashboardSharesEnvelope, DashboardSummary, DashboardView, PatchDashboard,
+    PendingShareInviteView, PendingShareSubjectType, PutDashboardLayout, UpdateDashboardShare,
+    UpdatePendingShareInvite,
 };
 use linkdean_db::{self as db};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
@@ -26,6 +29,10 @@ pub fn router() -> Router<AppState> {
         .route(
             "/dashboards/{id}/shares/{user_id}",
             patch(update_share).delete(delete_share),
+        )
+        .route(
+            "/dashboards/{id}/pending-shares/{pending_id}",
+            patch(update_pending_share).delete(delete_pending_share),
         )
 }
 
@@ -113,9 +120,16 @@ async fn list_shares(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
-) -> ApiResult<Json<Vec<DashboardShareView>>> {
+) -> ApiResult<Json<DashboardSharesEnvelope>> {
     let shares = db::list_shares_for_dashboard(&state.pool, user.id, id).await?;
-    Ok(Json(shares))
+    let pending = db::list_pending_for_subject(
+        &state.pool,
+        user.id,
+        PendingShareSubjectType::Dashboard,
+        id,
+    )
+    .await?;
+    Ok(Json(DashboardSharesEnvelope { shares, pending }))
 }
 
 async fn create_share(
@@ -123,9 +137,9 @@ async fn create_share(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
     Json(req): Json<CreateDashboardShare>,
-) -> ApiResult<Json<DashboardShareView>> {
-    let share = db::create_dashboard_share(&state.pool, user.id, id, req).await?;
-    Ok(Json(share))
+) -> ApiResult<Json<CreateDashboardShareOutcome>> {
+    let outcome = db::create_dashboard_share(&state.pool, user.id, id, req).await?;
+    Ok(Json(outcome))
 }
 
 async fn update_share(
@@ -145,4 +159,38 @@ async fn delete_share(
 ) -> ApiResult<Json<()>> {
     db::delete_dashboard_share(&state.pool, user.id, id, invitee_user_id).await?;
     Ok(Json(()))
+}
+
+async fn update_pending_share(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, pending_id)): Path<(Uuid, Uuid)>,
+    Json(req): Json<UpdatePendingShareInvite>,
+) -> ApiResult<Json<PendingShareInviteView>> {
+    let invite = db::update_pending_share_invite(
+        &state.pool,
+        user.id,
+        PendingShareSubjectType::Dashboard,
+        id,
+        pending_id,
+        req,
+    )
+    .await?;
+    Ok(Json(invite))
+}
+
+async fn delete_pending_share(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, pending_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::revoke_pending_share_invite(
+        &state.pool,
+        user.id,
+        PendingShareSubjectType::Dashboard,
+        id,
+        pending_id,
+    )
+    .await?;
+    Ok(Json(json!({ "ok": true })))
 }

@@ -238,19 +238,31 @@ pub async fn create_share(
     owner_user_id: Uuid,
     category_id: Uuid,
     req: CreateCategoryShare,
-) -> Result<CategoryShareView> {
+) -> Result<linkdean_core::CreateCategoryShareOutcome> {
+    use linkdean_core::{CreateCategoryShareOutcome, PendingShareSubjectType};
+
     let cat = require_category_owner(pool, owner_user_id, category_id).await?;
     if cat.is_vault {
         return Err(Error::BadRequest("cannot share vault categories".into()));
     }
 
     let email = req.email.trim().to_ascii_lowercase();
-    if email.is_empty() {
-        return Err(Error::BadRequest("email required".into()));
+    if email.is_empty() || !email.contains('@') {
+        return Err(Error::BadRequest("valid email required".into()));
     }
-    let invitee = find_user_by_email(pool, &email)
-        .await?
-        .ok_or_else(|| Error::NotFound)?;
+
+    let Some(invitee) = find_user_by_email(pool, &email).await? else {
+        let invite = super::pending_shares::upsert_pending_share_invite(
+            pool,
+            owner_user_id,
+            PendingShareSubjectType::Category,
+            category_id,
+            &email,
+            req.access,
+        )
+        .await?;
+        return Ok(CreateCategoryShareOutcome::Pending { invite });
+    };
     if invitee.id == owner_user_id {
         return Err(Error::BadRequest("cannot share with yourself".into()));
     }
@@ -301,7 +313,7 @@ pub async fn create_share(
         )
         .await;
     }
-    Ok(view)
+    Ok(CreateCategoryShareOutcome::Active { share: view })
 }
 
 pub async fn update_share(

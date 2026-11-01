@@ -5,8 +5,10 @@ use axum::extract::{Path, Query, State};
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::{
-    CategoryPublicLinkView, CategoryShareView, CategoryView, CreateCategory, CreateCategoryShare,
-    ForkCategory, UpdateCategory, UpdateCategoryShare,
+    CategoryPublicLinkView, CategoryShareView, CategorySharesEnvelope, CategoryView,
+    CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, ForkCategory,
+    PendingShareInviteView, PendingShareSubjectType, UpdateCategory, UpdateCategoryShare,
+    UpdatePendingShareInvite,
 };
 use linkdean_db::{self as db};
 use serde::Deserialize;
@@ -25,6 +27,10 @@ pub fn router() -> Router<AppState> {
         .route(
             "/categories/{id}/shares/{user_id}",
             patch(update_share).delete(delete_share),
+        )
+        .route(
+            "/categories/{id}/pending-shares/{pending_id}",
+            patch(update_pending_share).delete(delete_pending_share),
         )
         .route(
             "/categories/{id}/public-link",
@@ -123,9 +129,16 @@ async fn list_shares(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
-) -> ApiResult<Json<Vec<CategoryShareView>>> {
+) -> ApiResult<Json<CategorySharesEnvelope>> {
     let shares = db::list_shares_for_category(&state.pool, user.id, id).await?;
-    Ok(Json(shares))
+    let pending = db::list_pending_for_subject(
+        &state.pool,
+        user.id,
+        PendingShareSubjectType::Category,
+        id,
+    )
+    .await?;
+    Ok(Json(CategorySharesEnvelope { shares, pending }))
 }
 
 async fn create_share(
@@ -133,9 +146,9 @@ async fn create_share(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
     Json(req): Json<CreateCategoryShare>,
-) -> ApiResult<Json<CategoryShareView>> {
-    let share = db::create_share(&state.pool, user.id, id, req).await?;
-    Ok(Json(share))
+) -> ApiResult<Json<CreateCategoryShareOutcome>> {
+    let outcome = db::create_share(&state.pool, user.id, id, req).await?;
+    Ok(Json(outcome))
 }
 
 async fn update_share(
@@ -155,6 +168,40 @@ async fn delete_share(
 ) -> ApiResult<Json<serde_json::Value>> {
     db::delete_share(&state.pool, user.id, id, invitee_user_id).await?;
     Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+async fn update_pending_share(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, pending_id)): Path<(Uuid, Uuid)>,
+    Json(req): Json<UpdatePendingShareInvite>,
+) -> ApiResult<Json<PendingShareInviteView>> {
+    let invite = db::update_pending_share_invite(
+        &state.pool,
+        user.id,
+        PendingShareSubjectType::Category,
+        id,
+        pending_id,
+        req,
+    )
+    .await?;
+    Ok(Json(invite))
+}
+
+async fn delete_pending_share(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, pending_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::revoke_pending_share_invite(
+        &state.pool,
+        user.id,
+        PendingShareSubjectType::Category,
+        id,
+        pending_id,
+    )
+    .await?;
+    Ok(Json(json!({ "ok": true })))
 }
 
 async fn get_public_link(
