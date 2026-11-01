@@ -21,6 +21,7 @@ const cats: Category[] = [
     position: 0,
     access: 'owner',
     shared_out: false,
+    shared_with: [],
   },
   {
     id: 'child',
@@ -31,6 +32,7 @@ const cats: Category[] = [
     position: 1,
     access: 'owner',
     shared_out: false,
+    shared_with: [],
   },
   {
     id: 'hidden',
@@ -41,6 +43,7 @@ const cats: Category[] = [
     position: 2,
     access: 'owner',
     shared_out: false,
+    shared_with: [],
   },
   {
     id: 'shared',
@@ -51,6 +54,7 @@ const cats: Category[] = [
     position: 3,
     access: 'read',
     shared_out: false,
+    shared_with: [],
   },
 ]
 
@@ -64,6 +68,10 @@ const baseBm = {
   is_vault: false,
   can_write: true,
   shared_out: false,
+  shared_with: [] as string[],
+  is_favorite: false,
+  is_unread: false,
+  is_pinned: false,
   tags: [] as string[],
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-02T00:00:00Z',

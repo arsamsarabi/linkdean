@@ -18,6 +18,7 @@ const cats: Category[] = [
     position: 0,
     access: 'owner',
     shared_out: false,
+    shared_with: [],
   },
   {
     id: '2',
@@ -28,6 +29,7 @@ const cats: Category[] = [
     position: 1,
     access: 'owner',
     shared_out: false,
+    shared_with: [],
   },
 ]
 

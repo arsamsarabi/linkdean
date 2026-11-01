@@ -13,6 +13,10 @@ function bm(partial: Partial<Bookmark> & Pick<Bookmark, 'id' | 'updated_at'>): B
     tags: [],
     can_write: true,
     shared_out: false,
+    shared_with: [],
+    is_favorite: false,
+    is_unread: false,
+    is_pinned: false,
     created_at: partial.updated_at,
     ...partial,
   }

@@ -31,6 +31,7 @@ describe('bookmarks drafts', () => {
       tags: ['t'],
       can_write: true,
       shared_out: false,
+      shared_with: [],
       is_favorite: true,
       is_unread: true,
       is_pinned: false,
