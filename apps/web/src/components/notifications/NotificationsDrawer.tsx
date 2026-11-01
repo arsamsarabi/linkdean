@@ -10,6 +10,7 @@ import {
   useUnreadNotificationCount,
 } from '@/hooks'
 import type { Notification } from '@/schemas'
+import { ShareInvitesList } from './ShareInvitesList'
 
 type Props = {
   opened: boolean
@@ -98,6 +99,8 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
             Mark all read
           </Button>
         </Group>
+
+        <ShareInvitesList />
 
         {list.isError ? <QueryErrorAlert error={list.error} onRetry={() => void list.refetch()} /> : null}
 

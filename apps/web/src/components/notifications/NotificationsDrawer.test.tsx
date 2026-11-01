@@ -7,6 +7,7 @@ import { NotificationsDrawer } from './NotificationsDrawer'
 const markAll = vi.hoisted(() => vi.fn())
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
+vi.mock('./ShareInvitesList', () => ({ ShareInvitesList: () => null }))
 
 vi.mock('@/hooks', () => ({
   useNotifications: () => ({ data: { notifications: [] }, isLoading: false, isError: false }),

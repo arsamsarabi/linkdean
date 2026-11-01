@@ -54,7 +54,7 @@ export function useShareCategoryDrawer({ categoryId, opened, isVault }: Input) {
       })
       setEmail('')
       notifications.show({
-        message: outcome.status === 'pending' ? 'No account yet — access granted when they register' : 'Invite added',
+        message: outcome.status === 'pending' ? 'Invite sent. They get access once they accept.' : 'Invite added',
       })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })

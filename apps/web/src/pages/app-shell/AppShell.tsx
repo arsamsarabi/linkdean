@@ -12,7 +12,7 @@ import {
   PageContainer,
   QueryErrorAlert,
 } from '@/components'
-import { useLogout, usePrefsHydration, useUnreadNotificationCount } from '@/hooks'
+import { useLogout, usePrefsHydration, useShareInvites, useUnreadNotificationCount } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
@@ -26,6 +26,8 @@ export function AppShell(): ReactElement {
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const shell = useShellUi()
   const unread = useUnreadNotificationCount(!!me.data)
+  const invites = useShareInvites(!!me.data)
+  const pendingInvites = invites.data?.invites.filter((i) => !i.rejected_at).length ?? 0
 
   useEffect(() => {
     if (me.data && !me.data.user.onboarding_completed) {
@@ -78,7 +80,8 @@ export function AppShell(): ReactElement {
           email={user?.email}
           hasAvatar={!!user?.has_avatar}
           vaultUnlocked={vaultUnlocked}
-          unreadCount={unread.data?.count ?? 0}
+          // A new invite is also an unread notification, so don't add the two.
+          unreadCount={Math.max(unread.data?.count ?? 0, pendingInvites)}
           onLogout={() => void onLogout()}
         />
       </MantineAppShell.Header>

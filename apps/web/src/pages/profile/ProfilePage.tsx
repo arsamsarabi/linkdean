@@ -23,6 +23,7 @@ import type { ProfileVisibility } from '@/schemas'
 import { validatePasswordPair } from '@/services'
 import { ProfileAboutCard } from './ProfileAboutCard'
 import { ProfileBlocksCard } from './ProfileBlocksCard'
+import { ProfileDeclinedInvitesCard } from './ProfileDeclinedInvitesCard'
 import { ProfileEditDrawer } from './ProfileEditDrawer'
 import { ProfilePasswordCard } from './ProfilePasswordCard'
 
@@ -134,6 +135,7 @@ export function ProfilePage(): ReactElement {
           </Stack>
 
           <ProfileBlocksCard />
+          <ProfileDeclinedInvitesCard />
 
           <FollowListModal userId={user.id} kind={list} onClose={() => setList(null)} />
 

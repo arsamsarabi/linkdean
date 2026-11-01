@@ -40,7 +40,7 @@ export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onCl
       })
       setEmail('')
       notifications.show({
-        message: outcome.status === 'pending' ? 'No account yet — access granted when they register' : 'Invite added',
+        message: outcome.status === 'pending' ? 'Invite sent. They get access once they accept.' : 'Invite added',
       })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
@@ -57,7 +57,7 @@ export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onCl
       padding="lg"
     >
       <ShareInvitePanel
-        description="Invite by email. Existing users get access now; unknown emails stay pending until they register. Read-write can rearrange sections and pins (not delete, share, or pin as default)."
+        description="Invite by email. They get access once they accept."
         email={email}
         access={access}
         onEmailChange={setEmail}

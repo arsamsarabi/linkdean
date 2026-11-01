@@ -26,7 +26,7 @@ export function ShareCategoryDrawer({
   return (
     <Drawer opened={opened} onClose={onClose} title={`Share “${categoryName}”`} position="right" size="md" padding="lg">
       <ShareInvitePanel
-        description="Invite by email. Existing users get access now; unknown emails stay pending until they register. Read-write can edit bookmarks and add subfolders (not vault, share, or delete)."
+        description="Invite by email. They get access once they accept."
         email={s.email}
         access={s.access}
         onEmailChange={s.setEmail}
