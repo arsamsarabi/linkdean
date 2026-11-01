@@ -7,14 +7,21 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
+  useShareInvites,
   useUnreadNotificationCount,
 } from '@/hooks'
-import type { Notification } from '@/schemas'
+import type { Notification, ShareInvite } from '@/schemas'
 import { ShareInvitesList } from './ShareInvitesList'
 
 type Props = {
   opened: boolean
   onClose: () => void
+}
+
+/** An unanswered invite already shows as a card with its actions, so its row would repeat it. */
+function withoutOpenInvites(rows: Notification[], invites: ShareInvite[]): Notification[] {
+  const open = new Set(invites.filter((i) => !i.rejected_at).map((i) => `${i.subject_type}:${i.subject_id}`))
+  return rows.filter((n) => n.kind !== 'share_invite' || !open.has(`${n.subject_type}:${n.subject_id}`))
 }
 
 function hrefFor(n: Notification): string {
@@ -54,10 +61,14 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
   const nav = useNavigate()
   const list = useNotifications(opened)
   const unread = useUnreadNotificationCount(true)
+  const invites = useShareInvites(opened)
   const markOne = useMarkNotificationRead()
   const markAll = useMarkAllNotificationsRead()
   const prevOpened = useRef(opened)
   const unreadCount = unread.data?.count ?? 0
+  const inviteList = invites.data?.invites ?? []
+  const rows = withoutOpenInvites(list.data?.notifications ?? [], inviteList)
+  const hasPendingInvite = inviteList.some((i) => !i.rejected_at)
   const hasUnread = unreadCount > 0 || (list.data?.notifications.some((n) => !n.read_at) ?? false)
 
   useEffect(() => {
@@ -112,14 +123,14 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
           </Stack>
         ) : null}
 
-        {!list.isLoading && (list.data?.notifications.length ?? 0) === 0 ? (
+        {!list.isLoading && rows.length === 0 && !hasPendingInvite ? (
           <Text size="sm" c="dimmed">
             No notifications yet.
           </Text>
         ) : null}
 
         <Stack gap="xs">
-          {(list.data?.notifications ?? []).map((n) => {
+          {rows.map((n) => {
             const read = !!n.read_at
             return (
               <UnstyledButton
