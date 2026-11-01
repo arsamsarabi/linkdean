@@ -371,7 +371,7 @@ fn attr_value(line: &str, name: &str) -> Option<String> {
         return None;
     }
     let end = rest[1..].find(quote)? + 1;
-    Some(rest[1..end].to_string())
+    Some(html_unescape(&rest[1..end]))
 }
 
 fn extract_inner_text(line: &str) -> String {
@@ -396,10 +396,12 @@ fn html_escape(s: &str) -> String {
 }
 
 fn html_unescape(s: &str) -> String {
-    s.replace("&amp;", "&")
-        .replace("&lt;", "<")
+    // `&amp;` goes last, or an escaped entity such as `&amp;lt;` would decode twice.
+    s.replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
 }
 
 /// Resolve import category paths → created UUIDs (caller inserts cats in order).
@@ -422,6 +424,24 @@ pub fn new_id() -> Uuid {
 mod tests {
     use super::*;
     use crate::{BookmarkExport, CategoryExport};
+
+    #[test]
+    fn netscape_import_unescapes_urls_and_tags() {
+        let html = r#"<DL><p>
+<DT><A HREF="https://x.com/?a=1&amp;b=2" TAGS="r&amp;d,&lt;tools&gt;">Q &amp; A</A>
+</DL>"#;
+        let parsed = parse_netscape(html).unwrap();
+        let bookmark = &parsed.bookmarks[0].0;
+        assert_eq!(bookmark.url, "https://x.com/?a=1&b=2");
+        assert_eq!(bookmark.tags, vec!["r&d", "<tools>"]);
+        assert_eq!(bookmark.title.as_deref(), Some("Q & A"));
+    }
+
+    #[test]
+    fn html_unescape_decodes_each_entity_once() {
+        assert_eq!(html_unescape("&amp;lt;"), "&lt;");
+        assert_eq!(html_unescape("it&#39;s"), "it's");
+    }
 
     #[test]
     fn netscape_round_trip_skips_vault_on_export() {
