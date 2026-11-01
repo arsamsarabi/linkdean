@@ -10,6 +10,7 @@ mod import_export;
 mod notifications;
 mod public;
 mod search;
+mod share_invites;
 mod social;
 mod tags;
 mod trash;
@@ -27,6 +28,7 @@ pub fn router() -> Router<AppState> {
         .merge(api_keys::router())
         .merge(activity::router())
         .merge(notifications::router())
+        .merge(share_invites::router())
         .merge(users::router())
         .merge(categories::router())
         .merge(bookmarks::router())

@@ -42,6 +42,7 @@ import {
   registrationInvitesEnvelopeSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
+  shareInvitesEnvelopeSchema,
   socialEnvelopeSchema,
   trashItemsSchema,
   trashPurgeResultSchema,
@@ -86,6 +87,7 @@ import {
   type PutDashboardLayout,
   type RegistrationInvite,
   type ShareAccess,
+  type ShareInvite,
   type SocialSubjectType,
   type SocialSummary,
   type TrashItem,
@@ -162,6 +164,14 @@ export const api = {
 
   markAllNotificationsRead: (): Promise<{ ok: boolean; updated?: number }> =>
     req('/notifications/read-all', { method: 'POST' }, markAllReadSchema),
+
+  shareInvites: (): Promise<{ invites: ShareInvite[] }> => req('/share-invites', {}, shareInvitesEnvelopeSchema),
+
+  acceptShareInvite: (id: string): Promise<unknown> => req(`/share-invites/${id}/accept`, { method: 'POST' }),
+
+  rejectShareInvite: (id: string): Promise<unknown> => req(`/share-invites/${id}/reject`, { method: 'POST' }),
+
+  restoreShareInvite: (id: string): Promise<unknown> => req(`/share-invites/${id}/restore`, { method: 'POST' }),
 
   getSocial: (subjectType: SocialSubjectType, subjectId: string): Promise<{ social: SocialSummary }> =>
     req(`/social/${subjectType}/${subjectId}`, {}, socialEnvelopeSchema),
