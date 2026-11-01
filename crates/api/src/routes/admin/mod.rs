@@ -4,7 +4,7 @@ use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use linkdean_core::{UpdateAdminUser, UpdatePlatformSettings};
+use linkdean_core::{CreateRegistrationInvite, UpdateAdminUser, UpdatePlatformSettings};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -17,6 +17,8 @@ pub fn router() -> Router<AppState> {
         )
         .route("/admin/users", get(list_users))
         .route("/admin/users/{id}", axum::routing::patch(patch_user))
+        .route("/admin/invites", get(list_invites).post(create_invite))
+        .route("/admin/invites/{id}", axum::routing::delete(revoke_invite))
         .route("/admin/search/reindex", post(reindex_search))
 }
 
@@ -59,6 +61,35 @@ async fn patch_user(
 ) -> ApiResult<Json<Value>> {
     let user = db::update_admin_user(&state.pool, id, req).await?;
     Ok(Json(json!({ "user": user })))
+}
+
+async fn list_invites(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+) -> ApiResult<Json<Value>> {
+    let invites = db::list_registration_invites(&state.pool).await?;
+    Ok(Json(json!({ "invites": invites })))
+}
+
+async fn create_invite(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Json(req): Json<CreateRegistrationInvite>,
+) -> ApiResult<Json<Value>> {
+    let created = db::create_registration_invite(&state.pool, admin.id, req).await?;
+    Ok(Json(json!({
+        "invite": created.invite,
+        "code": created.code,
+    })))
+}
+
+async fn revoke_invite(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    db::revoke_registration_invite(&state.pool, id).await?;
+    Ok(Json(json!({ "ok": true })))
 }
 
 /// Clear Meili bookmarks index and re-upsert all non-vault, non-deleted bookmarks.

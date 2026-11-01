@@ -52,10 +52,24 @@ async fn register(
         return Err(Error::BadRequest("email required; password min 8 chars".into()).into());
     }
     let count = db::count_users(&state.pool).await?;
+    let invite_code = req
+        .invite_code
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let mut must_consume_invite = false;
     if count > 0 {
         let platform = db::get_platform_settings(&state.pool).await?;
         if !platform.registration_open {
-            return Err(Error::Forbidden.into());
+            let Some(code) = invite_code else {
+                return Err(Error::Forbidden.into());
+            };
+            db::assert_invite_redeemable(&state.pool, code, &req.email).await?;
+            must_consume_invite = true;
+        } else if let Some(code) = invite_code {
+            // Optional redeem when registration is open.
+            db::assert_invite_redeemable(&state.pool, code, &req.email).await?;
+            must_consume_invite = true;
         }
     }
     let user = db::create_user(
@@ -67,6 +81,15 @@ async fn register(
         None,
     )
     .await?;
+    if must_consume_invite {
+        if let Some(code) = invite_code {
+            if let Err(e) = db::consume_registration_invite(&state.pool, code, &req.email, user.id).await
+            {
+                tracing::warn!(user_id = %user.id, error = %e, "invite consume failed after register");
+                return Err(e.into());
+            }
+        }
+    }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let public = db::to_public(&state.pool, &user).await?;
     Ok(session_response(

@@ -141,6 +141,50 @@ pub struct UpdateAdminUser {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct RegistrationInvite {
+    pub id: Uuid,
+    pub code_hash: String,
+    pub code_prefix: String,
+    pub email: Option<String>,
+    pub created_by_user_id: Uuid,
+    pub expires_at: DateTime<Utc>,
+    pub used_at: Option<DateTime<Utc>>,
+    pub used_by_user_id: Option<Uuid>,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Public invite metadata (never includes the secret code).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegistrationInviteView {
+    pub id: Uuid,
+    pub code_prefix: String,
+    pub email: Option<String>,
+    pub created_by_user_id: Uuid,
+    pub expires_at: DateTime<Utc>,
+    pub used_at: Option<DateTime<Utc>>,
+    pub used_by_user_id: Option<Uuid>,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateRegistrationInvite {
+    /// Optional: bind invite to this email (case-insensitive match on register).
+    pub email: Option<String>,
+    /// Days until expiry (default 7, clamp 1..=90).
+    pub expires_in_days: Option<i32>,
+}
+
+/// One-shot create response: view + plaintext code (shown once).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateRegistrationInviteResponse {
+    pub invite: RegistrationInviteView,
+    pub code: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -515,6 +559,9 @@ pub struct RegisterRequest {
     pub email: String,
     pub password: String,
     pub display_name: Option<String>,
+    /// Required when registration is closed (after bootstrap).
+    #[serde(default)]
+    pub invite_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
