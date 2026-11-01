@@ -58,6 +58,7 @@ describe('bookmarks drafts', () => {
       updated_at: '2024-01-01T00:00:00Z',
       can_write: true,
       is_vault: false,
+      owner_user_id: 'u1',
     })
   })
 })
