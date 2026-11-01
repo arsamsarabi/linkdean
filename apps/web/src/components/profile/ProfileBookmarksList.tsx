@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react'
-import { Anchor, Card, Group, Image, Loader, Pagination, Pill, SimpleGrid, Stack, Text } from '@mantine/core'
+import { Anchor, Card, Group, Loader, Pagination, Pill, SimpleGrid, Stack, Text } from '@mantine/core'
+import { ApiImage } from '@/components/bookmark/ApiImage'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { PROFILE_PAGE_SIZE, useProfileBookmarks } from '@/hooks'
 
@@ -30,7 +31,7 @@ export function ProfileBookmarksList({ userId, emptyLabel }: Props): ReactElemen
           <Card key={b.id} withBorder padding="md" radius="md">
             <Stack gap="xs">
               <Group gap="xs" wrap="nowrap">
-                {b.favicon_url ? <Image src={b.favicon_url} w={16} h={16} alt="" /> : null}
+                {b.favicon_url ? <ApiImage src={b.favicon_url} alt="" w={16} h={16} alt="" /> : null}
                 <Anchor href={b.url} target="_blank" rel="noreferrer" lineClamp={1} fw={600}>
                   {b.title || b.url}
                 </Anchor>

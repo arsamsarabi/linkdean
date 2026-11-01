@@ -1,9 +1,10 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Button, FileButton, Group, Image, Stack, Text } from '@mantine/core'
+import { Button, FileButton, Group, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconPhoto, IconTrash } from '@tabler/icons-react'
 import { AvatarCropModal } from '@/components/avatar'
 import { bookmarkPreviewSrc } from '@/services'
+import { ApiImage } from './ApiImage'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 /** Match server cover crop (1200×675). */
@@ -127,7 +128,7 @@ export function BookmarkPreviewField({
         <Text size="xs" c="dimmed">
           Replaces the default card image. Crop to 16:9.
         </Text>
-        {previewSrc ? <Image src={previewSrc} alt="" radius="sm" mah={140} fit="cover" /> : null}
+        {previewSrc ? <ApiImage src={previewSrc} alt="" radius="sm" mah={140} fit="cover" /> : null}
         <Group gap="sm">
           <FileButton onChange={onPick} accept="image/*" disabled={disabled || busy}>
             {(props) => (
