@@ -1,8 +1,8 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { Box, Button, Drawer, Group, LoadingOverlay, Radio, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { QueryErrorAlert } from '@/components/query-error-alert'
-import { useDuplicates, useMergeDuplicateGroup } from '@/hooks'
+import { useDuplicates, useMergeDuplicateGroup, useSyncDuringRender } from '@/hooks'
 import type { Bookmark, DuplicateGroup } from '@/schemas'
 import { pickDefaultKeepId } from '@/services'
 
@@ -22,9 +22,9 @@ function GroupCard({
 }): ReactElement {
   const [keepId, setKeepId] = useState(() => pickDefaultKeepId(group.bookmarks) ?? '')
 
-  useEffect(() => {
+  useSyncDuringRender([group.url, group.bookmarks], () => {
     setKeepId(pickDefaultKeepId(group.bookmarks) ?? '')
-  }, [group.url, group.bookmarks])
+  })
 
   return (
     <Stack gap="sm" p="md" style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 8 }}>

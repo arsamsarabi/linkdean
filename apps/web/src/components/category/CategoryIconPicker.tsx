@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   Group,
@@ -26,6 +26,11 @@ export function CategoryIconPicker({ value, onChange, label = 'Icon' }: Props): 
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
 
+  function search(next: string): void {
+    setQuery(next)
+    setPage(1)
+  }
+
   const filtered = useMemo(() => filterCategoryIcons(query), [query])
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -33,10 +38,6 @@ export function CategoryIconPicker({ value, onChange, label = 'Icon' }: Props): 
     const start = (safePage - 1) * PAGE_SIZE
     return filtered.slice(start, start + PAGE_SIZE)
   }, [filtered, safePage])
-
-  useEffect(() => {
-    setPage(1)
-  }, [query])
 
   return (
     <Stack gap="xs">
@@ -54,11 +55,11 @@ export function CategoryIconPicker({ value, onChange, label = 'Icon' }: Props): 
       <TextInput
         placeholder="Search icons"
         value={query}
-        onChange={(e) => setQuery(e.currentTarget.value)}
+        onChange={(e) => search(e.currentTarget.value)}
         leftSection={<IconSearch size={16} stroke={1.5} />}
         rightSection={
           query ? (
-            <ActionIcon variant="subtle" color="gray" size="sm" aria-label="Clear search" onClick={() => setQuery('')}>
+            <ActionIcon variant="subtle" color="gray" size="sm" aria-label="Clear search" onClick={() => search('')}>
               <IconX size={14} stroke={1.5} />
             </ActionIcon>
           ) : null

@@ -56,17 +56,28 @@ fn to_view(row: NotificationRow) -> Result<NotificationView> {
     })
 }
 
+/// What a notification is about.
+#[derive(Debug, Clone, Copy)]
+pub struct NotificationSubject<'a> {
+    pub subject_type: NotificationSubjectType,
+    pub subject_id: Uuid,
+    pub subject_title: &'a str,
+}
+
 async fn insert_notification(
     pool: &PgPool,
     recipient_user_id: Uuid,
     actor_user_id: Option<Uuid>,
     kind: NotificationKind,
-    subject_type: NotificationSubjectType,
-    subject_id: Uuid,
-    subject_title: &str,
+    subject: NotificationSubject<'_>,
     body: &str,
     payload: serde_json::Value,
 ) -> Result<()> {
+    let NotificationSubject {
+        subject_type,
+        subject_id,
+        subject_title,
+    } = subject;
     if actor_user_id == Some(recipient_user_id) {
         return Ok(());
     }
@@ -104,9 +115,7 @@ pub async fn try_notify(
     recipient_user_id: Uuid,
     actor_user_id: Option<Uuid>,
     kind: NotificationKind,
-    subject_type: NotificationSubjectType,
-    subject_id: Uuid,
-    subject_title: &str,
+    subject: NotificationSubject<'_>,
     body: &str,
     payload: serde_json::Value,
 ) {
@@ -115,9 +124,7 @@ pub async fn try_notify(
         recipient_user_id,
         actor_user_id,
         kind,
-        subject_type,
-        subject_id,
-        subject_title,
+        subject,
         body,
         payload,
     )
@@ -142,9 +149,11 @@ pub async fn notify_category_share_invite(
         invitee_user_id,
         Some(actor_user_id),
         NotificationKind::ShareInvite,
-        NotificationSubjectType::Category,
-        category_id,
-        category_name,
+        NotificationSubject {
+            subject_type: NotificationSubjectType::Category,
+            subject_id: category_id,
+            subject_title: category_name,
+        },
         &format!("{actor_label} shared folder “{category_name}” with you ({access_label})"),
         json!({ "access": access.as_str() }),
     )
@@ -166,9 +175,11 @@ pub async fn notify_category_share_access(
         invitee_user_id,
         Some(actor_user_id),
         NotificationKind::ShareAccessChanged,
-        NotificationSubjectType::Category,
-        category_id,
-        category_name,
+        NotificationSubject {
+            subject_type: NotificationSubjectType::Category,
+            subject_id: category_id,
+            subject_title: category_name,
+        },
         &format!("{actor_label} changed your access on folder “{category_name}” to {access_label}"),
         json!({ "access": access.as_str() }),
     )
@@ -188,9 +199,11 @@ pub async fn notify_category_share_revoked(
         invitee_user_id,
         Some(actor_user_id),
         NotificationKind::ShareRevoked,
-        NotificationSubjectType::Category,
-        category_id,
-        category_name,
+        NotificationSubject {
+            subject_type: NotificationSubjectType::Category,
+            subject_id: category_id,
+            subject_title: category_name,
+        },
         &format!("{actor_label} removed your access to folder “{category_name}”"),
         json!({}),
     )
@@ -212,9 +225,11 @@ pub async fn notify_dashboard_share_invite(
         invitee_user_id,
         Some(actor_user_id),
         NotificationKind::ShareInvite,
-        NotificationSubjectType::Dashboard,
-        dashboard_id,
-        dashboard_title,
+        NotificationSubject {
+            subject_type: NotificationSubjectType::Dashboard,
+            subject_id: dashboard_id,
+            subject_title: dashboard_title,
+        },
         &format!("{actor_label} shared dashboard “{dashboard_title}” with you ({access_label})"),
         json!({ "access": access.as_str() }),
     )
@@ -236,9 +251,11 @@ pub async fn notify_dashboard_share_access(
         invitee_user_id,
         Some(actor_user_id),
         NotificationKind::ShareAccessChanged,
-        NotificationSubjectType::Dashboard,
-        dashboard_id,
-        dashboard_title,
+        NotificationSubject {
+            subject_type: NotificationSubjectType::Dashboard,
+            subject_id: dashboard_id,
+            subject_title: dashboard_title,
+        },
         &format!(
             "{actor_label} changed your access on dashboard “{dashboard_title}” to {access_label}"
         ),
@@ -260,9 +277,11 @@ pub async fn notify_dashboard_share_revoked(
         invitee_user_id,
         Some(actor_user_id),
         NotificationKind::ShareRevoked,
-        NotificationSubjectType::Dashboard,
-        dashboard_id,
-        dashboard_title,
+        NotificationSubject {
+            subject_type: NotificationSubjectType::Dashboard,
+            subject_id: dashboard_id,
+            subject_title: dashboard_title,
+        },
         &format!("{actor_label} removed your access to dashboard “{dashboard_title}”"),
         json!({}),
     )
@@ -292,9 +311,11 @@ pub async fn notify_shared_edit(
         owner_user_id,
         Some(actor_user_id),
         NotificationKind::SharedEdit,
-        subject_type,
-        subject_id,
-        subject_title,
+        NotificationSubject {
+            subject_type,
+            subject_id,
+            subject_title,
+        },
         &format!("{actor_label} edited shared {noun} “{subject_title}”"),
         json!({}),
     )

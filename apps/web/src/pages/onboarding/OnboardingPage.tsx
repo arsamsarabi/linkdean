@@ -62,6 +62,7 @@ export function OnboardingPage(): ReactElement {
     if (!bootstrap.data) return
 
     if (bootstrap.data.needs_bootstrap) {
+      // oxlint-disable-next-line react/set-state-in-effect -- picks the starting step once async data lands
       setStep(0)
       setReady(true)
       return

@@ -4,7 +4,7 @@ import { IconTrash } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import type { ShareAccess } from '@/schemas'
 
-export const SHARE_ACCESS_OPTIONS = [
+const SHARE_ACCESS_OPTIONS = [
   { value: 'read', label: 'Read-only' },
   { value: 'write', label: 'Read-write' },
 ] as const

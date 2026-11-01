@@ -679,9 +679,11 @@ async fn record_bookmark_update_activity(
         pool,
         user_id,
         linkdean_core::ActivityAction::Updated,
-        linkdean_core::ActivitySubjectType::Bookmark,
-        view.id,
-        &title,
+        super::activity::ActivitySubject {
+            subject_type: linkdean_core::ActivitySubjectType::Bookmark,
+            subject_id: view.id,
+            subject_title: &title,
+        },
         Some(&summary),
         serde_json::json!({ "changes": change_keys }),
     )
@@ -975,9 +977,11 @@ pub async fn purge_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()
         pool,
         user_id,
         linkdean_core::ActivityAction::Deleted,
-        linkdean_core::ActivitySubjectType::Bookmark,
-        id,
-        &title,
+        super::activity::ActivitySubject {
+            subject_type: linkdean_core::ActivitySubjectType::Bookmark,
+            subject_id: id,
+            subject_title: &title,
+        },
         Some(&format!("Permanently deleted bookmark: {title}")),
         serde_json::json!({ "purged": true }),
     )

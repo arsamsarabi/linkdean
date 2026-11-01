@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import {
   Box,
   Button,
@@ -12,14 +12,19 @@ import {
   TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { useCreateBookmark, useDeleteBookmarkPreview, useUpdateBookmark, useUploadBookmarkPreview } from '@/hooks'
+import {
+  useCreateBookmark,
+  useDeleteBookmarkPreview,
+  useSyncDuringRender,
+  useUpdateBookmark,
+  useUploadBookmarkPreview,
+} from '@/hooks'
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
 import { BookmarkPreviewField } from './BookmarkPreviewField'
 
 export type { BookmarkDraft }
-export { draftFromBookmark } from '@/services'
 
 type Props = {
   opened: boolean
@@ -39,11 +44,11 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
   const pending =
     createBookmark.isPending || updateBookmark.isPending || uploadPreview.isPending || deletePreview.isPending
 
-  useEffect(() => {
+  useSyncDuringRender([opened, initial], () => {
     if (!opened) return
     setDraft(initial ? { ...initial, tags: [...initial.tags] } : emptyDraft())
     setPendingPreview(null)
-  }, [opened, initial])
+  })
 
   async function save(): Promise<void> {
     const tags = draft.tags.map((t) => t.trim()).filter(Boolean)

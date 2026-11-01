@@ -3,7 +3,7 @@ import { SimpleGrid, Stack } from '@mantine/core'
 import { IconBookmark, IconBookmarkPlus, IconSearch } from '@tabler/icons-react'
 import { BookmarkCard, BookmarkGridSkeleton, EmptyState, type BookmarkCardItem } from '@/components'
 import { LibraryFilterPanel } from './LibraryFilterPanel'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

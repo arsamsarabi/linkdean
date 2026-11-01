@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::dashboard_shares::require_dashboard_read;
-use super::notifications::try_notify;
+use super::notifications::{try_notify, NotificationSubject};
 use super::shares::{bookmark_can_read, require_category_read};
 use super::users::{find_user_by_id, share_invitee_label, user_share_label};
 
@@ -314,9 +314,11 @@ pub async fn set_like(
             meta.owner_user_id,
             Some(user_id),
             NotificationKind::SocialLike,
-            subject_type.to_notification_subject(),
-            subject_id,
-            &meta.title,
+            NotificationSubject {
+                subject_type: subject_type.to_notification_subject(),
+                subject_id,
+                subject_title: &meta.title,
+            },
             &format!("{actor} liked “{}”", meta.title),
             json!({}),
         )
@@ -373,9 +375,11 @@ pub async fn add_comment(
         meta.owner_user_id,
         Some(user_id),
         NotificationKind::SocialComment,
-        subject_type.to_notification_subject(),
-        subject_id,
-        &meta.title,
+        NotificationSubject {
+            subject_type: subject_type.to_notification_subject(),
+            subject_id,
+            subject_title: &meta.title,
+        },
         &format!("{actor} commented on “{}”: {preview}", meta.title),
         json!({}),
     )
@@ -440,9 +444,11 @@ pub async fn upsert_rating(
         meta.owner_user_id,
         Some(user_id),
         NotificationKind::SocialRating,
-        subject_type.to_notification_subject(),
-        subject_id,
-        &meta.title,
+        NotificationSubject {
+            subject_type: subject_type.to_notification_subject(),
+            subject_id,
+            subject_title: &meta.title,
+        },
         &format!("{actor} rated “{}” {}/5", meta.title, req.rating),
         json!({ "rating": req.rating }),
     )

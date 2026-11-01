@@ -373,9 +373,11 @@ pub async fn update_category(
             pool,
             user_id,
             linkdean_core::ActivityAction::Updated,
-            linkdean_core::ActivitySubjectType::Category,
-            view.id,
-            &view.name,
+            super::activity::ActivitySubject {
+                subject_type: linkdean_core::ActivitySubjectType::Category,
+                subject_id: view.id,
+                subject_title: &view.name,
+            },
             Some(&summary),
             serde_json::json!({ "changes": change_keys }),
         )
@@ -522,9 +524,11 @@ pub async fn purge_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()
         pool,
         user_id,
         linkdean_core::ActivityAction::Deleted,
-        linkdean_core::ActivitySubjectType::Category,
-        id,
-        &title,
+        super::activity::ActivitySubject {
+            subject_type: linkdean_core::ActivitySubjectType::Category,
+            subject_id: id,
+            subject_title: &title,
+        },
         Some(&format!("Permanently deleted list: {title}")),
         serde_json::json!({ "purged": true }),
     )

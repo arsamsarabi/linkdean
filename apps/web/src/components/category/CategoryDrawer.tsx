@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
 import { Box, Button, Checkbox, Drawer, Group, LoadingOverlay, Select, Stack, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconFolderPlus } from '@tabler/icons-react'
-import { useCreateCategory } from '@/hooks'
+import { useCreateCategory, useSyncDuringRender } from '@/hooks'
 import { categorySelectData, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
 import { CategoryIconPicker } from './CategoryIconPicker'
@@ -36,14 +36,14 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
   const parentCat = useMemo(() => (parentId ? categories.find((c) => c.id === parentId) : null), [categories, parentId])
   const canCreateVault = !parentCat || parentCat.access === 'owner'
 
-  useEffect(() => {
+  useSyncDuringRender([opened, defaultParentId], () => {
     if (!opened) return
     setName('')
     setParentId(defaultParentId)
     setHidden(false)
     setVault(false)
     setIcon(null)
-  }, [opened, defaultParentId])
+  })
 
   async function onCreate(): Promise<void> {
     try {

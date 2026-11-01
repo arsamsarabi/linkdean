@@ -3,6 +3,7 @@ import { Button, Group, Modal, Slider, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconCheck, IconX } from '@tabler/icons-react'
 import Cropper, { type Area } from 'react-easy-crop'
+import { useSyncDuringRender } from '@/hooks'
 import { getCroppedBlob } from '@/services'
 import styles from './AvatarCropModal.module.css'
 
@@ -34,16 +35,18 @@ export function AvatarCropModal({
   const [busy, setBusy] = useState(false)
   const [src, setSrc] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!file) {
-      setSrc(null)
-      return
-    }
-    const url = URL.createObjectURL(file)
-    setSrc(url)
+  useSyncDuringRender([file], () => {
+    setSrc(null)
     setCrop({ x: 0, y: 0 })
     setZoom(1)
     setArea(null)
+  })
+
+  useEffect(() => {
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    // oxlint-disable-next-line react/set-state-in-effect -- the object URL is created and revoked in this effect
+    setSrc(url)
     return () => {
       URL.revokeObjectURL(url)
     }

@@ -1,9 +1,16 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { useRef, useState, type ReactElement } from 'react'
 import { Group, Skeleton, Stack, ThemeIcon, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconUser } from '@tabler/icons-react'
 import { AvatarCropModal, QueryErrorAlert } from '@/components'
-import { useChangePassword, useDeleteAvatar, useMe, useUpdateProfile, useUploadAvatar } from '@/hooks'
+import {
+  useChangePassword,
+  useDeleteAvatar,
+  useMe,
+  useSyncDuringRender,
+  useUpdateProfile,
+  useUploadAvatar,
+} from '@/hooks'
 import { validatePasswordPair } from '@/services'
 import { ProfileAboutCard } from './ProfileAboutCard'
 import { ProfileBlocksCard } from './ProfileBlocksCard'
@@ -45,13 +52,13 @@ export function ProfilePage(): ReactElement {
   const [avatarBust, setAvatarBust] = useState(0)
   const resetRef = useRef<() => void>(null)
 
-  useEffect(() => {
+  useSyncDuringRender([user], () => {
     if (!user) return
     setDisplayName(user.display_name || '')
     setBio(user.bio || '')
     setTimezone(user.timezone || null)
     setEmail(user.email)
-  }, [user])
+  })
 
   async function onCropped(blob: Blob): Promise<void> {
     try {

@@ -5,7 +5,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::notifications::try_notify;
+use super::notifications::{try_notify, NotificationSubject};
 use super::users::{find_user_by_id, user_share_label};
 
 pub async fn is_following(pool: &PgPool, follower_id: Uuid, following_id: Uuid) -> Result<bool> {
@@ -95,9 +95,11 @@ pub async fn follow_user(
             following_id,
             Some(follower_id),
             NotificationKind::UserFollowed,
-            NotificationSubjectType::User,
-            follower_id,
-            &actor_label,
+            NotificationSubject {
+                subject_type: NotificationSubjectType::User,
+                subject_id: follower_id,
+                subject_title: &actor_label,
+            },
             &format!("{actor_label} started following you"),
             json!({ "follower_id": follower_id }),
         )

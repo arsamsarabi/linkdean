@@ -1,7 +1,7 @@
 import { type ReactElement } from 'react'
 import { ActionIcon, Affix, Group, Tooltip, Transition } from '@mantine/core'
 import { IconArrowUp, IconBookmarkPlus } from '@tabler/icons-react'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 export function LibraryFab(): ReactElement {
   const lib = useLibraryPageModel()

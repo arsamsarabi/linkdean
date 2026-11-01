@@ -3,7 +3,7 @@ import { Button, Center, Group, SegmentedControl, Stack, Text, Title, Tooltip } 
 import { IconBookmarkPlus, IconCheck, IconCopy, IconFolders, IconLayoutGrid } from '@tabler/icons-react'
 import type { LibraryViewMode } from '@/hooks'
 import styles from './LibraryPage.module.css'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

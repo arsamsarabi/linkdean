@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
 import { Box, Button, Checkbox, Drawer, LoadingOverlay, Select, Stack, Text, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconDeviceFloppy } from '@tabler/icons-react'
-import { useCategories, useUpdateCategory } from '@/hooks'
+import { useCategories, useSyncDuringRender, useUpdateCategory } from '@/hooks'
 import { categorySelectData, categorySubtreeIds, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
 import { CategoryIconPicker } from './CategoryIconPicker'
@@ -33,13 +33,13 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
     return [{ value: '', label: '- root -' }, ...categorySelectData(candidates)]
   }, [all, category])
 
-  useEffect(() => {
+  useSyncDuringRender([opened, category], () => {
     if (!opened || !category) return
     setName(category.name)
     setParentId(category.parent_id ?? null)
     setHidden(category.is_hidden)
     setIcon(isCategoryIconKey(category.icon) ? category.icon : null)
-  }, [opened, category])
+  })
 
   async function onSave(): Promise<void> {
     if (!category) return

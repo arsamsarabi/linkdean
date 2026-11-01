@@ -1,4 +1,4 @@
-import { createElement, type ComponentType, type ReactElement } from 'react'
+import type { ComponentType } from 'react'
 import {
   IconAbacus,
   IconAccessible,
@@ -536,15 +536,6 @@ export function isCategoryIconKey(v: string | null | undefined): v is CategoryIc
 export function categoryIconComponent(icon: string | null | undefined): ComponentType<IconProps> {
   if (isCategoryIconKey(icon)) return BY_KEY.get(icon)!.Icon
   return IconFolderFilled
-}
-
-type CategoryIconProps = IconProps & {
-  icon?: string | null
-}
-
-/** Renders a category icon (default folder when unset / unknown). */
-export function CategoryIcon({ icon, ...props }: CategoryIconProps): ReactElement {
-  return createElement(categoryIconComponent(icon), props)
 }
 
 /** Case-insensitive match on key + label. */

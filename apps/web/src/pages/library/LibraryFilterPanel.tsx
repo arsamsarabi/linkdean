@@ -4,7 +4,7 @@ import { categorySelectData } from '@/lib'
 import { FOLDER_UNCATEGORIZED, SINCE_FILTERS, type SinceFilter } from '@/services'
 import { LIBRARY_FILTER_PANEL_ID } from './libraryConstants'
 import styles from './LibraryPage.module.css'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 const SINCE_LABEL: Record<SinceFilter, string> = {
   '7d': 'Last 7 days',

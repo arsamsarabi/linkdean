@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { AvatarCropModal, QueryErrorAlert } from '@/components'
-import { useBootstrap, useRegister, useUploadAvatar } from '@/hooks'
+import { useBootstrap, useRegister, useSyncDuringRender, useUploadAvatar } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import { RegisterForm } from './RegisterForm'
@@ -26,11 +26,9 @@ export function RegisterPage(): ReactElement {
   const register = useRegister()
   const uploadAvatar = useUploadAvatar()
 
-  useEffect(() => {
-    if (search.invite && search.invite !== inviteCode) {
-      setInviteCode(search.invite)
-    }
-  }, [search.invite]) // oxlint-disable-line react-hooks/exhaustive-deps -- sync URL → field once
+  useSyncDuringRender([search.invite], () => {
+    if (search.invite) setInviteCode(search.invite)
+  })
 
   useEffect(() => {
     if (bootstrap.data?.needs_bootstrap) {

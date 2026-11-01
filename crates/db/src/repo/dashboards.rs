@@ -436,9 +436,11 @@ pub async fn put_dashboard(
         pool,
         user_id,
         linkdean_core::ActivityAction::Updated,
-        linkdean_core::ActivitySubjectType::Dashboard,
-        id,
-        title,
+        super::activity::ActivitySubject {
+            subject_type: linkdean_core::ActivitySubjectType::Dashboard,
+            subject_id: id,
+            subject_title: title,
+        },
         Some(&summary),
         serde_json::json!({ "changes": change_keys, "sections": section_count, "pins": pin_count }),
     )
@@ -556,9 +558,11 @@ pub async fn patch_dashboard(
             pool,
             user_id,
             linkdean_core::ActivityAction::Updated,
-            linkdean_core::ActivitySubjectType::Dashboard,
-            id,
-            title,
+            super::activity::ActivitySubject {
+                subject_type: linkdean_core::ActivitySubjectType::Dashboard,
+                subject_id: id,
+                subject_title: title,
+            },
             Some(&summary),
             serde_json::json!({ "changes": change_keys }),
         )
@@ -684,9 +688,11 @@ pub async fn purge_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
         pool,
         user_id,
         linkdean_core::ActivityAction::Deleted,
-        linkdean_core::ActivitySubjectType::Dashboard,
-        id,
-        &title,
+        super::activity::ActivitySubject {
+            subject_type: linkdean_core::ActivitySubjectType::Dashboard,
+            subject_id: id,
+            subject_title: &title,
+        },
         Some(&format!("Permanently deleted dashboard: {title}")),
         serde_json::json!({ "purged": true }),
     )

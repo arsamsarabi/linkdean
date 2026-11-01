@@ -82,16 +82,27 @@ pub fn update_summary(
     }
 }
 
+/// What an activity event is about.
+#[derive(Debug, Clone, Copy)]
+pub struct ActivitySubject<'a> {
+    pub subject_type: ActivitySubjectType,
+    pub subject_id: Uuid,
+    pub subject_title: &'a str,
+}
+
 async fn insert_activity(
     pool: &PgPool,
     user_id: Uuid,
     action: ActivityAction,
-    subject_type: ActivitySubjectType,
-    subject_id: Uuid,
-    subject_title: &str,
+    subject: ActivitySubject<'_>,
     summary: &str,
     payload: serde_json::Value,
 ) -> Result<()> {
+    let ActivitySubject {
+        subject_type,
+        subject_id,
+        subject_title,
+    } = subject;
     sqlx::query(
         r#"
         INSERT INTO activity_events (
@@ -126,9 +137,11 @@ pub async fn record_activity(
         pool,
         user_id,
         action,
-        subject_type,
-        subject_id,
-        subject_title,
+        ActivitySubject {
+            subject_type,
+            subject_id,
+            subject_title,
+        },
         None,
         json!({}),
     )
@@ -139,27 +152,14 @@ pub async fn record_activity_with(
     pool: &PgPool,
     user_id: Uuid,
     action: ActivityAction,
-    subject_type: ActivitySubjectType,
-    subject_id: Uuid,
-    subject_title: &str,
+    subject: ActivitySubject<'_>,
     summary: Option<&str>,
     payload: serde_json::Value,
 ) {
     let summary_owned = summary
         .map(str::to_string)
-        .unwrap_or_else(|| default_summary(action, subject_type, subject_title));
-    if let Err(e) = insert_activity(
-        pool,
-        user_id,
-        action,
-        subject_type,
-        subject_id,
-        subject_title,
-        &summary_owned,
-        payload,
-    )
-    .await
-    {
+        .unwrap_or_else(|| default_summary(action, subject.subject_type, subject.subject_title));
+    if let Err(e) = insert_activity(pool, user_id, action, subject, &summary_owned, payload).await {
         warn!(error = %e, "failed to record activity event");
     }
 }

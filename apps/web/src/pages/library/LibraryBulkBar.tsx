@@ -2,7 +2,7 @@ import { type ReactElement } from 'react'
 import { Button, Group, Text } from '@mantine/core'
 import { IconFolders, IconTags, IconTrash } from '@tabler/icons-react'
 import styles from './LibraryPage.module.css'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 export function LibraryBulkBar(): ReactElement | null {
   const lib = useLibraryPageModel()

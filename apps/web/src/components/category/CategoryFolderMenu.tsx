@@ -17,7 +17,7 @@ export type CategoryFolderMenuProps = {
   className?: string
 }
 
-export function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boolean {
+function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boolean {
   const isOwner = props.access === 'owner'
   const canWrite = isOwner || props.access === 'write'
   return (

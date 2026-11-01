@@ -1,7 +1,7 @@
 import { type ReactElement } from 'react'
 import { Alert, Button, Group, Text } from '@mantine/core'
 import { QueryErrorAlert } from '@/components'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 export function LibraryQueryAlerts(): ReactElement | null {
   const lib = useLibraryPageModel()

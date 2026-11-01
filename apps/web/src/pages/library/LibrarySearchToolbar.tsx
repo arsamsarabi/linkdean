@@ -4,18 +4,19 @@ import { IconBookmark, IconFilter, IconPin, IconSearch, IconStar, IconX } from '
 import { type SortKey } from '@/lib'
 import { LIBRARY_FILTER_PANEL_ID } from './libraryConstants'
 import styles from './LibraryPage.module.css'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
 export function LibrarySearchToolbar(): ReactElement {
   const lib = useLibraryPageModel()
+  const { searchRef } = lib
 
   return (
     <Stack gap="md">
       <Group justify="space-between" align="stretch" wrap="wrap" gap="sm">
         <TextInput
-          ref={lib.searchRef}
+          ref={searchRef}
           placeholder="Search bookmarks…"
           leftSection={<IconSearch {...iconSm} />}
           rightSection={

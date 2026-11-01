@@ -2,7 +2,7 @@ import { type ReactElement } from 'react'
 import { Button, Group, Modal, PasswordInput, Stack, Text } from '@mantine/core'
 import { IconLockOpen } from '@tabler/icons-react'
 import { BookmarkDrawer, BulkEditDrawer, ConfirmModal, DuplicateMergeDrawer } from '@/components'
-import { useLibraryPageModel } from './LibraryPageContext'
+import { useLibraryPageModel } from './useLibraryPageModel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
