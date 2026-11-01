@@ -28,3 +28,6 @@ Scratch space for unprioritized ideas. Promote into [ROADMAP.md](./ROADMAP.md) w
 
 - add a second way to unlock the vault by using this library https://www.npmjs.com/package/@arsams/konami-codes-react
 
+## sharing features rework
+
+When an items is shared with the user, instead of immediately display the items in the users account, display a notification in the users account that they have been shared with. The user can then click accept to add the items to their account, or reject to ignore the shared items. 

@@ -20,7 +20,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Auth & multi-user**
 
-- Admin UI: invite users (registration gate already shipped)
 - Passkeys / WebAuthn
 - Hardened OIDC (PKCE + discovery) for all providers, not just Authentik-shaped URLs
 

@@ -82,6 +82,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Optional OIDC (e.g. Authentik-shaped issuers)
 - First registered user becomes admin (bootstrap)
 - Open registration toggle (Admin)
+- Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
 - Profile: display name, bio, avatar, password change
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
