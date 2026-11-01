@@ -4,7 +4,7 @@ use crate::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::{BookmarkView, CreateBookmark, Error, UpdateBookmark};
 use linkdean_db::{self as db};
@@ -16,6 +16,8 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/bookmarks", get(list).post(create))
         .route("/bookmarks/duplicates", get(duplicates))
+        .route("/bookmarks/broken", get(broken))
+        .route("/bookmarks/{id}/check-link", post(check_link))
         .route("/bookmarks/{id}/preview", get(get_preview))
         .route("/bookmarks/{id}/favicon", get(get_favicon))
         .route("/bookmarks/{id}/og", get(get_og))
@@ -207,4 +209,35 @@ async fn duplicates(
         })
         .collect();
     Ok(Json(json!({ "urls": urls, "groups": payload })))
+}
+
+async fn broken(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Vec<BookmarkView>>> {
+    let items = db::list_broken_bookmarks(&state.pool, user.id).await?;
+    Ok(Json(items))
+}
+
+async fn check_link(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<BookmarkView>> {
+    let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    if raw.owner_user_id != user.id {
+        return Err(Error::Forbidden.into());
+    }
+    if raw.is_vault {
+        return Err(Error::BadRequest("vault bookmarks are not link-checked".into()).into());
+    }
+    if raw.url.trim().is_empty() {
+        return Err(Error::BadRequest("bookmark has no url".into()).into());
+    }
+    linkdean_worker::check_bookmark_link(&state.pool, id, &raw.url).await;
+    let updated = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    let view = db::bookmark_to_view(&state.pool, updated, None, user.id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    Ok(Json(view))
 }
