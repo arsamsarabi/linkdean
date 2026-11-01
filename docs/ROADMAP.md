@@ -86,7 +86,7 @@ Programmatic access to a user's own data. Independent of sharing; scheduled afte
 
 ---
 
-## Milestone 5: Shared activity & social
+## Milestone 5: Shared activity & social (building)
 
 Depends on Milestone 1 (share/ACL). Activity surfaces benefit from Milestone 3 (shared dashboards); notifications can start on shared folders/lists alone. Email delivery depends on Platform SMTP (backlog).
 
@@ -99,6 +99,12 @@ Internal build order: notifications, discussion, lightweight reactions; gamifica
 - Likes on shared bookmarks / lists / dashboards
 - Ratings on shared bookmarks / lists / dashboards
 - Light gamification (optional; defer to backlog if it threatens the rest)
+
+**Building**
+
+- In-app notifications: `notifications` table; emit on category/dashboard share invite / access / revoke + shared edits (bookmark / folder / dashboard)
+- API `/notifications` list / unread-count / read / read-all
+- AppShell bell + drawer (poll unread)
 
 ---
 
