@@ -6,6 +6,7 @@ import { QueryErrorAlert, TwoColumnLayout } from '@/components'
 import { usePlatformSettings, useReindexSearch, useUpdatePlatformSettings } from '@/hooks'
 import { AdminInvitesPanel } from './AdminInvitesPanel'
 import { AdminUsersPanel } from './AdminUsersPanel'
+import { BannedUsersPanel } from './BannedUsersPanel'
 import { SettingsSkeleton } from './SettingsSkeleton'
 
 export function AdminPlatformSettings(): ReactElement {
@@ -101,7 +102,12 @@ export function AdminPlatformSettings(): ReactElement {
           <AdminInvitesPanel />
         </>
       }
-      right={<AdminUsersPanel />}
+      right={
+        <>
+          <BannedUsersPanel />
+          <AdminUsersPanel />
+        </>
+      }
     />
   )
 }

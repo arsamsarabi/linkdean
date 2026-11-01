@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import { getToken } from '@/lib'
+import { banNoticeSchema, type BanNotice } from '@/schemas'
 
 export { getToken, setToken } from '@/lib'
 
@@ -26,6 +27,12 @@ export class ApiError extends Error {
   }
 }
 
+/** The ban in a 403 body, or null for anything else. */
+export function banFromBody(body: unknown): BanNotice | null {
+  if (!body || typeof body !== 'object' || (body as { code?: unknown }).code !== 'banned') return null
+  return banNoticeSchema.safeParse((body as { ban?: unknown }).ban).data ?? null
+}
+
 export async function req<T>(path: string, init: RequestInit = {}, schema?: z.ZodType<T>): Promise<T> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
@@ -49,6 +56,9 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
       }
     } catch {
       /* ignore body parse */
+    }
+    if (res.status === 403 && banFromBody(body) && location.pathname !== '/banned') {
+      location.assign('/banned')
     }
     throw new ApiError(msg, res.status, body)
   }

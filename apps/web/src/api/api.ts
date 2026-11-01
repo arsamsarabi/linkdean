@@ -6,6 +6,7 @@ import {
   adminUsersEnvelopeSchema,
   apiKeysEnvelopeSchema,
   authTokenResponseSchema,
+  bansEnvelopeSchema,
   blockEnvelopeSchema,
   bookmarkSchema,
   bootstrapStatusSchema,
@@ -24,6 +25,7 @@ import {
   dashboardSharesEnvelopeSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
+  exposedContentEnvelopeSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
   forkCategoryResultSchema,
@@ -31,6 +33,8 @@ import {
   importResultSchema,
   markAllReadSchema,
   meResponseSchema,
+  moderateOutcomeEnvelopeSchema,
+  moderationActionsEnvelopeSchema,
   muteEnvelopeSchema,
   notificationEnvelopeSchema,
   notificationsEnvelopeSchema,
@@ -57,6 +61,8 @@ import {
   type ActivitySubjectType,
   type AdminUserSummary,
   type ApiKey,
+  type BanDurationBody,
+  type BanView,
   type BlockRelation,
   type Bookmark,
   type Category,
@@ -74,9 +80,13 @@ import {
   type DashboardSharesEnvelope,
   type DashboardSummary,
   type DuplicateGroup,
+  type ExposedContent,
   type FollowRelation,
   type FollowUser,
   type ForkCategoryResult,
+  type ModerateItem,
+  type ModerateOutcome,
+  type ModerationAction,
   type MuteRelation,
   type Notification,
   type PatchDashboard,
@@ -123,6 +133,26 @@ export const api = {
     body: { api_keys_enabled?: boolean; is_admin?: boolean }
   ): Promise<{ user: AdminUserSummary }> =>
     req(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, adminUserEnvelopeSchema),
+
+  listBans: (): Promise<{ bans: BanView[] }> => req('/admin/bans', {}, bansEnvelopeSchema),
+
+  banUser: (id: string, body: { reason: string } & BanDurationBody): Promise<unknown> =>
+    req(`/admin/users/${id}/ban`, { method: 'POST', body: JSON.stringify(body) }),
+
+  changeBans: (body: { user_ids: string[]; reason?: string } & BanDurationBody): Promise<{ ok: boolean }> =>
+    req('/admin/bans', { method: 'PATCH', body: JSON.stringify(body) }, okSchema),
+
+  liftBans: (user_ids: string[]): Promise<{ ok: boolean }> =>
+    req('/admin/bans/lift', { method: 'POST', body: JSON.stringify({ user_ids }) }, okSchema),
+
+  exposedContent: (id: string): Promise<{ content: ExposedContent }> =>
+    req(`/admin/users/${id}/exposed-content`, {}, exposedContentEnvelopeSchema),
+
+  moderate: (id: string, body: { reason: string; actions: ModerateItem[] }): Promise<{ outcome: ModerateOutcome }> =>
+    req(`/admin/users/${id}/moderate`, { method: 'POST', body: JSON.stringify(body) }, moderateOutcomeEnvelopeSchema),
+
+  moderationActions: (id: string): Promise<{ actions: ModerationAction[] }> =>
+    req(`/admin/users/${id}/moderation-actions`, {}, moderationActionsEnvelopeSchema),
 
   reindexSearch: (): Promise<{ ok: boolean; upserted: number; failed: number }> =>
     req('/admin/search/reindex', { method: 'POST' }, adminReindexSchema),

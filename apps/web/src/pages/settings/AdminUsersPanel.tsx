@@ -1,10 +1,12 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Divider, Group, Pagination, Paper, Stack, Switch, Text, TextInput } from '@mantine/core'
+import { Badge, Button, Divider, Group, Pagination, Paper, Stack, Switch, Text, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconSearch } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
-import { useAdminUsers, useUpdateAdminUser } from '@/hooks'
+import { useAdminUsers, useLiftBans, useMe, useUpdateAdminUser } from '@/hooks'
 import type { AdminUserSummary } from '@/schemas'
+import { banEndLabel } from '@/services'
+import { BanUserModal } from './BanUserModal'
 import { SettingsSkeleton } from './SettingsSkeleton'
 
 const ADMIN_USERS_PAGE_SIZE = 10
@@ -21,7 +23,10 @@ export function AdminUsersPanel(): ReactElement {
   const [userQuery, setUserQuery] = useState('')
   const [page, setPage] = useState(1)
   const allUsers = useMemo(() => users.data?.users ?? [], [users.data?.users])
-  const adminCount = allUsers.filter((u) => u.is_admin).length
+  const adminCount = allUsers.filter((u) => u.is_admin && !u.banned).length
+  const me = useMe()
+  const lift = useLiftBans()
+  const [banTarget, setBanTarget] = useState<{ id: string; label: string } | null>(null)
 
   const filteredUsers = useMemo(() => allUsers.filter((u) => matchesAdminUser(u, userQuery)), [allUsers, userQuery])
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ADMIN_USERS_PAGE_SIZE))
@@ -31,8 +36,16 @@ export function AdminUsersPanel(): ReactElement {
     return filteredUsers.slice(start, start + ADMIN_USERS_PAGE_SIZE)
   }, [filteredUsers, safePage])
 
+  function unban(id: string): void {
+    lift.mutate([id], {
+      onSuccess: () => notifications.show({ message: 'Unbanned' }),
+      onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+    })
+  }
+
   return (
     <Paper p="xl" withBorder>
+      {banTarget ? <BanUserModal user={banTarget} onClose={() => setBanTarget(null)} /> : null}
       <Stack gap="md">
         <div>
           <Text fw={500}>Accounts</Text>
@@ -59,19 +72,42 @@ export function AdminUsersPanel(): ReactElement {
         ) : null}
         {pageUsers.map((u, i) => (
           <Stack key={u.id} gap="xs">
-            <div>
-              <Text size="sm" fw={500}>
-                {u.display_name?.trim() || u.email}
-              </Text>
-              <Text size="xs" c="dimmed">
-                {u.email}
-              </Text>
-            </div>
+            <Group justify="space-between" wrap="nowrap" gap="sm">
+              <div>
+                <Group gap="xs">
+                  <Text size="sm" fw={500}>
+                    {u.display_name?.trim() || u.email}
+                  </Text>
+                  {u.banned ? (
+                    <Badge color="red" variant="light" size="sm" tt="none">
+                      Banned {banEndLabel(u.banned_until)}
+                    </Badge>
+                  ) : null}
+                </Group>
+                <Text size="xs" c="dimmed">
+                  {u.email}
+                </Text>
+              </div>
+              {u.banned ? (
+                <Button size="xs" variant="default" disabled={lift.isPending} onClick={() => unban(u.id)}>
+                  Unban
+                </Button>
+              ) : u.id !== me.data?.user.id ? (
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => setBanTarget({ id: u.id, label: u.display_name?.trim() || u.email })}
+                >
+                  Ban
+                </Button>
+              ) : null}
+            </Group>
             <Switch
               label="Admin"
               description="Can change platform settings and manage accounts."
               checked={u.is_admin}
-              disabled={patchUser.isPending || (u.is_admin && adminCount <= 1)}
+              disabled={patchUser.isPending || (u.is_admin && !u.banned && adminCount <= 1)}
               onChange={(e) => {
                 const is_admin = e.currentTarget.checked
                 patchUser.mutate(

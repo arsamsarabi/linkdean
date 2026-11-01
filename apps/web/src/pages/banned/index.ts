@@ -1,0 +1,1 @@
+export { BannedPage } from './BannedPage'

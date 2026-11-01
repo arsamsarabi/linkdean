@@ -78,6 +78,8 @@ export const adminUserSummarySchema = z.object({
   is_admin: z.boolean(),
   api_keys_enabled: z.boolean(),
   created_at: z.string(),
+  banned: z.boolean().default(false),
+  banned_until: z.string().nullish(),
 })
 
 export const adminUsersEnvelopeSchema = z.object({
