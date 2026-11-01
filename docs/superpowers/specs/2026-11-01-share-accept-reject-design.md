@@ -21,7 +21,7 @@ Sharing a folder or dashboard sends an invite. Access starts only when the invit
 
 ## Data model
 
-Migration `027_share_invite_acceptance.sql` adds to `pending_share_invites`:
+Migration `028_share_invite_acceptance.sql` adds to `pending_share_invites`:
 
 - `invitee_user_id UUID REFERENCES users(id) ON DELETE CASCADE`, because invites are keyed on email and an email can change. Accept, reject and restore all match on this column.
 - `rejected_at TIMESTAMPTZ`.

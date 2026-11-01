@@ -31,7 +31,7 @@ export DATABASE_URL=postgres://linkdean:linkdean@127.0.0.1:55433/linkdean
 
 ### Task 1: Migration and models
 
-**Files:** Create `migrations/027_share_invite_acceptance.sql`. Modify `crates/core/src/models/mod.rs`.
+**Files:** Create `migrations/028_share_invite_acceptance.sql`. Modify `crates/core/src/models/mod.rs`.
 
 - [ ] **Step 1: Add the migration**
 
@@ -1041,6 +1041,8 @@ Render it in `ProfilePage.tsx` directly after `<ProfileBlocksCard />`.
 - [ ] **Step 5: Update the share drawer message**
 
 In `hooks/categories/useShareCategoryDrawer.ts:57` and `components/dashboard/ShareDashboardDrawer.tsx:43`, use `'Invite sent. They get access once they accept.'` for `outcome.status === 'pending'`.
+
+Also replace the share drawer intro text, "Existing users get access now; unknown emails stay pending until they register", in the folder and dashboard drawers with: "Invite by email. They get access once they accept."
 
 - [ ] **Step 6: Verify and commit**
 
