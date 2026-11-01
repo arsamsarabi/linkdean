@@ -148,6 +148,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
                 is_hidden: None,
                 position: None,
                 icon: None,
+                visibility: None,
             },
         )
         .await,
@@ -306,6 +307,7 @@ async fn share_read_and_write_membership() {
                 is_hidden: None,
                 position: None,
                 icon: None,
+                visibility: None,
             },
         )
         .await,

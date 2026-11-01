@@ -16,6 +16,7 @@ pub struct User {
     pub bio: Option<String>,
     pub timezone: Option<String>,
     pub has_avatar: bool,
+    pub profile_visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -28,6 +29,7 @@ pub struct UserPublic {
     pub bio: Option<String>,
     pub timezone: Option<String>,
     pub has_avatar: bool,
+    pub profile_visibility: String,
     pub has_password: bool,
     pub has_vault: bool,
     pub is_admin: bool,
@@ -55,6 +57,8 @@ pub struct UpdateProfile {
     pub bio: Option<Option<String>>,
     pub timezone: Option<Option<String>>,
     pub email: Option<String>,
+    #[serde(default)]
+    pub profile_visibility: Option<ProfileVisibility>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,6 +209,8 @@ pub struct Category {
     pub icon: Option<String>,
     /// Unlisted public list slug (`ldl_…`). `None` = not published.
     pub public_slug: Option<String>,
+    /// `private`, `followers` or `members`. Unrelated to `is_hidden`, which only affects the owner's views.
+    pub visibility: String,
     pub position: i32,
     pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -267,6 +273,45 @@ impl ShareAccess {
     }
 }
 
+/// Who can open a profile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProfileVisibility {
+    Members,
+    Followers,
+    Hidden,
+}
+
+impl ProfileVisibility {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Members => "members",
+            Self::Followers => "followers",
+            Self::Hidden => "hidden",
+        }
+    }
+}
+
+/// Who can see a category's bookmarks on the owner's profile. "Public" is reserved for
+/// the no-login Public link, so the widest tier here is `Members`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CategoryVisibility {
+    Private,
+    Followers,
+    Members,
+}
+
+impl CategoryVisibility {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Private => "private",
+            Self::Followers => "followers",
+            Self::Members => "members",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CategoryView {
     pub id: Uuid,
@@ -275,6 +320,7 @@ pub struct CategoryView {
     pub name: String,
     pub is_hidden: bool,
     pub is_vault: bool,
+    pub visibility: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
     pub position: i32,
@@ -303,6 +349,7 @@ impl CategoryView {
             name: cat.name,
             is_hidden: cat.is_hidden,
             is_vault: cat.is_vault,
+            visibility: cat.visibility,
             icon: cat.icon,
             position: cat.position,
             created_at: cat.created_at,
@@ -563,6 +610,7 @@ pub struct Bookmark {
     pub preview_image_url: Option<String>,
     pub has_preview: bool,
     pub is_vault: bool,
+    pub is_private: bool,
     pub vault_ciphertext: Option<Vec<u8>>,
     pub vault_nonce: Option<Vec<u8>>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -597,6 +645,7 @@ pub struct BookmarkView {
     pub favicon_url: Option<String>,
     pub preview_image_url: Option<String>,
     pub has_preview: bool,
+    pub is_private: bool,
     pub is_vault: bool,
     pub tags: Vec<String>,
     /// Whether the requesting user may mutate this bookmark.
@@ -696,6 +745,8 @@ pub struct UpdateBookmark {
     pub is_favorite: Option<bool>,
     pub is_unread: Option<bool>,
     pub is_pinned: Option<bool>,
+    #[serde(default)]
+    pub is_private: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -724,6 +775,8 @@ pub struct UpdateCategory {
     /// `Some(None)` clears the icon; `Some(Some(key))` sets it.
     #[serde(default)]
     pub icon: Option<Option<String>>,
+    #[serde(default)]
+    pub visibility: Option<CategoryVisibility>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1030,6 +1083,37 @@ pub struct FollowRelation {
     pub following: bool,
     pub followers: i64,
     pub following_count: i64,
+}
+
+/// A user's profile as another signed-in user sees it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileView {
+    pub id: Uuid,
+    pub display_name: String,
+    pub bio: Option<String>,
+    pub has_avatar: bool,
+    pub is_self: bool,
+    pub follow: FollowRelation,
+    /// Self only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    /// Self only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_visibility: Option<String>,
+}
+
+/// One row of a follower or following list. Never carries an email.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileSummary {
+    pub id: Uuid,
+    pub display_name: String,
+    pub has_avatar: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileBookmarksPage {
+    pub bookmarks: Vec<PublicBookmarkView>,
+    pub total: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

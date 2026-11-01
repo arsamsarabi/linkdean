@@ -199,6 +199,8 @@ impl CategoryShareRow {
             icon: self.icon,
             // Public slug is owner-private; shared listing never exposes it.
             public_slug: None,
+            // Visibility is an owner setting; the shared listing does not carry it.
+            visibility: "private".to_string(),
             position: self.position,
             deleted_at: self.deleted_at,
             created_at: self.created_at,

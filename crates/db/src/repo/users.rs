@@ -135,6 +135,7 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
         bio: user.bio.clone(),
         timezone: user.timezone.clone(),
         has_avatar: user.has_avatar,
+        profile_visibility: user.profile_visibility.clone(),
         has_password: user.password_hash.is_some(),
         has_vault: user_has_vault(pool, user.id).await?,
         is_admin: user.is_admin,

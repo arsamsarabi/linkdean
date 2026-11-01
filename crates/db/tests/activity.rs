@@ -88,6 +88,7 @@ async fn bookmark_category_dashboard_activity_flow() {
             is_favorite: None,
             is_unread: None,
             is_pinned: None,
+            is_private: None,
         },
         None,
     )
@@ -105,6 +106,7 @@ async fn bookmark_category_dashboard_activity_flow() {
             is_hidden: None,
             position: None,
             icon: None,
+            visibility: None,
         },
     )
     .await
