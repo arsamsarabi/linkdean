@@ -5,43 +5,22 @@ import {
   Alert,
   Button,
   Group,
-  Kbd,
-  Modal,
-  PasswordInput,
-  Select,
   Stack,
   Text,
-  TextInput,
   Tooltip,
   Transition,
 } from '@mantine/core'
-import {
-  IconArrowUp,
-  IconBookmark,
-  IconBookmarkPlus,
-  IconFilter,
-  IconLockOpen,
-  IconPin,
-  IconSearch,
-  IconStar,
-  IconX,
-} from '@tabler/icons-react'
-import {
-  BookmarkDrawer,
-  BulkEditDrawer,
-  ConfirmModal,
-  DuplicateMergeDrawer,
-  LibraryExplorerView,
-  QueryErrorAlert,
-} from '@/components'
+import { IconArrowUp, IconBookmarkPlus } from '@tabler/icons-react'
+import { LibraryExplorerView, QueryErrorAlert } from '@/components'
 import { useLibraryPage } from '@/hooks'
-import { canWriteCategory, type SortKey } from '@/lib'
+import { canWriteCategory } from '@/lib'
 import { LibraryBulkBar } from './LibraryBulkBar'
 import { LibraryGridView } from './LibraryGridView'
 import { LibraryPageHeader } from './LibraryPageHeader'
+import { LibraryPageModals } from './LibraryPageModals'
+import { LibrarySearchToolbar } from './LibrarySearchToolbar'
 import styles from './LibraryPage.module.css'
 
-const iconSm = { size: 16, stroke: 1.5 } as const
 const FILTER_PANEL_ID = 'library-filter-panel'
 
 export function LibraryPage(): ReactElement {
@@ -117,95 +96,25 @@ export function LibraryPage(): ReactElement {
         </Alert>
       ) : null}
 
-      <Stack gap="md">
-        <Group justify="space-between" align="stretch" wrap="wrap" gap="sm">
-          <TextInput
-            ref={lib.searchRef}
-            placeholder="Search bookmarks…"
-            leftSection={<IconSearch {...iconSm} />}
-            rightSection={
-              lib.q ? (
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  aria-label="Clear search"
-                  onClick={() => {
-                    lib.setQ('')
-                    lib.setLibrarySearch({ q: '' })
-                  }}
-                >
-                  <IconX size={14} stroke={1.5} />
-                </ActionIcon>
-              ) : (
-                <Kbd visibleFrom="sm" size="xs">
-                  ⌘K
-                </Kbd>
-              )
-            }
-            rightSectionPointerEvents={lib.q ? 'all' : 'none'}
-            value={lib.q}
-            onChange={(e) => lib.setQ(e.currentTarget.value)}
-            className={styles.searchInput}
-          />
-          <Group gap="xs" wrap="nowrap" align="stretch">
-            {lib.viewMode === 'grid' ? (
-              <Tooltip label="Filter by category or tag">
-                <Button
-                  variant={lib.filterOpen || lib.panelFilterActive ? 'light' : 'default'}
-                  leftSection={<IconFilter {...iconSm} />}
-                  onClick={lib.toggleFilter}
-                  aria-expanded={lib.filterOpen}
-                  aria-controls={FILTER_PANEL_ID}
-                  h="100%"
-                >
-                  Filter
-                  {lib.panelFilterActive ? ` (${lib.panelFilterCount})` : ''}
-                </Button>
-              </Tooltip>
-            ) : null}
-            <Button.Group className={styles.flagFilters}>
-              <Button
-                variant={lib.filterFlags.includes('unread') ? 'light' : 'default'}
-                leftSection={<IconBookmark {...iconSm} />}
-                onClick={() => lib.toggleFlagFilter('unread')}
-                h="100%"
-              >
-                Reading list
-              </Button>
-              <Button
-                variant={lib.filterFlags.includes('favorite') ? 'light' : 'default'}
-                leftSection={<IconStar {...iconSm} />}
-                onClick={() => lib.toggleFlagFilter('favorite')}
-                h="100%"
-              >
-                Favorites
-              </Button>
-              <Button
-                variant={lib.filterFlags.includes('pinned') ? 'light' : 'default'}
-                leftSection={<IconPin {...iconSm} />}
-                onClick={() => lib.toggleFlagFilter('pinned')}
-                h="100%"
-              >
-                Pinned
-              </Button>
-            </Button.Group>
-            <Select
-              aria-label="Sort"
-              value={lib.sort}
-              onChange={(v) => v && lib.setLibrarySearch({ sort: v as SortKey })}
-              allowDeselect={false}
-              w={200}
-              data={[
-                { value: 'updated_desc', label: 'Recently updated' },
-                { value: 'updated_asc', label: 'Oldest updated' },
-                { value: 'created_desc', label: 'Newest created' },
-                { value: 'title_asc', label: 'Title A–Z' },
-                { value: 'title_desc', label: 'Title Z–A' },
-              ]}
-            />
-          </Group>
-        </Group>
-      </Stack>
+      <LibrarySearchToolbar
+        searchRef={lib.searchRef}
+        filterPanelId={FILTER_PANEL_ID}
+        viewMode={lib.viewMode}
+        q={lib.q}
+        sort={lib.sort}
+        filterFlags={lib.filterFlags}
+        filterOpen={lib.filterOpen}
+        panelFilterActive={lib.panelFilterActive}
+        panelFilterCount={lib.panelFilterCount}
+        onQChange={lib.setQ}
+        onClearSearch={() => {
+          lib.setQ('')
+          lib.setLibrarySearch({ q: '' })
+        }}
+        onToggleFilter={lib.toggleFilter}
+        onToggleFlag={lib.toggleFlagFilter}
+        onSortChange={(sort) => lib.setLibrarySearch({ sort })}
+      />
 
       <div className={styles.resultsShell}>
         {lib.viewMode === 'explorer' ? (
@@ -301,73 +210,35 @@ export function LibraryPage(): ReactElement {
         )}
       </div>
 
-      <BookmarkDrawer
-        opened={lib.drawerOpen}
-        onClose={lib.closeDrawer}
+      <LibraryPageModals
         categories={lib.cats.data || []}
-        initial={lib.draft}
-      />
-
-      <BulkEditDrawer
-        opened={lib.bulkMode != null}
-        onClose={() => lib.setBulkMode(null)}
-        mode={lib.bulkMode ?? 'categories'}
-        count={lib.selectedCount}
-        categories={lib.cats.data || []}
-        pending={lib.bulkPending}
+        drawerOpen={lib.drawerOpen}
+        onCloseDrawer={lib.closeDrawer}
+        draft={lib.draft}
+        bulkMode={lib.bulkMode}
+        onCloseBulk={() => lib.setBulkMode(null)}
+        selectedCount={lib.selectedCount}
+        bulkPending={lib.bulkPending}
         onApplyCategories={(ids) => void lib.applyBulkCategories(ids)}
         onApplyTag={(tags, mode) => void lib.applyBulkTag(tags, mode)}
+        dupesOpen={lib.dupesOpen}
+        onCloseDupes={lib.closeDupes}
+        categoryModals={lib.categoryActions.modals}
+        deleteId={lib.deleteId}
+        onCloseDelete={() => lib.setDeleteId(null)}
+        onConfirmDelete={() => void lib.confirmDelete()}
+        deletePending={lib.deleteBookmark.isPending}
+        bulkDeleteOpen={lib.bulkDeleteOpen}
+        onCloseBulkDelete={() => lib.setBulkDeleteOpen(false)}
+        onConfirmBulkDelete={() => void lib.confirmBulkDelete()}
+        bulkDeletePending={lib.bulkDelete.isPending}
+        unlockOpen={lib.unlockOpen}
+        onCloseUnlock={() => lib.setUnlockOpen(false)}
+        vaultPass={lib.vaultPass}
+        onVaultPassChange={lib.setVaultPass}
+        onUnlock={() => void lib.unlockForSearch()}
+        unlockPending={lib.vaultUnlock.isPending}
       />
-
-      <DuplicateMergeDrawer opened={lib.dupesOpen} onClose={lib.closeDupes} />
-
-      {lib.categoryActions.modals}
-
-      <ConfirmModal
-        opened={!!lib.deleteId}
-        onClose={() => lib.setDeleteId(null)}
-        onConfirm={() => void lib.confirmDelete()}
-        title="Delete bookmark?"
-        body="Moves this bookmark to Deleted items. You can restore it later."
-        confirmLabel="Delete"
-        loading={lib.deleteBookmark.isPending}
-      />
-
-      <ConfirmModal
-        opened={lib.bulkDeleteOpen}
-        onClose={() => lib.setBulkDeleteOpen(false)}
-        onConfirm={() => void lib.confirmBulkDelete()}
-        title={`Delete ${lib.selectedCount} bookmark${lib.selectedCount === 1 ? '' : 's'}?`}
-        body="Moves selected bookmarks to Deleted items. You can restore them later."
-        confirmLabel="Delete"
-        loading={lib.bulkDelete.isPending}
-      />
-
-      <Modal opened={lib.unlockOpen} onClose={() => lib.setUnlockOpen(false)} title="Unlock vault for search">
-        <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            Config options say vault should be included in search. Unlock to include vault hits.
-          </Text>
-          <PasswordInput
-            label="Vault passphrase"
-            value={lib.vaultPass}
-            onChange={(e) => lib.setVaultPass(e.currentTarget.value)}
-          />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => lib.setUnlockOpen(false)}>
-              Skip
-            </Button>
-            <Button
-              leftSection={<IconLockOpen {...iconSm} />}
-              onClick={() => void lib.unlockForSearch()}
-              disabled={lib.vaultPass.length < 8}
-              loading={lib.vaultUnlock.isPending}
-            >
-              Unlock
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
 
       <Affix position={{ bottom: 24, right: 24 }}>
         <Group gap="sm">
