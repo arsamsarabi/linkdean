@@ -91,12 +91,13 @@ async fn register(
             }
         }
     }
-    match db::link_pending_share_invites(&state.pool, &req.email, user.id).await {
-        Ok(n) if n > 0 => {
-            tracing::info!(user_id = %user.id, linked = n, "linked pending share invites")
+    let share_token = req.share_token.as_deref().map(str::trim);
+    if let Some(share_token) = share_token.filter(|t| !t.is_empty()) {
+        match db::claim_pending_share_invite(&state.pool, share_token, &req.email, user.id).await {
+            Ok(true) => tracing::info!(user_id = %user.id, "claimed share invite"),
+            Ok(false) => tracing::info!(user_id = %user.id, "share invite link did not match"),
+            Err(e) => tracing::warn!(user_id = %user.id, error = %e, "share invite claim failed"),
         }
-        Ok(_) => {}
-        Err(e) => tracing::warn!(user_id = %user.id, error = %e, "pending share link failed"),
     }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let public = db::to_public(&state.pool, &user).await?;
@@ -302,13 +303,16 @@ async fn oidc_callback(
                 Some(&issuer),
             )
             .await?;
-            match db::link_pending_share_invites(&state.pool, email, created.id).await {
-                Ok(n) if n > 0 => {
-                    tracing::info!(user_id = %created.id, linked = n, "linked pending share invites")
-                }
-                Ok(_) => {}
-                Err(e) => {
-                    tracing::warn!(user_id = %created.id, error = %e, "pending share link failed")
+            let email_verified = info.get("email_verified").and_then(Value::as_bool);
+            if email_verified == Some(true) {
+                match db::link_pending_share_invites(&state.pool, email, created.id).await {
+                    Ok(n) if n > 0 => {
+                        tracing::info!(user_id = %created.id, linked = n, "linked pending share invites")
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::warn!(user_id = %created.id, error = %e, "pending share link failed")
+                    }
                 }
             }
             created

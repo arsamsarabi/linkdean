@@ -451,6 +451,8 @@ pub struct PendingShareInvite {
     pub revoked_at: Option<DateTime<Utc>>,
     pub invitee_user_id: Option<Uuid>,
     pub rejected_at: Option<DateTime<Utc>>,
+    #[serde(skip)]
+    pub claim_token_hash: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -463,6 +465,9 @@ pub struct PendingShareInviteView {
     pub invited_by_user_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Single-use claim link token. Only present in the response that created it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claim_token: Option<String>,
 }
 
 /// An invite as its invitee sees it. `rejected_at` is set when they declined it.
@@ -934,6 +939,9 @@ pub struct RegisterRequest {
     /// Required when registration is closed (after bootstrap).
     #[serde(default)]
     pub invite_code: Option<String>,
+    /// From a share invite's claim link.
+    #[serde(default)]
+    pub share_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,5 +1,17 @@
 import { type ReactElement } from 'react'
-import { ActionIcon, Button, Group, Select, Skeleton, Stack, Text, TextInput, Tooltip } from '@mantine/core'
+import {
+  ActionIcon,
+  Alert,
+  Button,
+  CopyButton,
+  Group,
+  Select,
+  Skeleton,
+  Stack,
+  Text,
+  TextInput,
+  Tooltip,
+} from '@mantine/core'
 import { IconTrash } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import type { ShareAccess } from '@/schemas'
@@ -31,6 +43,8 @@ type Props = {
   onAccessChange: (access: ShareAccess) => void
   onInvite: () => void
   invitePending: boolean
+  /** Link for someone with no account yet. Shown once, after inviting them. */
+  claimLink?: string | null
   sharesError: unknown
   onRetryShares: () => void
   sharesLoading: boolean
@@ -54,6 +68,7 @@ export function ShareInvitePanel({
   onAccessChange,
   onInvite,
   invitePending,
+  claimLink,
   sharesError,
   onRetryShares,
   sharesLoading,
@@ -91,6 +106,25 @@ export function ShareInvitePanel({
           Invite
         </Button>
       </Stack>
+
+      {claimLink ? (
+        <Alert color="violet" title="Send them this link">
+          <Stack gap="xs">
+            <Text size="sm">
+              They have no account yet, and need this link to pick up the invite. It works once. Invite them again for a
+              new one.
+            </Text>
+            <TextInput aria-label="Invite link" value={claimLink} readOnly onFocus={(e) => e.currentTarget.select()} />
+            <CopyButton value={claimLink} timeout={1500}>
+              {({ copied, copy }) => (
+                <Button size="xs" variant="light" onClick={copy}>
+                  {copied ? 'Copied' : 'Copy link'}
+                </Button>
+              )}
+            </CopyButton>
+          </Stack>
+        </Alert>
+      ) : null}
 
       {sharesError ? <QueryErrorAlert error={sharesError} onRetry={onRetryShares} /> : null}
 
@@ -150,7 +184,7 @@ export function ShareInvitePanel({
                   {p.invitee_email}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  Pending — claims on register
+                  Pending — invite again for a new link
                 </Text>
               </Stack>
               <Select

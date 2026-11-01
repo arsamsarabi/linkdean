@@ -8,6 +8,7 @@ const iconSm = { size: 16, stroke: 1.5 } as const
 type Props = {
   closed: boolean
   hasInvite: boolean
+  hasShareInvite: boolean
   inviteCode: string
   displayName: string
   email: string
@@ -30,6 +31,7 @@ type Props = {
 export function RegisterForm({
   closed,
   hasInvite,
+  hasShareInvite,
   inviteCode,
   displayName,
   email,
@@ -55,6 +57,11 @@ export function RegisterForm({
           Create account
         </Title>
         <Text c="dimmed">{closed ? 'Join with your invite.' : 'Join this Linkdean instance.'}</Text>
+        {hasShareInvite ? (
+          <Text size="sm" c="dimmed">
+            Use the email address you were invited at, and the invite will be waiting for you.
+          </Text>
+        ) : null}
       </Stack>
       <Paper p="xl" radius="md" withBorder>
         <Stack gap="md">

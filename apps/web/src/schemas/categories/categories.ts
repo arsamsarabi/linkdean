@@ -56,6 +56,7 @@ export const pendingShareInviteSchema = z.object({
   invited_by_user_id: z.string(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
+  claim_token: z.string().optional(),
 })
 
 export const categorySharesEnvelopeSchema = z.object({

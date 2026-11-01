@@ -4,7 +4,13 @@ import { setToken } from '@/lib'
 import type { AuthTokenResponse, UserPublic } from '@/schemas'
 
 type LoginBody = { email: string; password: string }
-type RegisterBody = { email: string; password: string; display_name?: string; invite_code?: string }
+type RegisterBody = {
+  email: string
+  password: string
+  display_name?: string
+  invite_code?: string
+  share_token?: string
+}
 
 export function useLogin(): UseMutationResult<AuthTokenResponse, Error, LoginBody> {
   const qc = useQueryClient()

@@ -245,6 +245,7 @@ export const api = {
     password: string
     display_name?: string
     invite_code?: string
+    share_token?: string
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/register', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 

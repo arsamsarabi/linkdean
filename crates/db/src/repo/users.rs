@@ -42,7 +42,7 @@ pub async fn create_user(
         RETURNING *
         "#,
     )
-    .bind(email.to_ascii_lowercase())
+    .bind(email.trim().to_ascii_lowercase())
     .bind(display_name)
     .bind(password_hash)
     .bind(oidc_subject)
@@ -64,7 +64,7 @@ pub async fn create_user(
 
 pub async fn find_user_by_email(pool: &PgPool, email: &str) -> Result<Option<User>> {
     sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1")
-        .bind(email.to_ascii_lowercase())
+        .bind(email.trim().to_ascii_lowercase())
         .fetch_optional(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))

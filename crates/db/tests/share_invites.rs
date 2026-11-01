@@ -226,7 +226,7 @@ async fn other_users_cannot_act_on_an_invite() {
 }
 
 #[tokio::test]
-async fn signup_links_the_invite_without_granting() {
+async fn verified_signup_links_the_invite_without_granting() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
@@ -426,6 +426,163 @@ async fn owner_can_cancel_an_invite_and_send_a_new_one() {
         .expect("new invite");
     assert_eq!(
         db::list_share_invites(&pool, invitee.id)
+            .await
+            .expect("inbox")
+            .len(),
+        1
+    );
+}
+
+async fn pending_claim(pool: &PgPool, owner: &User, category_id: Uuid, email: &str) -> String {
+    match invite(pool, owner, category_id, email)
+        .await
+        .expect("invite")
+    {
+        CreateCategoryShareOutcome::Pending { invite } => invite
+            .claim_token
+            .expect("invite to a new address has a token"),
+        other => panic!("expected a pending invite, got {other:?}"),
+    }
+}
+
+async fn register(pool: &PgPool, email: &str) -> User {
+    db::create_user(pool, email, Some("password-long"), None, None, None)
+        .await
+        .expect("register")
+}
+
+#[tokio::test]
+async fn registering_with_an_invited_email_does_not_claim_the_invite() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let cat = category(&pool, &owner).await;
+    let email = format!("target-{}@invites.test", Uuid::new_v4());
+    pending_claim(&pool, &owner, cat, &email).await;
+
+    let squatter = register(&pool, &email).await;
+    let claimed = db::claim_pending_share_invite(&pool, "not-the-token", &email, squatter.id)
+        .await
+        .expect("claim");
+
+    assert!(!claimed);
+    assert!(db::list_share_invites(&pool, squatter.id)
+        .await
+        .expect("inbox")
+        .is_empty());
+}
+
+#[tokio::test]
+async fn claim_link_works_once_and_only_for_its_address() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let cat = category(&pool, &owner).await;
+    let email = format!("friend-{}@invites.test", Uuid::new_v4());
+    let token = pending_claim(&pool, &owner, cat, &email).await;
+
+    let other = user(&pool, "other").await;
+    assert!(
+        !db::claim_pending_share_invite(&pool, &token, &other.email, other.id)
+            .await
+            .expect("wrong address")
+    );
+
+    let friend = register(&pool, &email).await;
+    assert!(
+        db::claim_pending_share_invite(&pool, &token, &email, friend.id)
+            .await
+            .expect("claim")
+    );
+    assert_eq!(
+        db::list_share_invites(&pool, friend.id)
+            .await
+            .expect("inbox")
+            .len(),
+        1
+    );
+
+    assert!(
+        !db::claim_pending_share_invite(&pool, &token, &email, other.id)
+            .await
+            .expect("second use")
+    );
+}
+
+#[tokio::test]
+async fn inviting_again_replaces_the_claim_link() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let cat = category(&pool, &owner).await;
+    let email = format!("friend-{}@invites.test", Uuid::new_v4());
+    let first = pending_claim(&pool, &owner, cat, &email).await;
+    let second = pending_claim(&pool, &owner, cat, &email).await;
+    assert_ne!(first, second);
+
+    let friend = register(&pool, &email).await;
+    assert!(
+        !db::claim_pending_share_invite(&pool, &first, &email, friend.id)
+            .await
+            .expect("old link")
+    );
+    assert!(
+        db::claim_pending_share_invite(&pool, &second, &email, friend.id)
+            .await
+            .expect("new link")
+    );
+}
+
+#[tokio::test]
+async fn inviting_again_reaches_someone_who_registered_without_the_link() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let cat = category(&pool, &owner).await;
+    let email = format!("friend-{}@invites.test", Uuid::new_v4());
+    pending_claim(&pool, &owner, cat, &email).await;
+    let friend = register(&pool, &email).await;
+
+    invite(&pool, &owner, cat, &email)
+        .await
+        .expect("invite again");
+
+    assert_eq!(
+        db::list_share_invites(&pool, friend.id)
+            .await
+            .expect("inbox")
+            .len(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn padded_email_cannot_take_an_existing_users_invite() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let cat = category(&pool, &owner).await;
+    let bob = user(&pool, "bob").await;
+    invite(&pool, &owner, cat, &bob.email)
+        .await
+        .expect("invite");
+
+    let padded = format!("{} ", bob.email);
+    let duplicate = db::create_user(&pool, &padded, Some("password-long"), None, None, None).await;
+    assert!(matches!(duplicate, Err(Error::Conflict(_))));
+
+    let thief = user(&pool, "thief").await;
+    let linked = db::link_pending_share_invites(&pool, &bob.email, thief.id)
+        .await
+        .expect("link");
+    assert_eq!(linked, 0);
+    assert_eq!(
+        db::list_share_invites(&pool, bob.id)
             .await
             .expect("inbox")
             .len(),

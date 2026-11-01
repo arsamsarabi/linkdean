@@ -11,6 +11,7 @@ import {
   useUpdateDashboardShare,
 } from '@/hooks'
 import type { ShareAccess } from '@/schemas'
+import { claimLinkFrom } from '@/services'
 
 type Props = {
   dashboardId: string | null
@@ -30,6 +31,8 @@ export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onCl
   const updatePending = useUpdateDashboardPendingShare()
   const removePending = useDeleteDashboardPendingShare()
 
+  const [claimLink, setClaimLink] = useState<string | null>(null)
+
   async function onInvite(): Promise<void> {
     if (!dashboardId || !email.trim()) return
     try {
@@ -39,9 +42,9 @@ export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onCl
         access,
       })
       setEmail('')
-      notifications.show({
-        message: outcome.status === 'pending' ? 'Invite sent. They get access once they accept.' : 'Invite added',
-      })
+      const link = claimLinkFrom(outcome)
+      setClaimLink(link)
+      notifications.show({ message: link ? 'Invite created. Send them the link.' : 'Invite sent' })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
@@ -63,6 +66,7 @@ export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onCl
         onEmailChange={setEmail}
         onAccessChange={setAccess}
         onInvite={() => void onInvite()}
+        claimLink={claimLink}
         invitePending={create.isPending}
         sharesError={shares.isError ? shares.error : null}
         onRetryShares={() => void shares.refetch()}

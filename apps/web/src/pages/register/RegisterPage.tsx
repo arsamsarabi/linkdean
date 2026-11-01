@@ -12,7 +12,7 @@ import { RegisterInviteGate } from './RegisterInviteGate'
 
 export function RegisterPage(): ReactElement {
   const nav = useNavigate()
-  const search = useSearch({ strict: false }) as { invite?: string }
+  const search = useSearch({ strict: false }) as { invite?: string; share?: string }
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
@@ -48,6 +48,7 @@ export function RegisterPage(): ReactElement {
         password,
         display_name: displayName || undefined,
         invite_code: inviteCode.trim() || undefined,
+        share_token: search.share,
       })
       if (pendingAvatar) {
         try {
@@ -96,7 +97,7 @@ export function RegisterPage(): ReactElement {
         inviteCode={inviteCode}
         onInviteCode={setInviteCode}
         onContinue={() => {
-          void nav({ to: '/register', search: { invite: inviteCode.trim() } })
+          void nav({ to: '/register', search: { invite: inviteCode.trim(), share: search.share } })
         }}
         onLogin={() => void nav({ to: '/login' })}
       />
@@ -108,6 +109,7 @@ export function RegisterPage(): ReactElement {
       <RegisterForm
         closed={closed}
         hasInvite={hasInvite}
+        hasShareInvite={!!search.share}
         inviteCode={inviteCode}
         displayName={displayName}
         email={email}
