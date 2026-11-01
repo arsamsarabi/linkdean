@@ -12,8 +12,7 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - Pending email invites for bookmark / list / dashboard shares (not public URLs): invite by address; if recipient has no account, they register and claim access
 - Broken-link checker (rate-limited worker)
 - Full-text notes and optional highlights
-- In the category item's menu, swap rename for **edit category** (drawer + form)
-- On bookmark cards, show **title** primary; URL beneath as small muted text
+- increase the number of icons offered to the user for the categories. paginate the icons so the user can scroll through them. add a search input to the icons page so the user can search for an icon.
 
 **Social**
 
