@@ -35,12 +35,16 @@ fn to_event(row: ActivityRow) -> Result<ActivityEvent> {
     })
 }
 
-fn default_summary(action: ActivityAction, subject_type: ActivitySubjectType, title: &str) -> String {
-    let kind = match subject_type {
+fn subject_kind(subject_type: ActivitySubjectType) -> &'static str {
+    match subject_type {
         ActivitySubjectType::Bookmark => "bookmark",
         ActivitySubjectType::Category => "list",
         ActivitySubjectType::Dashboard => "dashboard",
-    };
+    }
+}
+
+fn default_summary(action: ActivityAction, subject_type: ActivitySubjectType, title: &str) -> String {
+    let kind = subject_kind(subject_type);
     let verb = match action {
         ActivityAction::Created => "Created",
         ActivityAction::Updated => "Updated",
@@ -53,6 +57,21 @@ fn default_summary(action: ActivityAction, subject_type: ActivitySubjectType, ti
         title.trim()
     };
     format!("{verb} {kind}: {label}")
+}
+
+/// Human summary for updates that list concrete field changes.
+pub fn update_summary(subject_type: ActivitySubjectType, title: &str, changes: &[String]) -> String {
+    let kind = subject_kind(subject_type);
+    let label = if title.trim().is_empty() {
+        kind.to_string()
+    } else {
+        format!("“{}”", title.trim())
+    };
+    if changes.is_empty() {
+        format!("Updated {kind} {label}")
+    } else {
+        format!("Updated {kind} {label}: {}", changes.join("; "))
+    }
 }
 
 async fn insert_activity(

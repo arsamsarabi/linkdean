@@ -221,6 +221,12 @@ pub async fn update_category(
     req: UpdateCategory,
 ) -> Result<CategoryView> {
     let (mut cat, access) = require_category_write(pool, user_id, id).await?;
+    let before_name = cat.name.clone();
+    let before_parent = cat.parent_id;
+    let before_hidden = cat.is_hidden;
+    let before_position = cat.position;
+    let before_icon = cat.icon.clone();
+
     if let Some(name) = req.name {
         cat.name = name;
     }
@@ -254,6 +260,41 @@ pub async fn update_category(
     if let Some(icon) = req.icon {
         cat.icon = normalize_category_icon(icon);
     }
+
+    let mut changes: Vec<String> = Vec::new();
+    let mut change_keys: Vec<&'static str> = Vec::new();
+    if cat.name != before_name {
+        changes.push(format!("renamed “{before_name}” → “{}”", cat.name));
+        change_keys.push("name");
+    }
+    if cat.parent_id != before_parent {
+        match (before_parent, cat.parent_id) {
+            (_, None) => changes.push("moved to root".into()),
+            (None, Some(_)) => changes.push("moved under another list".into()),
+            _ => changes.push("moved".into()),
+        }
+        change_keys.push("parent_id");
+    }
+    if cat.is_hidden != before_hidden {
+        changes.push(if cat.is_hidden {
+            "hidden".into()
+        } else {
+            "unhidden".into()
+        });
+        change_keys.push("is_hidden");
+    }
+    if cat.position != before_position {
+        changes.push("reordered".into());
+        change_keys.push("position");
+    }
+    if cat.icon != before_icon {
+        match cat.icon.as_deref() {
+            Some(icon) => changes.push(format!("icon set to {icon}")),
+            None => changes.push("icon cleared".into()),
+        }
+        change_keys.push("icon");
+    }
+
     let updated = sqlx::query_as::<_, Category>(
         r#"
         UPDATE categories
@@ -286,15 +327,24 @@ pub async fn update_category(
 
     let access = category_access(pool, user_id, updated.id).await?;
     let view = CategoryView::from_category(updated, access);
-    super::activity::record_activity(
-        pool,
-        user_id,
-        linkdean_core::ActivityAction::Updated,
-        linkdean_core::ActivitySubjectType::Category,
-        view.id,
-        &view.name,
-    )
-    .await;
+    if !changes.is_empty() {
+        let summary = super::activity::update_summary(
+            linkdean_core::ActivitySubjectType::Category,
+            &view.name,
+            &changes,
+        );
+        super::activity::record_activity_with(
+            pool,
+            user_id,
+            linkdean_core::ActivityAction::Updated,
+            linkdean_core::ActivitySubjectType::Category,
+            view.id,
+            &view.name,
+            Some(&summary),
+            serde_json::json!({ "changes": change_keys }),
+        )
+        .await;
+    }
     Ok(view)
 }
 

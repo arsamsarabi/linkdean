@@ -94,12 +94,13 @@ async fn bookmark_category_dashboard_activity_flow() {
     .await
     .expect("update bm");
 
+    let renamed = format!("Folder-renamed-{}", Uuid::new_v4());
     db::update_category(
         &pool,
         user.id,
         cat.id,
         UpdateCategory {
-            name: Some(format!("Folder-renamed-{}", Uuid::new_v4())),
+            name: Some(renamed.clone()),
             parent_id: None,
             is_hidden: None,
             position: None,
@@ -148,6 +149,15 @@ async fn bookmark_category_dashboard_activity_flow() {
         e.action == ActivityAction::Updated
             && e.subject_type == ActivitySubjectType::Bookmark
             && e.subject_id == bm.id
+            && e.summary.contains("renamed")
+            && e.summary.contains("Activity BM Renamed")
+    }));
+    assert!(all.iter().any(|e| {
+        e.action == ActivityAction::Updated
+            && e.subject_type == ActivitySubjectType::Category
+            && e.subject_id == cat.id
+            && e.summary.contains("renamed")
+            && e.summary.contains(&renamed)
     }));
     assert!(all.iter().any(|e| {
         e.action == ActivityAction::Deleted

@@ -593,6 +593,73 @@ fn update_has_flags(req: &UpdateBookmark) -> bool {
     req.is_favorite.is_some() || req.is_unread.is_some() || req.is_pinned.is_some()
 }
 
+fn bookmark_content_changes(
+    req: &UpdateBookmark,
+    before_title: Option<&str>,
+) -> (Vec<String>, Vec<&'static str>) {
+    let mut changes = Vec::new();
+    let mut keys = Vec::new();
+    if req.url.is_some() {
+        changes.push("url".into());
+        keys.push("url");
+    }
+    if let Some(ref title) = req.title {
+        match before_title.map(str::trim).filter(|s| !s.is_empty()) {
+            Some(prev) if prev != title.trim() => {
+                changes.push(format!("renamed “{prev}” → “{}”", title.trim()));
+            }
+            _ => changes.push(format!("title set to “{}”", title.trim())),
+        }
+        keys.push("title");
+    }
+    if req.description.is_some() {
+        changes.push("description".into());
+        keys.push("description");
+    }
+    if req.notes.is_some() {
+        changes.push("notes".into());
+        keys.push("notes");
+    }
+    if req.tags.is_some() {
+        changes.push("tags".into());
+        keys.push("tags");
+    }
+    if req.category_ids.is_some() || req.category_id.is_some() {
+        changes.push("folders".into());
+        keys.push("categories");
+    }
+    (changes, keys)
+}
+
+async fn record_bookmark_update_activity(
+    pool: &PgPool,
+    user_id: Uuid,
+    view: &BookmarkView,
+    changes: &[String],
+    change_keys: &[&str],
+) {
+    if changes.is_empty() {
+        return;
+    }
+    let title = activity_bookmark_title(view);
+    let summary = super::activity::update_summary(
+        linkdean_core::ActivitySubjectType::Bookmark,
+        &title,
+        changes,
+    );
+    super::activity::record_activity_with(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Updated,
+        linkdean_core::ActivitySubjectType::Bookmark,
+        view.id,
+        &title,
+        Some(&summary),
+        serde_json::json!({ "changes": change_keys }),
+    )
+    .await;
+}
+
 pub async fn update_bookmark(
     pool: &PgPool,
     user_id: Uuid,
@@ -655,6 +722,7 @@ pub async fn update_bookmark(
         let mut payload =
             super::blocking::run_blocking(move || crypto::decrypt_payload(&key, &ct0, &nonce0))
                 .await?;
+        let (changes, change_keys) = bookmark_content_changes(&req, Some(payload.title.as_str()));
         if let Some(url) = req.url {
             payload.url = url;
         }
@@ -696,19 +764,11 @@ pub async fn update_bookmark(
         let view = bookmark_to_view(pool, b, vault_key, user_id)
             .await?
             .ok_or(Error::VaultLocked)?;
-        let title = activity_bookmark_title(&view);
-        super::activity::record_activity(
-            pool,
-            user_id,
-            linkdean_core::ActivityAction::Updated,
-            linkdean_core::ActivitySubjectType::Bookmark,
-            view.id,
-            &title,
-        )
-        .await;
+        record_bookmark_update_activity(pool, user_id, &view, &changes, &change_keys).await;
         return Ok(view);
     }
 
+    let (changes, change_keys) = bookmark_content_changes(&req, Some(existing.title.as_str()));
     let url = req.url.unwrap_or(existing.url);
     let title = req.title.unwrap_or(existing.title);
     let description = req.description.or(existing.description);
@@ -757,16 +817,7 @@ pub async fn update_bookmark(
     let view = bookmark_to_view(pool, b, None, user_id)
         .await?
         .ok_or(Error::NotFound)?;
-    let title = activity_bookmark_title(&view);
-    super::activity::record_activity(
-        pool,
-        user_id,
-        linkdean_core::ActivityAction::Updated,
-        linkdean_core::ActivitySubjectType::Bookmark,
-        view.id,
-        &title,
-    )
-    .await;
+    record_bookmark_update_activity(pool, user_id, &view, &changes, &change_keys).await;
     Ok(view)
 }
 

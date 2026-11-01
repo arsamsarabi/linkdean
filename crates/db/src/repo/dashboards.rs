@@ -319,12 +319,15 @@ pub async fn put_dashboard(
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
     let (dash, _) = require_dashboard_write(pool, user_id, id).await?;
+    let before_title = dash.title.clone();
     let title = req
         .title
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .unwrap_or(dash.title.as_str());
+    let section_count = req.sections.len();
+    let pin_count: usize = req.sections.iter().map(|s| s.bookmark_ids.len()).sum();
 
     let mut tx = pool
         .begin()
@@ -416,13 +419,28 @@ pub async fn put_dashboard(
         .await;
     }
 
-    super::activity::record_activity(
+    let mut changes = Vec::new();
+    let mut change_keys: Vec<&'static str> = Vec::new();
+    if title != before_title {
+        changes.push(format!("renamed “{before_title}” → “{title}”"));
+        change_keys.push("title");
+    }
+    changes.push(format!("layout ({section_count} sections, {pin_count} pins)"));
+    change_keys.push("layout");
+    let summary = super::activity::update_summary(
+        linkdean_core::ActivitySubjectType::Dashboard,
+        title,
+        &changes,
+    );
+    super::activity::record_activity_with(
         pool,
         user_id,
         linkdean_core::ActivityAction::Updated,
         linkdean_core::ActivitySubjectType::Dashboard,
         id,
         title,
+        Some(&summary),
+        serde_json::json!({ "changes": change_keys, "sections": section_count, "pins": pin_count }),
     )
     .await;
 
@@ -492,12 +510,21 @@ pub async fn patch_dashboard(
         require_dashboard_write(pool, user_id, id).await?;
     }
 
+    let mut changes = Vec::new();
+    let mut change_keys: Vec<&'static str> = Vec::new();
     let mut activity_title: Option<String> = None;
+
     if let Some(ref title_raw) = req.title {
         let title = title_raw.trim();
         if title.is_empty() {
             return Err(Error::BadRequest("title required".into()));
         }
+        let before = sqlx::query_scalar::<_, String>("SELECT title FROM dashboards WHERE id = $1")
+            .bind(id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?
+            .unwrap_or_default();
         sqlx::query(
             r#"
             UPDATE dashboards
@@ -510,36 +537,39 @@ pub async fn patch_dashboard(
         .execute(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
+        if before != title {
+            changes.push(format!("renamed “{before}” → “{title}”"));
+            change_keys.push("title");
+        }
         activity_title = Some(title.to_string());
     }
 
-    if let Some(ref title) = activity_title {
-        super::activity::record_activity(
+    if req.is_default == Some(true) {
+        changes.push("pinned as default".into());
+        change_keys.push("is_default");
+    }
+
+    let view = get_dashboard(pool, user_id, id, vault_key).await?;
+    if !changes.is_empty() {
+        let title = activity_title.as_deref().unwrap_or(view.title.as_str());
+        let summary = super::activity::update_summary(
+            linkdean_core::ActivitySubjectType::Dashboard,
+            title,
+            &changes,
+        );
+        super::activity::record_activity_with(
             pool,
             user_id,
             linkdean_core::ActivityAction::Updated,
             linkdean_core::ActivitySubjectType::Dashboard,
             id,
             title,
+            Some(&summary),
+            serde_json::json!({ "changes": change_keys }),
         )
         .await;
-    } else if req.is_default == Some(true) {
-        // Pin-only patch still counts as an update for history.
-        if let Ok(view) = get_dashboard(pool, user_id, id, vault_key).await {
-            super::activity::record_activity(
-                pool,
-                user_id,
-                linkdean_core::ActivityAction::Updated,
-                linkdean_core::ActivitySubjectType::Dashboard,
-                id,
-                &view.title,
-            )
-            .await;
-            return Ok(view);
-        }
     }
-
-    get_dashboard(pool, user_id, id, vault_key).await
+    Ok(view)
 }
 
 pub async fn delete_dashboard(
