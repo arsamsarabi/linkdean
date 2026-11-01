@@ -8,7 +8,7 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Product**
 
-- Pending email invites for **single-bookmark** shares (lists + dashboards shipped; needs single-bookmark share first)
+- Pending email invites for **single-bookmark** shares (lists + dashboards claim-on-register shipped; needs single-bookmark share first)
 - Broken-link checker (rate-limited worker)
 - Full-text notes and optional highlights
 - increase the number of icons offered to the user for the categories. paginate the icons so the user can scroll through them. add a search input to the icons page so the user can search for an icon.
@@ -58,7 +58,7 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - SMTP / outbound email config (for invites + notification delivery) ([react-email](https://www.npmjs.com/package/react-email) for templates)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
-- backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file..
+- backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file.
 
 ---
 
