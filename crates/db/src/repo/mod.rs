@@ -21,6 +21,7 @@ mod trash;
 mod users;
 mod vault;
 mod vault_global;
+mod vault_moves;
 
 pub use activity::*;
 pub use api_keys::*;
@@ -44,3 +45,4 @@ pub use trash::*;
 pub use users::*;
 pub use vault::*;
 pub use vault_global::*;
+pub use vault_moves::*;

@@ -104,7 +104,7 @@ Every vault involved must be unlocked, or the route returns the existing vault-l
 
 ### Blockers
 
-The route checks everything before changing anything. If any blocker exists it returns `409` with all of them, and nothing moves. Blockers apply to moves into a vault, from outside or from another vault.
+The route checks everything before changing anything. If any blocker exists it returns `409` with all of them, and nothing moves. Blockers apply to moves into a vault, from outside or from another vault. A bookmark leaving a vault is also blocked while it sits in a vault category that is not moving.
 
 | Blocker | Instruction shown |
 | --- | --- |

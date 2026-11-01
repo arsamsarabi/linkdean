@@ -2,12 +2,14 @@ use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::{
     ChangeGlobalPassphraseRequest, CreateVaultRequest, DeleteVaultRequest, Error,
-    RecoverVaultRequest, RenameVaultRequest, Vault, VaultKeyring, VaultSetupRequest,
-    VaultUnlockRequest, VaultView,
+    MoveToVaultRequest, RecoverVaultRequest, RenameVaultRequest, Vault, VaultKeyring,
+    VaultMoveOutcome, VaultSetupRequest, VaultUnlockRequest, VaultView,
 };
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
@@ -21,6 +23,7 @@ pub fn router() -> Router<AppState> {
         .route("/vault/status", get(status))
         .route("/vaults", get(list).post(create))
         .route("/vaults/lock-all", post(lock_all))
+        .route("/vaults/move", post(move_items))
         .route(
             "/vaults/global",
             get(global_status)
@@ -283,4 +286,47 @@ async fn global_leave(
 ) -> ApiResult<Json<Value>> {
     db::leave_global(&state.pool, user.id, id).await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+async fn move_items(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Json(req): Json<MoveToVaultRequest>,
+) -> ApiResult<Response> {
+    let keyring = state.vault_keyring(user.id).await;
+    let outcome = db::move_to_vault(&state.pool, user.id, req, &keyring).await?;
+    let (left_search, joined_search) = match outcome {
+        VaultMoveOutcome::Blocked(blockers) => {
+            let body = json!({ "error": "This move is blocked.", "blockers": blockers });
+            return Ok((StatusCode::CONFLICT, Json(body)).into_response());
+        }
+        VaultMoveOutcome::Moved {
+            left_search,
+            joined_search,
+        } => (left_search, joined_search),
+    };
+
+    for id in left_search {
+        if let Err(e) = state.search.delete_bookmark(id).await {
+            tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
+        }
+        linkdean_worker::purge_preview_assets(std::path::Path::new(&state.cfg.preview_dir), id)
+            .await;
+    }
+    for id in joined_search {
+        let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+        if let Some(view) = db::bookmark_to_view(&state.pool, raw, &keyring, user.id).await? {
+            if let Err(e) = state.search.upsert_bookmark(&view).await {
+                tracing::warn!(bookmark_id = %id, error = %e, "meili upsert failed");
+            }
+        }
+        let pool = state.pool.clone();
+        let search = state.search.clone();
+        let opts = state.enrich_opts();
+        let uid = user.id;
+        tokio::spawn(async move {
+            linkdean_worker::enrich_bookmark(&pool, &search, uid, id, &opts).await;
+        });
+    }
+    Ok(Json(json!({ "ok": true })).into_response())
 }

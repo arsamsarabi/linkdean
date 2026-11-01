@@ -15,6 +15,22 @@ use super::shares::{
 };
 use super::tags::ensure_tags;
 
+pub(super) async fn bookmark_tag_names(pool: &PgPool, bookmark_id: Uuid) -> Result<Vec<String>> {
+    let rows: Vec<(String,)> = sqlx::query_as(
+        r#"
+        SELECT t.name FROM tags t
+        JOIN bookmark_tags bt ON bt.tag_id = t.id
+        WHERE bt.bookmark_id = $1
+        ORDER BY t.name
+        "#,
+    )
+    .bind(bookmark_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(rows.into_iter().map(|r| r.0).collect())
+}
+
 async fn set_bookmark_tags(
     pool: &PgPool,
     user_id: Uuid,
