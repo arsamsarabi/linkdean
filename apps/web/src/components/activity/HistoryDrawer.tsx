@@ -2,37 +2,24 @@ import { useEffect, useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   Badge,
+  Box,
   Drawer,
   Group,
   SegmentedControl,
   Skeleton,
   Stack,
   Text,
-  UnstyledButton,
 } from '@mantine/core'
 import { IconHistory } from '@tabler/icons-react'
-import { useNavigate } from '@tanstack/react-router'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useActivity } from '@/hooks'
-import type { ActivityAction, ActivityEvent, ActivitySubjectType } from '@/schemas'
+import type { ActivityAction, ActivitySubjectType } from '@/schemas'
 
 const SKELETON_GRACE_MS = 500
 
 type Props = {
   opened: boolean
   onClose: () => void
-}
-
-function hrefFor(e: ActivityEvent): string {
-  switch (e.subject_type) {
-    case 'dashboard':
-      return '/'
-    case 'category':
-    case 'bookmark':
-      return '/library'
-    default:
-      return '/'
-  }
 }
 
 function actionLabel(action: ActivityAction): string {
@@ -65,7 +52,6 @@ type SubjectFilter = 'all' | ActivitySubjectType
 type ActionFilter = 'all' | ActivityAction
 
 export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
-  const nav = useNavigate()
   const [subject, setSubject] = useState<SubjectFilter>('all')
   const [action, setAction] = useState<ActionFilter>('all')
   const list = useActivity(opened, { subjectType: subject, action })
@@ -81,11 +67,6 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
     const t = window.setTimeout(() => setShowSkeleton(true), SKELETON_GRACE_MS)
     return () => window.clearTimeout(t)
   }, [awaitingFirstPaint])
-
-  function openItem(e: ActivityEvent): void {
-    onClose()
-    void nav({ to: hrefFor(e) })
-  }
 
   return (
     <Drawer opened={opened} onClose={onClose} position="right" size="md" title="History" padding="md">
@@ -141,9 +122,8 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
 
         <Stack gap="xs">
           {(list.data?.events ?? []).map((e) => (
-            <UnstyledButton
+            <Box
               key={e.id}
-              onClick={() => openItem(e)}
               p="sm"
               style={{
                 borderRadius: 8,
@@ -168,7 +148,7 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
                   {e.summary}
                 </Text>
               </Stack>
-            </UnstyledButton>
+            </Box>
           ))}
         </Stack>
       </Stack>
