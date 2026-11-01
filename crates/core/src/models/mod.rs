@@ -721,6 +721,9 @@ pub enum NotificationKind {
     ShareAccessChanged,
     ShareRevoked,
     SharedEdit,
+    SocialLike,
+    SocialComment,
+    SocialRating,
 }
 
 impl NotificationKind {
@@ -730,6 +733,9 @@ impl NotificationKind {
             Self::ShareAccessChanged => "share_access_changed",
             Self::ShareRevoked => "share_revoked",
             Self::SharedEdit => "shared_edit",
+            Self::SocialLike => "social_like",
+            Self::SocialComment => "social_comment",
+            Self::SocialRating => "social_rating",
         }
     }
 
@@ -739,6 +745,9 @@ impl NotificationKind {
             "share_access_changed" => Ok(Self::ShareAccessChanged),
             "share_revoked" => Ok(Self::ShareRevoked),
             "shared_edit" => Ok(Self::SharedEdit),
+            "social_like" => Ok(Self::SocialLike),
+            "social_comment" => Ok(Self::SocialComment),
+            "social_rating" => Ok(Self::SocialRating),
             _ => Err(format!("unknown notification kind: {s}")),
         }
     }
@@ -799,4 +808,85 @@ pub struct NotificationView {
     pub actor_display_name: Option<String>,
     pub read_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+}
+
+/// Social subject (shared bookmark / list / dashboard).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SocialSubjectType {
+    Bookmark,
+    Category,
+    Dashboard,
+}
+
+impl SocialSubjectType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Bookmark => "bookmark",
+            Self::Category => "category",
+            Self::Dashboard => "dashboard",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "bookmark" => Ok(Self::Bookmark),
+            "category" => Ok(Self::Category),
+            "dashboard" => Ok(Self::Dashboard),
+            _ => Err(format!("unknown social subject_type: {s}")),
+        }
+    }
+
+    pub fn to_notification_subject(self) -> NotificationSubjectType {
+        match self {
+            Self::Bookmark => NotificationSubjectType::Bookmark,
+            Self::Category => NotificationSubjectType::Category,
+            Self::Dashboard => NotificationSubjectType::Dashboard,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SocialComment {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub subject_type: String,
+    pub subject_id: Uuid,
+    pub body: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SocialCommentView {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub author_display_name: String,
+    pub body: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub can_delete: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSocialComment {
+    pub body: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpsertSocialRating {
+    pub rating: i16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SocialSummary {
+    pub subject_type: SocialSubjectType,
+    pub subject_id: Uuid,
+    pub likes_count: i64,
+    pub liked_by_me: bool,
+    pub comments_count: i64,
+    pub rating_avg: Option<f64>,
+    pub rating_count: i64,
+    pub my_rating: Option<i16>,
+    pub comments: Vec<SocialCommentView>,
 }
