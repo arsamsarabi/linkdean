@@ -31,17 +31,25 @@ pub async fn ensure_default_dashboard(pool: &PgPool, user_id: Uuid) -> Result<Da
     if let Some(any) = list_dashboard_rows(pool, user_id).await?.into_iter().next() {
         return pin_dashboard_row(pool, user_id, any.id).await;
     }
-    sqlx::query_as::<_, Dashboard>(
+    // Parallel first requests race here. The loser takes the row the winner made.
+    let created = sqlx::query_as::<_, Dashboard>(
         r#"
         INSERT INTO dashboards (owner_user_id, title, is_default)
         VALUES ($1, 'Home', TRUE)
+        ON CONFLICT (owner_user_id) WHERE is_default DO NOTHING
         RETURNING *
         "#,
     )
     .bind(user_id)
-    .fetch_one(pool)
+    .fetch_optional(pool)
     .await
-    .map_err(|e| Error::msg(e.to_string()))
+    .map_err(|e| Error::msg(e.to_string()))?;
+    match created {
+        Some(d) => Ok(d),
+        None => get_default_dashboard_row(pool, user_id)
+            .await?
+            .ok_or_else(|| Error::msg("default dashboard missing after conflict")),
+    }
 }
 
 async fn get_default_dashboard_row(pool: &PgPool, user_id: Uuid) -> Result<Option<Dashboard>> {
