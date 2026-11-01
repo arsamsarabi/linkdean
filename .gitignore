@@ -13,3 +13,5 @@ brand/**/node_modules/
 brand/node_render/node_modules/
 graphify-out/
 .claude/settings.json
+# pnpm store created by the dev compose web container
+apps/web/.pnpm-store/

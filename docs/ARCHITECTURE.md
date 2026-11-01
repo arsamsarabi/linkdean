@@ -90,8 +90,16 @@ Vault bookmarks are not exported as plaintext.
 
 ## Local dev
 
+`deploy/docker/docker-compose.dev.yml` runs everything with live reload on `:5173`. `deploy/docker/docker-compose.yml` is the production stack. Both use the same project name and volumes, so run one at a time.
+
 ```bash
-docker compose -f deploy/docker/docker-compose.yml up -d db meilisearch
+docker compose -f deploy/docker/docker-compose.dev.yml up --build
+```
+
+To run the API and web on the host instead:
+
+```bash
+docker compose -f deploy/docker/docker-compose.dev.yml up -d db meilisearch
 cp .env.example .env   # SESSION_SECRET, DATABASE_URL → :5433
 cargo run -p linkdean-api
 cd apps/web && pnpm dev   # :5173 proxies /api → :8080

@@ -94,7 +94,7 @@ Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/r
 | `api` | Linkdean API + static SPA | `8080` |
 | `db` | Postgres 16 | host `5433` → container `5432` |
 | `meilisearch` | Search index | `7700` |
-| `chrome` | Optional CDP for page previews | `9222` |
+| `chrome` | Optional CDP for page previews | Internal only (dev: `127.0.0.1:9222`) |
 
 See [docs/self-host.md](docs/self-host.md).
 
@@ -124,11 +124,21 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 
 ## Development
 
+### With live reload (recommended)
+
+```bash
+docker compose -f deploy/docker/docker-compose.dev.yml up --build
+```
+
+Open **http://localhost:5173**. Web changes appear through Vite hot reload, and the API rebuilds and restarts when `crates/` or `migrations/` change. The first run compiles the API, so it takes a few minutes. `docker-compose.dev.yml` shares its project name and data volumes with `docker-compose.yml`, so run one at a time.
+
+### On the host
+
 **Prerequisites:** Rust (edition 2021), Node 20+, `pnpm`, Docker (Postgres / Meili).
 
 ```bash
 # Infra only
-docker compose -f deploy/docker/docker-compose.yml up -d db meilisearch
+docker compose -f deploy/docker/docker-compose.dev.yml up -d db meilisearch
 
 cp .env.example .env
 # Host → Compose Postgres is mapped to 5433:

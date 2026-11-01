@@ -1,3 +1,4 @@
+# Production stack. For local development use docker-compose.dev.yml.
 name: linkdean
 
 services:
@@ -36,8 +37,6 @@ services:
     image: zenika/alpine-chrome:124
     restart: unless-stopped
     shm_size: 256mb
-    ports:
-      - "9222:9222"
     command:
       - --no-sandbox
       - --disable-gpu
