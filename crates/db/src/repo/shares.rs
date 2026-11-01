@@ -129,7 +129,7 @@ pub async fn list_shared_categories(
         WITH RECURSIVE tree AS (
             SELECT
                 c.id, c.owner_user_id, c.parent_id, c.name, c.is_hidden, c.is_vault,
-                c.position, c.deleted_at, c.created_at, c.updated_at,
+                c.icon, c.position, c.deleted_at, c.created_at, c.updated_at,
                 cs.access AS share_access
             FROM category_shares cs
             JOIN categories c ON c.id = cs.category_id
@@ -140,8 +140,8 @@ pub async fn list_shared_categories(
             UNION ALL
             SELECT
                 child.id, child.owner_user_id, child.parent_id, child.name, child.is_hidden,
-                child.is_vault, child.position, child.deleted_at, child.created_at, child.updated_at,
-                tree.share_access
+                child.is_vault, child.icon, child.position, child.deleted_at, child.created_at,
+                child.updated_at, tree.share_access
             FROM categories child
             JOIN tree ON child.parent_id = tree.id
             WHERE child.is_vault = FALSE
@@ -149,7 +149,7 @@ pub async fn list_shared_categories(
               AND ($2 OR child.is_hidden = FALSE)
         )
         SELECT DISTINCT ON (id)
-            id, owner_user_id, parent_id, name, is_hidden, is_vault, position,
+            id, owner_user_id, parent_id, name, is_hidden, is_vault, icon, position,
             deleted_at, created_at, updated_at, share_access
         FROM tree
         ORDER BY id, CASE share_access WHEN 'write' THEN 0 ELSE 1 END
@@ -179,6 +179,7 @@ struct CategoryShareRow {
     name: String,
     is_hidden: bool,
     is_vault: bool,
+    icon: Option<String>,
     position: i32,
     deleted_at: Option<chrono::DateTime<chrono::Utc>>,
     created_at: chrono::DateTime<chrono::Utc>,
@@ -195,6 +196,7 @@ impl CategoryShareRow {
             name: self.name,
             is_hidden: self.is_hidden,
             is_vault: self.is_vault,
+            icon: self.icon,
             position: self.position,
             deleted_at: self.deleted_at,
             created_at: self.created_at,

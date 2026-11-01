@@ -67,6 +67,7 @@ pub async fn apply_parsed_import(
                 parent_id,
                 is_hidden: cat.is_hidden,
                 is_vault: false,
+                icon: cat.icon,
             },
         )
         .await?;
@@ -102,6 +103,7 @@ pub async fn export_data(
             name: c.name,
             is_hidden: c.is_hidden,
             is_vault: c.is_vault,
+            icon: c.icon,
             position: c.position,
         })
         .collect::<Vec<_>>();

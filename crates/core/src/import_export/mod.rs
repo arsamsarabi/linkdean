@@ -110,6 +110,7 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                     parent_id: None, // resolved later by path
                     is_hidden: false,
                     is_vault: false,
+                    icon: None,
                 });
                 // stash parent path in category_paths as "path\0parent"
                 let key = match parent_path {
@@ -191,6 +192,7 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
             parent_id: None,
             is_hidden: c.is_hidden,
             is_vault: false, // vault contents not exported plaintext
+            icon: c.icon.clone(),
         });
         parsed.category_paths.push(key);
     }
@@ -299,6 +301,7 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
                     parent_id: None,
                     is_hidden: false,
                     is_vault: false,
+                    icon: None,
                 });
                 parsed.category_paths.push(f.clone());
             }
@@ -428,6 +431,7 @@ mod tests {
             name: "Work".into(),
             is_hidden: false,
             is_vault: false,
+            icon: None,
             position: 0,
         }];
         let bms = vec![

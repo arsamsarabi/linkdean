@@ -12,6 +12,39 @@ use super::shares::{
     require_category_owner, require_category_read, require_category_write,
 };
 
+/// Allowlist of category icon keys. Unknown / empty → `None` (default folder).
+fn normalize_category_icon(icon: Option<String>) -> Option<String> {
+    const ALLOWED: &[&str] = &[
+        "bookmark",
+        "star",
+        "heart",
+        "code",
+        "book",
+        "briefcase",
+        "home",
+        "music",
+        "photo",
+        "world",
+        "gamepad",
+        "cart",
+        "school",
+        "flask",
+        "plane",
+        "car",
+        "pizza",
+        "coffee",
+        "movie",
+        "news",
+        "tools",
+        "lock",
+    ];
+    let key = icon?.trim().to_ascii_lowercase();
+    if key.is_empty() {
+        return None;
+    }
+    ALLOWED.iter().find(|&&a| a == key).map(|s| (*s).to_string())
+}
+
 pub async fn get_category_by_id(pool: &PgPool, id: Uuid) -> Result<Category> {
     sqlx::query_as::<_, Category>("SELECT * FROM categories WHERE id = $1")
         .bind(id)
@@ -149,10 +182,11 @@ pub async fn create_category(
         return Err(Error::Forbidden);
     }
 
+    let icon = normalize_category_icon(req.icon);
     let cat = sqlx::query_as::<_, Category>(
         r#"
-        INSERT INTO categories (owner_user_id, parent_id, name, is_hidden, is_vault)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO categories (owner_user_id, parent_id, name, is_hidden, is_vault, icon)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
         "#,
     )
@@ -161,6 +195,7 @@ pub async fn create_category(
     .bind(req.name)
     .bind(req.is_hidden)
     .bind(req.is_vault)
+    .bind(icon)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -206,11 +241,14 @@ pub async fn update_category(
     if let Some(p) = req.position {
         cat.position = p;
     }
+    if let Some(icon) = req.icon {
+        cat.icon = normalize_category_icon(icon);
+    }
     let updated = sqlx::query_as::<_, Category>(
         r#"
         UPDATE categories
-        SET name = $1, parent_id = $2, is_hidden = $3, position = $4, updated_at = now()
-        WHERE id = $5
+        SET name = $1, parent_id = $2, is_hidden = $3, position = $4, icon = $5, updated_at = now()
+        WHERE id = $6
         RETURNING *
         "#,
     )
@@ -218,6 +256,7 @@ pub async fn update_category(
     .bind(cat.parent_id)
     .bind(cat.is_hidden)
     .bind(cat.position)
+    .bind(&cat.icon)
     .bind(id)
     .fetch_one(pool)
     .await
@@ -417,6 +456,7 @@ pub async fn fork_category(
                     parent_id: new_parent,
                     is_hidden: cat.is_hidden,
                     is_vault: false,
+                    icon: cat.icon.clone(),
                 },
             )
             .await?;

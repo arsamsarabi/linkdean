@@ -62,6 +62,7 @@ async fn default_dashboard_roundtrip_and_authz() {
             parent_id: None,
             is_hidden: false,
             is_vault: false,
+            icon: None,
         },
     )
     .await
@@ -287,6 +288,7 @@ async fn dashboard_share_read_write_and_revoke() {
             parent_id: None,
             is_hidden: false,
             is_vault: false,
+            icon: None,
         },
     )
     .await

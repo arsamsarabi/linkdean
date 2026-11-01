@@ -44,6 +44,7 @@ async fn category_share_emits_invite_access_revoke() {
             parent_id: None,
             is_hidden: false,
             is_vault: false,
+            icon: None,
         },
     )
     .await
@@ -135,6 +136,7 @@ async fn shared_bookmark_edit_notifies_owner() {
             parent_id: None,
             is_hidden: false,
             is_vault: false,
+            icon: None,
         },
     )
     .await

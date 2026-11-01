@@ -157,6 +157,8 @@ pub struct Category {
     pub name: String,
     pub is_hidden: bool,
     pub is_vault: bool,
+    /// Optional icon key (e.g. `star`, `code`). `None` = default folder.
+    pub icon: Option<String>,
     pub position: i32,
     pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -227,6 +229,8 @@ pub struct CategoryView {
     pub name: String,
     pub is_hidden: bool,
     pub is_vault: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
     pub position: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -253,6 +257,7 @@ impl CategoryView {
             name: cat.name,
             is_hidden: cat.is_hidden,
             is_vault: cat.is_vault,
+            icon: cat.icon,
             position: cat.position,
             created_at: cat.created_at,
             updated_at: cat.updated_at,
@@ -483,6 +488,8 @@ pub struct CreateCategory {
     pub parent_id: Option<Uuid>,
     pub is_hidden: bool,
     pub is_vault: bool,
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 /// Copy a readable category tree (+ bookmarks) into a new owned root.
@@ -498,6 +505,9 @@ pub struct UpdateCategory {
     pub parent_id: Option<Option<Uuid>>,
     pub is_hidden: Option<bool>,
     pub position: Option<i32>,
+    /// `Some(None)` clears the icon; `Some(Some(key))` sets it.
+    #[serde(default)]
+    pub icon: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -560,6 +570,8 @@ pub struct CategoryExport {
     pub name: String,
     pub is_hidden: bool,
     pub is_vault: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
     pub position: i32,
 }
 

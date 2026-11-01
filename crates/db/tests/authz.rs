@@ -63,6 +63,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
             parent_id: None,
             is_hidden: false,
             is_vault: false,
+            icon: None,
         },
     )
     .await
@@ -201,6 +202,7 @@ async fn share_read_and_write_membership() {
             parent_id: None,
             is_hidden: false,
             is_vault: false,
+            icon: None,
         },
     )
     .await
@@ -344,6 +346,7 @@ async fn share_read_and_write_membership() {
             parent_id: Some(cat.id),
             is_hidden: false,
             is_vault: false,
+            icon: None,
         },
     )
     .await
@@ -441,6 +444,7 @@ async fn cannot_share_vault_category() {
             parent_id: None,
             is_hidden: false,
             is_vault: true,
+            icon: None,
         },
     )
     .await
