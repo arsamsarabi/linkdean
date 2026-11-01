@@ -67,6 +67,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Save a shared bookmark into your own library (⋮ → Save to my library; lands in Unsorted)
 - Share dashboards: read / write; invitees see shared boards in the switcher
 - RW invitees can rearrange shared dashboards per ACL
+- Pin a shared dashboard as your default; losing access returns you to your own default
 - Share badges on cards, glance tiles, folders, and dashboard chrome (invitee + outgoing)
 - Meili visibility respects readable shared categories
 - Read-only library gates for invitees
