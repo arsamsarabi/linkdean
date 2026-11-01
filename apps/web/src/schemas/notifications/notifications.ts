@@ -16,7 +16,7 @@ export const notificationSchema = z.object({
   subject_id: z.string(),
   subject_title: z.string(),
   body: z.string(),
-  payload: z.record(z.any()).default({}),
+  payload: z.record(z.string(), z.unknown()).default({}),
   actor_user_id: z.string().nullish(),
   actor_display_name: z.string().nullish(),
   read_at: z.string().nullish(),
