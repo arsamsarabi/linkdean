@@ -13,9 +13,21 @@ type Props = {
   file: File | null
   onClose: () => void
   onCropped: (blob: Blob) => Promise<void> | void
+  /** Crop aspect ratio. Default 1 (square avatar). */
+  aspect?: number
+  title?: string
+  confirmLabel?: string
 }
 
-export function AvatarCropModal({ opened, file, onClose, onCropped }: Props): ReactElement {
+export function AvatarCropModal({
+  opened,
+  file,
+  onClose,
+  onCropped,
+  aspect = 1,
+  title = 'Crop avatar',
+  confirmLabel = 'Save avatar',
+}: Props): ReactElement {
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [area, setArea] = useState<Area | null>(null)
@@ -29,6 +41,9 @@ export function AvatarCropModal({ opened, file, onClose, onCropped }: Props): Re
     }
     const url = URL.createObjectURL(file)
     setSrc(url)
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    setArea(null)
     return () => {
       URL.revokeObjectURL(url)
     }
@@ -56,7 +71,7 @@ export function AvatarCropModal({ opened, file, onClose, onCropped }: Props): Re
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Crop avatar" size="lg">
+    <Modal opened={opened} onClose={onClose} title={title} size="lg">
       <Stack>
         {src ? (
           <div className={styles.cropArea}>
@@ -64,7 +79,7 @@ export function AvatarCropModal({ opened, file, onClose, onCropped }: Props): Re
               image={src}
               crop={crop}
               zoom={zoom}
-              aspect={1}
+              aspect={aspect}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
@@ -79,8 +94,13 @@ export function AvatarCropModal({ opened, file, onClose, onCropped }: Props): Re
           <Button variant="default" leftSection={<IconX {...iconSm} />} onClick={onClose}>
             Cancel
           </Button>
-          <Button leftSection={<IconCheck {...iconSm} />} loading={busy} onClick={() => void save()} disabled={!area}>
-            Save avatar
+          <Button
+            leftSection={<IconCheck {...iconSm} />}
+            loading={busy}
+            onClick={() => void save()}
+            disabled={!area}
+          >
+            {confirmLabel}
           </Button>
         </Group>
       </Stack>

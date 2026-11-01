@@ -375,6 +375,15 @@ export const api = {
 
   deleteBookmark: (id: string): Promise<void> => req(`/bookmarks/${id}`, { method: 'DELETE' }),
 
+  uploadBookmarkPreview: async (id: string, blob: Blob): Promise<Bookmark> => {
+    const fd = new FormData()
+    fd.append('preview', blob, 'preview.jpg')
+    return req(`/bookmarks/${id}/preview`, { method: 'POST', body: fd }, bookmarkSchema)
+  },
+
+  deleteBookmarkPreview: (id: string): Promise<Bookmark> =>
+    req(`/bookmarks/${id}/preview`, { method: 'DELETE' }, bookmarkSchema),
+
   search: (q: string) => req(`/search?q=${encodeURIComponent(q)}`, {}, searchResponseSchema),
 
   import: (format: string, content: string): Promise<{ total: number; imported: number; failed: number }> =>

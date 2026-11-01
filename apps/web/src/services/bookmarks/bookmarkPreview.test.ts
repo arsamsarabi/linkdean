@@ -12,6 +12,16 @@ describe('bookmarkPreviewSrc', () => {
     ).toBe('/api/bookmarks/1/preview')
   })
 
+  it('cache-busts with updated_at', () => {
+    expect(
+      bookmarkPreviewSrc({
+        id: '1',
+        has_preview: true,
+        updated_at: '2024-01-02T00:00:00Z',
+      })
+    ).toBe('/api/bookmarks/1/preview?v=2024-01-02T00%3A00%3A00Z')
+  })
+
   it('falls back to remote OG', () => {
     expect(
       bookmarkPreviewSrc({

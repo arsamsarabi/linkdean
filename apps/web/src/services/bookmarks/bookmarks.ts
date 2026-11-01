@@ -10,6 +10,11 @@ export type BookmarkDraft = {
   is_favorite: boolean
   is_unread: boolean
   is_pinned: boolean
+  has_preview?: boolean
+  preview_image_url?: string | null
+  updated_at?: string
+  can_write?: boolean
+  is_vault?: boolean
 }
 
 export function emptyDraft(): BookmarkDraft {
@@ -36,5 +41,10 @@ export function draftFromBookmark(b: Bookmark): BookmarkDraft {
     is_favorite: !!b.is_favorite,
     is_unread: !!b.is_unread,
     is_pinned: !!b.is_pinned,
+    has_preview: !!b.has_preview,
+    preview_image_url: b.preview_image_url,
+    updated_at: b.updated_at,
+    can_write: !!b.can_write,
+    is_vault: !!b.is_vault,
   }
 }

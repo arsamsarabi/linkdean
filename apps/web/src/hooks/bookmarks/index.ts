@@ -4,6 +4,8 @@ export {
   useCreateBookmark,
   useUpdateBookmark,
   useDeleteBookmark,
+  useUploadBookmarkPreview,
+  useDeleteBookmarkPreview,
 } from './useBookmarks'
 export {
   useBulkAddCategories,

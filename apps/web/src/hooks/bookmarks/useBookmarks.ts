@@ -94,3 +94,29 @@ export function useDeleteBookmark(): UseMutationResult<void, Error, string> {
     },
   })
 }
+
+type PreviewVars = { id: string; blob: Blob }
+
+export function useUploadBookmarkPreview(): UseMutationResult<Bookmark, Error, PreviewVars> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, blob }: PreviewVars) => api.uploadBookmarkPreview(id, blob),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      void qc.invalidateQueries({ queryKey: ['search'] })
+      void qc.invalidateQueries({ queryKey: ['dashboards'] })
+    },
+  })
+}
+
+export function useDeleteBookmarkPreview(): UseMutationResult<Bookmark, Error, string> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteBookmarkPreview(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      void qc.invalidateQueries({ queryKey: ['search'] })
+      void qc.invalidateQueries({ queryKey: ['dashboards'] })
+    },
+  })
+}

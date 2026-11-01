@@ -12,10 +12,16 @@ import {
   TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { useCreateBookmark, useUpdateBookmark } from '@/hooks'
+import {
+  useCreateBookmark,
+  useDeleteBookmarkPreview,
+  useUpdateBookmark,
+  useUploadBookmarkPreview,
+} from '@/hooks'
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
+import { BookmarkPreviewField } from './BookmarkPreviewField'
 
 export type { BookmarkDraft }
 export { draftFromBookmark } from '@/services'
@@ -29,13 +35,22 @@ type Props = {
 
 export function BookmarkDrawer({ opened, onClose, categories, initial }: Props): ReactElement {
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
+  const [pendingPreview, setPendingPreview] = useState<Blob | null>(null)
   const editing = !!draft.id
   const createBookmark = useCreateBookmark()
   const updateBookmark = useUpdateBookmark()
-  const pending = createBookmark.isPending || updateBookmark.isPending
+  const uploadPreview = useUploadBookmarkPreview()
+  const deletePreview = useDeleteBookmarkPreview()
+  const pending =
+    createBookmark.isPending ||
+    updateBookmark.isPending ||
+    uploadPreview.isPending ||
+    deletePreview.isPending
 
   useEffect(() => {
-    if (opened) setDraft(initial ? { ...initial, tags: [...initial.tags] } : emptyDraft())
+    if (!opened) return
+    setDraft(initial ? { ...initial, tags: [...initial.tags] } : emptyDraft())
+    setPendingPreview(null)
   }, [opened, initial])
 
   async function save(): Promise<void> {
@@ -62,8 +77,11 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
             is_pinned: draft.is_pinned,
           },
         })
+        if (pendingPreview) {
+          await uploadPreview.mutateAsync({ id: draft.id, blob: pendingPreview })
+        }
       } else {
-        await createBookmark.mutateAsync({
+        const created = await createBookmark.mutateAsync({
           url: body.url,
           title: body.title,
           description: body.description,
@@ -73,6 +91,18 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
           is_unread: draft.is_unread,
           is_pinned: draft.is_pinned,
         })
+        if (pendingPreview && !created.is_vault) {
+          try {
+            await uploadPreview.mutateAsync({ id: created.id, blob: pendingPreview })
+          } catch (e) {
+            notifications.show({
+              color: 'yellow',
+              message: `Bookmark saved; preview upload failed: ${e}`,
+            })
+            onClose()
+            return
+          }
+        }
       }
       notifications.show({ message: editing ? 'Updated' : 'Saved' })
       onClose()
@@ -80,6 +110,8 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
       notifications.show({ color: 'red', message: String(e) })
     }
   }
+
+  const previewAllowed = !draft.is_vault && (draft.can_write !== false || !editing)
 
   return (
     <Drawer
@@ -121,6 +153,27 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
               setDraft((d) => ({ ...d, description }))
             }}
           />
+          {previewAllowed ? (
+            <BookmarkPreviewField
+              bookmarkId={draft.id}
+              hasPreview={draft.has_preview}
+              previewImageUrl={draft.preview_image_url}
+              updatedAt={draft.updated_at}
+              pendingBlob={pendingPreview}
+              onPendingChange={setPendingPreview}
+              onUploaded={(next) =>
+                setDraft((d) => ({
+                  ...d,
+                  has_preview: next.has_preview,
+                  preview_image_url: next.preview_image_url,
+                  updated_at: next.updated_at,
+                }))
+              }
+              onUpload={async (id, blob) => uploadPreview.mutateAsync({ id, blob })}
+              onDelete={async (id) => deletePreview.mutateAsync(id)}
+              disabled={pending}
+            />
+          ) : null}
           <MultiSelect
             label="Categories"
             description="Can pick several. Nested path shown in label. Read-only shared folders are omitted."

@@ -50,6 +50,11 @@ describe('bookmarks drafts', () => {
       is_favorite: true,
       is_unread: true,
       is_pinned: false,
+      has_preview: false,
+      preview_image_url: null,
+      updated_at: '2024-01-01T00:00:00Z',
+      can_write: true,
+      is_vault: false,
     })
   })
 })

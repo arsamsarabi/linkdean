@@ -61,7 +61,7 @@ export function BookmarkCard({
   const [socialOpen, setSocialOpen] = useState(false)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
-  const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}`
+  const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}:${b.updated_at}`
   const [srcIndex, setSrcIndex] = useState(0)
   const [srcForKey, setSrcForKey] = useState(previewKey)
   if (srcForKey !== previewKey) {

@@ -1,10 +1,14 @@
-/** Local screenshot when present; else remote OG image. */
+/** Local screenshot / custom upload when present; else remote OG image. */
 export function bookmarkPreviewSrc(b: {
   id: string
   has_preview?: boolean
   preview_image_url?: string | null
+  updated_at?: string | null
 }): string | undefined {
-  if (b.has_preview) return `/api/bookmarks/${b.id}/preview`
+  if (b.has_preview) {
+    const bust = b.updated_at ? `?v=${encodeURIComponent(b.updated_at)}` : ''
+    return `/api/bookmarks/${b.id}/preview${bust}`
+  }
   return b.preview_image_url || undefined
 }
 
@@ -12,6 +16,7 @@ export function previewSrcCandidates(b: {
   id: string
   has_preview?: boolean
   preview_image_url?: string | null
+  updated_at?: string | null
 }): string[] {
   const list: string[] = []
   const primary = bookmarkPreviewSrc(b)
