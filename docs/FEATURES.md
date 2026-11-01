@@ -7,10 +7,12 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Library
 
 - Nested categories (folders) and tags
+- Optional category icons (picker on create / edit)
 - Bookmarks with title, URL, description, notes
 - Multi-category filing (a bookmark can live in more than one folder)
 - Grid and explorer library views (preference persisted)
 - Unsorted / uncategorized filter
+- Library filters: category, tag, created-within (7d/30d/90d/year), vault-only
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
 - Bulk select: move, tag, delete
@@ -26,6 +28,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Meilisearch full-text search for **non-vault** bookmarks
 - Shared-folder visibility in search (owned + readable shared categories)
+- Wait/retry UX when Meili lags writes: local matches merged + retry banner
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews
 - Admin reindex: rebuild Meili from Postgres (Settings → Admin)
