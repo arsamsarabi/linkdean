@@ -1,3 +1,4 @@
+mod api_keys;
 mod blocking;
 mod bookmarks;
 mod categories;
@@ -12,6 +13,7 @@ mod trash;
 mod users;
 mod vault;
 
+pub use api_keys::*;
 pub use bookmarks::*;
 pub use categories::*;
 pub use dashboard_shares::*;

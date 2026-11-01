@@ -12,6 +12,7 @@ pub struct User {
     pub oidc_issuer: Option<String>,
     pub is_admin: bool,
     pub onboarding_completed: bool,
+    pub api_keys_enabled: bool,
     pub bio: Option<String>,
     pub timezone: Option<String>,
     pub has_avatar: bool,
@@ -31,6 +32,7 @@ pub struct UserPublic {
     pub has_vault: bool,
     pub is_admin: bool,
     pub onboarding_completed: bool,
+    pub api_keys_enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -76,12 +78,65 @@ pub struct UpdateSettings {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct PlatformSettings {
     pub registration_open: bool,
+    pub api_keys_enabled: bool,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdatePlatformSettings {
     pub registration_open: Option<bool>,
+    pub api_keys_enabled: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ApiKey {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub name: String,
+    pub token_hash: String,
+    pub prefix: String,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Public key metadata (never includes the secret).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiKeyView {
+    pub id: Uuid,
+    pub name: String,
+    pub prefix: String,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateApiKey {
+    pub name: String,
+}
+
+/// One-shot create response: view + plaintext token (shown once).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateApiKeyResponse {
+    pub key: ApiKeyView,
+    pub token: String,
+}
+
+/// Minimal admin account row (no private user data).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdminUserSummary {
+    pub id: Uuid,
+    pub email: String,
+    pub display_name: Option<String>,
+    pub is_admin: bool,
+    pub api_keys_enabled: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateAdminUser {
+    pub api_keys_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

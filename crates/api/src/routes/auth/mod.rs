@@ -115,10 +115,13 @@ async fn me(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResul
     let public = db::to_public(&state.pool, &user).await?;
     let settings = db::get_user_settings(&state.pool, user.id).await?;
     let vault_unlocked = state.vault_key(user.id).await.is_some();
+    let platform = db::get_platform_settings(&state.pool).await?;
+    let api_keys_allowed = platform.api_keys_enabled && user.api_keys_enabled;
     Ok(Json(json!({
         "user": public,
         "settings": settings,
         "vault_unlocked": vault_unlocked,
+        "api_keys_allowed": api_keys_allowed,
     })))
 }
 

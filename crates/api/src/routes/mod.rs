@@ -1,4 +1,5 @@
 mod admin;
+mod api_keys;
 mod auth;
 mod bookmarks;
 mod categories;
@@ -19,6 +20,7 @@ pub fn router() -> Router<AppState> {
         .merge(health::router())
         .merge(auth::router())
         .merge(admin::router())
+        .merge(api_keys::router())
         .merge(users::router())
         .merge(categories::router())
         .merge(bookmarks::router())

@@ -1,5 +1,8 @@
 use linkdean_core::crypto::{hash_password, verify_password};
-use linkdean_core::{Error, Result, UpdateProfile, UpdateSettings, User, UserPublic, UserSettings};
+use linkdean_core::{
+    AdminUserSummary, Error, Result, UpdateAdminUser, UpdateProfile, UpdateSettings, User,
+    UserPublic, UserSettings,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -136,6 +139,63 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
         has_vault: user_has_vault(pool, user.id).await?,
         is_admin: user.is_admin,
         onboarding_completed: user.onboarding_completed,
+        api_keys_enabled: user.api_keys_enabled,
+    })
+}
+
+pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
+    let rows = sqlx::query_as::<_, User>(
+        r#"
+        SELECT * FROM users
+        ORDER BY created_at ASC
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(rows
+        .into_iter()
+        .map(|u| AdminUserSummary {
+            id: u.id,
+            email: u.email,
+            display_name: u.display_name,
+            is_admin: u.is_admin,
+            api_keys_enabled: u.api_keys_enabled,
+            created_at: u.created_at,
+        })
+        .collect())
+}
+
+pub async fn update_admin_user(
+    pool: &PgPool,
+    user_id: Uuid,
+    patch: UpdateAdminUser,
+) -> Result<AdminUserSummary> {
+    let Some(mut user) = find_user_by_id(pool, user_id).await? else {
+        return Err(Error::NotFound);
+    };
+    if let Some(enabled) = patch.api_keys_enabled {
+        user = sqlx::query_as::<_, User>(
+            r#"
+            UPDATE users
+            SET api_keys_enabled = $1, updated_at = now()
+            WHERE id = $2
+            RETURNING *
+            "#,
+        )
+        .bind(enabled)
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    }
+    Ok(AdminUserSummary {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        is_admin: user.is_admin,
+        api_keys_enabled: user.api_keys_enabled,
+        created_at: user.created_at,
     })
 }
 

@@ -21,6 +21,10 @@ pub async fn create_session(pool: &PgPool, user_id: Uuid, days: i64) -> Result<S
 }
 
 pub async fn user_from_token(pool: &PgPool, token: &str) -> Result<Option<User>> {
+    // API keys use `ldk_` prefix; sessions are plain hex.
+    if token.starts_with("ldk_") {
+        return super::api_keys::user_from_api_key(pool, token).await;
+    }
     let token_hash = hash_token(token);
     let row: Option<(Uuid,)> = sqlx::query_as(
         r#"
