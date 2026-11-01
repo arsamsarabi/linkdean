@@ -47,3 +47,7 @@ Explore these possibilities and evolve these features into a full team managemen
 - add a way to view a team's activity
 - add a way to view a team's comments
 - add a way to view a team's likes
+
+## SSO
+
+- add a way to configure SSO for the app using Authentik, google, microsoft, github, etc.
