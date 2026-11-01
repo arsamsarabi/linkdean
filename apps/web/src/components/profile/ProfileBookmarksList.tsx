@@ -31,7 +31,7 @@ export function ProfileBookmarksList({ userId, emptyLabel }: Props): ReactElemen
           <Card key={b.id} withBorder padding="md" radius="md">
             <Stack gap="xs">
               <Group gap="xs" wrap="nowrap">
-                {b.favicon_url ? <ApiImage src={b.favicon_url} alt="" w={16} h={16} alt="" /> : null}
+                {b.favicon_url ? <ApiImage src={b.favicon_url} alt="" w={16} h={16} /> : null}
                 <Anchor href={b.url} target="_blank" rel="noreferrer" lineClamp={1} fw={600}>
                   {b.title || b.url}
                 </Anchor>
