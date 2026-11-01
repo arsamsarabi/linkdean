@@ -122,17 +122,19 @@ export function DashboardPageHeader({
                   </Menu.Item>
                 ) : null}
                 {isOwner ? (
+                  <Menu.Item leftSection={<IconShare size={14} stroke={1.5} />} onClick={onOpenShare}>
+                    Share…
+                  </Menu.Item>
+                ) : null}
+                <Menu.Item
+                  leftSection={<IconPin size={14} stroke={1.5} />}
+                  onClick={onPin}
+                  disabled={isPinned || pinPending}
+                >
+                  {isPinned ? 'Already default' : 'Set as default'}
+                </Menu.Item>
+                {isOwner ? (
                   <>
-                    <Menu.Item leftSection={<IconShare size={14} stroke={1.5} />} onClick={onOpenShare}>
-                      Share…
-                    </Menu.Item>
-                    <Menu.Item
-                      leftSection={<IconPin size={14} stroke={1.5} />}
-                      onClick={onPin}
-                      disabled={isPinned || pinPending}
-                    >
-                      {isPinned ? 'Already default' : 'Set as default'}
-                    </Menu.Item>
                     <Menu.Divider />
                     <Menu.Item color="red" leftSection={<IconTrash size={14} stroke={1.5} />} onClick={onOpenDelete}>
                       Delete dashboard

@@ -114,6 +114,73 @@ pub async fn require_dashboard_owner(
     Ok(dash)
 }
 
+/// The shared dashboard this user pinned as their default, if it still exists.
+pub async fn pinned_shared_dashboard_id(pool: &PgPool, user_id: Uuid) -> Result<Option<Uuid>> {
+    sqlx::query_scalar::<_, Uuid>(
+        r#"
+        SELECT d.id
+        FROM dashboard_shares ds
+        JOIN dashboards d ON d.id = ds.dashboard_id
+        WHERE ds.invitee_user_id = $1
+          AND ds.is_pinned
+          AND d.deleted_at IS NULL
+        "#,
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
+/// Pin a dashboard shared with this user. Their own default stays set as the fallback.
+pub async fn pin_shared_dashboard(pool: &PgPool, user_id: Uuid, dashboard_id: Uuid) -> Result<()> {
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query(
+        r#"
+        UPDATE dashboard_shares
+        SET is_pinned = FALSE, updated_at = now()
+        WHERE invitee_user_id = $1 AND is_pinned
+        "#,
+    )
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let res = sqlx::query(
+        r#"
+        UPDATE dashboard_shares
+        SET is_pinned = TRUE, updated_at = now()
+        WHERE invitee_user_id = $1 AND dashboard_id = $2
+        "#,
+    )
+    .bind(user_id)
+    .bind(dashboard_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if res.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    Ok(())
+}
+
+pub async fn clear_shared_dashboard_pin(pool: &PgPool, user_id: Uuid) -> Result<()> {
+    sqlx::query(
+        r#"
+        UPDATE dashboard_shares
+        SET is_pinned = FALSE, updated_at = now()
+        WHERE invitee_user_id = $1 AND is_pinned
+        "#,
+    )
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(())
+}
+
 pub async fn list_shared_dashboards(
     pool: &PgPool,
     invitee_user_id: Uuid,

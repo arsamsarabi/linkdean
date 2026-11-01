@@ -103,6 +103,7 @@ export function useDashboardBoard() {
     list,
     activeId,
     libraryBookmarks: bookmarks.data,
+    showDashboard: setActiveId,
     switcherData,
     create,
     patch,

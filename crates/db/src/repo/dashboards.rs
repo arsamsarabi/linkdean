@@ -8,8 +8,9 @@ use uuid::Uuid;
 
 use super::bookmarks::bookmark_to_view;
 use super::dashboard_shares::{
-    dashboard_shared_with, list_shared_dashboards, require_dashboard_owner, require_dashboard_read,
-    require_dashboard_write,
+    clear_shared_dashboard_pin, dashboard_shared_with, list_shared_dashboards,
+    pin_shared_dashboard, pinned_shared_dashboard_id, require_dashboard_owner,
+    require_dashboard_read, require_dashboard_write,
 };
 use super::shares::bookmark_can_read;
 
@@ -80,13 +81,13 @@ async fn list_dashboard_rows_filtered(
     .map_err(|e| Error::msg(e.to_string()))
 }
 
-fn owned_summary(d: Dashboard, shared_with: Vec<String>) -> DashboardSummary {
+fn owned_summary(d: Dashboard, shared_with: Vec<String>, is_default: bool) -> DashboardSummary {
     let shared_out = !shared_with.is_empty();
     DashboardSummary {
         id: d.id,
         owner_user_id: d.owner_user_id,
         title: d.title,
-        is_default: d.is_default,
+        is_default,
         access: CategoryAccess::Owner,
         shared_out,
         shared_with,
@@ -101,13 +102,13 @@ fn shared_summary(
     d: Dashboard,
     access: CategoryAccess,
     owner_display_name: Option<String>,
+    is_default: bool,
 ) -> DashboardSummary {
     DashboardSummary {
         id: d.id,
         owner_user_id: d.owner_user_id,
         title: d.title,
-        // Invitee cannot pin someone else's board as their default.
-        is_default: false,
+        is_default,
         access,
         shared_out: false,
         shared_with: Vec::new(),
@@ -129,10 +130,12 @@ pub async fn list_dashboards_filtered(
 ) -> Result<Vec<DashboardSummary>> {
     let _ = ensure_default_dashboard(pool, user_id).await?;
     let owned = list_dashboard_rows_filtered(pool, user_id, include_deleted).await?;
+    let pinned = pinned_shared_dashboard_id(pool, user_id).await?;
     let mut out = Vec::with_capacity(owned.len());
     for d in owned {
         let shared_with = dashboard_shared_with(pool, d.id).await?;
-        out.push(owned_summary(d, shared_with));
+        let is_default = d.is_default && pinned.is_none();
+        out.push(owned_summary(d, shared_with, is_default));
     }
     for (d, access) in list_shared_dashboards(pool, user_id).await? {
         if d.deleted_at.is_some() {
@@ -140,7 +143,8 @@ pub async fn list_dashboards_filtered(
         }
         let owner_display_name =
             super::users::owner_display_name_for_viewer(pool, d.owner_user_id, user_id).await?;
-        out.push(shared_summary(d, access, owner_display_name));
+        let is_default = pinned == Some(d.id);
+        out.push(shared_summary(d, access, owner_display_name, is_default));
     }
     Ok(out)
 }
@@ -150,6 +154,9 @@ pub async fn get_default_dashboard(
     user_id: Uuid,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
+    if let Some(id) = pinned_shared_dashboard_id(pool, user_id).await? {
+        return get_dashboard(pool, user_id, id, vault_key).await;
+    }
     let dash = ensure_default_dashboard(pool, user_id).await?;
     load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await
 }
@@ -177,10 +184,11 @@ async fn load_dashboard_view(
         Vec::new()
     };
     let shared_out = !shared_with.is_empty();
+    let pinned = pinned_shared_dashboard_id(pool, user_id).await?;
     let is_default = if access.is_owner() {
-        dash.is_default
+        dash.is_default && pinned.is_none()
     } else {
-        false
+        pinned == Some(dash.id)
     };
     let sections = sqlx::query_as::<_, DashboardSection>(
         r#"
@@ -310,8 +318,11 @@ pub async fn put_default_dashboard(
     req: PutDashboardLayout,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
-    let dash = ensure_default_dashboard(pool, user_id).await?;
-    put_dashboard(pool, user_id, dash.id, req, vault_key).await
+    let id = match pinned_shared_dashboard_id(pool, user_id).await? {
+        Some(id) => id,
+        None => ensure_default_dashboard(pool, user_id).await?.id,
+    };
+    put_dashboard(pool, user_id, id, req, vault_key).await
 }
 
 pub async fn put_dashboard(
@@ -491,20 +502,33 @@ pub async fn patch_dashboard(
     req: PatchDashboard,
     vault_key: Option<&[u8; 32]>,
 ) -> Result<DashboardView> {
-    // Pin is owner-only. Title may be updated by write invitees (same as put layout).
-    if req.is_default.is_some() {
-        let dash = require_dashboard_owner(pool, user_id, id).await?;
-        if let Some(true) = req.is_default {
-            let _ = pin_dashboard_row(pool, user_id, id).await?;
-        } else if let Some(false) = req.is_default {
-            if dash.is_default {
+    // Anyone with access may pin, because a pin only changes their own default.
+    // A rename still needs write access (same as put layout).
+    if req.title.is_some() || req.is_default.is_none() {
+        require_dashboard_write(pool, user_id, id).await?;
+    }
+    let mut pinned_own = false;
+    if let Some(pin) = req.is_default {
+        let (dash, access) = require_dashboard_read(pool, user_id, id).await?;
+        match (access.is_owner(), pin) {
+            (true, true) => {
+                let _ = pin_dashboard_row(pool, user_id, id).await?;
+                clear_shared_dashboard_pin(pool, user_id).await?;
+                pinned_own = true;
+            }
+            (true, false) if dash.is_default => {
                 return Err(Error::BadRequest(
                     "pin another dashboard instead of unpinning the only default".into(),
                 ));
             }
+            (true, false) => {}
+            (false, true) => pin_shared_dashboard(pool, user_id, id).await?,
+            (false, false) => {
+                if pinned_shared_dashboard_id(pool, user_id).await? == Some(id) {
+                    clear_shared_dashboard_pin(pool, user_id).await?;
+                }
+            }
         }
-    } else {
-        require_dashboard_write(pool, user_id, id).await?;
     }
 
     let mut changes = Vec::new();
@@ -541,7 +565,7 @@ pub async fn patch_dashboard(
         activity_title = Some(title.to_string());
     }
 
-    if req.is_default == Some(true) {
+    if pinned_own {
         changes.push("pinned as default".into());
         change_keys.push("is_default");
     }

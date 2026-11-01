@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useMe } from '@/hooks/auth'
-import { mergeDashboardBookmarks } from '@/services'
+import { dashboardToShowInstead, mergeDashboardBookmarks } from '@/services'
 import { useDashboard, usePutDashboard } from './useDashboard'
 import { useDashboardBoard } from './useDashboardBoard'
 import { useDashboardEdit } from './useDashboardEdit'
@@ -16,6 +16,19 @@ export function useDashboardPage() {
     dashboard: dashboard.data,
     save,
   })
+  const { activeId, list, showDashboard } = board
+  const loadFailed = dashboard.isError
+
+  // Access may have been revoked while this board was open.
+  useEffect(() => {
+    if (!loadFailed) return
+    void list.refetch().then(({ data }) => {
+      const next = dashboardToShowInstead(data ?? [], activeId)
+      if (next) showDashboard(next)
+    })
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- refetch and setter are stable
+  }, [loadFailed, activeId])
+
   const viewerUserId = me.data?.user.id
   const view = dashboard.data
   const access = board.accessFlags(view)

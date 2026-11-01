@@ -977,7 +977,7 @@ pub struct CreateDashboard {
     pub title: Option<String>,
 }
 
-/// Rename and/or pin (`is_default: true` clears other pins for the owner).
+/// Rename and/or pin. Pinning a shared dashboard needs read access and only affects the caller.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatchDashboard {
     pub title: Option<String>,

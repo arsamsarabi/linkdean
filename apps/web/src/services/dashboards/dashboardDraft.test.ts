@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Bookmark, Dashboard } from '@/schemas'
-import { mergeDashboardBookmarks, moveSection, toPutDashboardLayout, type DashboardDraft } from './dashboardDraft'
+import {
+  dashboardToShowInstead,
+  mergeDashboardBookmarks,
+  moveSection,
+  toPutDashboardLayout,
+  type DashboardDraft,
+} from './dashboardDraft'
 
 describe('moveSection', () => {
   it('swaps adjacent sections up and down', () => {
@@ -45,5 +51,24 @@ describe('mergeDashboardBookmarks', () => {
 
   it('returns the library when no dashboard has loaded', () => {
     expect(mergeDashboardBookmarks([mine], undefined)).toEqual([mine])
+  })
+})
+
+describe('dashboardToShowInstead', () => {
+  const list = [
+    { id: 'other', is_default: false },
+    { id: 'home', is_default: true },
+  ]
+
+  it('stays put while the dashboard is still listed', () => {
+    expect(dashboardToShowInstead(list, 'other')).toBeUndefined()
+  })
+
+  it('moves to the default when the dashboard is gone', () => {
+    expect(dashboardToShowInstead(list, 'revoked')).toBe('home')
+  })
+
+  it('uses the first dashboard when none is default', () => {
+    expect(dashboardToShowInstead([{ id: 'other', is_default: false }], 'revoked')).toBe('other')
   })
 })

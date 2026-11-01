@@ -1,5 +1,5 @@
 import { newClientId } from '@/lib/id'
-import type { Bookmark, Dashboard } from '@/schemas'
+import type { Bookmark, Dashboard, DashboardSummary } from '@/schemas'
 
 export type DashboardDraftSection = {
   key: string
@@ -62,4 +62,13 @@ export function mergeDashboardBookmarks(library: Bookmark[], dashboard: Dashboar
     }
   }
   return [...byId.values()]
+}
+
+/** Where to go when the open dashboard failed to load and has left the user's list. */
+export function dashboardToShowInstead(
+  list: Pick<DashboardSummary, 'id' | 'is_default'>[],
+  activeId: string | undefined
+): string | undefined {
+  if (!activeId || list.some((d) => d.id === activeId)) return undefined
+  return list.find((d) => d.is_default)?.id ?? list[0]?.id
 }
