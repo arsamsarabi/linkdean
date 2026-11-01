@@ -1,11 +1,12 @@
 //! Profile access. Visibility is computed per request and is separate from
 //! `category_access`, which only covers ownership and explicit shares.
 
-use linkdean_core::{Error, ProfileView, Result, User};
+use linkdean_core::{Bookmark, Error, ProfileBookmarksPage, ProfileView, Result, User};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::blocks::is_blocked_either_way;
+use super::categories::public_bookmark_view;
 use super::follows::{follow_relation, is_following};
 use super::users::find_user_by_id;
 
@@ -61,4 +62,92 @@ pub async fn get_profile(pool: &PgPool, viewer_id: Uuid, target_id: Uuid) -> Res
         email: is_self.then(|| target.email.clone()),
         profile_visibility: is_self.then(|| target.profile_visibility.clone()),
     })
+}
+
+const DEFAULT_PAGE_SIZE: i64 = 50;
+const MAX_PAGE_SIZE: i64 = 100;
+
+/// `$1` owner, `$2` category tiers the viewer may see. Only the owner's own categories
+/// count, so a category shared by someone else cannot publish a bookmark.
+const VISIBLE_BOOKMARK_FILTER: &str = r#"
+    b.owner_user_id = $1
+    AND b.deleted_at IS NULL
+    AND b.is_vault = FALSE
+    AND b.is_private = FALSE
+    AND EXISTS (
+        SELECT 1 FROM categories c
+        WHERE c.owner_user_id = $1
+          AND c.deleted_at IS NULL
+          AND c.visibility = ANY($2)
+          AND (
+            c.id = b.category_id
+            OR EXISTS (
+                SELECT 1 FROM bookmark_categories bc
+                WHERE bc.bookmark_id = b.id AND bc.category_id = c.id
+            )
+          )
+    )
+"#;
+
+fn page_bounds(limit: Option<i64>, offset: Option<i64>) -> Result<(i64, i64)> {
+    let limit = limit.unwrap_or(DEFAULT_PAGE_SIZE);
+    let offset = offset.unwrap_or(0);
+    if !(1..=MAX_PAGE_SIZE).contains(&limit) {
+        return Err(Error::BadRequest(format!(
+            "limit must be between 1 and {MAX_PAGE_SIZE}"
+        )));
+    }
+    if offset < 0 {
+        return Err(Error::BadRequest("offset must not be negative".into()));
+    }
+    Ok((limit, offset))
+}
+
+/// The owner previews everything others could see, so self counts as a follower.
+async fn visible_tiers(pool: &PgPool, viewer_id: Uuid, target_id: Uuid) -> Result<Vec<String>> {
+    let follower = viewer_id == target_id || is_following(pool, viewer_id, target_id).await?;
+    let mut tiers = vec!["members".to_string()];
+    if follower {
+        tiers.push("followers".to_string());
+    }
+    Ok(tiers)
+}
+
+pub async fn profile_visible_bookmarks(
+    pool: &PgPool,
+    viewer_id: Uuid,
+    target_id: Uuid,
+    limit: Option<i64>,
+    offset: Option<i64>,
+) -> Result<ProfileBookmarksPage> {
+    let (limit, offset) = page_bounds(limit, offset)?;
+    let target = require_viewable_profile(pool, viewer_id, target_id).await?;
+    let tiers = visible_tiers(pool, viewer_id, target.id).await?;
+
+    let count_sql = format!("SELECT COUNT(*) FROM bookmarks b WHERE {VISIBLE_BOOKMARK_FILTER}");
+    let (total,): (i64,) = sqlx::query_as(&count_sql)
+        .bind(target.id)
+        .bind(&tiers)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    let rows_sql = format!(
+        "SELECT b.* FROM bookmarks b WHERE {VISIBLE_BOOKMARK_FILTER} \
+         ORDER BY b.updated_at DESC, b.id LIMIT $3 OFFSET $4"
+    );
+    let rows = sqlx::query_as::<_, Bookmark>(&rows_sql)
+        .bind(target.id)
+        .bind(&tiers)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    let mut bookmarks = Vec::with_capacity(rows.len());
+    for b in rows {
+        bookmarks.push(public_bookmark_view(pool, b).await?);
+    }
+    Ok(ProfileBookmarksPage { bookmarks, total })
 }

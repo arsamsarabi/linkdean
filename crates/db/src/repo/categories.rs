@@ -846,6 +846,24 @@ pub async fn disable_category_public_link(
 }
 
 /// Anonymous: resolve published list by slug (unlisted).
+/// Bookmark fields that are safe to show to people the owner did not share with directly.
+pub(super) async fn public_bookmark_view(
+    pool: &PgPool,
+    b: linkdean_core::Bookmark,
+) -> Result<PublicBookmarkView> {
+    let tags = tags_for_bookmark(pool, b.id).await?;
+    Ok(PublicBookmarkView {
+        id: b.id,
+        url: b.url,
+        title: b.title,
+        description: b.description,
+        favicon_url: b.favicon_url,
+        preview_image_url: b.preview_image_url,
+        has_preview: b.has_preview,
+        tags,
+    })
+}
+
 pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<PublicListView> {
     let slug = slug.trim();
     if slug.is_empty() || !slug.starts_with(PUBLIC_SLUG_PREFIX) {
@@ -893,17 +911,7 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
 
     let mut bookmarks = Vec::with_capacity(rows.len());
     for b in rows {
-        let tags = tags_for_bookmark(pool, b.id).await?;
-        bookmarks.push(PublicBookmarkView {
-            id: b.id,
-            url: b.url,
-            title: b.title,
-            description: b.description,
-            favicon_url: b.favicon_url,
-            preview_image_url: b.preview_image_url,
-            has_preview: b.has_preview,
-            tags,
-        });
+        bookmarks.push(public_bookmark_view(pool, b).await?);
     }
 
     Ok(PublicListView {

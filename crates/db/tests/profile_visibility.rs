@@ -222,3 +222,165 @@ async fn losing_the_follow_loses_access_immediately() {
         .expect("unfollow");
     assert!(!can_open(&pool, &viewer, &target).await);
 }
+
+async fn set_category(pool: &PgPool, id: Uuid, visibility: &str) {
+    sqlx::query("UPDATE categories SET visibility = $2 WHERE id = $1")
+        .bind(id)
+        .bind(visibility)
+        .execute(pool)
+        .await
+        .expect("set category visibility");
+}
+
+async fn visible_ids(pool: &PgPool, viewer: &User, target: &User) -> Vec<Uuid> {
+    db::profile_visible_bookmarks(pool, viewer.id, target.id, None, None)
+        .await
+        .expect("visible bookmarks")
+        .bookmarks
+        .into_iter()
+        .map(|b| b.id)
+        .collect()
+}
+
+#[tokio::test]
+async fn category_tier_matrix() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let cases = [
+        ("private", false, false),
+        ("private", true, false),
+        ("followers", false, false),
+        ("followers", true, true),
+        ("members", false, true),
+        ("members", true, true),
+    ];
+    for (tier, follows, expected) in cases {
+        let target = user(&pool, "target").await;
+        let viewer = user(&pool, "viewer").await;
+        set_profile(&pool, &target, "members").await;
+        let cat = category(&pool, &target).await;
+        set_category(&pool, cat, tier).await;
+        let bm = bookmark(&pool, &target, vec![cat]).await;
+        if follows {
+            db::follow_user(&pool, viewer.id, target.id)
+                .await
+                .expect("follow");
+        }
+        let ids = visible_ids(&pool, &viewer, &target).await;
+        assert_eq!(ids.contains(&bm), expected, "{tier}, follows: {follows}");
+    }
+}
+
+#[tokio::test]
+async fn excluded_bookmarks_stay_excluded() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let target = user(&pool, "target").await;
+    let viewer = user(&pool, "viewer").await;
+    set_profile(&pool, &target, "members").await;
+    let cat = category(&pool, &target).await;
+    set_category(&pool, cat, "members").await;
+
+    let shown = bookmark(&pool, &target, vec![cat]).await;
+    let private = bookmark(&pool, &target, vec![cat]).await;
+    sqlx::query("UPDATE bookmarks SET is_private = TRUE WHERE id = $1")
+        .bind(private)
+        .execute(&pool)
+        .await
+        .expect("mark private");
+    let vault = bookmark(&pool, &target, vec![cat]).await;
+    sqlx::query("UPDATE bookmarks SET is_vault = TRUE WHERE id = $1")
+        .bind(vault)
+        .execute(&pool)
+        .await
+        .expect("mark vault");
+    let trashed = bookmark(&pool, &target, vec![cat]).await;
+    db::delete_bookmark(&pool, target.id, trashed)
+        .await
+        .expect("trash");
+    let uncategorized = bookmark(&pool, &target, vec![]).await;
+
+    let ids = visible_ids(&pool, &viewer, &target).await;
+    assert_eq!(
+        ids,
+        vec![shown],
+        "uncategorized {uncategorized} must not show"
+    );
+}
+
+#[tokio::test]
+async fn any_allowing_category_is_enough() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let target = user(&pool, "target").await;
+    let viewer = user(&pool, "viewer").await;
+    set_profile(&pool, &target, "members").await;
+    let open = category(&pool, &target).await;
+    let closed = category(&pool, &target).await;
+    set_category(&pool, open, "members").await;
+    let bm = bookmark(&pool, &target, vec![closed, open]).await;
+    assert_eq!(visible_ids(&pool, &viewer, &target).await, vec![bm]);
+}
+
+#[tokio::test]
+async fn a_third_partys_category_does_not_publish_a_bookmark() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let target = user(&pool, "target").await;
+    let third = user(&pool, "third").await;
+    let viewer = user(&pool, "viewer").await;
+    set_profile(&pool, &target, "members").await;
+    let theirs = category(&pool, &third).await;
+    set_category(&pool, theirs, "members").await;
+    let bm = bookmark(&pool, &target, vec![]).await;
+    sqlx::query("INSERT INTO bookmark_categories (bookmark_id, category_id) VALUES ($1, $2)")
+        .bind(bm)
+        .bind(theirs)
+        .execute(&pool)
+        .await
+        .expect("link");
+    assert!(visible_ids(&pool, &viewer, &target).await.is_empty());
+}
+
+#[tokio::test]
+async fn hidden_profile_hides_bookmarks_and_self_sees_preview() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let target = user(&pool, "target").await;
+    let viewer = user(&pool, "viewer").await;
+    let cat = category(&pool, &target).await;
+    set_category(&pool, cat, "followers").await;
+    let bm = bookmark(&pool, &target, vec![cat]).await;
+
+    let denied = db::profile_visible_bookmarks(&pool, viewer.id, target.id, None, None).await;
+    assert!(matches!(denied, Err(Error::NotFound)));
+    assert_eq!(visible_ids(&pool, &target, &target).await, vec![bm]);
+}
+
+#[tokio::test]
+async fn paging_reports_the_total() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let target = user(&pool, "target").await;
+    let cat = category(&pool, &target).await;
+    set_category(&pool, cat, "members").await;
+    for _ in 0..3 {
+        bookmark(&pool, &target, vec![cat]).await;
+    }
+    let page = db::profile_visible_bookmarks(&pool, target.id, target.id, Some(2), Some(2))
+        .await
+        .expect("page");
+    assert_eq!(page.total, 3);
+    assert_eq!(page.bookmarks.len(), 1);
+
+    for (limit, offset) in [(Some(0), None), (Some(101), None), (None, Some(-1))] {
+        let bad = db::profile_visible_bookmarks(&pool, target.id, target.id, limit, offset).await;
+        assert!(matches!(bad, Err(Error::BadRequest(_))));
+    }
+}
