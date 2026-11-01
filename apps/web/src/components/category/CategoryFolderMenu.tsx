@@ -1,6 +1,6 @@
 import type { ReactElement, MouseEvent, ReactNode } from 'react'
 import { ActionIcon, Menu } from '@mantine/core'
-import { IconCopy, IconDots, IconPencil, IconShare, IconTrash } from '@tabler/icons-react'
+import { IconCopy, IconDots, IconMessageCircle, IconPencil, IconShare, IconTrash } from '@tabler/icons-react'
 import type { CategoryAccess } from '@/schemas'
 
 export type CategoryFolderMenuProps = {
@@ -9,6 +9,7 @@ export type CategoryFolderMenuProps = {
   isVault: boolean
   onRename?: () => void
   onShare?: () => void
+  onSocial?: () => void
   onFork?: () => void
   onDelete?: () => void
   forkPending?: boolean
@@ -23,6 +24,7 @@ export function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boole
     (canWrite && !!props.onRename) ||
     (!props.isVault && !!props.onFork) ||
     (isOwner && !props.isVault && !!props.onShare) ||
+    !!props.onSocial ||
     (isOwner && !!props.onDelete)
   )
 }
@@ -30,7 +32,8 @@ export function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boole
 export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement | null {
   if (!categoryFolderMenuVisible(props)) return null
 
-  const { name, access, isVault, onRename, onShare, onFork, onDelete, forkPending, className } = props
+  const { name, access, isVault, onRename, onShare, onSocial, onFork, onDelete, forkPending, className } =
+    props
   const isOwner = access === 'owner'
   const canWrite = isOwner || access === 'write'
 
@@ -67,6 +70,11 @@ export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement
           {isOwner && !isVault && onShare ? (
             <Menu.Item leftSection={<IconShare size={14} stroke={1.5} />} onClick={onShare}>
               Share
+            </Menu.Item>
+          ) : null}
+          {onSocial ? (
+            <Menu.Item leftSection={<IconMessageCircle size={14} stroke={1.5} />} onClick={onSocial}>
+              Likes & comments
             </Menu.Item>
           ) : null}
           {isOwner && onDelete ? (

@@ -28,6 +28,8 @@ import {
   IconPencil,
   IconPin,
   IconPinFilled,
+  IconHeart,
+  IconMessageCircle,
   IconStar,
   IconStarFilled,
   IconTrash,
@@ -35,6 +37,7 @@ import {
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { ShareBadge } from '@/components/share-badge'
+import { SocialDrawer } from '@/components/social'
 import { inviteeShareAccess } from '@/lib'
 import type { CategoryRef } from '@/schemas'
 import { FOLDER_UNCATEGORIZED, googleFavicon, hostname, previewSrcCandidates } from '@/services'
@@ -122,6 +125,8 @@ export function BookmarkCard({
   const selectable = selectMode && canWrite && !!onToggleSelect
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
+  const socialEnabled = !!share || showOutgoing
+  const [socialOpen, setSocialOpen] = useState(false)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
   const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}`
@@ -146,6 +151,7 @@ export function BookmarkCard({
     .join(' ')
 
   return (
+    <>
     <Card withBorder padding="sm" radius="md" h="100%" className={cardClass}>
       {selectable ? (
         <Checkbox
@@ -265,6 +271,15 @@ export function BookmarkCard({
                   </Menu.Item>
                 </>
               ) : null}
+              {socialEnabled ? (
+                <Menu.Item
+                  leftSection={<IconMessageCircle size={14} stroke={1.5} />}
+                  rightSection={<IconHeart size={12} stroke={1.5} />}
+                  onClick={() => setSocialOpen(true)}
+                >
+                  Likes & comments
+                </Menu.Item>
+              ) : null}
               {canWrite ? (
                 <>
                   <Menu.Item leftSection={<IconPencil size={14} stroke={1.5} />} onClick={() => onEdit(b.id)}>
@@ -367,5 +382,15 @@ export function BookmarkCard({
         </Group>
       </Stack>
     </Card>
+    {socialEnabled ? (
+      <SocialDrawer
+        opened={socialOpen}
+        onClose={() => setSocialOpen(false)}
+        subjectType="bookmark"
+        subjectId={b.id}
+        title={title}
+      />
+    ) : null}
+    </>
   )
 }

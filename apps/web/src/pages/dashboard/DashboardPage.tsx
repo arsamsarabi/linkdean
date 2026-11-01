@@ -21,6 +21,7 @@ import {
   IconDeviceFloppy,
   IconDotsVertical,
   IconLayoutDashboard,
+  IconMessageCircle,
   IconPencil,
   IconPin,
   IconPlus,
@@ -36,6 +37,7 @@ import {
   QueryErrorAlert,
   ShareBadge,
   ShareDashboardDrawer,
+  SocialDrawer,
 } from '@/components'
 import {
   useBookmarks,
@@ -102,6 +104,7 @@ export function DashboardPage(): ReactElement {
   const [editDraft, setEditDraft] = useState<DashboardDraft | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [socialOpen, setSocialOpen] = useState(false)
   const editing = editDraft !== null
 
   const bookmarkOptions = useMemo(() => {
@@ -236,6 +239,7 @@ export function DashboardPage(): ReactElement {
   const isOwner = view.access === 'owner'
   const canEditLayout = view.access === 'owner' || view.access === 'write'
   const inviteeAccess = view.access === 'read' || view.access === 'write' ? view.access : null
+  const socialEnabled = !!inviteeAccess || !!view.shared_out
   const draft = editDraft
 
   return (
@@ -293,6 +297,14 @@ export function DashboardPage(): ReactElement {
                   >
                     New dashboard
                   </Menu.Item>
+                  {socialEnabled ? (
+                    <Menu.Item
+                      leftSection={<IconMessageCircle size={14} stroke={1.5} />}
+                      onClick={() => setSocialOpen(true)}
+                    >
+                      Likes & comments
+                    </Menu.Item>
+                  ) : null}
                   {isOwner ? (
                     <>
                       <Menu.Item
@@ -537,6 +549,15 @@ export function DashboardPage(): ReactElement {
         opened={shareOpen}
         onClose={() => setShareOpen(false)}
       />
+      {socialEnabled ? (
+        <SocialDrawer
+          opened={socialOpen}
+          onClose={() => setSocialOpen(false)}
+          subjectType="dashboard"
+          subjectId={activeId}
+          title={view.title}
+        />
+      ) : null}
     </Stack>
   )
 }

@@ -48,6 +48,12 @@ function kindLabel(kind: Notification['kind']): string {
       return 'Revoked'
     case 'shared_edit':
       return 'Edit'
+    case 'social_like':
+      return 'Like'
+    case 'social_comment':
+      return 'Comment'
+    case 'social_rating':
+      return 'Rating'
   }
 }
 

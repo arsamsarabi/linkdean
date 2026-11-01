@@ -27,6 +27,7 @@ import {
   platformSettingsEnvelopeSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
+  socialEnvelopeSchema,
   trashItemsSchema,
   trashPurgeResultSchema,
   unreadCountSchema,
@@ -49,6 +50,8 @@ import {
   type PlatformSettings,
   type PutDashboardLayout,
   type ShareAccess,
+  type SocialSubjectType,
+  type SocialSummary,
   type TrashItem,
   type TrashKind,
   type UserPublic,
@@ -106,6 +109,46 @@ export const api = {
 
   markAllNotificationsRead: (): Promise<{ ok: boolean; updated?: number }> =>
     req('/notifications/read-all', { method: 'POST' }, markAllReadSchema),
+
+  getSocial: (subjectType: SocialSubjectType, subjectId: string): Promise<{ social: SocialSummary }> =>
+    req(`/social/${subjectType}/${subjectId}`, {}, socialEnvelopeSchema),
+
+  likeSocial: (subjectType: SocialSubjectType, subjectId: string): Promise<{ social: SocialSummary }> =>
+    req(`/social/${subjectType}/${subjectId}/like`, { method: 'POST' }, socialEnvelopeSchema),
+
+  unlikeSocial: (subjectType: SocialSubjectType, subjectId: string): Promise<{ social: SocialSummary }> =>
+    req(`/social/${subjectType}/${subjectId}/like`, { method: 'DELETE' }, socialEnvelopeSchema),
+
+  commentSocial: (
+    subjectType: SocialSubjectType,
+    subjectId: string,
+    body: string
+  ): Promise<{ social: SocialSummary }> =>
+    req(
+      `/social/${subjectType}/${subjectId}/comments`,
+      { method: 'POST', body: JSON.stringify({ body }) },
+      socialEnvelopeSchema
+    ),
+
+  deleteSocialComment: (id: string): Promise<{ ok: boolean }> =>
+    req(`/social/comments/${id}`, { method: 'DELETE' }, okSchema),
+
+  rateSocial: (
+    subjectType: SocialSubjectType,
+    subjectId: string,
+    rating: number
+  ): Promise<{ social: SocialSummary }> =>
+    req(
+      `/social/${subjectType}/${subjectId}/rating`,
+      { method: 'POST', body: JSON.stringify({ rating }) },
+      socialEnvelopeSchema
+    ),
+
+  clearSocialRating: (
+    subjectType: SocialSubjectType,
+    subjectId: string
+  ): Promise<{ social: SocialSummary }> =>
+    req(`/social/${subjectType}/${subjectId}/rating`, { method: 'DELETE' }, socialEnvelopeSchema),
 
   register: (body: {
     email: string

@@ -3,6 +3,7 @@ import { Button, Group, Modal, Stack, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { ShareCategoryDrawer } from '@/components/category/ShareCategoryDrawer'
+import { SocialDrawer } from '@/components/social'
 import type { Category } from '@/schemas'
 import { useDeleteCategory, useForkCategory, useUpdateCategory } from './useCategories'
 
@@ -15,6 +16,7 @@ export type CategoryFolderActions = {
   forkPending: boolean
   openRename: (cat: Category) => void
   openShare: (cat: Category) => void
+  openSocial: (cat: Category) => void
   openDelete: (id: string) => void
   forkCategory: (cat: Category) => void
   modals: ReactElement
@@ -24,6 +26,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
   const { onDeleted } = options
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [shareCat, setShareCat] = useState<Category | null>(null)
+  const [socialCat, setSocialCat] = useState<Category | null>(null)
   const [renameCat, setRenameCat] = useState<Category | null>(null)
   const [renameValue, setRenameValue] = useState('')
 
@@ -123,6 +126,16 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
         categoryId={shareCat?.id ?? null}
         categoryName={shareCat?.name ?? ''}
       />
+
+      {socialCat ? (
+        <SocialDrawer
+          opened
+          onClose={() => setSocialCat(null)}
+          subjectType="category"
+          subjectId={socialCat.id}
+          title={socialCat.name}
+        />
+      ) : null}
     </>
   )
 
@@ -130,6 +143,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
     forkPending: fork.isPending,
     openRename,
     openShare: setShareCat,
+    openSocial: setSocialCat,
     openDelete: setDeleteId,
     forkCategory: (cat) => {
       void forkCategory(cat)
