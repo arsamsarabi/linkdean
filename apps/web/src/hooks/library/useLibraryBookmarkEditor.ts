@@ -7,6 +7,7 @@ import { useUnlockVault, useVaults } from '@/hooks/vault'
 import { canWriteCategory } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
 import { draftFromBookmark, emptyDraft } from '@/services'
+import type { LibraryScope } from './types'
 
 type SearchHitLike = {
   id: string
@@ -18,6 +19,8 @@ type Input = {
   searchHits: SearchHitLike[]
   folderCat: Category | null
   vaultPrompt: boolean
+  scope: LibraryScope
+  vaultId: string | null
 }
 
 type MoveTarget = {
@@ -26,7 +29,7 @@ type MoveTarget = {
 }
 
 /** Create/edit drawer, single delete, vault unlock-for-search. */
-export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vaultPrompt }: Input) {
+export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vaultPrompt, scope, vaultId }: Input) {
   const [drawerOpen, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [draft, setDraft] = useState<BookmarkDraft | null>(null)
   const [unlockOpen, setUnlockOpen] = useState(false)
@@ -38,8 +41,9 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
   const deleteBookmark = useDeleteBookmark()
   const updateBookmark = useUpdateBookmark()
   const vaultUnlock = useUnlockVault()
-  const vaults = useVaults(unlockOpen)
+  const vaults = useVaults(unlockOpen || scope === 'vault')
   const lockedVaults = (vaults.data?.vaults ?? []).filter((v) => !v.unlocked)
+  const openVaults = (vaults.data?.vaults ?? []).filter((v) => v.unlocked)
 
   const canCreateInContext = !folderCat || canWriteCategory(folderCat)
 
@@ -53,6 +57,8 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
     if (!canCreateInContext) return
     if (folderCat && canWriteCategory(folderCat)) {
       setDraft({ ...emptyDraft(), category_ids: [folderCat.id] })
+    } else if (scope === 'vault') {
+      setDraft({ ...emptyDraft(), vault_id: vaultId ?? (openVaults.length === 1 ? openVaults[0].id : null) })
     } else {
       setDraft(null)
     }

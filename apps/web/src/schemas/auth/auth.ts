@@ -25,6 +25,8 @@ export const userSettingsSchema = z.object({
   library_view: z.enum(['grid', 'explorer']).default('grid'),
   trash_retention_days: z.number().default(30),
   show_deleted_in_library: z.boolean().default(false),
+  show_vault_in_library: z.boolean().default(true),
+  vault_delete_mode: z.enum(['trash', 'permanent']).default('trash'),
   updated_at: z.string(),
 })
 

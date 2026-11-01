@@ -28,6 +28,9 @@ export function LibraryResults(): ReactElement {
           onFlags={lib.onFlags}
           filterFlags={lib.filterFlags}
           onCreate={lib.openCreate}
+          emptyDescription={
+            lib.scope === 'vault' ? 'Add a bookmark here, or use Move to vault from the Library.' : undefined
+          }
           canCreate={lib.canCreateInContext}
           folderReadOnly={!!lib.folderCat && !canWriteCategory(lib.folderCat)}
           viewerUserId={lib.me.data?.user.id}

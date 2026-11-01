@@ -21,6 +21,8 @@ export type LibrarySearch = {
   since?: SinceKey
   /** Vault-only filter (`1` in URL). */
   vault?: '1'
+  /** Vaults page: limit to one open vault. */
+  vaultId?: string
   /** Explorer folder id (`uncategorized` or category uuid). Omit / `all` = root. */
   folder?: string
   /** One-shot: open create drawer (command palette). Consumed then stripped. */
@@ -59,6 +61,7 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
   const vaultRaw = search.vault
   const vault =
     vaultRaw === true || vaultRaw === 1 || vaultRaw === '1' || vaultRaw === 'true' ? ('1' as const) : undefined
+  const vaultId = typeof search.vaultId === 'string' && search.vaultId ? search.vaultId : undefined
   const q = typeof search.q === 'string' && search.q.trim() ? search.q : undefined
   const folderRaw = typeof search.folder === 'string' ? search.folder.trim() : ''
   const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
@@ -74,6 +77,7 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
     flag: listToSearchParam(flag),
     since,
     vault,
+    vaultId,
     folder,
     create,
     focus,
@@ -89,6 +93,7 @@ export function buildLibrarySearch(input: {
   flag?: string[]
   since?: SinceKey | null
   vault?: boolean
+  vaultId?: string | null
   folder?: string
   create?: boolean
   focus?: 'search'
@@ -107,6 +112,7 @@ export function buildLibrarySearch(input: {
     flag: listToSearchParam(flag),
     since,
     vault: input.vault ? '1' : undefined,
+    vaultId: input.vaultId || undefined,
     folder,
     create: input.create ? true : undefined,
     focus: input.focus === 'search' ? 'search' : undefined,

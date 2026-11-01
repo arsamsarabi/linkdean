@@ -70,7 +70,7 @@ export function CategoryManager(): ReactElement {
       onShare: () => actions.openShare(cat),
       onSocial: socialEnabled ? () => actions.openSocial(cat) : undefined,
       onFork: () => actions.forkCategory(cat),
-      onDelete: () => actions.openDelete(cat.id),
+      onDelete: () => actions.openDelete(cat.id, cat.is_vault),
       onMoveToVault: () => actions.openMove(cat),
       forkPending: actions.forkPending,
     }

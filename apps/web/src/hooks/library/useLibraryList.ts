@@ -6,15 +6,23 @@ import {
   collectTagOptions,
   filterAndSortLibraryItems,
   FOLDER_UNCATEGORIZED,
+  matchesVaultQuery,
   mergeSearchWithLocalCatchUp,
+  scopeBookmarks,
+  scopeCategories,
   sinceFilterToIso,
   type ExplorerFolderId,
   type FlagFilter,
   type LibraryListItem,
   type SinceFilter,
 } from '@/services'
+import { useUi } from '@/stores'
+import type { LibraryScope } from './types'
 
 type Input = {
+  scope: LibraryScope
+  vaultId: string | null
+  showVaultInLibrary: boolean
   debouncedQ: string
   filterCats: string[]
   filterTags: string[]
@@ -29,6 +37,9 @@ type Input = {
 
 /** Bookmarks + search merge, filtered list, and label maps. */
 export function useLibraryList({
+  scope,
+  vaultId,
+  showVaultInLibrary,
   debouncedQ,
   filterCats,
   filterTags,
@@ -39,10 +50,22 @@ export function useLibraryList({
   folderId,
   filterActive,
 }: Input) {
-  const cats = useCategories()
-  const bookmarks = useBookmarks()
+  const vaultUnlocked = useUi((s) => s.vaultUnlocked)
+  const inVaults = scope === 'vault'
+  const includeVault = inVaults || (vaultUnlocked && showVaultInLibrary)
+  const catsQuery = useCategories(undefined, includeVault)
+  const bookmarksQuery = useBookmarks(undefined, includeVault)
+  const cats = useMemo(
+    () => (inVaults ? { ...catsQuery, data: scopeCategories(catsQuery.data, vaultId) } : catsQuery),
+    [catsQuery, inVaults, vaultId]
+  ) as typeof catsQuery
+  const bookmarks = useMemo(
+    () => (inVaults ? { ...bookmarksQuery, data: scopeBookmarks(bookmarksQuery.data, vaultId) } : bookmarksQuery),
+    [bookmarksQuery, inVaults, vaultId]
+  ) as typeof bookmarksQuery
   const searching = debouncedQ.trim().length > 1
-  const search = useSearchBookmarks(debouncedQ, searching)
+  // Meilisearch holds no vault content, so the Vaults page filters what it already has.
+  const search = useSearchBookmarks(debouncedQ, searching && !inVaults)
 
   const allTags = useMemo(() => collectTagOptions(bookmarks.data || []), [bookmarks.data])
 
@@ -61,7 +84,9 @@ export function useLibraryList({
   } => {
     let catchUpCount = 0
     let raw: LibraryListItem[]
-    if (searching) {
+    if (searching && inVaults) {
+      raw = (bookmarks.data || []).filter((b) => matchesVaultQuery(b, debouncedQ))
+    } else if (searching) {
       const merged = mergeSearchWithLocalCatchUp(search.data?.hits || [], bookmarks.data || [], debouncedQ)
       raw = merged.items
       catchUpCount = merged.catchUpCount
@@ -101,6 +126,7 @@ export function useLibraryList({
     }
   }, [
     bookmarks.data,
+    inVaults,
     search.data,
     searching,
     debouncedQ,

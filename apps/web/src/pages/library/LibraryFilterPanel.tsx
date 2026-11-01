@@ -48,11 +48,13 @@ export function LibraryFilterPanel(): ReactElement {
             }
             clearable
           />
-          <Checkbox
-            label="Vault only"
-            checked={lib.draftVaultOnly}
-            onChange={(e) => lib.setDraftVaultOnly(e.currentTarget.checked)}
-          />
+          {lib.vaultOnlyAvailable ? (
+            <Checkbox
+              label="Vault only"
+              checked={lib.draftVaultOnly}
+              onChange={(e) => lib.setDraftVaultOnly(e.currentTarget.checked)}
+            />
+          ) : null}
           <Group justify="space-between" wrap="wrap">
             <Button
               variant="subtle"
@@ -102,7 +104,7 @@ export function LibraryFilterPanel(): ReactElement {
               {SINCE_LABEL[lib.filterSince]}
             </Pill>
           ) : null}
-          {lib.vaultOnly ? (
+          {lib.vaultOnlyAvailable && lib.vaultOnly ? (
             <Pill withRemoveButton onRemove={() => lib.setLibrarySearch({ vault: false })}>
               Vault only
             </Pill>

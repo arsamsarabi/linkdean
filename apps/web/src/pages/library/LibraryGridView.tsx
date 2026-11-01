@@ -21,9 +21,11 @@ export function LibraryGridView(): ReactElement {
           icon={<IconBookmark size={28} stroke={1.5} />}
           title={lib.canCreateInContext ? 'No bookmarks yet' : 'Nothing here yet'}
           description={
-            lib.canCreateInContext
-              ? 'Save the first link. Imports live under Config options.'
-              : 'This shared folder has no bookmarks yet.'
+            lib.scope === 'vault'
+              ? 'Add a bookmark here, or use Move to vault from the Library.'
+              : lib.canCreateInContext
+                ? 'Save the first link. Imports live under Config options.'
+                : 'This shared folder has no bookmarks yet.'
           }
           action={
             lib.canCreateInContext

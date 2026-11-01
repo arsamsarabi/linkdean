@@ -35,7 +35,7 @@ export function LibraryPageHeader(): ReactElement {
   return (
     <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
       <Stack gap={4}>
-        <Title order={2}>Library</Title>
+        <Title order={2}>{lib.scope === 'vault' ? 'Vaults' : 'Library'}</Title>
         <Text size="sm" c="dimmed" aria-live="polite" className={styles.countLine}>
           {!loading && viewMode === 'grid'
             ? `${listCount} bookmark${listCount === 1 ? '' : 's'}${searching ? ' matched' : ''}`

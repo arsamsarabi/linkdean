@@ -6,6 +6,7 @@ import { buildLibrarySearch } from '@/lib'
 import type { Category } from '@/schemas'
 import { FOLDER_ALL, FOLDER_UNCATEGORIZED, type ExplorerFolderId } from '@/services'
 import { useUi } from '@/stores'
+import type { LibraryPath, LibraryScope } from './types'
 import { useLibraryBookmarkEditor } from './useLibraryBookmarkEditor'
 import { useLibraryList } from './useLibraryList'
 import { useLibraryPageChrome } from './useLibraryPageChrome'
@@ -13,23 +14,30 @@ import { useLibrarySelection } from './useLibrarySelection'
 import { useLibraryUrlState } from './useLibraryUrlState'
 import { useLibraryViewMode } from './useLibraryViewMode'
 
-export type { LibraryViewMode } from './types'
+export type { LibraryScope, LibraryViewMode } from './types'
 
 /** Compose library URL / list / selection / editor hooks for the Library page. */
-export function useLibraryPage() {
+export function useLibraryPage(scope: LibraryScope = 'library') {
   const nav = useNavigate()
   const me = useMe()
   const showHidden = useUi((s) => s.showHidden)
 
-  const url = useLibraryUrlState()
+  const basePath: LibraryPath = scope === 'vault' ? '/vaults' : '/library'
+  const showVaultInLibrary = me.data?.settings.show_vault_in_library ?? true
+  const vaultOnlyAvailable = scope === 'library' && showVaultInLibrary
+
+  const url = useLibraryUrlState(basePath)
   const { viewMode, onViewModeChange } = useLibraryViewMode()
   const listState = useLibraryList({
+    scope,
+    vaultId: url.vaultId,
+    showVaultInLibrary,
     debouncedQ: url.debouncedQ,
     filterCats: url.filterCats,
     filterTags: url.filterTags,
     filterFlags: url.filterFlags,
     filterSince: url.filterSince,
-    vaultOnly: url.vaultOnly,
+    vaultOnly: vaultOnlyAvailable && url.vaultOnly,
     sort: url.sort,
     folderId: url.folderId,
     filterActive: url.filterActive,
@@ -51,10 +59,14 @@ export function useLibraryPage() {
     bookmarks: listState.bookmarks.data || [],
     searchHits: listState.search.data?.hits || [],
     folderCat,
-    vaultPrompt: !!listState.search.data?.vault_prompt,
+    vaultPrompt: scope === 'library' && !!listState.search.data?.vault_prompt,
+    scope,
+    vaultId: url.vaultId,
   })
 
   const chrome = useLibraryPageChrome({
+    basePath,
+    vaultId: url.vaultId,
     canCreate: editor.canCreateInContext,
     selectMode: selection.selectMode,
     openCreate: editor.openCreate,
@@ -74,7 +86,7 @@ export function useLibraryPage() {
     onDeleted: (id) => {
       if (url.folderId !== id) return
       void nav({
-        to: '/library',
+        to: basePath,
         search: buildLibrarySearch({
           q: url.debouncedQ.trim() || undefined,
           sort: url.sort,
@@ -83,6 +95,7 @@ export function useLibraryPage() {
           flag: url.filterFlags,
           since: url.filterSince,
           vault: url.vaultOnly,
+          vaultId: url.vaultId,
           folder: FOLDER_ALL,
         }),
       })
@@ -100,13 +113,15 @@ export function useLibraryPage() {
       onShare: () => categoryActions.openShare(cat),
       onSocial: socialEnabled ? () => categoryActions.openSocial(cat) : undefined,
       onFork: () => categoryActions.forkCategory(cat),
-      onDelete: () => categoryActions.openDelete(cat.id),
+      onDelete: () => categoryActions.openDelete(cat.id, cat.is_vault),
       onMoveToVault: () => categoryActions.openMove(cat),
       forkPending: categoryActions.forkPending,
     }
   }
 
   return {
+    scope,
+    vaultOnlyAvailable,
     me,
     showHidden,
     viewMode,

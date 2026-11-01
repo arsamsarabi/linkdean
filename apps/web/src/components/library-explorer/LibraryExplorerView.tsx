@@ -30,6 +30,7 @@ type Props = {
   onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   filterFlags?: FlagFilter[]
   onCreate: () => void
+  emptyDescription?: string
   canCreate?: boolean
   folderReadOnly?: boolean
   viewerUserId?: string
@@ -57,6 +58,7 @@ export function LibraryExplorerView({
   onFlags,
   filterFlags = [],
   onCreate,
+  emptyDescription = 'Save the first link. Imports live under Config options.',
   canCreate = true,
   folderReadOnly = false,
   viewerUserId,
@@ -127,7 +129,7 @@ export function LibraryExplorerView({
         <EmptyState
           icon={<IconFolder size={28} stroke={1.5} />}
           title="No bookmarks yet"
-          description="Save the first link. Imports live under Config options."
+          description={emptyDescription}
           action={canCreate ? { label: 'Add bookmark', onClick: onCreate } : undefined}
         />
       ) : emptyFolder ? (

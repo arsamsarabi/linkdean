@@ -32,15 +32,18 @@ export type { BookmarkDraft }
 
 type Props = {
   opened: boolean
+  /** Vaults page: a new bookmark must land in a vault. */
+  vaultRequired?: boolean
   onClose: () => void
   categories: Category[]
   initial: BookmarkDraft | null
 }
 
-export function BookmarkDrawer({ opened, onClose, categories, initial }: Props): ReactElement {
+export function BookmarkDrawer({ opened, onClose, categories, initial, vaultRequired }: Props): ReactElement {
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
   const [pendingPreview, setPendingPreview] = useState<Blob | null>(null)
   const editing = !!draft.id
+  const vaultMissing = !!vaultRequired && !editing && !draft.vault_id && draft.category_ids.length === 0
   const vaults = useVaults(opened)
   const me = useMe(true)
   const canSetPrivate = editing && !draft.is_vault && draft.owner_user_id === me.data?.user.id
@@ -203,8 +206,9 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
           {!editing && draft.category_ids.length === 0 ? (
             <Select
               label="Vault"
-              placeholder="Not in a vault"
-              clearable
+              placeholder={vaultRequired ? 'Choose a vault' : 'Not in a vault'}
+              required={vaultRequired}
+              clearable={!vaultRequired}
               data={(vaults.data?.vaults ?? []).filter((v) => v.unlocked).map((v) => ({ value: v.id, label: v.name }))}
               value={draft.vault_id ?? null}
               onChange={(vault_id) => setDraft((d) => ({ ...d, vault_id }))}
@@ -241,7 +245,7 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
               setDraft((d) => ({ ...d, is_pinned }))
             }}
           />
-          <Button mt="sm" onClick={() => void save()} disabled={!draft.url.trim()} loading={pending}>
+          <Button mt="sm" onClick={() => void save()} disabled={!draft.url.trim() || vaultMissing} loading={pending}>
             {editing ? 'Save changes' : 'Add bookmark'}
           </Button>
         </Stack>

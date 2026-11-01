@@ -3,9 +3,11 @@ import { useHotkeys, useWindowScroll } from '@mantine/hooks'
 import { useNavigate } from '@tanstack/react-router'
 import { buildLibrarySearch, type SortKey } from '@/lib'
 import type { ExplorerFolderId, FlagFilter, SinceFilter } from '@/services'
-import type { LibrarySearchParams } from './types'
+import type { LibraryPath, LibrarySearchParams } from './types'
 
 type Input = {
+  basePath: LibraryPath
+  vaultId: string | null
   canCreate: boolean
   selectMode: boolean
   openCreate: () => void
@@ -23,6 +25,8 @@ type Input = {
 
 /** Hotkeys, scroll, and one-shot palette URL flags for Library page. */
 export function useLibraryPageChrome({
+  basePath,
+  vaultId,
   canCreate,
   selectMode,
   openCreate,
@@ -68,7 +72,7 @@ export function useLibraryPageChrome({
       window.requestAnimationFrame(() => searchRef.current?.focus())
     }
     void nav({
-      to: '/library',
+      to: basePath,
       search: buildLibrarySearch({
         q: urlQ,
         sort,
@@ -77,6 +81,7 @@ export function useLibraryPageChrome({
         flag: filterFlags,
         since: filterSince,
         vault: vaultOnly,
+        vaultId,
         folder: folderId,
       }),
       replace: true,

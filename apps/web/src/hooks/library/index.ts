@@ -1,4 +1,4 @@
-export type { LibraryViewMode, LibrarySearchParams, LibrarySearchPatch } from './types'
+export type { LibraryScope, LibraryViewMode, LibrarySearchParams, LibrarySearchPatch } from './types'
 export { useLibraryPage } from './useLibraryPage'
 export { useLibraryPageChrome } from './useLibraryPageChrome'
 export { useLibraryUrlState } from './useLibraryUrlState'

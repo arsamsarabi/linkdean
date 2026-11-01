@@ -3,10 +3,10 @@ import { useDebouncedValue } from '@mantine/hooks'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { asStringList, buildLibrarySearch, type FlagKey, type SortKey } from '@/lib'
 import { FOLDER_ALL, normalizeFolderId, type FlagFilter, type SinceFilter } from '@/services'
-import type { LibrarySearchParams, LibrarySearchPatch } from './types'
+import type { LibraryPath, LibrarySearchParams, LibrarySearchPatch } from './types'
 
 /** URL-backed library search/filter state + draft filter panel. */
-export function useLibraryUrlState() {
+export function useLibraryUrlState(basePath: LibraryPath) {
   const nav = useNavigate()
   const searchParams = useSearch({ strict: false }) as LibrarySearchParams
 
@@ -18,6 +18,7 @@ export function useLibraryUrlState() {
   )
   const filterSince: SinceFilter | null = searchParams.since ?? null
   const vaultOnly = searchParams.vault === '1'
+  const vaultId = searchParams.vaultId ?? null
   const sort: SortKey = searchParams.sort ?? 'updated_desc'
   const urlQ = searchParams.q ?? ''
   const folderId = normalizeFolderId(searchParams.folder)
@@ -41,7 +42,7 @@ export function useLibraryUrlState() {
     const cur = searchParams.q || undefined
     if (next === cur) return
     void nav({
-      to: '/library',
+      to: basePath,
       search: buildLibrarySearch({
         q: next,
         sort,
@@ -50,6 +51,7 @@ export function useLibraryUrlState() {
         flag: filterFlags,
         since: filterSince,
         vault: vaultOnly,
+        vaultId,
         folder: folderId,
       }),
       replace: true,
@@ -58,7 +60,7 @@ export function useLibraryUrlState() {
 
   function setLibrarySearch(patch: LibrarySearchPatch): void {
     void nav({
-      to: '/library',
+      to: basePath,
       search: buildLibrarySearch({
         q: patch.q !== undefined ? patch.q : q,
         sort: patch.sort ?? sort,
@@ -67,6 +69,7 @@ export function useLibraryUrlState() {
         flag: patch.flag ?? filterFlags,
         since: patch.since !== undefined ? patch.since : filterSince,
         vault: patch.vault !== undefined ? patch.vault : vaultOnly,
+        vaultId: patch.vaultId !== undefined ? patch.vaultId : vaultId,
         folder: patch.folder !== undefined ? patch.folder || FOLDER_ALL : folderId,
       }),
     })
@@ -106,6 +109,7 @@ export function useLibraryUrlState() {
     filterFlags,
     filterSince,
     vaultOnly,
+    vaultId,
     sort,
     urlQ,
     folderId,

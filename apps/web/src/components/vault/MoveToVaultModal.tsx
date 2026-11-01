@@ -39,7 +39,7 @@ export function MoveToVaultModal({ categoryIds, bookmarkIds, onClose }: Props): 
         bookmark_ids: bookmarkIds,
         destination_vault_id: destination === OUT_OF_VAULT ? null : destination,
       })
-      notifications.show({ message: 'Moved' })
+      notifications.show({ message: destination === OUT_OF_VAULT ? 'Moved to Library' : 'Moved' })
       onClose()
     } catch (e) {
       const parsed = e instanceof ApiError && e.status === 409 ? blockedBodySchema.safeParse(e.body) : null

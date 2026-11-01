@@ -5,6 +5,7 @@ import { ShareCategoryDrawer } from '@/components/category/ShareCategoryDrawer'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { SocialDrawer } from '@/components/social'
 import { MoveToVaultModal } from '@/components/vault/MoveToVaultModal'
+import { useMe } from '@/hooks/auth'
 import type { Category } from '@/schemas'
 import { useDeleteCategory, useForkCategory } from './useCategories'
 
@@ -18,7 +19,7 @@ export type CategoryFolderActions = {
   openEdit: (cat: Category) => void
   openShare: (cat: Category) => void
   openSocial: (cat: Category) => void
-  openDelete: (id: string) => void
+  openDelete: (id: string, isVault?: boolean) => void
   openMove: (cat: Category) => void
   forkCategory: (cat: Category) => void
   modals: ReactElement
@@ -26,7 +27,9 @@ export type CategoryFolderActions = {
 
 export function useCategoryFolderActions(options: Options = {}): CategoryFolderActions {
   const { onDeleted } = options
+  const me = useMe()
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleteIsVault, setDeleteIsVault] = useState(false)
   const [shareCat, setShareCat] = useState<Category | null>(null)
   const [socialCat, setSocialCat] = useState<Category | null>(null)
   const [editCat, setEditCat] = useState<Category | null>(null)
@@ -65,7 +68,11 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
         onClose={() => setDeleteId(null)}
         onConfirm={() => void confirmDelete()}
         title="Delete category?"
-        body="Bookmarks in this category keep their links but lose this folder assignment."
+        body={
+          deleteIsVault && me.data?.settings.vault_delete_mode === 'permanent'
+            ? 'This permanently removes the category and its subcategories. It cannot be undone. Bookmarks stay in the vault.'
+            : 'Bookmarks in this category keep their links but lose this folder assignment.'
+        }
         confirmLabel="Delete"
         loading={remove.isPending}
       />
@@ -101,7 +108,10 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
     openEdit: setEditCat,
     openShare: setShareCat,
     openSocial: setSocialCat,
-    openDelete: setDeleteId,
+    openDelete: (id, isVault = false) => {
+      setDeleteIsVault(isVault)
+      setDeleteId(id)
+    },
     openMove: setMoveCat,
     forkCategory: (cat) => {
       void forkCategory(cat)

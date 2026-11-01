@@ -20,6 +20,7 @@ import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppTrashRouteImport } from './routes/_app/trash'
 import { Route as AppVaultRouteImport } from './routes/_app/vault'
+import { Route as AppVaultsRouteImport } from './routes/_app/vaults'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as AppUIdRouteImport } from './routes/_app/u.$id'
 
@@ -77,6 +78,11 @@ const AppVaultRoute = AppVaultRouteImport.update({
   path: '/vault',
   getParentRoute: () => AppRoute,
 } as any)
+const AppVaultsRoute = AppVaultsRouteImport.update({
+  id: '/vaults',
+  path: '/vaults',
+  getParentRoute: () => AppRoute,
+} as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/trash': typeof AppTrashRoute
   '/vault': typeof AppVaultRoute
+  '/vaults': typeof AppVaultsRoute
   '/l/$slug': typeof LSlugRoute
   '/u/$id': typeof AppUIdRoute
 }
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/trash': typeof AppTrashRoute
   '/vault': typeof AppVaultRoute
+  '/vaults': typeof AppVaultsRoute
   '/l/$slug': typeof LSlugRoute
   '/': typeof AppIndexRoute
   '/u/$id': typeof AppUIdRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/trash': typeof AppTrashRoute
   '/_app/vault': typeof AppVaultRoute
+  '/_app/vaults': typeof AppVaultsRoute
   '/l/$slug': typeof LSlugRoute
   '/_app/': typeof AppIndexRoute
   '/_app/u/$id': typeof AppUIdRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/trash'
     | '/vault'
+    | '/vaults'
     | '/l/$slug'
     | '/u/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/trash'
     | '/vault'
+    | '/vaults'
     | '/l/$slug'
     | '/'
     | '/u/$id'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/trash'
     | '/_app/vault'
+    | '/_app/vaults'
     | '/l/$slug'
     | '/_app/'
     | '/_app/u/$id'
@@ -265,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVaultRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/vaults': {
+      id: '/_app/vaults'
+      path: '/vaults'
+      fullPath: '/vaults'
+      preLoaderRoute: typeof AppVaultsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/l/$slug': {
       id: '/l/$slug'
       path: '/l/$slug'
@@ -289,6 +308,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppTrashRoute: typeof AppTrashRoute
   AppVaultRoute: typeof AppVaultRoute
+  AppVaultsRoute: typeof AppVaultsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppUIdRoute: typeof AppUIdRoute
 }
@@ -300,6 +320,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppTrashRoute: AppTrashRoute,
   AppVaultRoute: AppVaultRoute,
+  AppVaultsRoute: AppVaultsRoute,
   AppIndexRoute: AppIndexRoute,
   AppUIdRoute: AppUIdRoute,
 }
