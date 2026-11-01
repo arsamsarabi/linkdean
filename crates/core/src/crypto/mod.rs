@@ -4,6 +4,8 @@ use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+use crypto_box::{PublicKey, SecretKey};
+use rand::rngs::OsRng;
 use rand::RngCore;
 
 use crate::{Error, Result, VaultPayload};
@@ -83,21 +85,25 @@ pub fn wrap_data_key(secret: &str, data_key: &[u8; KEY_LEN]) -> Result<WrappedKe
     })
 }
 
-/// Wrap a vault's data key under the user's master key.
-pub fn wrap_with_key(
-    master: &[u8; KEY_LEN],
-    data_key: &[u8; KEY_LEN],
-) -> Result<(Vec<u8>, Vec<u8>)> {
-    encrypt(master, data_key)
+/// The public half of a master key, so a vault can join without the passphrase.
+pub fn master_public_key(master: &[u8; KEY_LEN]) -> Vec<u8> {
+    SecretKey::from(*master).public_key().as_bytes().to_vec()
 }
 
-pub fn unwrap_with_key(
-    master: &[u8; KEY_LEN],
-    wrapped_key: &[u8],
-    wrapped_nonce: &[u8],
-) -> Result<[u8; KEY_LEN]> {
-    let plain =
-        decrypt(master, wrapped_key, wrapped_nonce).map_err(|_| Error::VaultUnlockFailed)?;
+/// Seal a vault's data key so that only the master key can open it.
+pub fn seal_data_key(public_key: &[u8], data_key: &[u8; KEY_LEN]) -> Result<Vec<u8>> {
+    let public_key: [u8; KEY_LEN] = public_key
+        .try_into()
+        .map_err(|_| Error::msg("invalid master public key"))?;
+    PublicKey::from(public_key)
+        .seal(&mut OsRng, data_key)
+        .map_err(|e| Error::msg(e.to_string()))
+}
+
+pub fn open_sealed_key(master: &[u8; KEY_LEN], sealed: &[u8]) -> Result<[u8; KEY_LEN]> {
+    let plain = SecretKey::from(*master)
+        .unseal(sealed)
+        .map_err(|_| Error::VaultUnlockFailed)?;
     plain.try_into().map_err(|_| Error::VaultUnlockFailed)
 }
 
@@ -250,15 +256,20 @@ mod key_wrap_tests {
     }
 
     #[test]
-    fn a_master_key_wrap_round_trips() {
+    fn a_sealed_key_opens_only_with_its_master_key() {
         let master = [1u8; KEY_LEN];
         let key = [2u8; KEY_LEN];
-        let (ct, nonce) = wrap_with_key(&master, &key).unwrap();
-        assert_eq!(unwrap_with_key(&master, &ct, &nonce).unwrap(), key);
+        let sealed = seal_data_key(&master_public_key(&master), &key).unwrap();
+        assert_eq!(open_sealed_key(&master, &sealed).unwrap(), key);
         assert!(matches!(
-            unwrap_with_key(&[3u8; KEY_LEN], &ct, &nonce),
+            open_sealed_key(&[3u8; KEY_LEN], &sealed),
             Err(Error::VaultUnlockFailed)
         ));
+    }
+
+    #[test]
+    fn a_bad_public_key_is_rejected() {
+        assert!(seal_data_key(&[1u8; 8], &[2u8; KEY_LEN]).is_err());
     }
 
     #[test]

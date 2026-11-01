@@ -36,7 +36,6 @@ function countLabel(vault: Vault): string {
 function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boolean }): ReactElement {
   const [passphrase, setPassphrase] = useState('')
   const [name, setName] = useState(vault.name)
-  const [globalPass, setGlobalPass] = useState('')
   const [recovering, setRecovering] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null)
@@ -46,6 +45,9 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
   const newKey = useNewRecoveryKey()
   const join = useJoinGlobal()
   const leave = useLeaveGlobal()
+
+  // A locked vault's key isn't available to seal, but leaving needs no key.
+  const canJoin = vault.unlocked || vault.in_global
 
   async function onUnlock(): Promise<void> {
     await report(unlock.mutateAsync({ id: vault.id, passphrase }), `${vault.name} unlocked`)
@@ -92,28 +94,6 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
                 Rename
               </Button>
             </Group>
-            {globalEnabled && !vault.in_global ? (
-              <Group align="flex-end">
-                <PasswordInput
-                  label="Global passphrase"
-                  description="Lets the global passphrase open this vault too."
-                  value={globalPass}
-                  onChange={(e) => setGlobalPass(e.currentTarget.value)}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  variant="default"
-                  disabled={globalPass.length < 8}
-                  loading={join.isPending}
-                  onClick={() => {
-                    void report(join.mutateAsync({ id: vault.id, passphrase: globalPass }), 'Added to global unlock')
-                    setGlobalPass('')
-                  }}
-                >
-                  Add to global unlock
-                </Button>
-              </Group>
-            ) : null}
             <Group>
               <Button
                 variant="light"
@@ -147,11 +127,19 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
           </Group>
         )}
 
-        {globalEnabled && vault.in_global ? (
+        {globalEnabled ? (
           <Switch
             label="Opens with the global passphrase"
-            checked
-            onChange={() => void report(leave.mutateAsync(vault.id), 'Removed from global unlock')}
+            description={canJoin ? undefined : 'Unlock this vault to turn this on.'}
+            checked={vault.in_global}
+            disabled={!canJoin || join.isPending || leave.isPending}
+            onChange={(e) => {
+              if (e.currentTarget.checked) {
+                void report(join.mutateAsync(vault.id), 'Added to global unlock')
+              } else {
+                void report(leave.mutateAsync(vault.id), 'Removed from global unlock')
+              }
+            }}
           />
         ) : null}
 

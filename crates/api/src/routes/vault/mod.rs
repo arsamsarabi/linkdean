@@ -229,11 +229,10 @@ async fn global_join(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
-    Json(req): Json<VaultUnlockRequest>,
 ) -> ApiResult<Json<Value>> {
     let keyring = state.vault_keyring(user.id).await;
     let key = keyring.get(id).ok_or(Error::VaultLocked)?;
-    db::join_global(&state.pool, user.id, id, key, &req.passphrase).await?;
+    db::join_global(&state.pool, user.id, id, key).await?;
     Ok(Json(json!({ "ok": true })))
 }
 

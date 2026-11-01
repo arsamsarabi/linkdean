@@ -43,7 +43,7 @@ async fn unlocks_only_joined_vaults_and_own_passphrases_keep_working() {
     db::enable_global_passphrase(&pool, owner.id, "global-passphrase")
         .await
         .expect("enable");
-    db::join_global(&pool, owner.id, joined.id, &joined_key, "global-passphrase")
+    db::join_global(&pool, owner.id, joined.id, &joined_key)
         .await
         .expect("join");
 
@@ -72,8 +72,9 @@ async fn wrong_passphrase_fails() {
         .await
         .expect("enable");
 
-    let join = db::join_global(&pool, owner.id, joined.id, &key, "wrong-passphrase").await;
-    assert!(matches!(join, Err(Error::VaultUnlockFailed)));
+    db::join_global(&pool, owner.id, joined.id, &key)
+        .await
+        .expect("join");
     let open = db::unlock_with_global(&pool, owner.id, "wrong-passphrase").await;
     assert!(matches!(open, Err(Error::VaultUnlockFailed)));
 }
@@ -101,7 +102,7 @@ async fn changing_keeps_vaults_joined() {
     db::enable_global_passphrase(&pool, owner.id, "global-passphrase")
         .await
         .expect("enable");
-    db::join_global(&pool, owner.id, joined.id, &key, "global-passphrase")
+    db::join_global(&pool, owner.id, joined.id, &key)
         .await
         .expect("join");
 
@@ -128,10 +129,10 @@ async fn leaving_and_disabling_clear_the_wrapped_keys() {
     db::enable_global_passphrase(&pool, owner.id, "global-passphrase")
         .await
         .expect("enable");
-    db::join_global(&pool, owner.id, first.id, &first_key, "global-passphrase")
+    db::join_global(&pool, owner.id, first.id, &first_key)
         .await
         .expect("join first");
-    db::join_global(&pool, owner.id, second.id, &second_key, "global-passphrase")
+    db::join_global(&pool, owner.id, second.id, &second_key)
         .await
         .expect("join second");
 
@@ -171,7 +172,7 @@ async fn recovery_does_not_change_membership() {
     db::enable_global_passphrase(&pool, owner.id, "global-passphrase")
         .await
         .expect("enable");
-    db::join_global(&pool, owner.id, joined.id, &key, "global-passphrase")
+    db::join_global(&pool, owner.id, joined.id, &key)
         .await
         .expect("join");
 
@@ -184,4 +185,16 @@ async fn recovery_does_not_change_membership() {
             .expect("unlock"),
         vec![(joined.id, key)]
     );
+}
+
+#[tokio::test]
+async fn joining_needs_the_global_passphrase_turned_on() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    let (joined, key) = vault(&pool, &owner, "Joined").await;
+
+    let got = db::join_global(&pool, owner.id, joined.id, &key).await;
+    assert!(matches!(got, Err(Error::BadRequest(_))));
 }

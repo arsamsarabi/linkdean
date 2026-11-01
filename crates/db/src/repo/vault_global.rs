@@ -10,11 +10,12 @@ struct MasterKeyRow {
     kdf_salt: Vec<u8>,
     wrapped_key: Vec<u8>,
     wrapped_nonce: Vec<u8>,
+    public_key: Vec<u8>,
 }
 
 async fn master_row(pool: &PgPool, user_id: Uuid) -> Result<Option<MasterKeyRow>> {
     sqlx::query_as::<_, MasterKeyRow>(
-        "SELECT kdf_salt, wrapped_key, wrapped_nonce FROM vault_master_keys WHERE user_id = $1",
+        "SELECT kdf_salt, wrapped_key, wrapped_nonce, public_key FROM vault_master_keys WHERE user_id = $1",
     )
     .bind(user_id)
     .fetch_optional(pool)
@@ -49,20 +50,21 @@ pub async fn enable_global_passphrase(
         return Err(Error::Conflict("Global passphrase is already on.".into()));
     }
     let passphrase = passphrase.to_string();
-    let wrapped = super::blocking::run_blocking(move || {
-        crypto::wrap_data_key(&passphrase, &crypto::new_data_key())
-    })
-    .await?;
+    let master = crypto::new_data_key();
+    let public_key = crypto::master_public_key(&master);
+    let wrapped =
+        super::blocking::run_blocking(move || crypto::wrap_data_key(&passphrase, &master)).await?;
     sqlx::query(
         r#"
-        INSERT INTO vault_master_keys (user_id, kdf_salt, wrapped_key, wrapped_nonce)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO vault_master_keys (user_id, kdf_salt, wrapped_key, wrapped_nonce, public_key)
+        VALUES ($1, $2, $3, $4, $5)
         "#,
     )
     .bind(user_id)
     .bind(&wrapped.kdf_salt)
     .bind(&wrapped.wrapped_key)
     .bind(&wrapped.wrapped_nonce)
+    .bind(&public_key)
     .execute(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -104,7 +106,7 @@ pub async fn disable_global_passphrase(pool: &PgPool, user_id: Uuid) -> Result<(
     sqlx::query(
         r#"
         UPDATE vaults
-        SET global_wrapped_key = NULL, global_wrapped_nonce = NULL, updated_at = now()
+        SET global_wrapped_key = NULL, updated_at = now()
         WHERE user_id = $1
         "#,
     )
@@ -120,30 +122,25 @@ pub async fn disable_global_passphrase(pool: &PgPool, user_id: Uuid) -> Result<(
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))
 }
 
-/// The caller holds the vault's unlocked data key.
+/// The caller holds the vault's unlocked data key. The global passphrase can
+/// only open a vault later, so adding one does not need it.
 pub async fn join_global(
     pool: &PgPool,
     user_id: Uuid,
     vault_id: Uuid,
     data_key: &[u8; 32],
-    passphrase: &str,
 ) -> Result<()> {
     get_user_vault(pool, user_id, vault_id).await?;
-    let master = open_master(pool, user_id, passphrase).await?;
-    let (ct, nonce) = crypto::wrap_with_key(&master, data_key)?;
-    sqlx::query(
-        r#"
-        UPDATE vaults
-        SET global_wrapped_key = $1, global_wrapped_nonce = $2, updated_at = now()
-        WHERE id = $3
-        "#,
-    )
-    .bind(ct)
-    .bind(nonce)
-    .bind(vault_id)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+    let row = master_row(pool, user_id)
+        .await?
+        .ok_or_else(|| Error::BadRequest("Turn on the global passphrase first.".into()))?;
+    let sealed = crypto::seal_data_key(&row.public_key, data_key)?;
+    sqlx::query("UPDATE vaults SET global_wrapped_key = $1, updated_at = now() WHERE id = $2")
+        .bind(sealed)
+        .bind(vault_id)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
     Ok(())
 }
 
@@ -152,7 +149,7 @@ pub async fn leave_global(pool: &PgPool, user_id: Uuid, vault_id: Uuid) -> Resul
     sqlx::query(
         r#"
         UPDATE vaults
-        SET global_wrapped_key = NULL, global_wrapped_nonce = NULL, updated_at = now()
+        SET global_wrapped_key = NULL, updated_at = now()
         WHERE id = $1
         "#,
     )
@@ -172,8 +169,8 @@ pub async fn unlock_with_global(
     let master = open_master(pool, user_id, passphrase).await?;
     let mut out = Vec::new();
     for vault in list_vaults(pool, user_id).await? {
-        if let (Some(ct), Some(nonce)) = (vault.global_wrapped_key, vault.global_wrapped_nonce) {
-            out.push((vault.id, crypto::unwrap_with_key(&master, &ct, &nonce)?));
+        if let Some(sealed) = vault.global_wrapped_key {
+            out.push((vault.id, crypto::open_sealed_key(&master, &sealed)?));
         }
     }
     Ok(out)

@@ -1,13 +1,15 @@
 import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Vault } from '@/schemas'
 import { VaultList } from './VaultList'
 
 const unlock = vi.hoisted(() => vi.fn())
 const lock = vi.hoisted(() => vi.fn())
-const data = vi.hoisted(() => ({ vaults: [] as Vault[] }))
+const join = vi.hoisted(() => vi.fn())
+const leave = vi.hoisted(() => vi.fn())
+const data = vi.hoisted(() => ({ vaults: [] as Vault[], global: false }))
 const idle = { mutateAsync: vi.fn(), isPending: false }
 
 vi.mock('@/hooks', () => ({
@@ -16,9 +18,9 @@ vi.mock('@/hooks', () => ({
   useLockVault: () => ({ mutateAsync: lock, isPending: false }),
   useRenameVault: () => idle,
   useNewRecoveryKey: () => idle,
-  useJoinGlobal: () => idle,
-  useLeaveGlobal: () => idle,
-  useGlobalPassphrase: () => ({ data: { enabled: false } }),
+  useJoinGlobal: () => ({ mutateAsync: join, isPending: false }),
+  useLeaveGlobal: () => ({ mutateAsync: leave, isPending: false }),
+  useGlobalPassphrase: () => ({ data: { enabled: data.global } }),
 }))
 
 vi.mock('./RecoverVaultModal', () => ({ RecoverVaultModal: () => null }))
@@ -28,6 +30,11 @@ const base: Vault = { id: 'v1', name: 'Work', unlocked: false, has_recovery_key:
 
 describe('VaultList', () => {
   afterEach(cleanup)
+  beforeEach(() => {
+    data.global = false
+    join.mockReset()
+    leave.mockReset()
+  })
 
   it('unlocks a vault with its passphrase', async () => {
     data.vaults = [base]
@@ -51,5 +58,42 @@ describe('VaultList', () => {
     expect(screen.getByText('2 categories, 5 bookmarks')).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Lock' }))
     expect(lock).toHaveBeenCalledWith('v1')
+  })
+
+  it('toggles global unlock without asking for a passphrase', async () => {
+    data.global = true
+    data.vaults = [{ ...base, unlocked: true }]
+    render(
+      <MantineProvider>
+        <VaultList />
+      </MantineProvider>
+    )
+    expect(screen.queryByLabelText(/global passphrase$/i, { selector: 'input[type=password]' })).toBeNull()
+    await userEvent.click(screen.getByLabelText('Opens with the global passphrase'))
+    expect(join).toHaveBeenCalledWith('v1')
+  })
+
+  it('leaves global unlock from the toggle', async () => {
+    data.global = true
+    data.vaults = [{ ...base, in_global: true }]
+    render(
+      <MantineProvider>
+        <VaultList />
+      </MantineProvider>
+    )
+    await userEvent.click(screen.getByLabelText('Opens with the global passphrase'))
+    expect(leave).toHaveBeenCalledWith('v1')
+  })
+
+  it('needs a locked vault unlocked before it can join', () => {
+    data.global = true
+    data.vaults = [base]
+    render(
+      <MantineProvider>
+        <VaultList />
+      </MantineProvider>
+    )
+    expect(screen.getByRole('switch')).toBeDisabled()
+    expect(screen.getByText('Unlock this vault to turn this on.')).toBeTruthy()
   })
 })

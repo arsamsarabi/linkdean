@@ -476,8 +476,7 @@ export const api = {
   unlockAllVaults: (passphrase: string): Promise<unknown> =>
     req('/vaults/global/unlock', { method: 'POST', body: JSON.stringify({ passphrase }) }),
 
-  joinGlobal: (id: string, passphrase: string): Promise<unknown> =>
-    req(`/vaults/${id}/global`, { method: 'POST', body: JSON.stringify({ passphrase }) }),
+  joinGlobal: (id: string): Promise<unknown> => req(`/vaults/${id}/global`, { method: 'POST' }),
 
   leaveGlobal: (id: string): Promise<unknown> => req(`/vaults/${id}/global`, { method: 'DELETE' }),
 

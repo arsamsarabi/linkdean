@@ -87,8 +87,7 @@ export const useDisableGlobalPassphrase = (): UseMutationResult<unknown, Error, 
 
 export const useUnlockAllVaults = (): UseMutationResult<unknown, Error, string> => useVaultAction(api.unlockAllVaults)
 
-export const useJoinGlobal = (): UseMutationResult<unknown, Error, { id: string; passphrase: string }> =>
-  useVaultAction(({ id, passphrase }) => api.joinGlobal(id, passphrase))
+export const useJoinGlobal = (): UseMutationResult<unknown, Error, string> => useVaultAction(api.joinGlobal)
 
 export const useLeaveGlobal = (): UseMutationResult<unknown, Error, string> => useVaultAction(api.leaveGlobal)
 

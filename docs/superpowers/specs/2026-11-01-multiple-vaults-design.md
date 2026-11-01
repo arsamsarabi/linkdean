@@ -24,7 +24,7 @@ Migration `029_multiple_vaults.sql`:
 - `vaults` gains `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` and `name TEXT NOT NULL`. `user_id` stops being the primary key and stays `NOT NULL`.
 - A unique index covers `(user_id, lower(name))`.
 - `vaults` gains nullable `recovery_salt`, `recovery_wrapped_key` and `recovery_wrapped_nonce`.
-- `vaults` gains nullable `global_wrapped_key` and `global_wrapped_nonce`.
+- `vaults` gains nullable `global_wrapped_key`, the vault's data key sealed to the user's master public key.
 - `categories` and `bookmarks` gain `vault_id UUID REFERENCES vaults(id)`.
 - A new table `vault_master_keys` has `user_id` as primary key, plus `kdf_salt`, `wrapped_key` and `wrapped_nonce`.
 - Each user's existing vault is named `Vault`, and their `is_vault` rows get its `vault_id`.
@@ -57,11 +57,11 @@ Auto-lock after inactivity locks every unlocked vault.
 A convenience so a user need not type several passphrases. It adds a way in. Each vault keeps its own passphrase, which goes on working.
 
 - Enabling it in Settings sets a global passphrase. The server creates a random master key wrapped by that passphrase and stores it in `vault_master_keys`.
-- A user chooses which vaults join. Joining needs the vault unlocked and the global passphrase, because the vault's data key gets wrapped by the master key into `global_wrapped_*`. New vaults do not join automatically.
-- A vault can leave at any time, which clears its `global_wrapped_*` columns.
+- A user chooses which vaults join with a switch on each vault. Joining needs the vault unlocked, not the global passphrase: the master key is an X25519 key, its public half is stored, and the vault's data key is sealed to it. Only the global passphrase can open it later.
+- A vault can leave at any time, which clears `global_wrapped_key`.
 - Unlock all takes the global passphrase and unlocks every joined vault. Vaults that have not joined stay locked.
 - Changing the global passphrase needs the current one and rewraps only the master key.
-- Disabling it deletes the master key row and clears every vault's `global_wrapped_*` columns. No vault contents or vault passphrases change.
+- Disabling it deletes the master key row and clears every vault's `global_wrapped_key`. No vault contents or vault passphrases change.
 - A forgotten global passphrase costs nothing: disable it, then enable it again. Disabling needs no passphrase for that reason.
 - Recovery and passphrase changes on a vault do not affect its membership, because the data key stays the same.
 - Settings warns that anyone who learns the global passphrase can open every joined vault.
@@ -85,7 +85,7 @@ A convenience so a user need not type several passphrases. It adds a way in. Eac
 | `PUT /vaults/global` | Change it with the current and new passphrase |
 | `DELETE /vaults/global` | Disable it |
 | `POST /vaults/global/unlock` | Unlock every joined vault; returns the ids unlocked |
-| `POST /vaults/{id}/global` | Join, with the global passphrase; the vault must be unlocked |
+| `POST /vaults/{id}/global` | Join; the vault must be unlocked and the global passphrase enabled |
 | `DELETE /vaults/{id}/global` | Leave |
 
 `/vault/setup`, `/vault/unlock`, `/vault/lock` and `/vault/status` are removed. There are no external API users before the first public release.

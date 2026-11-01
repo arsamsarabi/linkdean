@@ -714,7 +714,6 @@ pub struct Vault {
     pub recovery_wrapped_key: Option<Vec<u8>>,
     pub recovery_wrapped_nonce: Option<Vec<u8>>,
     pub global_wrapped_key: Option<Vec<u8>>,
-    pub global_wrapped_nonce: Option<Vec<u8>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
