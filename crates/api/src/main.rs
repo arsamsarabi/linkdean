@@ -48,6 +48,14 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    {
+        let pool = state.pool.clone();
+        let opts = state.cfg.link_check.clone();
+        tokio::spawn(async move {
+            linkdean_worker::run_link_checker(pool, opts).await;
+        });
+    }
+
     metrics::init();
     let api = Router::new()
         .merge(routes::router())

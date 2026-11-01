@@ -18,6 +18,7 @@ pub struct Config {
     pub oidc_client_secret: Option<String>,
     /// Empty = reflect `APP_URL` only. Use `*` for any-origin (dev/homelab convenience).
     pub cors_origins: Vec<String>,
+    pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
 impl Config {
@@ -64,6 +65,14 @@ impl Config {
                 .ok()
                 .filter(|s| !s.is_empty()),
             cors_origins,
+            link_check: linkdean_worker::LinkCheckOpts {
+                enabled: env_bool("LINK_CHECK_ENABLED", true),
+                tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),
+                batch_size: env_i64("LINK_CHECK_BATCH_SIZE", 40),
+                concurrency: env_usize("LINK_CHECK_CONCURRENCY", 2),
+                per_host_delay_ms: env_u64("LINK_CHECK_PER_HOST_DELAY_MS", 1_000),
+                recheck_days: env_i64("LINK_CHECK_RECHECK_DAYS", 7),
+            },
         })
     }
 
@@ -80,4 +89,35 @@ impl Config {
 
 fn required(key: &str) -> anyhow::Result<String> {
     std::env::var(key).map_err(|_| anyhow::anyhow!("missing env {key}"))
+}
+
+fn env_bool(key: &str, default: bool) -> bool {
+    match std::env::var(key) {
+        Ok(s) => matches!(
+            s.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        Err(_) => default,
+    }
+}
+
+fn env_u64(key: &str, default: u64) -> u64 {
+    std::env::var(key)
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(default)
+}
+
+fn env_i64(key: &str, default: i64) -> i64 {
+    std::env::var(key)
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(default)
+}
+
+fn env_usize(key: &str, default: usize) -> usize {
+    std::env::var(key)
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(default)
 }

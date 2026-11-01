@@ -2,11 +2,15 @@ use chromiumoxide::browser::Browser;
 use chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat;
 use chromiumoxide::page::ScreenshotParams;
 use futures::StreamExt;
+use linkdean_core::LinkCheckStatus;
 use linkdean_db::{self as db};
 use linkdean_search::SearchClient;
 use sqlx::PgPool;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::Mutex;
 use tracing::{info, warn};
 use uuid::Uuid;
 
@@ -384,6 +388,285 @@ fn absolutize(base: &str, href: &str) -> String {
     href.to_string()
 }
 
+#[derive(Clone, Debug)]
+pub struct LinkCheckOpts {
+    pub enabled: bool,
+    pub tick_secs: u64,
+    pub batch_size: i64,
+    pub concurrency: usize,
+    pub per_host_delay_ms: u64,
+    pub recheck_days: i64,
+}
+
+impl Default for LinkCheckOpts {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            tick_secs: 60,
+            batch_size: 40,
+            concurrency: 2,
+            per_host_delay_ms: 1_000,
+            recheck_days: 7,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ProbeResult {
+    status: LinkCheckStatus,
+    status_code: Option<u16>,
+    error: Option<String>,
+}
+
+fn classify_http(code: u16) -> LinkCheckStatus {
+    match code {
+        200..=399 | 401 | 403 => LinkCheckStatus::Ok,
+        404 | 410 => LinkCheckStatus::Broken,
+        429 | 500..=599 => LinkCheckStatus::Unverifiable,
+        400..=499 => LinkCheckStatus::Broken,
+        _ => LinkCheckStatus::Unverifiable,
+    }
+}
+
+fn head_needs_get_fallback(code: u16) -> bool {
+    matches!(code, 403 | 404 | 405 | 501)
+}
+
+fn is_blocked_host(host: &str) -> bool {
+    let h = host.trim().trim_end_matches('.').to_ascii_lowercase();
+    matches!(
+        h.as_str(),
+        "localhost"
+            | "localhost.localdomain"
+            | "metadata.google.internal"
+            | "metadata"
+            | "0.0.0.0"
+    ) || h.ends_with(".localhost")
+        || h.ends_with(".local")
+        || h.parse::<std::net::IpAddr>()
+            .map(is_blocked_ip)
+            .unwrap_or(false)
+}
+
+fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(v4) => {
+            v4.is_loopback()
+                || v4.is_private()
+                || v4.is_link_local()
+                || v4.is_broadcast()
+                || v4.is_unspecified()
+                || v4.octets()[0] == 169 && v4.octets()[1] == 254
+        }
+        std::net::IpAddr::V6(v6) => {
+            v6.is_loopback() || v6.is_unique_local() || v6.is_unicast_link_local() || v6.is_unspecified()
+        }
+    }
+}
+
+async fn probe_url(client: &reqwest::Client, url: &str) -> ProbeResult {
+    let Ok(parsed) = url::Url::parse(url) else {
+        return ProbeResult {
+            status: LinkCheckStatus::Broken,
+            status_code: None,
+            error: Some("invalid url".into()),
+        };
+    };
+    if parsed.scheme() != "http" && parsed.scheme() != "https" {
+        return ProbeResult {
+            status: LinkCheckStatus::Unverifiable,
+            status_code: None,
+            error: Some("non-http scheme".into()),
+        };
+    }
+    let Some(host) = parsed.host_str() else {
+        return ProbeResult {
+            status: LinkCheckStatus::Broken,
+            status_code: None,
+            error: Some("missing host".into()),
+        };
+    };
+    if is_blocked_host(host) {
+        return ProbeResult {
+            status: LinkCheckStatus::Unverifiable,
+            status_code: None,
+            error: Some("blocked host".into()),
+        };
+    }
+
+    match client.head(url).send().await {
+        Ok(resp) => {
+            let code = resp.status().as_u16();
+            // 403 on HEAD is common while GET works — fall through via head_needs_get_fallback.
+            if resp.status().is_success() || (300..400).contains(&code) || code == 401 {
+                return ProbeResult {
+                    status: classify_http(code),
+                    status_code: Some(code),
+                    error: None,
+                };
+            }
+            if !head_needs_get_fallback(code) {
+                return ProbeResult {
+                    status: classify_http(code),
+                    status_code: Some(code),
+                    error: Some(format!("HTTP {code}")),
+                };
+            }
+        }
+        Err(_) => {
+            // Many hosts reject HEAD outright — try GET.
+        }
+    }
+
+    match client.get(url).send().await {
+        Ok(resp) => {
+            let code = resp.status().as_u16();
+            // Drop body early; we only care about reachability.
+            drop(resp);
+            ProbeResult {
+                status: classify_http(code),
+                status_code: Some(code),
+                error: if classify_http(code).is_problem() {
+                    Some(format!("HTTP {code}"))
+                } else {
+                    None
+                },
+            }
+        }
+        Err(e) => ProbeResult {
+            status: LinkCheckStatus::Unreachable,
+            status_code: None,
+            error: Some(truncate_err(&e.to_string())),
+        },
+    }
+}
+
+fn truncate_err(s: &str) -> String {
+    const MAX: usize = 200;
+    if s.len() <= MAX {
+        s.to_string()
+    } else {
+        format!("{}…", &s[..MAX])
+    }
+}
+
+async fn wait_per_host(
+    last_by_host: &Mutex<HashMap<String, Instant>>,
+    host: &str,
+    delay: Duration,
+) {
+    loop {
+        let sleep_for = {
+            let mut map = last_by_host.lock().await;
+            if let Some(prev) = map.get(host) {
+                let elapsed = prev.elapsed();
+                if elapsed < delay {
+                    Some(delay - elapsed)
+                } else {
+                    map.insert(host.to_string(), Instant::now());
+                    None
+                }
+            } else {
+                map.insert(host.to_string(), Instant::now());
+                None
+            }
+        };
+        match sleep_for {
+            Some(d) => tokio::time::sleep(d).await,
+            None => break,
+        }
+    }
+}
+
+pub async fn check_bookmark_link(pool: &PgPool, bookmark_id: Uuid, url: &str) {
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(12))
+        .redirect(reqwest::redirect::Policy::limited(8))
+        .user_agent("LinkdeanLinkCheck/0.1 (+https://github.com/arsamsarabi/linkdean)")
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("link-check http client: {e}");
+            return;
+        }
+    };
+
+    let result = probe_url(&client, url).await;
+    if let Err(e) = db::record_link_check(
+        pool,
+        bookmark_id,
+        result.status,
+        result.status_code.map(i32::from),
+        result.error.as_deref(),
+    )
+    .await
+    {
+        warn!(%bookmark_id, error = %e, "record link check failed");
+    }
+}
+
+/// Background loop: claim due bookmarks and probe URLs with global + per-host pacing.
+pub async fn run_link_checker(pool: PgPool, opts: LinkCheckOpts) {
+    if !opts.enabled {
+        info!("link checker disabled");
+        return;
+    }
+    info!(
+        tick_secs = opts.tick_secs,
+        concurrency = opts.concurrency,
+        recheck_days = opts.recheck_days,
+        "link checker starting"
+    );
+    let last_by_host = Arc::new(Mutex::new(HashMap::<String, Instant>::new()));
+    let recheck = chrono::Duration::days(opts.recheck_days.max(1));
+    // Soft failures retry sooner so two-strike confirmation does not wait a full week.
+    let soft_recheck = chrono::Duration::days(2).min(recheck);
+    let per_host = Duration::from_millis(opts.per_host_delay_ms.max(100));
+    let concurrency = opts.concurrency.max(1);
+
+    loop {
+        match db::claim_bookmarks_for_link_check(
+            &pool,
+            opts.batch_size.max(1),
+            recheck,
+            soft_recheck,
+        )
+        .await
+        {
+            Ok(batch) if !batch.is_empty() => {
+                info!(count = batch.len(), "link-check batch");
+                let sem = Arc::new(tokio::sync::Semaphore::new(concurrency));
+                let mut joins = Vec::with_capacity(batch.len());
+                for (owner_id, bookmark_id, url) in batch {
+                    let _ = owner_id;
+                    let host = url::Url::parse(&url)
+                        .ok()
+                        .and_then(|u| u.host_str().map(str::to_string))
+                        .unwrap_or_else(|| "_".into());
+                    let permit = match sem.clone().acquire_owned().await {
+                        Ok(p) => p,
+                        Err(_) => break,
+                    };
+                    let pool = pool.clone();
+                    let last_by_host = last_by_host.clone();
+                    joins.push(tokio::spawn(async move {
+                        wait_per_host(&last_by_host, &host, per_host).await;
+                        check_bookmark_link(&pool, bookmark_id, &url).await;
+                        drop(permit);
+                    }));
+                }
+                for j in joins {
+                    let _ = j.await;
+                }
+            }
+            Ok(_) => {}
+            Err(e) => warn!(error = %e, "link-check claim failed"),
+        }
+        tokio::time::sleep(Duration::from_secs(opts.tick_secs.max(5))).await;
+    }
+}
+
 /// Rate-limited backfill for bookmarks missing local screenshots.
 pub async fn backfill_previews(pool: PgPool, search: SearchClient, opts: EnrichOpts) {
     let Ok(rows) = db::list_bookmarks_needing_preview(&pool).await else {
@@ -561,5 +844,27 @@ mod tests {
             cached_og_url(id),
             "/api/bookmarks/00000000-0000-0000-0000-000000000000/og"
         );
+    }
+
+    #[test]
+    fn classify_http_status() {
+        assert_eq!(classify_http(200), LinkCheckStatus::Ok);
+        assert_eq!(classify_http(301), LinkCheckStatus::Ok);
+        assert_eq!(classify_http(401), LinkCheckStatus::Ok);
+        assert_eq!(classify_http(403), LinkCheckStatus::Ok);
+        assert_eq!(classify_http(404), LinkCheckStatus::Broken);
+        assert_eq!(classify_http(410), LinkCheckStatus::Broken);
+        assert_eq!(classify_http(429), LinkCheckStatus::Unverifiable);
+        assert_eq!(classify_http(503), LinkCheckStatus::Unverifiable);
+    }
+
+    #[test]
+    fn blocks_private_hosts() {
+        assert!(is_blocked_host("localhost"));
+        assert!(is_blocked_host("127.0.0.1"));
+        assert!(is_blocked_host("10.0.0.5"));
+        assert!(is_blocked_host("192.168.1.1"));
+        assert!(is_blocked_host("169.254.169.254"));
+        assert!(!is_blocked_host("example.com"));
     }
 }
