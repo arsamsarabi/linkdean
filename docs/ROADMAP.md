@@ -10,8 +10,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 - increase the number of icons offered to the user for the categories. paginate the icons so the user can scroll through them. add a search input to the icons page so the user can search for an icon.
 - Allow user to upload their own image for the bookmark items. replace the default image with the uploaded image.
-- break large components into smaller components. and reuse them across the app if possible. add this to the AGENTS.md file so the development agents follow this rule.
-- Go through the whole FE app and breakout logic from components into hooks. and reuse them across the app is possible. add this to the AGENTS.md file so the development agents follow this rule.
 
 **Social**
 
@@ -57,6 +55,10 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
 - backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file.
+
+**possible bugs**
+
+- the sort by recently updated doesn't seem to sort the categories correctly. it should sort the categories by the recently updated date. and then below them any bookmarks that shared the parent category and have been updated recently.
 
 ---
 
