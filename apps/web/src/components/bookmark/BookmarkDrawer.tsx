@@ -7,6 +7,7 @@ import {
   LoadingOverlay,
   MultiSelect,
   Stack,
+  Switch,
   TagsInput,
   Textarea,
   TextInput,
@@ -15,6 +16,7 @@ import { notifications } from '@mantine/notifications'
 import {
   useCreateBookmark,
   useDeleteBookmarkPreview,
+  useMe,
   useSyncDuringRender,
   useUpdateBookmark,
   useUploadBookmarkPreview,
@@ -37,6 +39,8 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
   const [pendingPreview, setPendingPreview] = useState<Blob | null>(null)
   const editing = !!draft.id
+  const me = useMe(true)
+  const canSetPrivate = editing && !draft.is_vault && draft.owner_user_id === me.data?.user.id
   const createBookmark = useCreateBookmark()
   const updateBookmark = useUpdateBookmark()
   const uploadPreview = useUploadBookmarkPreview()
@@ -72,6 +76,7 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
             is_favorite: draft.is_favorite,
             is_unread: draft.is_unread,
             is_pinned: draft.is_pinned,
+            ...(canSetPrivate ? { is_private: draft.is_private } : {}),
           },
         })
         if (pendingPreview) {
@@ -150,6 +155,17 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
               setDraft((d) => ({ ...d, description }))
             }}
           />
+          {canSetPrivate ? (
+            <Switch
+              label="Only me"
+              description="Keep this off your profile, even in a visible category."
+              checked={draft.is_private}
+              onChange={(e) => {
+                const is_private = e.currentTarget.checked
+                setDraft((d) => ({ ...d, is_private }))
+              }}
+            />
+          ) : null}
           {previewAllowed ? (
             <BookmarkPreviewField
               bookmarkId={draft.id}

@@ -40,6 +40,7 @@ type Props = {
   isPinned?: boolean
   onFlags?: (patch: FlagPatch) => void
   onSaveCopy?: () => void
+  onViewOwnerProfile?: () => void
   onToggleFollowOwner?: () => void
   onToggleMuteOwner?: () => void
   onBlockOwner?: () => void
@@ -62,6 +63,7 @@ export function BookmarkCardMenu({
   isPinned,
   onFlags,
   onSaveCopy,
+  onViewOwnerProfile,
   onToggleFollowOwner,
   onToggleMuteOwner,
   onBlockOwner,
@@ -119,6 +121,7 @@ export function BookmarkCardMenu({
             Save to my library
           </Menu.Item>
         ) : null}
+        {canFollowOwner && onViewOwnerProfile ? <Menu.Item onClick={onViewOwnerProfile}>View profile</Menu.Item> : null}
         {canFollowOwner && onToggleFollowOwner ? (
           <Menu.Item
             leftSection={

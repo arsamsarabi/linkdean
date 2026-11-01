@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactElement } from 'react'
 import { Card, Checkbox, Group, Highlight, Pill, Spoiler, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { SocialDrawer } from '@/components/social'
 import { useOwnerActions, useSaveBookmarkCopy } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
@@ -51,6 +51,7 @@ export function BookmarkCard({
   const canFollowOwner = !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId
   const saveCopy = useSaveBookmarkCopy()
   const owner = useOwnerActions(b.owner_user_id, b.owner_display_name, canFollowOwner)
+  const navigate = useNavigate()
   const [socialOpen, setSocialOpen] = useState(false)
   const [blockOpen, setBlockOpen] = useState(false)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
@@ -150,6 +151,7 @@ export function BookmarkCard({
               isPinned={b.is_pinned}
               onFlags={onFlags ? (patch) => onFlags(b.id, patch) : undefined}
               onSaveCopy={() => void onSaveCopy()}
+              onViewOwnerProfile={() => void navigate({ to: '/u/$id', params: { id: b.owner_user_id! } })}
               onToggleFollowOwner={() => void owner.toggleFollow()}
               onToggleMuteOwner={() => void owner.toggleMute()}
               onBlockOwner={() => setBlockOpen(true)}
