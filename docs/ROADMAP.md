@@ -12,24 +12,51 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - Pending email invites for bookmark / list / dashboard shares (not public URLs): invite by address; if recipient has no account, they register and claim access
 - Broken-link checker (rate-limited worker)
 - Full-text notes and optional highlights
+- In the category item's menu, swap rename for **edit category** (drawer + form)
+- On bookmark cards, show **title** primary; URL beneath as small muted text
+
+**Social**
+
+- Save (“bookmark”) another user’s shared bookmark into own library
+- Share a **single bookmark** (not only folder / dashboard)
+- Follow / unfollow users
+- Block / unblock users
+- Mute / unmute users
+- Profile + library visibility: public / private / followers-only; hidden profile; private bookmarks/lists
+- _(likes, comments, ratings on shared items — already shipped)_
+
+**Sharing**
+
+- Accept / reject share flow: share → notification only; accept adds to account, reject ignores (no immediate library inject)
+
+**Teams**
+
+- Create team; invite / remove members
+- View team, members, bookmarks/lists, dashboards
+- Team activity, comments, and likes surfaces
+
+**Moderation**
+
+- Admin ban / unban user
+- Banned-users list + bulk edit
+- Ban reason shown to banned user
+- Ban duration: absolute date or N days
 
 **Vault & privacy**
 
 - Client-held vault key option (true E2E; harder search tradeoff)
 - Per-category vault passphrases (today: one vault per user)
+- Second vault unlock via Konami sequence ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react))
 
 **Auth & multi-user**
 
 - Passkeys / WebAuthn
 - Hardened OIDC (PKCE + discovery) for all providers, not just Authentik-shaped URLs
-
-**Search & data**
-
-- Personal activity history: per-item create/edit/delete log + filterable History drawer (bookmark / category / dashboard). Distinct from shared activity (notifications / comments)
+- Configurable SSO providers: Authentik, Google, Microsoft, GitHub, etc.
 
 **Platform**
 
-- SMTP / outbound email config (for invites + notification delivery)
+- SMTP / outbound email config (for invites + notification delivery) ([react-email](https://www.npmjs.com/package/react-email) for templates)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
 

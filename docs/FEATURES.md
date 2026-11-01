@@ -76,6 +76,15 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 ---
 
+## Personal activity history
+
+- Per-user create / edit / delete / restore log for bookmarks, lists, and dashboards
+- History drawer in the app shell (filter by subject + action)
+- Distinct from shared-activity notifications; vault bookmark titles redacted
+- API `GET /activity`
+
+---
+
 ## Auth & accounts
 
 - Local email / password accounts
