@@ -134,6 +134,30 @@ Keep modules small enough to review in one pass. Soft ceilings (prefer under; sp
 - Prefer Tanstack Query for API data
 - Use selectors to derive data, not components
 
+### 4.3 Prop drilling (mandatory)
+
+Avoid threading props through intermediate components that do not use them.
+
+| Need | Prefer |
+| --- | --- |
+| Server / API data | Tanstack Query domain hooks at the leaf (`useBookmarks`, `useMe`, …) |
+| URL / route state | Router hooks or domain URL hooks (`useLibraryUrlState`) at the leaf |
+| Shared UI across distant trees (shell drawers, vault unlocked, show-hidden) | **Zustand** with narrow selectors |
+| Page orchestration shared by many colocated siblings | Page-scoped context from the composition root (`LibraryPageProvider` + `useLibraryPageModel`) **or** a page Zustand store — never a 20+ field prop bag |
+| Truly local ephemeral UI (one component) | `useState` |
+
+**Do not:**
+
+- Pass the same callback/data through 2+ layers that only forward it
+- Re-list every field from `useXPage()` as props on each child
+- Put server entities in Zustand
+
+**Do:**
+
+- Colocated page children call `useLibraryPageModel()` / focused hooks / Zustand selectors
+- Shared presentational components under `components/` stay props-in (reusable); the page adapter wires them from hooks/context
+- When adding a feature that needs state in 3+ siblings, introduce context or Zustand before growing prop lists
+
 ---
 
 ## 5. Data fetching
