@@ -64,6 +64,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Share folders with invitees: **read** or **write** ACL
 - Pending email invites: share with an address that has no account yet; access is claimed when they register (or first OIDC signup). SMTP delivery still backlog.
 - Collaborative edit on write-shared collections
+- Save a shared bookmark into your own library (⋮ → Save to my library; lands in Unsorted)
 - Share dashboards: read / write; invitees see shared boards in the switcher
 - RW invitees can rearrange shared dashboards per ACL
 - Share badges on cards, glance tiles, folders, and dashboard chrome (invitee + outgoing)

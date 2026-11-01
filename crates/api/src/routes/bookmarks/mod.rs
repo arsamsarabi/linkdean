@@ -22,6 +22,7 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/broken", get(broken))
         .route("/bookmarks/broken-links", get(broken))
         .route("/bookmarks/{id}/check-link", post(check_link))
+        .route("/bookmarks/{id}/save", post(save_copy))
         .route(
             "/bookmarks/{id}/preview",
             get(get_preview)
@@ -346,5 +347,27 @@ async fn check_link(
     let view = db::bookmark_to_view(&state.pool, updated, None, user.id)
         .await?
         .ok_or(Error::NotFound)?;
+    Ok(Json(view))
+}
+
+async fn save_copy(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<BookmarkView>> {
+    let view = db::save_bookmark_copy(&state.pool, user.id, id).await?;
+    if !view.is_vault {
+        if let Err(e) = state.search.upsert_bookmark(&view).await {
+            tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
+        }
+        let pool = state.pool.clone();
+        let search = state.search.clone();
+        let opts = state.enrich_opts();
+        let uid = user.id;
+        let bid = view.id;
+        tokio::spawn(async move {
+            linkdean_worker::enrich_bookmark(&pool, &search, uid, bid, &opts).await;
+        });
+    }
     Ok(Json(view))
 }

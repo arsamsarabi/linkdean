@@ -410,6 +410,9 @@ export const api = {
   checkBookmarkLink: (id: string): Promise<Bookmark> =>
     req(`/bookmarks/${id}/check-link`, { method: 'POST' }, bookmarkSchema),
 
+  saveBookmarkCopy: (id: string): Promise<Bookmark> =>
+    req(`/bookmarks/${id}/save`, { method: 'POST' }, bookmarkSchema),
+
   listDashboards: (): Promise<DashboardSummary[]> =>
     req('/dashboards', {}, dashboardSummariesSchema),
 

@@ -3,6 +3,7 @@ import { ActionIcon, CopyButton, Menu, Tooltip } from '@mantine/core'
 import {
   IconBookmark,
   IconBookmarkFilled,
+  IconBookmarkPlus,
   IconCheck,
   IconCopy,
   IconDotsVertical,
@@ -21,11 +22,14 @@ type FlagPatch = Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: 
 type Props = {
   url: string
   canWrite: boolean
+  /** Invitee viewing someone else's shared bookmark — copy into own library. */
+  canSaveCopy?: boolean
   socialEnabled: boolean
   isFavorite?: boolean
   isUnread?: boolean
   isPinned?: boolean
   onFlags?: (patch: FlagPatch) => void
+  onSaveCopy?: () => void
   onOpenSocial: () => void
   onEdit: () => void
   onDelete: () => void
@@ -34,11 +38,13 @@ type Props = {
 export function BookmarkCardMenu({
   url,
   canWrite,
+  canSaveCopy = false,
   socialEnabled,
   isFavorite,
   isUnread,
   isPinned,
   onFlags,
+  onSaveCopy,
   onOpenSocial,
   onEdit,
   onDelete,
@@ -100,6 +106,11 @@ export function BookmarkCardMenu({
               {isPinned ? 'Unpin' : 'Pin to top'}
             </Menu.Item>
           </>
+        ) : null}
+        {canSaveCopy && onSaveCopy ? (
+          <Menu.Item leftSection={<IconBookmarkPlus size={14} stroke={1.5} />} onClick={onSaveCopy}>
+            Save to my library
+          </Menu.Item>
         ) : null}
         {socialEnabled ? (
           <Menu.Item

@@ -8,6 +8,7 @@ export type BookmarkCardItem = {
   favicon_url?: string | null
   preview_image_url?: string | null
   has_preview?: boolean
+  updated_at?: string
   is_vault: boolean
   tags: string[]
   categories?: CategoryRef[]

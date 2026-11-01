@@ -1172,6 +1172,45 @@ pub async fn record_link_check(
     Ok(())
 }
 
+/// Copy a readable non-vault bookmark into the current user's library (unsorted).
+/// Skips notes; enrich worker can refetch favicon/OG for the new row.
+pub async fn save_bookmark_copy(
+    pool: &PgPool,
+    user_id: Uuid,
+    source_id: Uuid,
+) -> Result<BookmarkView> {
+    let raw = get_bookmark_raw(pool, user_id, source_id).await?;
+    if raw.owner_user_id == user_id {
+        return Err(Error::BadRequest(
+            "bookmark is already in your library".into(),
+        ));
+    }
+    if raw.is_vault {
+        return Err(Error::BadRequest("cannot save vault bookmarks".into()));
+    }
+    let source = bookmark_to_view(pool, raw, None, user_id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    create_bookmark(
+        pool,
+        user_id,
+        CreateBookmark {
+            url: source.url,
+            title: Some(source.title),
+            description: source.description,
+            notes: None,
+            category_id: None,
+            category_ids: Vec::new(),
+            tags: source.tags,
+            is_favorite: false,
+            is_unread: false,
+            is_pinned: false,
+        },
+        None,
+    )
+    .await
+}
+
 /// Owner-only list of bookmarks currently flagged broken / unreachable.
 pub async fn list_broken_bookmarks(
     pool: &PgPool,

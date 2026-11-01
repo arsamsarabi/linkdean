@@ -8,7 +8,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Social**
 
-- Save (“bookmark”) another user’s shared bookmark into own library
 - Follow / unfollow users
 - Block / unblock users
 - Mute / unmute users

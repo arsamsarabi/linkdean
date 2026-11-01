@@ -120,3 +120,16 @@ export function useDeleteBookmarkPreview(): UseMutationResult<Bookmark, Error, s
     },
   })
 }
+
+export function useSaveBookmarkCopy(): UseMutationResult<Bookmark, Error, string> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.saveBookmarkCopy(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['bookmarks'] })
+      void qc.invalidateQueries({ queryKey: ['search'] })
+      window.setTimeout(() => void qc.invalidateQueries({ queryKey: ['bookmarks'] }), 2500)
+      window.setTimeout(() => void qc.invalidateQueries({ queryKey: ['bookmarks'] }), 6000)
+    },
+  })
+}

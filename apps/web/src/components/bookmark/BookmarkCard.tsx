@@ -11,9 +11,11 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { SocialDrawer } from '@/components/social'
+import { useSaveBookmarkCopy } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
 import { FOLDER_UNCATEGORIZED, previewSrcCandidates } from '@/services'
 import { BookmarkCardBadges } from './BookmarkCardBadges'
@@ -58,8 +60,20 @@ export function BookmarkCard({
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
   const socialEnabled = !!share || showOutgoing
+  const canSaveCopy =
+    !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId && !b.is_vault
+  const saveCopy = useSaveBookmarkCopy()
   const [socialOpen, setSocialOpen] = useState(false)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
+
+  async function onSaveCopy(): Promise<void> {
+    try {
+      await saveCopy.mutateAsync(b.id)
+      notifications.show({ message: 'Saved to your library (Unsorted)' })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
 
   const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}:${b.updated_at}`
   const [srcIndex, setSrcIndex] = useState(0)
@@ -132,11 +146,13 @@ export function BookmarkCard({
             <BookmarkCardMenu
               url={b.url}
               canWrite={canWrite}
+              canSaveCopy={canSaveCopy}
               socialEnabled={socialEnabled}
               isFavorite={b.is_favorite}
               isUnread={b.is_unread}
               isPinned={b.is_pinned}
               onFlags={onFlags ? (patch) => onFlags(b.id, patch) : undefined}
+              onSaveCopy={() => void onSaveCopy()}
               onOpenSocial={() => setSocialOpen(true)}
               onEdit={() => onEdit(b.id)}
               onDelete={() => onDelete(b.id)}
