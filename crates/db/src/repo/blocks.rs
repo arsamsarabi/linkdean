@@ -191,7 +191,7 @@ pub async fn block_user(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    // Silent revoke pending invites both directions (by email).
+    // Silent revoke open invites both directions (by email or account).
     sqlx::query(
         r#"
         UPDATE pending_share_invites
@@ -199,8 +199,8 @@ pub async fn block_user(
         WHERE claimed_at IS NULL
           AND revoked_at IS NULL
           AND (
-            (invited_by_user_id = $1 AND invitee_email = $2)
-            OR (invited_by_user_id = $3 AND invitee_email = $4)
+            (invited_by_user_id = $1 AND (invitee_email = $2 OR invitee_user_id = $5))
+            OR (invited_by_user_id = $3 AND (invitee_email = $4 OR invitee_user_id = $6))
           )
         "#,
     )
@@ -208,6 +208,8 @@ pub async fn block_user(
     .bind(target.email.to_ascii_lowercase())
     .bind(blocked_id)
     .bind(blocker.email.to_ascii_lowercase())
+    .bind(blocked_id)
+    .bind(blocker_id)
     .execute(&mut *tx)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;

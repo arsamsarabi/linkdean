@@ -261,8 +261,10 @@ pub async fn create_share(
             category_id,
             &email,
             req.access,
+            None,
         )
-        .await?;
+        .await?
+        .0;
         return Ok(CreateCategoryShareOutcome::Pending { invite });
     };
     if invitee.id == owner_user_id {
@@ -273,6 +275,30 @@ pub async fn create_share(
     let existed = find_direct_share(pool, category_id, invitee.id)
         .await?
         .is_some();
+    if !existed {
+        let (invite, created) = super::pending_shares::upsert_pending_share_invite(
+            pool,
+            owner_user_id,
+            PendingShareSubjectType::Category,
+            category_id,
+            &email,
+            req.access,
+            Some(invitee.id),
+        )
+        .await?;
+        if created {
+            super::notifications::notify_category_share_invite(
+                pool,
+                owner_user_id,
+                invitee.id,
+                category_id,
+                &cat.name,
+                invite.access,
+            )
+            .await;
+        }
+        return Ok(CreateCategoryShareOutcome::Pending { invite });
+    }
     let access = req.access.as_str();
     let row = sqlx::query_as::<_, ShareRow>(
         r#"
@@ -295,27 +321,15 @@ pub async fn create_share(
     .map_err(|e| Error::msg(e.to_string()))?;
 
     let view = to_view(row)?;
-    if existed {
-        super::notifications::notify_category_share_access(
-            pool,
-            owner_user_id,
-            invitee.id,
-            category_id,
-            &cat.name,
-            view.access,
-        )
-        .await;
-    } else {
-        super::notifications::notify_category_share_invite(
-            pool,
-            owner_user_id,
-            invitee.id,
-            category_id,
-            &cat.name,
-            view.access,
-        )
-        .await;
-    }
+    super::notifications::notify_category_share_access(
+        pool,
+        owner_user_id,
+        invitee.id,
+        category_id,
+        &cat.name,
+        view.access,
+    )
+    .await;
     Ok(CreateCategoryShareOutcome::Active { share: view })
 }
 

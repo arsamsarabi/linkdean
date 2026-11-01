@@ -10,6 +10,17 @@ use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+async fn accept_invites(pool: &sqlx::PgPool, invitee_id: Uuid) {
+    for invite in db::list_share_invites(pool, invitee_id)
+        .await
+        .expect("inbox")
+    {
+        db::accept_share_invite(pool, invitee_id, invite.id)
+            .await
+            .expect("accept");
+    }
+}
+
 async fn pool_or_skip() -> Option<PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
         eprintln!("skipping profile_visibility tests: DATABASE_URL unset");
@@ -527,6 +538,7 @@ async fn only_the_owner_sets_visibility() {
     )
     .await
     .expect("share");
+    accept_invites(&pool, writer.id).await;
 
     let denied = db::update_category(
         &pool,

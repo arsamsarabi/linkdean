@@ -8,6 +8,17 @@ use linkdean_core::{
 use linkdean_db::{self as db};
 use uuid::Uuid;
 
+async fn accept_invites(pool: &sqlx::PgPool, invitee_id: Uuid) {
+    for invite in db::list_share_invites(pool, invitee_id)
+        .await
+        .expect("inbox")
+    {
+        db::accept_share_invite(pool, invitee_id, invite.id)
+            .await
+            .expect("accept");
+    }
+}
+
 async fn pool_or_skip() -> Option<sqlx::PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
         eprintln!("skipping notifications tests: DATABASE_URL unset");
@@ -81,6 +92,8 @@ async fn category_share_emits_invite_access_revoke() {
     assert!(list.iter().any(|n| {
         n.kind == NotificationKind::ShareInvite && n.subject_id == cat.id && n.read_at.is_none()
     }));
+
+    accept_invites(&pool, invitee.id).await;
 
     db::update_share(
         &pool,
@@ -179,6 +192,7 @@ async fn shared_bookmark_edit_notifies_owner() {
     )
     .await
     .expect("share");
+    accept_invites(&pool, writer.id).await;
 
     let bm = db::create_bookmark(
         &pool,
@@ -271,6 +285,7 @@ async fn shared_dashboard_edit_notifies_owner() {
     )
     .await
     .expect("share");
+    accept_invites(&pool, writer.id).await;
 
     let _ = db::mark_all_notifications_read(&pool, owner.id).await;
 

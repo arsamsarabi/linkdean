@@ -91,12 +91,12 @@ async fn register(
             }
         }
     }
-    match db::claim_pending_share_invites(&state.pool, &req.email, user.id).await {
+    match db::link_pending_share_invites(&state.pool, &req.email, user.id).await {
         Ok(n) if n > 0 => {
-            tracing::info!(user_id = %user.id, claimed = n, "claimed pending share invites")
+            tracing::info!(user_id = %user.id, linked = n, "linked pending share invites")
         }
         Ok(_) => {}
-        Err(e) => tracing::warn!(user_id = %user.id, error = %e, "pending share claim failed"),
+        Err(e) => tracing::warn!(user_id = %user.id, error = %e, "pending share link failed"),
     }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let public = db::to_public(&state.pool, &user).await?;
@@ -302,13 +302,13 @@ async fn oidc_callback(
                 Some(&issuer),
             )
             .await?;
-            match db::claim_pending_share_invites(&state.pool, email, created.id).await {
+            match db::link_pending_share_invites(&state.pool, email, created.id).await {
                 Ok(n) if n > 0 => {
-                    tracing::info!(user_id = %created.id, claimed = n, "claimed pending share invites")
+                    tracing::info!(user_id = %created.id, linked = n, "linked pending share invites")
                 }
                 Ok(_) => {}
                 Err(e) => {
-                    tracing::warn!(user_id = %created.id, error = %e, "pending share claim failed")
+                    tracing::warn!(user_id = %created.id, error = %e, "pending share link failed")
                 }
             }
             created

@@ -11,15 +11,14 @@ use linkdean_core::{
 use linkdean_db::{self as db};
 use uuid::Uuid;
 
-fn expect_active_share(outcome: CreateCategoryShareOutcome) -> linkdean_core::CategoryShareView {
-    match outcome {
-        CreateCategoryShareOutcome::Active { share } => share,
-        CreateCategoryShareOutcome::Pending { invite } => {
-            panic!(
-                "expected active share, got pending {}",
-                invite.invitee_email
-            )
-        }
+async fn accept_invites(pool: &sqlx::PgPool, invitee_id: Uuid) {
+    for invite in db::list_share_invites(pool, invitee_id)
+        .await
+        .expect("inbox")
+    {
+        db::accept_share_invite(pool, invitee_id, invite.id)
+            .await
+            .expect("accept");
     }
 }
 
@@ -250,21 +249,22 @@ async fn share_read_and_write_membership() {
     ));
 
     // A shares with B as read
-    let share = expect_active_share(
-        db::create_share(
-            &pool,
-            user_a.id,
-            cat.id,
-            CreateCategoryShare {
-                email: user_b.email.clone(),
-                access: ShareAccess::Read,
-            },
-        )
-        .await
-        .expect("create read share"),
-    );
-    assert_eq!(share.access, ShareAccess::Read);
-    assert_eq!(share.invitee_user_id, user_b.id);
+    let outcome = db::create_share(
+        &pool,
+        user_a.id,
+        cat.id,
+        CreateCategoryShare {
+            email: user_b.email.clone(),
+            access: ShareAccess::Read,
+        },
+    )
+    .await
+    .expect("create read share");
+    assert!(matches!(
+        outcome,
+        CreateCategoryShareOutcome::Pending { .. }
+    ));
+    accept_invites(&pool, user_b.id).await;
 
     let view = db::get_category(&pool, user_b.id, cat.id)
         .await
@@ -678,10 +678,11 @@ async fn pending_share_invite_claims_on_register() {
     .await
     .expect("user b");
 
-    let claimed = db::claim_pending_share_invites(&pool, &pending_email, user_b.id)
+    let claimed = db::link_pending_share_invites(&pool, &pending_email, user_b.id)
         .await
         .expect("claim");
     assert_eq!(claimed, 1);
+    accept_invites(&pool, user_b.id).await;
 
     let view = db::get_category(&pool, user_b.id, cat.id)
         .await

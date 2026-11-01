@@ -10,6 +10,17 @@ use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+async fn accept_invites(pool: &sqlx::PgPool, invitee_id: Uuid) {
+    for invite in db::list_share_invites(pool, invitee_id)
+        .await
+        .expect("inbox")
+    {
+        db::accept_share_invite(pool, invitee_id, invite.id)
+            .await
+            .expect("accept");
+    }
+}
+
 async fn pool_or_skip() -> Option<PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
         eprintln!("skipping blocks tests: DATABASE_URL unset");
@@ -63,8 +74,11 @@ async fn share(pool: &PgPool, owner: &User, category_id: Uuid, email: &str) -> R
             access: ShareAccess::Write,
         },
     )
-    .await
-    .map(|_| ())
+    .await?;
+    if let Some(invitee) = db::find_user_by_email(pool, email).await? {
+        accept_invites(pool, invitee.id).await;
+    }
+    Ok(())
 }
 
 async fn shared_bookmark(pool: &PgPool, owner: &User, category_id: Uuid) -> Uuid {
@@ -155,6 +169,7 @@ async fn block_cuts_follows_mutes_and_shares_both_ways() {
     )
     .await
     .expect("dashboard share");
+    accept_invites(&pool, b.id).await;
 
     let relation = db::block_user(&pool, a.id, b.id).await.expect("block");
     assert!(relation.blocked);
@@ -331,7 +346,7 @@ async fn block_revokes_pending_invites_and_claim_skips_them() {
         .await
         .expect("reopen");
 
-    let claimed = db::claim_pending_share_invites(&pool, &invited, later.id)
+    let claimed = db::link_pending_share_invites(&pool, &invited, later.id)
         .await
         .expect("claim");
     assert_eq!(claimed, 0);

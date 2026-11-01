@@ -10,17 +10,14 @@ use linkdean_core::{
 use linkdean_db::{self as db};
 use uuid::Uuid;
 
-fn expect_active_dash_share(
-    outcome: CreateDashboardShareOutcome,
-) -> linkdean_core::DashboardShareView {
-    match outcome {
-        CreateDashboardShareOutcome::Active { share } => share,
-        CreateDashboardShareOutcome::Pending { invite } => {
-            panic!(
-                "expected active share, got pending {}",
-                invite.invitee_email
-            )
-        }
+async fn accept_invites(pool: &sqlx::PgPool, invitee_id: Uuid) {
+    for invite in db::list_share_invites(pool, invitee_id)
+        .await
+        .expect("inbox")
+    {
+        db::accept_share_invite(pool, invitee_id, invite.id)
+            .await
+            .expect("accept");
     }
 }
 
@@ -350,20 +347,22 @@ async fn dashboard_share_read_write_and_revoke() {
         Err(Error::NotFound)
     ));
 
-    let share = expect_active_dash_share(
-        db::create_dashboard_share(
-            &pool,
-            user_a.id,
-            home.id,
-            CreateDashboardShare {
-                email: user_b.email.clone(),
-                access: ShareAccess::Read,
-            },
-        )
-        .await
-        .expect("share read"),
-    );
-    assert_eq!(share.access, ShareAccess::Read);
+    let outcome = db::create_dashboard_share(
+        &pool,
+        user_a.id,
+        home.id,
+        CreateDashboardShare {
+            email: user_b.email.clone(),
+            access: ShareAccess::Read,
+        },
+    )
+    .await
+    .expect("share read");
+    assert!(matches!(
+        outcome,
+        CreateDashboardShareOutcome::Pending { .. }
+    ));
+    accept_invites(&pool, user_b.id).await;
 
     let as_b = db::get_dashboard(&pool, user_b.id, home.id, None)
         .await

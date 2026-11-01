@@ -10,6 +10,17 @@ use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+async fn accept_invites(pool: &sqlx::PgPool, invitee_id: Uuid) {
+    for invite in db::list_share_invites(pool, invitee_id)
+        .await
+        .expect("inbox")
+    {
+        db::accept_share_invite(pool, invitee_id, invite.id)
+            .await
+            .expect("accept");
+    }
+}
+
 async fn pool_or_skip() -> Option<PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
         eprintln!("skipping dashboard pin tests: DATABASE_URL unset");
@@ -49,6 +60,7 @@ async fn shared_board(pool: &PgPool, owner: &User, invitee: &User, access: Share
     )
     .await
     .expect("share");
+    accept_invites(pool, invitee.id).await;
     board.id
 }
 

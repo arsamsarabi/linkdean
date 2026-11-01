@@ -312,8 +312,10 @@ pub async fn create_dashboard_share(
             dashboard_id,
             &email,
             req.access,
+            None,
         )
-        .await?;
+        .await?
+        .0;
         return Ok(CreateDashboardShareOutcome::Pending { invite });
     };
     if invitee.id == owner_user_id {
@@ -324,6 +326,30 @@ pub async fn create_dashboard_share(
     let existed = find_direct_dashboard_share(pool, dashboard_id, invitee.id)
         .await?
         .is_some();
+    if !existed {
+        let (invite, created) = super::pending_shares::upsert_pending_share_invite(
+            pool,
+            owner_user_id,
+            PendingShareSubjectType::Dashboard,
+            dashboard_id,
+            &email,
+            req.access,
+            Some(invitee.id),
+        )
+        .await?;
+        if created {
+            super::notifications::notify_dashboard_share_invite(
+                pool,
+                owner_user_id,
+                invitee.id,
+                dashboard_id,
+                &dash.title,
+                invite.access,
+            )
+            .await;
+        }
+        return Ok(CreateDashboardShareOutcome::Pending { invite });
+    }
     let access = req.access.as_str();
     let row = sqlx::query_as::<_, DashShareRow>(
         r#"
@@ -346,27 +372,15 @@ pub async fn create_dashboard_share(
     .map_err(|e| Error::msg(e.to_string()))?;
 
     let view = to_view(row)?;
-    if existed {
-        super::notifications::notify_dashboard_share_access(
-            pool,
-            owner_user_id,
-            invitee.id,
-            dashboard_id,
-            &dash.title,
-            view.access,
-        )
-        .await;
-    } else {
-        super::notifications::notify_dashboard_share_invite(
-            pool,
-            owner_user_id,
-            invitee.id,
-            dashboard_id,
-            &dash.title,
-            view.access,
-        )
-        .await;
-    }
+    super::notifications::notify_dashboard_share_access(
+        pool,
+        owner_user_id,
+        invitee.id,
+        dashboard_id,
+        &dash.title,
+        view.access,
+    )
+    .await;
     Ok(CreateDashboardShareOutcome::Active { share: view })
 }
 

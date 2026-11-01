@@ -154,7 +154,7 @@ pub async fn notify_category_share_invite(
             subject_id: category_id,
             subject_title: category_name,
         },
-        &format!("{actor_label} shared folder “{category_name}” with you ({access_label})"),
+        &format!("{actor_label} invited you to folder “{category_name}” ({access_label})"),
         json!({ "access": access.as_str() }),
     )
     .await;
@@ -230,7 +230,7 @@ pub async fn notify_dashboard_share_invite(
             subject_id: dashboard_id,
             subject_title: dashboard_title,
         },
-        &format!("{actor_label} shared dashboard “{dashboard_title}” with you ({access_label})"),
+        &format!("{actor_label} invited you to dashboard “{dashboard_title}” ({access_label})"),
         json!({ "access": access.as_str() }),
     )
     .await;
