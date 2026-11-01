@@ -24,7 +24,7 @@ export function useLockAllVaults(): UseMutationResult<unknown, Error, void> {
     mutationFn: () => api.lockAllVaults(),
     onSuccess: () => {
       setVaultUnlocked(false)
-      invalidateVaultRelated(qc)
+      resetDecrypted(qc)
     },
   })
 }
@@ -35,6 +35,20 @@ export function useVaults(enabled = true): UseQueryResult<{ vaults: Vault[] }> {
 
 export function useGlobalPassphrase(enabled = true): UseQueryResult<{ enabled: boolean }> {
   return useQuery({ queryKey: ['vaults', 'global'], queryFn: api.globalPassphrase, enabled })
+}
+
+/** Drops decrypted data. Invalidating alone would leave it cached and visible on Back. */
+function resetDecrypted(qc: ReturnType<typeof useQueryClient>): void {
+  for (const queryKey of [['bookmarks'], ['categories'], ['search'], ['dashboard']]) {
+    void qc.resetQueries({ queryKey })
+  }
+  void qc.invalidateQueries({ queryKey: ['vaults'] })
+  void qc.invalidateQueries({ queryKey: ['me'] })
+}
+
+function useLockAction<T>(action: (input: T) => Promise<unknown>): UseMutationResult<unknown, Error, T> {
+  const qc = useQueryClient()
+  return useMutation({ mutationFn: action, onSuccess: () => resetDecrypted(qc) })
 }
 
 function useVaultAction<T>(action: (input: T) => Promise<unknown>): UseMutationResult<unknown, Error, T> {
@@ -60,12 +74,12 @@ export const useRenameVault = (): UseMutationResult<unknown, Error, { id: string
   useVaultAction(({ id, name }) => api.renameVault(id, name))
 
 export const useDeleteVault = (): UseMutationResult<unknown, Error, { id: string; name: string; password?: string }> =>
-  useVaultAction(({ id, ...body }) => api.deleteVault(id, body))
+  useLockAction(({ id, ...body }) => api.deleteVault(id, body))
 
 export const useUnlockVault = (): UseMutationResult<unknown, Error, { id: string; passphrase: string }> =>
   useVaultAction(({ id, passphrase }) => api.unlockVault(id, passphrase))
 
-export const useLockVault = (): UseMutationResult<unknown, Error, string> => useVaultAction(api.lockVault)
+export const useLockVault = (): UseMutationResult<unknown, Error, string> => useLockAction(api.lockVault)
 
 export const useRecoverVault = (): UseMutationResult<
   unknown,
