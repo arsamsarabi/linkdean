@@ -26,8 +26,7 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 **Vault & privacy**
 
 - Client-held vault key option (true E2E; harder search tradeoff)
-- Per-category vault passphrases (today: one vault per user)
-- Second vault unlock via Konami sequence ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react))
+- Multiple vaults, Per-category vault passphrases or global vaults passphrase (today: one vault per user)
 
 **Auth & multi-user**
 
@@ -81,3 +80,5 @@ Lowest numbered priority among the planned interactive surfaces.
 - Quick file-to-category from the extension
 
 5. can we get around cloudflare bot protection?
+
+6. Easter eggs with Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), needs React 19 support first)
