@@ -57,15 +57,16 @@ Linkdean is a small, self-hosted bookmarks server: Postgres, optional Meilisearc
 
 | Area | Capability |
 | --- | --- |
-| **Library** | Nested categories, multi-category bookmarks, tags, grid + explorer layouts |
+| **Library** | Nested categories, tags, grid + explorer, bulk edit, flags, trash |
+| **Dashboards** | Multi-board glance home; shareable layouts |
 | **Search** | Meilisearch full-text for non-vault bookmarks |
 | **Vault** | Passphrase-protected categories; plaintext never indexed |
-| **Hidden** | Declutter without encrypting |
-| **Import / export** | Netscape HTML, Linkdean JSON, Pocket & Raindrop CSV in; JSON + Netscape out |
-| **Auth** | Local password, optional OIDC, first-user admin onboarding, open-registration toggle |
-| **Sharing** | Invite same-instance users to a folder as **read** or **write** |
-| **Enrichment** | Title / favicon / preview fetch (optional headless Chrome) |
-| **Ops** | Compose healthchecks, `/api/health` + `/api/ready`, avatars + previews on volumes, admin Meili reindex |
+| **Sharing** | Same-instance folder / dashboard ACL; likes, comments, ratings |
+| **Auth** | Local password, optional OIDC, admin accounts, API keys |
+| **Import / export** | Netscape, JSON, Pocket, Raindrop |
+| **Ops** | Compose healthchecks, ready probe, backup recipe, admin reindex |
+
+Full list: [docs/FEATURES.md](docs/FEATURES.md).
 
 ---
 
@@ -191,20 +192,20 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 
 | Doc | Contents |
 | --- | --- |
+| [Features](docs/FEATURES.md) | What the app can do today |
 | [Architecture](docs/ARCHITECTURE.md) | Stack, domain model, auth, vault vs hidden |
-| [Roadmap](docs/ROADMAP.md) | Build order / milestones |
-| [Self-host](docs/self-host.md) | Compose + OIDC checklist |
+| [Roadmap](docs/ROADMAP.md) | Planned milestones / backlog |
+| [Self-host](docs/self-host.md) | Compose + OIDC + backup checklist |
 | [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---
 
 ## Roadmap
 
-**Shipped (v1):** nested categories and tags, Meili search, import/export, vault, hidden folders, local + OIDC auth, Compose path, library views, admin registration toggle.
+**Next up:** browser extension (save tab / file to category). Backlog includes public list URLs, email invites, search filters, SMTP, PWA, and more. Far out: native apps, archive/downloads, gamification.
 
-**Planned (v2+):** personal dashboards (M2 polish — glance home + landing pref), shared dashboards, API keys, archive/downloads, browser extension, shared activity/social. Native mobile apps are unplanned.
-
-Full ordered list: [docs/ROADMAP.md](docs/ROADMAP.md).
+- Capabilities: [docs/FEATURES.md](docs/FEATURES.md)
+- Plan: [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ---
 

@@ -1,6 +1,6 @@
 # Ideas
 
-Scratch space for unprioritized ideas. Promote into [ROADMAP.md](./ROADMAP.md) when scheduled.
+Scratch space for unprioritized ideas. Promote into [ROADMAP.md](./ROADMAP.md) when scheduled. Shipped product surface: [FEATURES.md](./FEATURES.md).
 
 ## improved social features
 

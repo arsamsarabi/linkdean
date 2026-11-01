@@ -97,4 +97,4 @@ cargo run -p linkdean-api
 cd apps/web && pnpm dev   # :5173 proxies /api → :8080
 ```
 
-See also [self-host.md](./self-host.md) and [ROADMAP.md](./ROADMAP.md).
+See also [FEATURES.md](./FEATURES.md), [self-host.md](./self-host.md), and [ROADMAP.md](./ROADMAP.md).

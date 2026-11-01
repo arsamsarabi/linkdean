@@ -1,141 +1,17 @@
 # Roadmap
 
-Ordered milestones define build order. Each milestone lists concrete deliverables.
-
-## Shipped (v1)
-
-- Nested categories + tags
-- Meilisearch search (non-vault)
-- Import / export (Netscape, JSON, Pocket, Raindrop)
-- Multi-device via server account
-- Hidden categories
-- Password-protected vault categories
-- Local auth + optional OIDC
-- First-user onboarding (admin)
-- Docker Compose self-host path
-- Library grid + explorer views (preference persisted)
-- Admin: open registration toggle
-- Vault auto-lock setting (UI)
-- Same-instance category sharing (read / write ACL, share UI, Meili visibility, RO library gates)
+What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md). Scratch ideas: [IDEAS.md](./IDEAS.md).
 
 ---
 
-## Milestone 1: Sharing infra (v2 core) — done
-
-Foundation for collaboration. Sharing landed before personal dashboards so shared dashboards (Milestone 3) reuse the same ACL model.
-
-**Delivered**
-
-- Share folders / lists with other users on the same instance
-- Invite model with access levels: read-only / read-write
-- Collaborative edit on shared collections (RW invitees)
-- Schema next to `owner_user_id` (`category_shares`); library + explorer polish (RO gates, shared section)
-
-**Out of this milestone**
-
-- Public bookmark list URLs (backlog)
-- Shared dashboards (Milestone 3)
-
----
-
-## Milestone 2: Personal dashboard — done
-
-Home surface for a single user (glance-style sectioned grid). `/` is the dashboard; library stays at `/library`.
-
-**Delivered**
-
-- User dashboard: sectioned grid of selected bookmarks
-- Arrange / edit layout of frequently visited links
-- Persisted per-user layout (`dashboards` + sections + items)
-- Glance tiles + section reorder; `default_landing` `/` vs `/library` (Settings + post-login)
-- Invitee share badges on cards / glance tiles / folder tiles
-- App shell: **Dashboard** nav next to Library; logo click honors `default_landing`
-- Owner-side share cue on bookmarks / folders you have shared out
-- Multi-dashboard: many boards, one default pin; page switcher + create / pin / delete; Settings default-dashboard select; rename via edit-layout title; delete pin falls back or recreates Home
-- Library BookmarkCard on home; denser dashboard grid; Unsorted pill + filter; First-install login link removed
-
----
-
-## Milestone 3: Shared dashboards — done
-
-Depends on Milestone 1 (share/ACL) and builds on Milestone 2 (dashboard UX), including multi-dashboard.
-
-**Delivered**
-
-- Share a dashboard with invitees
-- Creator controls invitee access: read-only / read-write
-- Invitees see shared layout; RW can rearrange per ACL rules
-- Shared-dashboard visual cues consistent with folder/bookmark share badges
-- Invitees can switch among dashboards shared with them (alongside own)
-- `dashboard_shares` migration + ACL (`read` / `write`); owner-only share / delete / pin
-- List merges owned + shared; non-vault pins visible to invitees; vault pins stay owner-only
-- API `/dashboards/{id}/shares`; Share drawer + badges on dashboard page
-
----
-
-## Milestone 4: API keys — done
-
-Programmatic access to a user's own data. Independent of sharing; scheduled after dashboards.
-
-**Delivered**
-
-- Users create / revoke API keys scoped to their own data (`/api-keys`; Settings → API keys)
-- Admin: enable/disable API keys for the whole platform (`platform_settings.api_keys_enabled`)
-- Admin: enable/disable API keys per user (`users.api_keys_enabled`; Admin → per-user list)
-- Auth path accepts API key (Bearer `ldk_…`) alongside session; secret hashed at rest, shown once
-
----
-
-## Milestone 5: Shared activity & social (confirm done)
-
-Depends on Milestone 1 (share/ACL). Activity surfaces benefit from Milestone 3 (shared dashboards); notifications can start on shared folders/lists alone. Email delivery depends on Platform SMTP (backlog).
-
-Internal build order: notifications, discussion, lightweight reactions; gamification last (or backlog if scope expands).
-
-**Deliverables**
-
-- Notifications for shared activity (invites, edits, membership changes)
-- Comments on shared bookmarks / lists / dashboards
-- Likes on shared bookmarks / lists / dashboards
-- Ratings on shared bookmarks / lists / dashboards
-- Light gamification (optional; defer to backlog if it threatens the rest)
-
-**Building**
-
-- In-app notifications: `notifications` table; emit on category/dashboard share invite / access / revoke + shared edits (bookmark / folder / dashboard)
-- API `/notifications` list / unread-count / read / read-all
-- AppShell bell + drawer (poll unread)
-
----
-
-## Milestone 6: Browser extension
-
-Lowest numbered priority among the planned interactive surfaces.
-
-**Deliverables**
-
-- Save current tab to Linkdean
-- Quick file-to-category from the extension
-
----
-
-## Backlog (unscheduled)
-
-Items may be promoted into a milestone when prioritized.
+## Backlog 
 
 **Product**
 
 - Public bookmark list URLs (after sharing infra is solid)
 - Pending email invites for bookmark / list / dashboard shares (not public URLs): invite by address; if recipient has no account, they register and claim access
-- ~~Bulk edit / multi-select move, tag, delete~~ (library Select mode + bulk drawer)
-- ~~Duplicate merge UI~~ (`GET /bookmarks/duplicates` groups + library drawer)
-- ~~Duplicate / fork a list~~ (`POST /categories/{id}/fork`; Settings → Categories copy action)
 - Broken-link checker (rate-limited worker)
-- ~~Keyboard-first command palette (add, search, jump category)~~ (`/` + mod+K; AppShell palette)
-- ~~Reading list / unread + pin / favorites~~ (`bookmark_flags`; library chips + card menu; open link marks read)
 - Full-text notes and optional highlights
-- ~~Favicon + OG image cache on disk (not hot-fetch forever)~~ (`PREVIEW_DIR`; enrich writes; `/favicon` + `/og` serve)
-- ~~Reimagine category management UX~~ (Settings → Categories explorer + new-category drawer)
 - Category icons
 
 **Vault & privacy**
@@ -146,28 +22,21 @@ Items may be promoted into a milestone when prioritized.
 **Auth & multi-user**
 
 - Admin UI: invite users (registration gate already shipped)
-- ~~Admin promote admin~~ (Settings → Admin → Accounts `is_admin` toggle; last-admin demote blocked)
-- ~~Admin users dashboard: list / manage accounts~~ (Admin → account list + promote + API-keys toggle; never reads private user data)
 - Passkeys / WebAuthn
 - Hardened OIDC (PKCE + discovery) for all providers, not just Authentik-shaped URLs
 
 **Search & data**
 
 - Wait/retry UX when Meili is briefly behind writes
-- ~~Reindex button for admins~~ (`POST /admin/search/reindex`; Settings → Admin → Search index)
 - Search filters: tag, category, date, vault-only
-- ~~Soft-delete + trash / undo~~ (deleted_at; `/trash` restore/purge; retention + show-deleted-in-library)
-- Personal activity history: per-item create/edit/delete log + filterable History drawer (bookmark / category / dashboard). Distinct from Milestone 5 shared activity (notifications / comments)
+- Personal activity history: per-item create/edit/delete log + filterable History drawer (bookmark / category / dashboard). Distinct from shared activity (notifications / comments)
 
 **Platform**
 
-- ~~Official `docker compose` one-liner docs + healthchecks~~ (README + `docs/self-host.md`; Compose probes on db / Meili / api)
 - Prometheus metrics (counters / histograms). Partial: `/api/ready` dependency probe
-- ~~Backup recipe (pg_dump + meili dump) in docs~~ (`docs/self-host.md`)
-- SMTP / outbound email config (for invites + Milestone 5 notifications)
+- SMTP / outbound email config (for invites + notification delivery)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
-- ~~Burger / collapse nav for mobile and very small viewports~~ (AppShell Burger + Drawer `<sm`)
 - PWA install for app-like phone use
 
 ---
@@ -189,4 +58,13 @@ Heavy infra; scheduled after interactive product surfaces.
 - Separate storage volume + background job queue
 - Deploy: archive worker + volume mount convention
 
-3. Improved gamification
+3. Improved gamification (points / badges on top of likes & ratings)
+
+4. Browser extension
+
+Lowest numbered priority among the planned interactive surfaces.
+
+**Deliverables**
+
+- Save current tab to Linkdean
+- Quick file-to-category from the extension
