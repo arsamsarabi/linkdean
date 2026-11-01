@@ -105,6 +105,20 @@ impl SearchClient {
         Ok(())
     }
 
+    /// Drop every document so a full reindex starts clean (stale docs gone).
+    pub async fn clear_index(&self) -> anyhow::Result<()> {
+        let task = self
+            .client
+            .index(&self.index_name)
+            .delete_all_documents()
+            .await
+            .context("meili delete all")?;
+        task.wait_for_completion(&self.client, None, None)
+            .await
+            .context("meili delete all wait")?;
+        Ok(())
+    }
+
     /// Search bookmarks owned by `user` or filed under any of `readable_category_ids`.
     pub async fn search(
         &self,

@@ -86,7 +86,7 @@ Programmatic access to a user's own data. Independent of sharing; scheduled afte
 
 ---
 
-## Milestone 5: Shared activity & social (building)
+## Milestone 5: Shared activity & social (confirm done)
 
 Depends on Milestone 1 (share/ACL). Activity surfaces benefit from Milestone 3 (shared dashboards); notifications can start on shared folders/lists alone. Email delivery depends on Platform SMTP (backlog).
 
@@ -145,28 +145,29 @@ Items may be promoted into a milestone when prioritized.
 
 **Auth & multi-user**
 
-- Admin UI: invite users, promote admin (registration gate already shipped)
-- Admin users dashboard: list / manage accounts; never read private user data (bookmarks, categories, vault, etc.). Partial: Admin → account list + API-keys toggle (Milestone 4)
+- Admin UI: invite users (registration gate already shipped)
+- ~~Admin promote admin~~ (Settings → Admin → Accounts `is_admin` toggle; last-admin demote blocked)
+- ~~Admin users dashboard: list / manage accounts~~ (Admin → account list + promote + API-keys toggle; never reads private user data)
 - Passkeys / WebAuthn
 - Hardened OIDC (PKCE + discovery) for all providers, not just Authentik-shaped URLs
 
 **Search & data**
 
 - Wait/retry UX when Meili is briefly behind writes
-- Reindex button for admins
+- ~~Reindex button for admins~~ (`POST /admin/search/reindex`; Settings → Admin → Search index)
 - Search filters: tag, category, date, vault-only
 - ~~Soft-delete + trash / undo~~ (deleted_at; `/trash` restore/purge; retention + show-deleted-in-library)
 - Personal activity history: per-item create/edit/delete log + filterable History drawer (bookmark / category / dashboard). Distinct from Milestone 5 shared activity (notifications / comments)
 
 **Platform**
 
-- Official `docker compose` one-liner docs + healthchecks in README badge style
-- Prometheus metrics / basic ops endpoint
-- Backup recipe (pg_dump + meili dump) in docs
+- ~~Official `docker compose` one-liner docs + healthchecks~~ (README + `docs/self-host.md`; Compose probes on db / Meili / api)
+- Prometheus metrics (counters / histograms). Partial: `/api/ready` dependency probe
+- ~~Backup recipe (pg_dump + meili dump) in docs~~ (`docs/self-host.md`)
 - SMTP / outbound email config (for invites + Milestone 5 notifications)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
-- Burger / collapse nav for mobile and very small viewports
+- ~~Burger / collapse nav for mobile and very small viewports~~ (AppShell Burger + Drawer `<sm`)
 - PWA install for app-like phone use
 
 ---
@@ -187,3 +188,5 @@ Heavy infra; scheduled after interactive product surfaces.
 - Download / export: PDF, Markdown (reader mode), images, audio, video
 - Separate storage volume + background job queue
 - Deploy: archive worker + volume mount convention
+
+3. Improved gamification

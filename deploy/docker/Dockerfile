@@ -18,7 +18,7 @@ RUN cargo build --release -p linkdean-api
 
 # --- runtime ---
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates libwebp7 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates curl libwebp7 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=api /src/target/release/linkdean-api /app/linkdean-api
 COPY --from=web /web/dist /app/static

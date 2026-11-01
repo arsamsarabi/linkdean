@@ -125,6 +125,7 @@ async fn platform_and_user_gates_block_keys() {
         user.id,
         UpdateAdminUser {
             api_keys_enabled: Some(false),
+            is_admin: None,
         },
     )
     .await
@@ -140,6 +141,7 @@ async fn platform_and_user_gates_block_keys() {
         user.id,
         UpdateAdminUser {
             api_keys_enabled: Some(true),
+            is_admin: None,
         },
     )
     .await;

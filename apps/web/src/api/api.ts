@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  adminReindexSchema,
   adminUserEnvelopeSchema,
   adminUsersEnvelopeSchema,
   apiKeysEnvelopeSchema,
@@ -79,9 +80,12 @@ export const api = {
 
   updateAdminUser: (
     id: string,
-    body: { api_keys_enabled?: boolean }
+    body: { api_keys_enabled?: boolean; is_admin?: boolean }
   ): Promise<{ user: AdminUserSummary }> =>
     req(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, adminUserEnvelopeSchema),
+
+  reindexSearch: (): Promise<{ ok: boolean; upserted: number; failed: number }> =>
+    req('/admin/search/reindex', { method: 'POST' }, adminReindexSchema),
 
   listApiKeys: (): Promise<{ keys: ApiKey[] }> => req('/api-keys', {}, apiKeysEnvelopeSchema),
 

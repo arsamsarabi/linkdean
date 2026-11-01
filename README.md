@@ -65,7 +65,7 @@ Linkdean is a small, self-hosted bookmarks server: Postgres, optional Meilisearc
 | **Auth** | Local password, optional OIDC, first-user admin onboarding, open-registration toggle |
 | **Sharing** | Invite same-instance users to a folder as **read** or **write** |
 | **Enrichment** | Title / favicon / preview fetch (optional headless Chrome) |
-| **Ops** | Single Compose stack, avatars + previews on volumes, health endpoint |
+| **Ops** | Compose healthchecks, `/api/health` + `/api/ready`, avatars + previews on volumes, admin Meili reindex |
 
 ---
 
@@ -79,11 +79,12 @@ cd linkdean
 cp .env.example .env
 # set SESSION_SECRET to a long random string
 
-cd deploy/docker
-docker compose up -d --build
+docker compose -f deploy/docker/docker-compose.yml up -d --build
 ```
 
 Open **http://localhost:8080**. The first registered user becomes admin.
+
+Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/self-host.md](docs/self-host.md).
 
 ### Stack services
 

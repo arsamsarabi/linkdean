@@ -49,15 +49,26 @@ export function useAdminUsers(enabled = true): UseQueryResult<{ users: AdminUser
 export function useUpdateAdminUser(): UseMutationResult<
   { user: AdminUserSummary },
   Error,
-  { id: string; api_keys_enabled: boolean }
+  { id: string; api_keys_enabled?: boolean; is_admin?: boolean }
 > {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, api_keys_enabled }) => api.updateAdminUser(id, { api_keys_enabled }),
+    mutationFn: ({ id, api_keys_enabled, is_admin }) =>
+      api.updateAdminUser(id, { api_keys_enabled, is_admin }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
       void qc.invalidateQueries({ queryKey: ['me'] })
     },
+  })
+}
+
+export function useReindexSearch(): UseMutationResult<
+  { ok: boolean; upserted: number; failed: number },
+  Error,
+  void
+> {
+  return useMutation({
+    mutationFn: () => api.reindexSearch(),
   })
 }
 

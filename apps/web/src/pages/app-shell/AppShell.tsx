@@ -1,13 +1,17 @@
 import { useEffect, type ReactElement } from 'react'
 import {
+  Burger,
   Button,
   Code,
+  Drawer,
   Group,
   Indicator,
   Loader,
   AppShell as MantineAppShell,
   Menu,
+  NavLink,
   Skeleton,
+  Stack,
   Title,
   Tooltip,
   UnstyledButton,
@@ -47,6 +51,7 @@ export function AppShell(): ReactElement {
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const [paletteOpen, { open: openPalette, close: closePalette, toggle: togglePalette }] = useDisclosure(false)
   const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false)
+  const [navOpen, { toggle: toggleNav, close: closeNav }] = useDisclosure(false)
   const unread = useUnreadNotificationCount(!!me.data)
 
   useEffect(() => {
@@ -93,6 +98,13 @@ export function AppShell(): ReactElement {
         <PageContainer h="100%">
           <Group h="100%" justify="space-between">
             <Group gap="md" wrap="nowrap">
+              <Burger
+                opened={navOpen}
+                onClick={toggleNav}
+                hiddenFrom="sm"
+                size="sm"
+                aria-label="Open navigation"
+              />
               <UnstyledButton
                 component={Link}
                 to={landing}
@@ -100,7 +112,7 @@ export function AppShell(): ReactElement {
               >
                 <Group gap="sm" wrap="nowrap">
                   <LogoMark size={28} />
-                  <Title order={3} c="violet">
+                  <Title order={3} c="violet" visibleFrom="xs">
                     Linkdean
                   </Title>
                 </Group>
@@ -111,6 +123,7 @@ export function AppShell(): ReactElement {
                 variant={onDashboard ? 'light' : 'subtle'}
                 leftSection={<IconLayoutDashboard {...iconSm} />}
                 size="compact-sm"
+                visibleFrom="sm"
               >
                 Dashboard
               </Button>
@@ -120,6 +133,7 @@ export function AppShell(): ReactElement {
                 variant={onLibrary ? 'light' : 'subtle'}
                 leftSection={<IconBooks {...iconSm} />}
                 size="compact-sm"
+                visibleFrom="sm"
               >
                 Library
               </Button>
@@ -198,6 +212,33 @@ export function AppShell(): ReactElement {
           )}
         </PageContainer>
       </MantineAppShell.Main>
+      <Drawer
+        opened={navOpen}
+        onClose={closeNav}
+        size="xs"
+        padding="md"
+        title="Navigate"
+        hiddenFrom="sm"
+      >
+        <Stack gap="xs">
+          <NavLink
+            component={Link}
+            to="/"
+            label="Dashboard"
+            leftSection={<IconLayoutDashboard {...iconProps} />}
+            active={onDashboard}
+            onClick={closeNav}
+          />
+          <NavLink
+            component={Link}
+            to="/library"
+            label="Library"
+            leftSection={<IconBooks {...iconProps} />}
+            active={onLibrary}
+            onClick={closeNav}
+          />
+        </Stack>
+      </Drawer>
       <CommandPalette opened={paletteOpen} onClose={closePalette} />
       <NotificationsDrawer opened={notifOpen} onClose={closeNotif} />
     </MantineAppShell>

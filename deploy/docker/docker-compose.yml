@@ -26,6 +26,11 @@ services:
       - meili:/meili_data
     ports:
       - "7700:7700"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   chrome:
     image: zenika/alpine-chrome:124
@@ -70,9 +75,15 @@ services:
       db:
         condition: service_healthy
       meilisearch:
-        condition: service_started
+        condition: service_healthy
       chrome:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
 volumes:
   pgdata:

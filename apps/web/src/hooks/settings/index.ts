@@ -3,6 +3,7 @@ export {
   useUpdatePlatformSettings,
   useAdminUsers,
   useUpdateAdminUser,
+  useReindexSearch,
   useApiKeys,
   useCreateApiKey,
   useRevokeApiKey,

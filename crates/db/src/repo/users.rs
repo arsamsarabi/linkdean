@@ -166,6 +166,18 @@ pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
         .collect())
 }
 
+pub async fn count_admins(pool: &PgPool) -> Result<i64> {
+    let n: (i64,) = sqlx::query_as(
+        r#"
+        SELECT COUNT(*)::bigint FROM users WHERE is_admin = TRUE
+        "#,
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(n.0)
+}
+
 pub async fn update_admin_user(
     pool: &PgPool,
     user_id: Uuid,
@@ -184,6 +196,29 @@ pub async fn update_admin_user(
             "#,
         )
         .bind(enabled)
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    }
+    if let Some(is_admin) = patch.is_admin {
+        if !is_admin && user.is_admin {
+            let admins = count_admins(pool).await?;
+            if admins <= 1 {
+                return Err(Error::BadRequest(
+                    "cannot demote the last admin".into(),
+                ));
+            }
+        }
+        user = sqlx::query_as::<_, User>(
+            r#"
+            UPDATE users
+            SET is_admin = $1, updated_at = now()
+            WHERE id = $2
+            RETURNING *
+            "#,
+        )
+        .bind(is_admin)
         .bind(user_id)
         .fetch_one(pool)
         .await

@@ -2,7 +2,7 @@ use crate::auth::AdminUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, State};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::{UpdateAdminUser, UpdatePlatformSettings};
 use linkdean_db::{self as db};
@@ -17,6 +17,7 @@ pub fn router() -> Router<AppState> {
         )
         .route("/admin/users", get(list_users))
         .route("/admin/users/{id}", axum::routing::patch(patch_user))
+        .route("/admin/search/reindex", post(reindex_search))
 }
 
 async fn get_platform_settings(
@@ -58,4 +59,49 @@ async fn patch_user(
 ) -> ApiResult<Json<Value>> {
     let user = db::update_admin_user(&state.pool, id, req).await?;
     Ok(Json(json!({ "user": user })))
+}
+
+/// Clear Meili bookmarks index and re-upsert all non-vault, non-deleted bookmarks.
+async fn reindex_search(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+) -> ApiResult<Json<Value>> {
+    if let Err(e) = state.search.ensure_index().await {
+        tracing::warn!("meili ensure_index before reindex: {e}");
+    }
+    if let Err(e) = state.search.clear_index().await {
+        return Err(linkdean_core::Error::msg(format!("meili clear failed: {e}")).into());
+    }
+
+    let users = db::list_admin_users(&state.pool).await?;
+    let mut upserted: u64 = 0;
+    let mut failed: u64 = 0;
+
+    for u in users {
+        let Ok(items) =
+            db::list_bookmarks(&state.pool, u.id, None, false, None, false).await
+        else {
+            continue;
+        };
+        for v in items {
+            // Shared rows appear under multiple invitees; upsert by id is idempotent.
+            // Prefer owner-owned docs: skip when listing through a non-owner (shared).
+            if v.owner_user_id != u.id {
+                continue;
+            }
+            match state.search.upsert_bookmark(&v).await {
+                Ok(()) => upserted += 1,
+                Err(e) => {
+                    failed += 1;
+                    tracing::warn!(bookmark_id = %v.id, error = %e, "meili reindex upsert failed");
+                }
+            }
+        }
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "upserted": upserted,
+        "failed": failed,
+    })))
 }

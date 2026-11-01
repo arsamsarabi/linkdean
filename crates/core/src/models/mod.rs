@@ -137,6 +137,7 @@ pub struct AdminUserSummary {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAdminUser {
     pub api_keys_enabled: Option<bool>,
+    pub is_admin: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

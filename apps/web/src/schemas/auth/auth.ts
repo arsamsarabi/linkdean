@@ -85,6 +85,12 @@ export const adminUserEnvelopeSchema = z.object({
   user: adminUserSummarySchema,
 })
 
+export const adminReindexSchema = z.object({
+  ok: z.boolean(),
+  upserted: z.number(),
+  failed: z.number(),
+})
+
 export const authTokenResponseSchema = z.object({
   user: userPublicSchema,
   token: z.string(),
