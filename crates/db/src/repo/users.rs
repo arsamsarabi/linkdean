@@ -6,6 +6,8 @@ use linkdean_core::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use super::moderation::{active_ban, active_ban_windows, count_active_admins_except, BanWindow};
+
 pub async fn count_users(pool: &PgPool) -> Result<i64> {
     let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
         .fetch_one(pool)
@@ -144,6 +146,19 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
     })
 }
 
+fn admin_summary(user: User, ban: Option<&BanWindow>) -> AdminUserSummary {
+    AdminUserSummary {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        is_admin: user.is_admin,
+        api_keys_enabled: user.api_keys_enabled,
+        created_at: user.created_at,
+        banned: ban.is_some(),
+        banned_until: ban.and_then(|b| b.ends_at),
+    }
+}
+
 pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
     let rows = sqlx::query_as::<_, User>(
         r#"
@@ -154,29 +169,14 @@ pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
+    let bans = active_ban_windows(pool).await?;
     Ok(rows
         .into_iter()
-        .map(|u| AdminUserSummary {
-            id: u.id,
-            email: u.email,
-            display_name: u.display_name,
-            is_admin: u.is_admin,
-            api_keys_enabled: u.api_keys_enabled,
-            created_at: u.created_at,
+        .map(|u| {
+            let ban = bans.iter().find(|b| b.user_id == u.id);
+            admin_summary(u, ban)
         })
         .collect())
-}
-
-pub async fn count_admins(pool: &PgPool) -> Result<i64> {
-    let n: (i64,) = sqlx::query_as(
-        r#"
-        SELECT COUNT(*)::bigint FROM users WHERE is_admin = TRUE
-        "#,
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(n.0)
 }
 
 pub async fn update_admin_user(
@@ -204,8 +204,9 @@ pub async fn update_admin_user(
     }
     if let Some(is_admin) = patch.is_admin {
         if !is_admin && user.is_admin {
-            let admins = count_admins(pool).await?;
-            if admins <= 1 {
+            let others = count_active_admins_except(pool, user_id).await?;
+            let banned = active_ban(pool, user_id).await?.is_some();
+            if others == 0 && !banned {
                 return Err(Error::BadRequest("cannot demote the last admin".into()));
             }
         }
@@ -223,14 +224,9 @@ pub async fn update_admin_user(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
     }
-    Ok(AdminUserSummary {
-        id: user.id,
-        email: user.email,
-        display_name: user.display_name,
-        is_admin: user.is_admin,
-        api_keys_enabled: user.api_keys_enabled,
-        created_at: user.created_at,
-    })
+    let ban = active_ban_windows(pool).await?;
+    let ban = ban.iter().find(|b| b.user_id == user_id);
+    Ok(admin_summary(user, ban))
 }
 
 pub async fn ensure_user_settings(pool: &PgPool, user_id: Uuid) -> Result<UserSettings> {

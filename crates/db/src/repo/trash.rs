@@ -89,7 +89,13 @@ pub async fn list_trash(pool: &PgPool, user_id: Uuid) -> Result<Vec<TrashItem>> 
 pub async fn purge_expired_trash(pool: &PgPool) -> Result<(u64, u64, u64)> {
     let settings: Vec<(Uuid, i32)> = sqlx::query_as(
         r#"
-        SELECT user_id, trash_retention_days FROM user_settings
+        SELECT user_id, trash_retention_days FROM user_settings s
+        WHERE NOT EXISTS (
+            SELECT 1 FROM user_bans b
+            WHERE b.user_id = s.user_id
+              AND b.lifted_at IS NULL
+              AND (b.ends_at IS NULL OR b.ends_at > now())
+        )
         "#,
     )
     .fetch_all(pool)

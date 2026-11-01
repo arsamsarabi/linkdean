@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -16,6 +17,11 @@ pub enum Error {
     Conflict(String),
     #[error("bad request: {0}")]
     BadRequest(String),
+    #[error("banned")]
+    Banned {
+        reason: String,
+        ends_at: Option<DateTime<Utc>>,
+    },
     #[error("vault locked")]
     VaultLocked,
     #[error("vault unlock failed")]

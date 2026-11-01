@@ -18,6 +18,13 @@ impl FromRequestParts<AppState> for AuthUser {
         let user = db::user_from_token(&state.pool, &token)
             .await?
             .ok_or(Error::Unauthorized)?;
+        if let Some(ban) = db::active_ban(&state.pool, user.id).await? {
+            return Err(Error::Banned {
+                reason: ban.reason,
+                ends_at: ban.ends_at,
+            }
+            .into());
+        }
         Ok(AuthUser(user))
     }
 }

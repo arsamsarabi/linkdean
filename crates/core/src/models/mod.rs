@@ -2,6 +2,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+mod moderation;
+pub use moderation::*;
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
@@ -140,6 +143,9 @@ pub struct AdminUserSummary {
     pub is_admin: bool,
     pub api_keys_enabled: bool,
     pub created_at: DateTime<Utc>,
+    pub banned: bool,
+    /// End of the active ban. `None` while banned means permanent.
+    pub banned_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1145,6 +1151,7 @@ pub enum NotificationKind {
     SocialComment,
     SocialRating,
     UserFollowed,
+    ModerationChanges,
 }
 
 impl NotificationKind {
@@ -1158,6 +1165,7 @@ impl NotificationKind {
             Self::SocialComment => "social_comment",
             Self::SocialRating => "social_rating",
             Self::UserFollowed => "user_followed",
+            Self::ModerationChanges => "moderation_changes",
         }
     }
 
@@ -1171,6 +1179,7 @@ impl NotificationKind {
             "social_comment" => Ok(Self::SocialComment),
             "social_rating" => Ok(Self::SocialRating),
             "user_followed" => Ok(Self::UserFollowed),
+            "moderation_changes" => Ok(Self::ModerationChanges),
             _ => Err(format!("unknown notification kind: {s}")),
         }
     }

@@ -5,7 +5,10 @@ use axum::extract::{Path, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::VaultKeyring;
-use linkdean_core::{CreateRegistrationInvite, UpdateAdminUser, UpdatePlatformSettings};
+use linkdean_core::{
+    ChangeBans, CreateBan, CreateRegistrationInvite, LiftBans, UpdateAdminUser,
+    UpdatePlatformSettings,
+};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -18,6 +21,13 @@ pub fn router() -> Router<AppState> {
         )
         .route("/admin/users", get(list_users))
         .route("/admin/users/{id}", axum::routing::patch(patch_user))
+        .route("/admin/users/{id}/ban", post(ban_user))
+        .route(
+            "/admin/users/{id}/moderation-actions",
+            get(moderation_actions),
+        )
+        .route("/admin/bans", get(list_bans).patch(change_bans))
+        .route("/admin/bans/lift", post(lift_bans))
         .route("/admin/invites", get(list_invites).post(create_invite))
         .route("/admin/invites/{id}", axum::routing::delete(revoke_invite))
         .route("/admin/search/reindex", post(reindex_search))
@@ -62,6 +72,52 @@ async fn patch_user(
 ) -> ApiResult<Json<Value>> {
     let user = db::update_admin_user(&state.pool, id, req).await?;
     Ok(Json(json!({ "user": user })))
+}
+
+async fn ban_user(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<CreateBan>,
+) -> ApiResult<Json<Value>> {
+    let ban = db::ban_user(&state.pool, admin.id, id, &req).await?;
+    state.clear_vault_keys(id).await;
+    Ok(Json(json!({ "ban": ban })))
+}
+
+async fn list_bans(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+) -> ApiResult<Json<Value>> {
+    let bans = db::list_bans(&state.pool).await?;
+    Ok(Json(json!({ "bans": bans })))
+}
+
+async fn change_bans(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Json(req): Json<ChangeBans>,
+) -> ApiResult<Json<Value>> {
+    db::change_bans(&state.pool, admin.id, &req).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+async fn lift_bans(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Json(req): Json<LiftBans>,
+) -> ApiResult<Json<Value>> {
+    db::lift_bans(&state.pool, admin.id, &req).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+async fn moderation_actions(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let actions = db::list_moderation_actions(&state.pool, id).await?;
+    Ok(Json(json!({ "actions": actions })))
 }
 
 async fn list_invites(
