@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod error;
+mod metrics;
 mod routes;
 mod state;
 
@@ -47,7 +48,12 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    let api = Router::new().merge(routes::router()).with_state(state);
+    metrics::init();
+    let api = Router::new()
+        .merge(routes::router())
+        .merge(metrics::router())
+        .layer(axum::middleware::from_fn(metrics::track_http))
+        .with_state(state);
 
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "apps/web/dist".into());
     let index = format!("{static_dir}/index.html");
