@@ -47,11 +47,10 @@ export function VaultsBar(): ReactElement {
             key={v.id}
             variant="default"
             leftSection={<IconLock {...iconSm} />}
-            aria-label={`Lock ${v.name}`}
             loading={lock.isPending && lock.variables === v.id}
             onClick={() => run(lock.mutateAsync(v.id), `${v.name} locked`)}
           >
-            {v.name}
+            Lock {v.name}
           </Button>
         ))}
         <Button

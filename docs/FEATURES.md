@@ -46,6 +46,9 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Vaults hold categories and loose bookmarks; move items in, out and between vaults, with a checklist when something blocks the move
 - Recovery key per vault, shown once; a lost passphrase and recovery key means the contents are gone
 - Optional global passphrase that unlocks chosen vaults in one step, alongside each vault's own passphrase
+- Vaults page: open vaults get the Library's filters, sorting, views and bulk actions, with a vault filter and lock controls; the header link shows only while a vault is open
+- Settings for whether vault items also appear in the Library, and whether deleted vault items go to Trash or are removed immediately
+- Unlock from Settings or the command palette's Unlock vault command; locking clears decrypted data from the browser cache
 - Vault content never indexed in Meilisearch
 - Export never dumps vault bookmarks as plaintext
 - Vault unlock in session; optional auto-lock after inactivity (Settings)

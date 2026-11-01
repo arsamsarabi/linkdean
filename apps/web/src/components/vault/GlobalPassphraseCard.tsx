@@ -7,6 +7,7 @@ import {
   useEnableGlobalPassphrase,
   useGlobalPassphrase,
 } from '@/hooks'
+import { UnlockAllVaultsModal } from './UnlockAllVaultsModal'
 
 export function GlobalPassphraseCard(): ReactElement {
   const state = useGlobalPassphrase()
@@ -16,6 +17,7 @@ export function GlobalPassphraseCard(): ReactElement {
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const enabled = !!state.data?.enabled
+  const [unlockAllOpen, setUnlockAllOpen] = useState(false)
 
   async function run(action: Promise<unknown>, message: string): Promise<void> {
     try {
@@ -53,6 +55,9 @@ export function GlobalPassphraseCard(): ReactElement {
         <Group>
           {enabled ? (
             <>
+              <Button variant="light" onClick={() => setUnlockAllOpen(true)}>
+                Unlock all
+              </Button>
               <Button
                 disabled={next.length < 8 || !current}
                 loading={change.isPending}
@@ -84,6 +89,7 @@ export function GlobalPassphraseCard(): ReactElement {
           )}
         </Group>
       </Stack>
+      {unlockAllOpen ? <UnlockAllVaultsModal onClose={() => setUnlockAllOpen(false)} /> : null}
     </Paper>
   )
 }

@@ -50,22 +50,24 @@ export function GeneralSettingsPanel({ settings, saving, onPatch }: Props): Reac
 
         <Divider />
 
-        <Select
-          label="Vault in search"
-          description="When vault hits appear in library search"
-          value={settings.vault_search_mode}
-          onChange={(v) =>
-            v &&
-            onPatch({
-              vault_search_mode: v as UserSettings['vault_search_mode'],
-            })
-          }
-          data={[
-            { value: 'never', label: 'Never' },
-            { value: 'when_unlocked', label: 'Only when unlocked' },
-            { value: 'always', label: 'Always (prompt unlock if locked)' },
-          ]}
-        />
+        {settings.show_vault_in_library ? (
+          <Select
+            label="Vault in search"
+            description="When vault hits appear in library search"
+            value={settings.vault_search_mode}
+            onChange={(v) =>
+              v &&
+              onPatch({
+                vault_search_mode: v as UserSettings['vault_search_mode'],
+              })
+            }
+            data={[
+              { value: 'never', label: 'Never' },
+              { value: 'when_unlocked', label: 'Only when unlocked' },
+              { value: 'always', label: 'Always (prompt unlock if locked)' },
+            ]}
+          />
+        ) : null}
 
         <Select
           label="Theme"

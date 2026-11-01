@@ -1,8 +1,8 @@
 import { useMemo, useState, type KeyboardEvent, type ReactElement } from 'react'
 import { Group, Kbd, Modal, Stack, Text, TextInput } from '@mantine/core'
-import { IconBookmarkPlus, IconFolder, IconFolders, IconSearch, IconTags } from '@tabler/icons-react'
+import { IconBookmarkPlus, IconFolder, IconFolders, IconLockOpen, IconSearch, IconTags } from '@tabler/icons-react'
 import { useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
-import { useCategories } from '@/hooks'
+import { useCategories, useMe, useVaults } from '@/hooks'
 import { buildLibrarySearch, categoryPath } from '@/lib'
 import { buildPaletteItems, clampActiveIndex, FOLDER_ALL, FOLDER_UNCATEGORIZED, type PaletteItem } from '@/services'
 import { useUi } from '@/stores'
@@ -19,6 +19,8 @@ function itemIcon(item: PaletteItem): ReactElement {
   switch (item.kind) {
     case 'add':
       return <IconBookmarkPlus {...iconSm} className={styles.itemIcon} />
+    case 'unlock-vault':
+      return <IconLockOpen {...iconSm} className={styles.itemIcon} />
     case 'search':
       return <IconSearch {...iconSm} className={styles.itemIcon} />
     case 'jump-all':
@@ -37,6 +39,10 @@ export function CommandPalette({ opened, onClose }: Props): ReactElement {
   const onLibrary = pathname.startsWith('/library')
   const showHidden = useUi((s) => s.showHidden)
   const cats = useCategories()
+  const me = useMe()
+  const vaults = useVaults(opened)
+  const anyVaultLocked = (vaults.data?.vaults ?? []).some((v) => !v.unlocked)
+  const showVaultInLibrary = me.data?.settings.show_vault_in_library ?? true
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const [openEpoch, setOpenEpoch] = useState(opened)
@@ -60,10 +66,14 @@ export function CommandPalette({ opened, onClose }: Props): ReactElement {
       id: c.id,
       label: categoryPath(c, byId) + (c.is_vault ? ' (vault)' : '') + (c.is_hidden ? ' (hidden)' : ''),
       is_hidden: c.is_hidden,
+      is_vault: c.is_vault,
     }))
   }, [cats.data])
 
-  const items = useMemo(() => buildPaletteItems(query, categoryRows, { showHidden }), [query, categoryRows, showHidden])
+  const items = useMemo(
+    () => buildPaletteItems(query, categoryRows, { showHidden, anyVaultLocked }),
+    [anyVaultLocked, query, categoryRows, showHidden]
+  )
 
   function run(item: PaletteItem): void {
     onClose()
@@ -76,6 +86,9 @@ export function CommandPalette({ opened, onClose }: Props): ReactElement {
             folder: onLibrary ? librarySearch.folder : undefined,
           }),
         })
+        return
+      case 'unlock-vault':
+        void nav({ to: '/settings', search: { tab: 'vault' } })
         return
       case 'search': {
         const q = query.trim()
@@ -104,7 +117,7 @@ export function CommandPalette({ opened, onClose }: Props): ReactElement {
       case 'jump-category':
         if (!item.categoryId) return
         void nav({
-          to: '/library',
+          to: item.isVault && !showVaultInLibrary ? '/vaults' : '/library',
           search: buildLibrarySearch({ folder: item.categoryId }),
         })
         return

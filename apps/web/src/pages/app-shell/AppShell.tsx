@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, type ReactElement } from 'react'
 import { Drawer, Group, Loader, AppShell as MantineAppShell, NavLink, Stack } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
-import { IconBooks, IconLayoutDashboard } from '@tabler/icons-react'
+import { IconBooks, IconLayoutDashboard, IconLock } from '@tabler/icons-react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   BrokenLinksDrawer,
@@ -11,17 +11,8 @@ import {
   NotificationsDrawer,
   PageContainer,
   QueryErrorAlert,
-  UnlockAllVaultsModal,
 } from '@/components'
-import {
-  useGlobalPassphrase,
-  useLockVault,
-  useLogout,
-  usePrefsHydration,
-  useShareInvites,
-  useUnreadNotificationCount,
-  useVaults,
-} from '@/hooks'
+import { useLogout, usePrefsHydration, useShareInvites, useUnreadNotificationCount } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
@@ -34,10 +25,6 @@ export function AppShell(): ReactElement {
   const logout = useLogout()
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const shell = useShellUi()
-  const vaults = useVaults(!!me.data)
-  const globalPassphrase = useGlobalPassphrase(!!me.data)
-  const lockVault = useLockVault()
-  const [unlockAllOpen, setUnlockAllOpen] = useState(false)
   const unread = useUnreadNotificationCount(!!me.data)
   const invites = useShareInvites(!!me.data)
   const pendingInvites = invites.data?.invites.filter((i) => !i.rejected_at).length ?? 0
@@ -79,6 +66,7 @@ export function AppShell(): ReactElement {
   const landing = resolveDefaultLanding(me.data?.settings.default_landing)
   const onDashboard = pathname === '/'
   const onLibrary = pathname.startsWith('/library')
+  const onVaults = pathname === '/vaults' || pathname.startsWith('/vaults/')
 
   return (
     <MantineAppShell header={{ height: 64 }} padding="lg">
@@ -88,22 +76,17 @@ export function AppShell(): ReactElement {
           landing={landing}
           onDashboard={onDashboard}
           onLibrary={onLibrary}
+          onVaults={onVaults}
           label={label}
           displayName={user?.display_name ?? undefined}
           email={user?.email}
           hasAvatar={!!user?.has_avatar}
           vaultUnlocked={vaultUnlocked}
-          vaults={vaults.data?.vaults ?? []}
-          globalEnabled={!!globalPassphrase.data?.enabled}
-          onLockVault={(id) => lockVault.mutate(id)}
-          onOpenUnlockAll={() => setUnlockAllOpen(true)}
           // A new invite is also an unread notification, so don't add the two.
           unreadCount={Math.max(unread.data?.count ?? 0, pendingInvites)}
           onLogout={() => void onLogout()}
         />
       </MantineAppShell.Header>
-
-      {unlockAllOpen ? <UnlockAllVaultsModal onClose={() => setUnlockAllOpen(false)} /> : null}
 
       <MantineAppShell.Main>
         <PageContainer pb="xl" fadeIn>
@@ -138,6 +121,16 @@ export function AppShell(): ReactElement {
             active={onLibrary}
             onClick={shell.closeNav}
           />
+          {vaultUnlocked ? (
+            <NavLink
+              component={Link}
+              to="/vaults"
+              label="Vaults"
+              leftSection={<IconLock {...iconProps} />}
+              active={onVaults}
+              onClick={shell.closeNav}
+            />
+          ) : null}
         </Stack>
       </Drawer>
 

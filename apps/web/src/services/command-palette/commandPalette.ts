@@ -1,4 +1,4 @@
-export type PaletteItemKind = 'add' | 'search' | 'jump-category' | 'jump-all' | 'jump-uncategorized'
+export type PaletteItemKind = 'add' | 'unlock-vault' | 'search' | 'jump-category' | 'jump-all' | 'jump-uncategorized'
 
 export type PaletteItem = {
   id: string
@@ -7,12 +7,15 @@ export type PaletteItem = {
   description?: string
   /** Set for jump-category */
   categoryId?: string
+  /** Set for jump-category */
+  isVault?: boolean
 }
 
 export type PaletteCategory = {
   id: string
   label: string
   is_hidden?: boolean
+  is_vault?: boolean
 }
 
 function matches(hay: string, query: string): boolean {
@@ -31,7 +34,7 @@ function actionMatches(query: string, keywords: string[]): boolean {
 export function buildPaletteItems(
   query: string,
   categories: readonly PaletteCategory[],
-  opts?: { showHidden?: boolean; categoryLimit?: number }
+  opts?: { showHidden?: boolean; categoryLimit?: number; anyVaultLocked?: boolean }
 ): PaletteItem[] {
   const showHidden = opts?.showHidden ?? false
   const categoryLimit = opts?.categoryLimit ?? 8
@@ -44,6 +47,15 @@ export function buildPaletteItems(
       kind: 'add',
       label: 'Add bookmark',
       description: 'Open create drawer',
+    })
+  }
+
+  if (opts?.anyVaultLocked && actionMatches(q, ['unlock', 'vault', 'open vault'])) {
+    items.push({
+      id: 'action:unlock-vault',
+      kind: 'unlock-vault',
+      label: 'Unlock vault',
+      description: 'Open vault settings',
     })
   }
 
@@ -86,6 +98,7 @@ export function buildPaletteItems(
       label: c.label,
       description: 'Jump to folder',
       categoryId: c.id,
+      isVault: c.is_vault,
     })
   }
 

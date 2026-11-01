@@ -3,7 +3,14 @@ import { Group, Paper, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorSchem
 import { notifications } from '@mantine/notifications'
 import { IconArrowsExchange, IconFolder, IconKey, IconLock, IconSettings, IconShield } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { ApiKeysPanel, CategoryManager, ImportExportPanel, QueryErrorAlert, VaultPanel } from '@/components'
+import {
+  ApiKeysPanel,
+  CategoryManager,
+  ImportExportPanel,
+  QueryErrorAlert,
+  VaultPanel,
+  VaultPreferencesCard,
+} from '@/components'
 import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { AdminPlatformSettings } from './AdminPlatformSettings'
@@ -104,11 +111,14 @@ export function SettingsPage(): ReactElement {
             {!settings ? (
               <SettingsSkeleton />
             ) : (
-              <VaultAutoLockSettings
-                minutes={settings.vault_auto_lock_minutes}
-                saving={save.isPending}
-                onChange={(vault_auto_lock_minutes) => patch({ vault_auto_lock_minutes })}
-              />
+              <>
+                <VaultPreferencesCard settings={settings} onPatch={patch} />
+                <VaultAutoLockSettings
+                  minutes={settings.vault_auto_lock_minutes}
+                  saving={save.isPending}
+                  onChange={(vault_auto_lock_minutes) => patch({ vault_auto_lock_minutes })}
+                />
+              </>
             )}
             {save.isPending ? (
               <Text size="xs" c="dimmed">

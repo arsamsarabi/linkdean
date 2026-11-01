@@ -20,6 +20,17 @@ describe('buildPaletteItems', () => {
     ])
   })
 
+  it('offers Unlock vault only while a vault is locked', () => {
+    const ids = (anyVaultLocked: boolean) => buildPaletteItems('unlock', cats, { anyVaultLocked }).map((i) => i.id)
+    expect(ids(true)).toContain('action:unlock-vault')
+    expect(ids(false)).not.toContain('action:unlock-vault')
+  })
+
+  it('marks vault folders on jump items', () => {
+    const items = buildPaletteItems('secret', [{ id: '9', label: 'Secret', is_vault: true }])
+    expect(items.find((i) => i.id === 'cat:9')?.isVault).toBe(true)
+  })
+
   it('includes hidden when showHidden', () => {
     const items = buildPaletteItems('personal', cats, { showHidden: true })
     expect(items.some((i) => i.id === 'cat:2')).toBe(true)
