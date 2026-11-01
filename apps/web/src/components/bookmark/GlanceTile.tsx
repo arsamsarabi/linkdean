@@ -3,7 +3,7 @@ import { Badge, Group, Image, Text, Tooltip, UnstyledButton } from '@mantine/cor
 import { IconExternalLink, IconLock, IconWorld } from '@tabler/icons-react'
 import { ShareBadge } from '@/components/share-badge'
 import { inviteeShareAccess } from '@/lib'
-import { googleFavicon, hostname } from '@/services'
+import { googleFavicon } from '@/services'
 import styles from './GlanceTile.module.css'
 
 export type GlanceTileItem = {
@@ -25,7 +25,7 @@ type Props = {
 }
 
 export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
-  const title = b.title || b.url
+  const title = b.title.trim() || 'Untitled'
   const [iconFailed, setIconFailed] = useState(false)
   const iconSrc = !iconFailed ? b.favicon_url || googleFavicon(b.url) : undefined
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
@@ -63,8 +63,8 @@ export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
               </Tooltip>
             ) : null}
           </Group>
-          <Text size="xs" c="dimmed" lineClamp={1}>
-            {hostname(b.url)}
+          <Text size="xs" c="dimmed" lineClamp={1} title={b.url}>
+            {b.url}
           </Text>
         </div>
         <IconExternalLink size={14} stroke={1.5} className={styles.external} aria-hidden />

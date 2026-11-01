@@ -120,7 +120,7 @@ export function BookmarkCard({
   selected = false,
   onToggleSelect,
 }: Props): ReactElement {
-  const title = b.title || b.url
+  const title = b.title.trim() || 'Untitled'
   const canWrite = b.can_write !== false
   const selectable = selectMode && canWrite && !!onToggleSelect
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
@@ -298,8 +298,8 @@ export function BookmarkCard({
           </Menu>
         </Group>
 
-        <Text size="xs" c="dimmed" lineClamp={1}>
-          {hostname(b.url)}
+        <Text size="xs" c="dimmed" lineClamp={1} title={b.url}>
+          {b.url}
         </Text>
 
         {b.description ? (
