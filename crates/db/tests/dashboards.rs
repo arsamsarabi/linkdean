@@ -2,6 +2,7 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CategoryAccess, CreateBookmark, CreateCategory, CreateDashboard, CreateDashboardShare,
     CreateDashboardShareOutcome, Error, PatchDashboard, PutDashboardLayout, PutDashboardSection,
@@ -93,7 +94,7 @@ async fn default_dashboard_roundtrip_and_authz() {
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bm1");
@@ -110,12 +111,12 @@ async fn default_dashboard_roundtrip_and_authz() {
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bm2");
 
-    let empty = db::get_default_dashboard(&pool, user_a.id, None)
+    let empty = db::get_default_dashboard(&pool, user_a.id, &VaultKeyring::default())
         .await
         .expect("ensure default");
     assert!(empty.is_default);
@@ -138,7 +139,7 @@ async fn default_dashboard_roundtrip_and_authz() {
                 },
             ],
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("put layout");
@@ -170,7 +171,7 @@ async fn default_dashboard_roundtrip_and_authz() {
                 bookmark_ids: vec![bm1.id],
             }],
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await;
     assert!(matches!(denied, Err(Error::BadRequest(_))));
@@ -179,7 +180,7 @@ async fn default_dashboard_roundtrip_and_authz() {
     db::delete_bookmark(&pool, user_a.id, bm2.id)
         .await
         .expect("delete bm2");
-    let after_delete = db::get_default_dashboard(&pool, user_a.id, None)
+    let after_delete = db::get_default_dashboard(&pool, user_a.id, &VaultKeyring::default())
         .await
         .expect("get after delete");
     assert_eq!(after_delete.sections.len(), 2);
@@ -208,7 +209,7 @@ async fn multi_dashboard_create_pin_delete() {
     .await
     .expect("create user");
 
-    let home = db::get_default_dashboard(&pool, user.id, None)
+    let home = db::get_default_dashboard(&pool, user.id, &VaultKeyring::default())
         .await
         .expect("default");
     assert!(home.is_default);
@@ -219,7 +220,7 @@ async fn multi_dashboard_create_pin_delete() {
         CreateDashboard {
             title: Some("Work".into()),
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("create second");
@@ -236,13 +237,13 @@ async fn multi_dashboard_create_pin_delete() {
             title: None,
             is_default: Some(true),
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("pin second");
     assert!(pinned.is_default);
 
-    let default_now = db::get_default_dashboard(&pool, user.id, None)
+    let default_now = db::get_default_dashboard(&pool, user.id, &VaultKeyring::default())
         .await
         .expect("default after pin");
     assert_eq!(default_now.id, second.id);
@@ -318,12 +319,12 @@ async fn dashboard_share_read_write_and_revoke() {
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bm");
 
-    let home = db::get_default_dashboard(&pool, user_a.id, None)
+    let home = db::get_default_dashboard(&pool, user_a.id, &VaultKeyring::default())
         .await
         .expect("home");
     let _ = db::put_dashboard(
@@ -337,13 +338,13 @@ async fn dashboard_share_read_write_and_revoke() {
                 bookmark_ids: vec![bm.id],
             }],
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("layout");
 
     assert!(matches!(
-        db::get_dashboard(&pool, user_c.id, home.id, None).await,
+        db::get_dashboard(&pool, user_c.id, home.id, &VaultKeyring::default()).await,
         Err(Error::NotFound)
     ));
 
@@ -364,7 +365,7 @@ async fn dashboard_share_read_write_and_revoke() {
     ));
     accept_invites(&pool, user_b.id).await;
 
-    let as_b = db::get_dashboard(&pool, user_b.id, home.id, None)
+    let as_b = db::get_dashboard(&pool, user_b.id, home.id, &VaultKeyring::default())
         .await
         .expect("b read");
     assert_eq!(as_b.access, CategoryAccess::Read);
@@ -383,7 +384,7 @@ async fn dashboard_share_read_write_and_revoke() {
                     bookmark_ids: vec![],
                 }],
             },
-            None,
+            &VaultKeyring::default(),
         )
         .await,
         Err(Error::Forbidden)
@@ -416,7 +417,7 @@ async fn dashboard_share_read_write_and_revoke() {
                 bookmark_ids: vec![bm.id],
             }],
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("b write layout");
@@ -432,7 +433,7 @@ async fn dashboard_share_read_write_and_revoke() {
         .await
         .expect("revoke");
     assert!(matches!(
-        db::get_dashboard(&pool, user_b.id, home.id, None).await,
+        db::get_dashboard(&pool, user_b.id, home.id, &VaultKeyring::default()).await,
         Err(Error::NotFound)
     ));
 }

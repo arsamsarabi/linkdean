@@ -3,6 +3,7 @@
 //! Requires Postgres. Set `DATABASE_URL` (e.g. `postgres://linkdean:linkdean@127.0.0.1:5432/linkdean`).
 //! Skips when unset so CI without a DB stays green.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CategoryAccess, CreateBookmark, CreateCategory, CreateCategoryShare,
     CreateCategoryShareOutcome, Error, ShareAccess, UpdateBookmark, UpdateCategory,
@@ -92,7 +93,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("create bookmark for a");
@@ -121,7 +122,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
                 tags: None,
                 ..Default::default()
             },
-            None,
+            &VaultKeyring::default(),
         )
         .await,
         Err(Error::NotFound)
@@ -159,9 +160,16 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
     ));
 
     // B's list never includes A's bookmark
-    let b_list = db::list_bookmarks(&pool, user_b.id, None, false, None, false)
-        .await
-        .expect("list for b");
+    let b_list = db::list_bookmarks(
+        &pool,
+        user_b.id,
+        None,
+        false,
+        &VaultKeyring::default(),
+        false,
+    )
+    .await
+    .expect("list for b");
     assert!(!b_list.iter().any(|x| x.id == bm.id));
 
     // Cleanup A's rows (best-effort; unique emails avoid collisions)
@@ -233,7 +241,7 @@ async fn share_read_and_write_membership() {
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("create bookmark");
@@ -287,7 +295,7 @@ async fn share_read_and_write_membership() {
                 tags: None,
                 ..Default::default()
             },
-            None,
+            &VaultKeyring::default(),
         )
         .await,
         Err(Error::Forbidden)
@@ -350,7 +358,7 @@ async fn share_read_and_write_membership() {
             tags: None,
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("RW can edit bookmark");
@@ -384,7 +392,7 @@ async fn share_read_and_write_membership() {
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("RW can add bookmark");
@@ -394,22 +402,32 @@ async fn share_read_and_write_membership() {
         db::get_bookmark_raw(&pool, user_c.id, bm.id).await,
         Err(Error::NotFound)
     ));
-    assert!(
-        !db::list_bookmarks(&pool, user_c.id, None, false, None, false)
-            .await
-            .expect("list c")
-            .iter()
-            .any(|x| x.id == bm.id || x.id == b_created.id)
-    );
+    assert!(!db::list_bookmarks(
+        &pool,
+        user_c.id,
+        None,
+        false,
+        &VaultKeyring::default(),
+        false
+    )
+    .await
+    .expect("list c")
+    .iter()
+    .any(|x| x.id == bm.id || x.id == b_created.id));
 
     // B sees shared bookmark in list
-    assert!(
-        db::list_bookmarks(&pool, user_b.id, None, false, None, false)
-            .await
-            .expect("list b")
-            .iter()
-            .any(|x| x.id == bm.id)
-    );
+    assert!(db::list_bookmarks(
+        &pool,
+        user_b.id,
+        None,
+        false,
+        &VaultKeyring::default(),
+        false
+    )
+    .await
+    .expect("list b")
+    .iter()
+    .any(|x| x.id == bm.id));
 
     // Revoke → B loses access
     db::delete_share(&pool, user_a.id, cat.id, user_b.id)
@@ -565,7 +583,7 @@ async fn public_list_slug_is_unlisted_and_revocable() {
             tags: vec!["tag-a".into()],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bookmark");

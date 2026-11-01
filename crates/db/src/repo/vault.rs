@@ -1,5 +1,5 @@
 use linkdean_core::crypto;
-use linkdean_core::{Bookmark, BookmarkView, Error, Result, Vault};
+use linkdean_core::{Bookmark, BookmarkView, Error, Result, Vault, VaultKeyring};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -10,19 +10,20 @@ pub async fn search_vault_bookmarks(
     pool: &PgPool,
     user_id: Uuid,
     query: &str,
-    vault_key: &[u8; 32],
+    keyring: &VaultKeyring,
 ) -> Result<Vec<BookmarkView>> {
     let rows = sqlx::query_as::<_, Bookmark>(
-        "SELECT * FROM bookmarks WHERE owner_user_id = $1 AND is_vault = TRUE",
+        "SELECT * FROM bookmarks WHERE owner_user_id = $1 AND vault_id = ANY($2)",
     )
     .bind(user_id)
+    .bind(keyring.vault_ids())
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
     let q = query.to_ascii_lowercase();
     let mut out = Vec::new();
     for b in rows {
-        if let Some(v) = bookmark_to_view(pool, b, Some(vault_key), user_id).await? {
+        if let Some(v) = bookmark_to_view(pool, b, keyring, user_id).await? {
             let hay = format!(
                 "{} {} {} {} {}",
                 v.title,

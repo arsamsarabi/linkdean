@@ -1,6 +1,7 @@
 //! Notifications for share invite / access / revoke + shared edit.
 //! Requires `DATABASE_URL`. Skips when unset.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CreateBookmark, CreateCategory, CreateCategoryShare, CreateDashboard, NotificationKind,
     PutDashboardLayout, PutDashboardSection, ShareAccess, UpdateBookmark, UpdateCategoryShare,
@@ -207,7 +208,7 @@ async fn shared_bookmark_edit_notifies_owner() {
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bm");
@@ -223,7 +224,7 @@ async fn shared_bookmark_edit_notifies_owner() {
             title: Some("Edited by invitee".into()),
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("edit");
@@ -269,7 +270,7 @@ async fn shared_dashboard_edit_notifies_owner() {
         CreateDashboard {
             title: Some(format!("Board-{}", Uuid::new_v4())),
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("dash");
@@ -300,7 +301,7 @@ async fn shared_dashboard_edit_notifies_owner() {
                 bookmark_ids: vec![],
             }],
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("put");

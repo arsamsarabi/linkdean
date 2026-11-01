@@ -1,6 +1,7 @@
 //! Personal activity history for create / update / delete / restore.
 //! Requires `DATABASE_URL`. Skips when unset.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     ActivityAction, ActivitySubjectType, CreateBookmark, CreateCategory, CreateDashboard,
     ListActivityFilter, UpdateBookmark, UpdateCategory,
@@ -68,7 +69,7 @@ async fn bookmark_category_dashboard_activity_flow() {
             is_unread: false,
             is_pinned: false,
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bm");
@@ -90,7 +91,7 @@ async fn bookmark_category_dashboard_activity_flow() {
             is_pinned: None,
             is_private: None,
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("update bm");
@@ -118,7 +119,7 @@ async fn bookmark_category_dashboard_activity_flow() {
         CreateDashboard {
             title: Some("Board".into()),
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("dash");

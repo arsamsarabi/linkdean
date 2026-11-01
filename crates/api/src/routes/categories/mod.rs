@@ -57,13 +57,17 @@ async fn list(
     AuthUser(user): AuthUser,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<CategoryView>>> {
-    let include_vault = q.include_vault && state.vault_key(user.id).await.is_some();
+    let unlocked = if q.include_vault {
+        state.vault_keyring(user.id).await.vault_ids()
+    } else {
+        Vec::new()
+    };
     let settings = db::get_user_settings(&state.pool, user.id).await?;
     let cats = db::list_categories(
         &state.pool,
         user.id,
         q.include_hidden,
-        include_vault,
+        &unlocked,
         settings.show_deleted_in_library,
     )
     .await?;
@@ -76,7 +80,7 @@ async fn create(
     Json(req): Json<CreateCategory>,
 ) -> ApiResult<Json<CategoryView>> {
     if req.is_vault
-        && state.vault_key(user.id).await.is_none()
+        && state.vault_keyring(user.id).await.is_empty()
         && !db::user_has_vault(&state.pool, user.id).await?
     {
         return Err(linkdean_core::Error::BadRequest(

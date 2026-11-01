@@ -1,6 +1,7 @@
 //! User block (hard cut) and mute (one-way quiet).
 //! Requires `DATABASE_URL`. Skips when unset.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CategoryView, CreateBookmark, CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome,
     CreateDashboard, CreateDashboardShare, CreateSocialComment, Error, NotificationKind, Result,
@@ -95,7 +96,7 @@ async fn shared_bookmark(pool: &PgPool, owner: &User, category_id: Uuid) -> Uuid
             tags: vec![],
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bookmark")
@@ -154,7 +155,7 @@ async fn block_cuts_follows_mutes_and_shares_both_ways() {
         CreateDashboard {
             title: Some(format!("Board-{}", Uuid::new_v4())),
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("dashboard");

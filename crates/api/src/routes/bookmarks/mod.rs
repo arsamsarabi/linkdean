@@ -7,6 +7,7 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::preview_image::{self, process_bookmark_preview};
+use linkdean_core::VaultKeyring;
 use linkdean_core::{BookmarkView, CreateBookmark, Error, UpdateBookmark};
 use linkdean_db::{self as db};
 use serde::Deserialize;
@@ -47,15 +48,15 @@ async fn list(
     AuthUser(user): AuthUser,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<BookmarkView>>> {
-    let key = state.vault_key(user.id).await;
-    let include_vault = q.include_vault && key.is_some();
+    let keyring = state.vault_keyring(user.id).await;
+    let include_vault = q.include_vault && !keyring.is_empty();
     let settings = db::get_user_settings(&state.pool, user.id).await?;
     let items = db::list_bookmarks(
         &state.pool,
         user.id,
         q.category_id,
         include_vault,
-        key.as_ref(),
+        &keyring,
         settings.show_deleted_in_library,
     )
     .await?;
@@ -68,8 +69,8 @@ async fn get_one(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<BookmarkView>> {
     let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    let key = state.vault_key(user.id).await;
-    let view = db::bookmark_to_view(&state.pool, raw, key.as_ref(), user.id)
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::bookmark_to_view(&state.pool, raw, &keyring, user.id)
         .await?
         .ok_or(linkdean_core::Error::VaultLocked)?;
     Ok(Json(view))
@@ -80,8 +81,8 @@ async fn create(
     AuthUser(user): AuthUser,
     Json(req): Json<CreateBookmark>,
 ) -> ApiResult<Json<BookmarkView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::create_bookmark(&state.pool, user.id, req, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::create_bookmark(&state.pool, user.id, req, &keyring).await?;
     if !view.is_vault {
         if let Err(e) = state.search.upsert_bookmark(&view).await {
             tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
@@ -104,8 +105,8 @@ async fn update(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateBookmark>,
 ) -> ApiResult<Json<BookmarkView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::update_bookmark(&state.pool, user.id, id, req, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::update_bookmark(&state.pool, user.id, id, req, &keyring).await?;
     if view.is_vault {
         if let Err(e) = state.search.delete_bookmark(id).await {
             tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
@@ -201,8 +202,8 @@ async fn upload_preview(
     db::set_bookmark_has_preview(&state.pool, id, true).await?;
 
     let updated = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    let key = state.vault_key(user.id).await;
-    let view = db::bookmark_to_view(&state.pool, updated, key.as_ref(), user.id)
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::bookmark_to_view(&state.pool, updated, &keyring, user.id)
         .await?
         .ok_or(Error::NotFound)?;
     if !view.is_vault {
@@ -235,8 +236,8 @@ async fn delete_preview(
     db::set_bookmark_has_preview(&state.pool, id, false).await?;
 
     let updated = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    let key = state.vault_key(user.id).await;
-    let view = db::bookmark_to_view(&state.pool, updated, key.as_ref(), user.id)
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::bookmark_to_view(&state.pool, updated, &keyring, user.id)
         .await?
         .ok_or(Error::NotFound)?;
     if !view.is_vault {
@@ -342,7 +343,7 @@ async fn check_link(
     }
     linkdean_worker::check_bookmark_link(&state.pool, id, &raw.url).await;
     let updated = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    let view = db::bookmark_to_view(&state.pool, updated, None, user.id)
+    let view = db::bookmark_to_view(&state.pool, updated, &VaultKeyring::default(), user.id)
         .await?
         .ok_or(Error::NotFound)?;
     Ok(Json(view))

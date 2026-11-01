@@ -2,6 +2,7 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, CreateDashboard,
     CreateDashboardShare, CreateDashboardShareOutcome, Error, PendingShareSubjectType, ShareAccess,
@@ -115,7 +116,7 @@ async fn dashboard_invite_grants_nothing_until_accepted() {
         CreateDashboard {
             title: Some("Shared".into()),
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("dashboard");
@@ -135,17 +136,21 @@ async fn dashboard_invite_grants_nothing_until_accepted() {
         outcome,
         CreateDashboardShareOutcome::Pending { .. }
     ));
-    assert!(db::get_dashboard(&pool, invitee.id, board.id, None)
-        .await
-        .is_err());
+    assert!(
+        db::get_dashboard(&pool, invitee.id, board.id, &VaultKeyring::default())
+            .await
+            .is_err()
+    );
 
     let id = only_invite(&pool, &invitee).await;
     db::accept_share_invite(&pool, invitee.id, id)
         .await
         .expect("accept");
-    assert!(db::get_dashboard(&pool, invitee.id, board.id, None)
-        .await
-        .is_ok());
+    assert!(
+        db::get_dashboard(&pool, invitee.id, board.id, &VaultKeyring::default())
+            .await
+            .is_ok()
+    );
 }
 
 #[tokio::test]

@@ -1,4 +1,5 @@
 use crate::config::Config;
+use linkdean_core::VaultKeyring;
 use linkdean_db::{self as db};
 use linkdean_search::SearchClient;
 use sqlx::PgPool;
@@ -12,8 +13,8 @@ pub struct AppState {
     pub pool: PgPool,
     pub search: SearchClient,
     pub cfg: Config,
-    /// user_id → vault data key (session memory; lost on restart)
-    pub vault_keys: Arc<RwLock<HashMap<Uuid, [u8; 32]>>>,
+    /// user_id → unlocked vaults (session memory; lost on restart)
+    pub vault_keys: Arc<RwLock<HashMap<Uuid, VaultKeyring>>>,
 }
 
 impl AppState {
@@ -65,15 +66,25 @@ impl AppState {
         }
     }
 
-    pub async fn vault_key(&self, user_id: Uuid) -> Option<[u8; 32]> {
-        self.vault_keys.read().await.get(&user_id).copied()
+    pub async fn vault_keyring(&self, user_id: Uuid) -> VaultKeyring {
+        self.vault_keys
+            .read()
+            .await
+            .get(&user_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
-    pub async fn set_vault_key(&self, user_id: Uuid, key: [u8; 32]) {
-        self.vault_keys.write().await.insert(user_id, key);
+    pub async fn set_vault_key(&self, user_id: Uuid, vault_id: Uuid, key: [u8; 32]) {
+        self.vault_keys
+            .write()
+            .await
+            .entry(user_id)
+            .or_default()
+            .insert(vault_id, key);
     }
 
-    pub async fn clear_vault_key(&self, user_id: Uuid) {
+    pub async fn clear_vault_keys(&self, user_id: Uuid) {
         self.vault_keys.write().await.remove(&user_id);
     }
 }

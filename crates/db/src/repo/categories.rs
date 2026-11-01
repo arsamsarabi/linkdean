@@ -1,4 +1,5 @@
 use linkdean_core::crypto;
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     BookmarkView, Category, CategoryAccess, CategoryPublicLinkView, CategoryView, CreateBookmark,
     CreateCategory, Error, ForkCategory, PublicBookmarkView, PublicListView, Result,
@@ -90,7 +91,7 @@ pub async fn list_categories(
     pool: &PgPool,
     user_id: Uuid,
     include_hidden: bool,
-    include_vault: bool,
+    unlocked_vaults: &[Uuid],
     include_deleted: bool,
 ) -> Result<Vec<CategoryView>> {
     let owned = sqlx::query_as::<_, Category>(
@@ -98,14 +99,14 @@ pub async fn list_categories(
         SELECT * FROM categories
         WHERE owner_user_id = $1
           AND ($2 OR is_hidden = FALSE)
-          AND ($3 OR is_vault = FALSE)
+          AND (is_vault = FALSE OR vault_id = ANY($3))
           AND ($4 OR deleted_at IS NULL)
         ORDER BY position, name
         "#,
     )
     .bind(user_id)
     .bind(include_hidden)
-    .bind(include_vault)
+    .bind(unlocked_vaults)
     .bind(include_deleted)
     .fetch_all(pool)
     .await
@@ -695,7 +696,8 @@ pub async fn fork_category(
         if raw.is_vault {
             continue;
         }
-        let Some(view) = bookmark_to_view(pool, raw, None, user_id).await? else {
+        let Some(view) = bookmark_to_view(pool, raw, &VaultKeyring::default(), user_id).await?
+        else {
             continue;
         };
         let mut mapped_cats: Vec<Uuid> = view
@@ -723,7 +725,7 @@ pub async fn fork_category(
                 tags: view.tags,
                 ..Default::default()
             },
-            None,
+            &VaultKeyring::default(),
         )
         .await?;
         copied.push(created);

@@ -3,6 +3,7 @@ use chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat;
 use chromiumoxide::page::ScreenshotParams;
 use futures::StreamExt;
 use linkdean_core::LinkCheckStatus;
+use linkdean_core::VaultKeyring;
 use linkdean_db::{self as db};
 use linkdean_search::SearchClient;
 use sqlx::PgPool;
@@ -139,7 +140,9 @@ pub async fn enrich_bookmark(
 
     if let Ok(updated) = db::get_bookmark_raw(pool, user_id, bookmark_id).await {
         let owner = updated.owner_user_id;
-        if let Ok(Some(view)) = db::bookmark_to_view(pool, updated, None, owner).await {
+        if let Ok(Some(view)) =
+            db::bookmark_to_view(pool, updated, &VaultKeyring::default(), owner).await
+        {
             let _ = search.upsert_bookmark(&view).await;
         }
     }

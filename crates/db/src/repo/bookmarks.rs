@@ -1,4 +1,5 @@
 use linkdean_core::crypto;
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     Bookmark, BookmarkView, Category, CategoryRef, CreateBookmark, Error, LinkCheckStatus, Result,
     UpdateBookmark, VaultPayload,
@@ -260,7 +261,7 @@ fn resolve_category_ids(req_ids: &[Uuid], legacy: Option<Uuid>) -> Vec<Uuid> {
 pub async fn bookmark_to_view(
     pool: &PgPool,
     b: Bookmark,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
     viewer_id: Uuid,
 ) -> Result<Option<BookmarkView>> {
     let categories = categories_for_bookmark(pool, b.owner_user_id, b.id).await?;
@@ -281,9 +282,8 @@ pub async fn bookmark_to_view(
     let flags = flags_for_viewer(pool, viewer_id, b.id).await?;
 
     if b.is_vault {
-        let key = match vault_key {
-            Some(k) => k,
-            None => return Ok(None),
+        let Some(key) = b.vault_id.and_then(|id| keyring.get(id)) else {
+            return Ok(None);
         };
         let ct = b
             .vault_ciphertext
@@ -390,12 +390,12 @@ pub async fn list_bookmarks(
     user_id: Uuid,
     category_id: Option<Uuid>,
     include_vault: bool,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
     include_deleted: bool,
 ) -> Result<Vec<BookmarkView>> {
     use super::shares::list_shared_categories;
 
-    let include_vault = include_vault && vault_key.is_some();
+    let include_vault = include_vault && !keyring.is_empty();
     let rows = if let Some(cid) = category_id {
         require_category_read(pool, user_id, cid).await?;
         sqlx::query_as::<_, Bookmark>(
@@ -473,14 +473,15 @@ pub async fn list_bookmarks(
         owned
     };
 
+    let none = VaultKeyring::default();
     let mut out = Vec::new();
     for b in rows {
-        let key = if b.is_vault && b.owner_user_id == user_id {
-            vault_key
+        let ring = if b.is_vault && b.owner_user_id == user_id {
+            keyring
         } else {
-            None
+            &none
         };
-        if let Some(v) = bookmark_to_view(pool, b, key, user_id).await? {
+        if let Some(v) = bookmark_to_view(pool, b, ring, user_id).await? {
             out.push(v);
         }
     }
@@ -535,25 +536,25 @@ pub async fn create_bookmark(
     pool: &PgPool,
     user_id: Uuid,
     req: CreateBookmark,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<BookmarkView> {
     let cat_ids = resolve_category_ids(&req.category_ids, req.category_id);
-    let mut is_vault = false;
+    let mut vault_id = None;
     for cid in &cat_ids {
         let (cat, access) = require_category_write(pool, user_id, *cid).await?;
         if cat.is_vault {
             if !access.is_owner() {
                 return Err(Error::Forbidden);
             }
-            is_vault = true;
+            vault_id = cat.vault_id;
         }
     }
 
     let title = req.title.clone().unwrap_or_else(|| req.url.clone());
     let primary = cat_ids.first().copied();
 
-    let bookmark = if is_vault {
-        let key = vault_key.ok_or(Error::VaultLocked)?;
+    let bookmark = if let Some(vault_id) = vault_id {
+        let key = *keyring.get(vault_id).ok_or(Error::VaultLocked)?;
         let payload = VaultPayload {
             url: req.url.clone(),
             title: title.clone(),
@@ -561,20 +562,20 @@ pub async fn create_bookmark(
             notes: req.notes.clone(),
             tags: req.tags.clone(),
         };
-        let key = *key;
         let (ct, nonce) =
             super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload)).await?;
         sqlx::query_as::<_, Bookmark>(
             r#"
             INSERT INTO bookmarks (
                 owner_user_id, category_id, url, title, description, notes,
-                is_vault, vault_ciphertext, vault_nonce
-            ) VALUES ($1,$2,'','','',NULL,TRUE,$3,$4)
+                is_vault, vault_id, vault_ciphertext, vault_nonce
+            ) VALUES ($1,$2,'','','',NULL,TRUE,$3,$4,$5)
             RETURNING *
             "#,
         )
         .bind(user_id)
         .bind(primary)
+        .bind(vault_id)
         .bind(ct)
         .bind(nonce)
         .fetch_one(pool)
@@ -615,7 +616,7 @@ pub async fn create_bookmark(
         .await?;
     }
     let bookmark = get_bookmark_raw(pool, user_id, bookmark.id).await?;
-    let view = bookmark_to_view(pool, bookmark, vault_key, user_id)
+    let view = bookmark_to_view(pool, bookmark, keyring, user_id)
         .await?
         .ok_or(Error::VaultLocked)?;
     let title = activity_bookmark_title(&view);
@@ -783,7 +784,7 @@ pub async fn update_bookmark(
     user_id: Uuid,
     id: Uuid,
     req: UpdateBookmark,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<BookmarkView> {
     let content = update_has_content(&req);
     let flags = update_has_flags(&req);
@@ -820,8 +821,9 @@ pub async fn update_bookmark(
     }
     if !content {
         let existing = get_bookmark_raw(pool, user_id, id).await?;
-        let key = if existing.is_vault { vault_key } else { None };
-        return bookmark_to_view(pool, existing, key, user_id)
+        let none = VaultKeyring::default();
+        let ring = if existing.is_vault { keyring } else { &none };
+        return bookmark_to_view(pool, existing, ring, user_id)
             .await?
             .ok_or(Error::VaultLocked);
     }
@@ -832,7 +834,10 @@ pub async fn update_bookmark(
         return Err(Error::Forbidden);
     }
     if existing.is_vault {
-        let key = *vault_key.ok_or(Error::VaultLocked)?;
+        let key = *existing
+            .vault_id
+            .and_then(|id| keyring.get(id))
+            .ok_or(Error::VaultLocked)?;
         let ct0 = existing
             .vault_ciphertext
             .clone()
@@ -883,7 +888,7 @@ pub async fn update_bookmark(
             set_bookmark_categories(pool, user_id, id, &c.into_iter().collect::<Vec<_>>()).await?;
         }
         let b = get_bookmark_raw(pool, user_id, id).await?;
-        let view = bookmark_to_view(pool, b, vault_key, user_id)
+        let view = bookmark_to_view(pool, b, keyring, user_id)
             .await?
             .ok_or(Error::VaultLocked)?;
         record_bookmark_update_activity(pool, user_id, &view, &changes, &change_keys).await;
@@ -960,7 +965,7 @@ pub async fn update_bookmark(
         )
         .await;
     }
-    let view = bookmark_to_view(pool, b, None, user_id)
+    let view = bookmark_to_view(pool, b, &VaultKeyring::default(), user_id)
         .await?
         .ok_or(Error::NotFound)?;
     record_bookmark_update_activity(pool, user_id, &view, &changes, &change_keys).await;
@@ -1304,7 +1309,7 @@ pub async fn save_bookmark_copy(
     if raw.is_vault {
         return Err(Error::BadRequest("cannot save vault bookmarks".into()));
     }
-    let source = bookmark_to_view(pool, raw, None, user_id)
+    let source = bookmark_to_view(pool, raw, &VaultKeyring::default(), user_id)
         .await?
         .ok_or(Error::NotFound)?;
     create_bookmark(
@@ -1322,7 +1327,7 @@ pub async fn save_bookmark_copy(
             is_unread: false,
             is_pinned: false,
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
 }
@@ -1346,7 +1351,7 @@ pub async fn list_broken_bookmarks(pool: &PgPool, user_id: Uuid) -> Result<Vec<B
 
     let mut out = Vec::with_capacity(rows.len());
     for b in rows {
-        if let Some(view) = bookmark_to_view(pool, b, None, user_id).await? {
+        if let Some(view) = bookmark_to_view(pool, b, &VaultKeyring::default(), user_id).await? {
             out.push(view);
         }
     }
@@ -1392,7 +1397,8 @@ pub async fn find_duplicate_groups(
 
         let mut bookmarks = Vec::with_capacity(rows.len());
         for b in rows {
-            if let Some(view) = bookmark_to_view(pool, b, None, user_id).await? {
+            if let Some(view) = bookmark_to_view(pool, b, &VaultKeyring::default(), user_id).await?
+            {
                 bookmarks.push(view);
             }
         }

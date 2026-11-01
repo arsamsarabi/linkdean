@@ -54,8 +54,8 @@ async fn create(
     AuthUser(user): AuthUser,
     Json(req): Json<CreateDashboard>,
 ) -> ApiResult<Json<DashboardView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::create_dashboard(&state.pool, user.id, req, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::create_dashboard(&state.pool, user.id, req, &keyring).await?;
     Ok(Json(view))
 }
 
@@ -63,8 +63,8 @@ async fn get_default(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<DashboardView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::get_default_dashboard(&state.pool, user.id, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::get_default_dashboard(&state.pool, user.id, &keyring).await?;
     Ok(Json(view))
 }
 
@@ -73,8 +73,8 @@ async fn put_default(
     AuthUser(user): AuthUser,
     Json(req): Json<PutDashboardLayout>,
 ) -> ApiResult<Json<DashboardView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::put_default_dashboard(&state.pool, user.id, req, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::put_default_dashboard(&state.pool, user.id, req, &keyring).await?;
     Ok(Json(view))
 }
 
@@ -83,8 +83,8 @@ async fn get_one(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<DashboardView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::get_dashboard(&state.pool, user.id, id, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::get_dashboard(&state.pool, user.id, id, &keyring).await?;
     Ok(Json(view))
 }
 
@@ -94,8 +94,8 @@ async fn put_one(
     Path(id): Path<Uuid>,
     Json(req): Json<PutDashboardLayout>,
 ) -> ApiResult<Json<DashboardView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::put_dashboard(&state.pool, user.id, id, req, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::put_dashboard(&state.pool, user.id, id, req, &keyring).await?;
     Ok(Json(view))
 }
 
@@ -105,8 +105,8 @@ async fn patch_one(
     Path(id): Path<Uuid>,
     Json(req): Json<PatchDashboard>,
 ) -> ApiResult<Json<DashboardView>> {
-    let key = state.vault_key(user.id).await;
-    let view = db::patch_dashboard(&state.pool, user.id, id, req, key.as_ref()).await?;
+    let keyring = state.vault_keyring(user.id).await;
+    let view = db::patch_dashboard(&state.pool, user.id, id, req, &keyring).await?;
     Ok(Json(view))
 }
 

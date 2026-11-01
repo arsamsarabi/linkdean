@@ -4,6 +4,7 @@ use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use linkdean_core::VaultKeyring;
 use linkdean_core::{CreateRegistrationInvite, UpdateAdminUser, UpdatePlatformSettings};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
@@ -109,7 +110,15 @@ async fn reindex_search(
     let mut failed: u64 = 0;
 
     for u in users {
-        let Ok(items) = db::list_bookmarks(&state.pool, u.id, None, false, None, false).await
+        let Ok(items) = db::list_bookmarks(
+            &state.pool,
+            u.id,
+            None,
+            false,
+            &VaultKeyring::default(),
+            false,
+        )
+        .await
         else {
             continue;
         };

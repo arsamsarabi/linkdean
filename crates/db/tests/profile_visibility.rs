@@ -1,6 +1,7 @@
 //! Who can see a profile and its bookmarks.
 //! Requires `DATABASE_URL`. Skips when unset.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CategoryVisibility, CreateBookmark, CreateCategory, CreateCategoryShare, Error,
     ListActivityFilter, ProfileVisibility, ShareAccess, UpdateBookmark, UpdateCategory,
@@ -95,7 +96,7 @@ async fn bookmark(pool: &PgPool, owner: &User, category_ids: Vec<Uuid>) -> Uuid 
             category_ids,
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bookmark")
@@ -565,7 +566,7 @@ async fn only_the_owner_sets_visibility() {
         is_private: Some(true),
         ..Default::default()
     };
-    let denied = db::update_bookmark(&pool, writer.id, bm, patch, None).await;
+    let denied = db::update_bookmark(&pool, writer.id, bm, patch, &VaultKeyring::default()).await;
     assert!(matches!(denied, Err(Error::Forbidden)));
 }
 
@@ -581,12 +582,12 @@ async fn is_private_round_trips_and_is_rejected_on_vault() {
         is_private: Some(true),
         ..Default::default()
     };
-    let view = db::update_bookmark(&pool, owner.id, bm, patch.clone(), None)
+    let view = db::update_bookmark(&pool, owner.id, bm, patch.clone(), &VaultKeyring::default())
         .await
         .expect("set private");
     assert!(view.is_private);
 
     mark_vault(&pool, "bookmarks", bm).await;
-    let denied = db::update_bookmark(&pool, owner.id, bm, patch, None).await;
+    let denied = db::update_bookmark(&pool, owner.id, bm, patch, &VaultKeyring::default()).await;
     assert!(matches!(denied, Err(Error::BadRequest(_))));
 }

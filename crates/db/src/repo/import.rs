@@ -1,4 +1,5 @@
 use linkdean_core::import_export::{leaf_name, path_key, ParsedImport};
+use linkdean_core::VaultKeyring;
 use linkdean_core::{BookmarkExport, CategoryExport, CreateCategory, Error, ImportJob, Result};
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -79,7 +80,7 @@ pub async fn apply_parsed_import(
     let mut failed = 0i32;
     for (mut bm, cat_path) in parsed.bookmarks {
         bm.category_id = cat_path.and_then(|p| path_to_id.get(&p).copied());
-        match create_bookmark(pool, user_id, bm, None).await {
+        match create_bookmark(pool, user_id, bm, &VaultKeyring::default()).await {
             Ok(_) => imported += 1,
             Err(e) => {
                 tracing::warn!(?e, "import bookmark failed");
@@ -108,7 +109,8 @@ pub async fn export_data(
         })
         .collect::<Vec<_>>();
 
-    let bookmarks = list_bookmarks(pool, user_id, None, false, None, false).await?;
+    let bookmarks =
+        list_bookmarks(pool, user_id, None, false, &VaultKeyring::default(), false).await?;
     let owned_ids: std::collections::HashSet<Uuid> = sqlx::query_as::<_, (Uuid,)>(
         "SELECT id FROM bookmarks WHERE owner_user_id = $1 AND is_vault = FALSE",
     )

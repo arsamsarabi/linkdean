@@ -1,3 +1,4 @@
+use linkdean_core::VaultKeyring;
 use linkdean_core::{
     Bookmark, CategoryAccess, CreateDashboard, Dashboard, DashboardItem, DashboardItemView,
     DashboardSection, DashboardSectionView, DashboardSummary, DashboardView, Error, PatchDashboard,
@@ -152,23 +153,23 @@ pub async fn list_dashboards_filtered(
 pub async fn get_default_dashboard(
     pool: &PgPool,
     user_id: Uuid,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
     if let Some(id) = pinned_shared_dashboard_id(pool, user_id).await? {
-        return get_dashboard(pool, user_id, id, vault_key).await;
+        return get_dashboard(pool, user_id, id, keyring).await;
     }
     let dash = ensure_default_dashboard(pool, user_id).await?;
-    load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await
+    load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, keyring).await
 }
 
 pub async fn get_dashboard(
     pool: &PgPool,
     user_id: Uuid,
     id: Uuid,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
     let (dash, access) = require_dashboard_read(pool, user_id, id).await?;
-    load_dashboard_view(pool, user_id, dash, access, vault_key).await
+    load_dashboard_view(pool, user_id, dash, access, keyring).await
 }
 
 async fn load_dashboard_view(
@@ -176,7 +177,7 @@ async fn load_dashboard_view(
     user_id: Uuid,
     dash: Dashboard,
     access: CategoryAccess,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
     let shared_with = if access.is_owner() {
         dashboard_shared_with(pool, dash.id).await?
@@ -225,12 +226,13 @@ async fn load_dashboard_view(
             if raw.is_vault && raw.owner_user_id != user_id {
                 continue;
             }
-            let key = if raw.is_vault && raw.owner_user_id == user_id {
-                vault_key
+            let none = VaultKeyring::default();
+            let ring = if raw.is_vault && raw.owner_user_id == user_id {
+                keyring
             } else {
-                None
+                &none
             };
-            let Some(view) = bookmark_to_view(pool, raw, key, user_id).await? else {
+            let Some(view) = bookmark_to_view(pool, raw, ring, user_id).await? else {
                 continue;
             };
             item_views.push(DashboardItemView {
@@ -274,7 +276,7 @@ pub async fn create_dashboard(
     pool: &PgPool,
     user_id: Uuid,
     req: CreateDashboard,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
     let _ = ensure_default_dashboard(pool, user_id).await?;
     let title = req
@@ -299,7 +301,7 @@ pub async fn create_dashboard(
 
     let title = dash.title.clone();
     let id = dash.id;
-    let view = load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await?;
+    let view = load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, keyring).await?;
     super::activity::record_activity(
         pool,
         user_id,
@@ -316,13 +318,13 @@ pub async fn put_default_dashboard(
     pool: &PgPool,
     user_id: Uuid,
     req: PutDashboardLayout,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
     let id = match pinned_shared_dashboard_id(pool, user_id).await? {
         Some(id) => id,
         None => ensure_default_dashboard(pool, user_id).await?.id,
     };
-    put_dashboard(pool, user_id, id, req, vault_key).await
+    put_dashboard(pool, user_id, id, req, keyring).await
 }
 
 pub async fn put_dashboard(
@@ -330,7 +332,7 @@ pub async fn put_dashboard(
     user_id: Uuid,
     id: Uuid,
     req: PutDashboardLayout,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
     let (dash, _) = require_dashboard_write(pool, user_id, id).await?;
     let before_title = dash.title.clone();
@@ -457,7 +459,7 @@ pub async fn put_dashboard(
     )
     .await;
 
-    get_dashboard(pool, user_id, id, vault_key).await
+    get_dashboard(pool, user_id, id, keyring).await
 }
 
 async fn pin_dashboard_row(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Dashboard> {
@@ -500,7 +502,7 @@ pub async fn patch_dashboard(
     user_id: Uuid,
     id: Uuid,
     req: PatchDashboard,
-    vault_key: Option<&[u8; 32]>,
+    keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
     // Anyone with access may pin, because a pin only changes their own default.
     // A rename still needs write access (same as put layout).
@@ -570,7 +572,7 @@ pub async fn patch_dashboard(
         change_keys.push("is_default");
     }
 
-    let view = get_dashboard(pool, user_id, id, vault_key).await?;
+    let view = get_dashboard(pool, user_id, id, keyring).await?;
     if !changes.is_empty() {
         let title = activity_title.as_deref().unwrap_or(view.title.as_str());
         let summary = super::activity::update_summary(

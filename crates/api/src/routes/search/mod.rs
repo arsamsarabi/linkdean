@@ -41,7 +41,7 @@ async fn search(
 
     if !q.q.trim().is_empty() {
         // Owned + shared category ids so Meili can surface shared (and invitee-created) docs.
-        let readable = db::list_categories(&state.pool, user.id, true, false, false).await?;
+        let readable = db::list_categories(&state.pool, user.id, true, &[], false).await?;
         let readable_ids: Vec<Uuid> = readable.into_iter().map(|c| c.id).collect();
 
         match state
@@ -83,13 +83,13 @@ async fn search(
         }
 
         let mode = settings.vault_search_mode.as_str();
-        let unlocked = state.vault_key(user.id).await;
+        let keyring = state.vault_keyring(user.id).await;
         match mode {
             "never" => {}
             "when_unlocked" => {
-                if let Some(key) = unlocked {
+                if !keyring.is_empty() {
                     let vault_hits =
-                        db::search_vault_bookmarks(&state.pool, user.id, &q.q, &key).await?;
+                        db::search_vault_bookmarks(&state.pool, user.id, &q.q, &keyring).await?;
                     for v in vault_hits {
                         hits.push(SearchHit {
                             id: v.id,
@@ -109,9 +109,9 @@ async fn search(
                 }
             }
             "always" => {
-                if let Some(key) = unlocked {
+                if !keyring.is_empty() {
                     let vault_hits =
-                        db::search_vault_bookmarks(&state.pool, user.id, &q.q, &key).await?;
+                        db::search_vault_bookmarks(&state.pool, user.id, &q.q, &keyring).await?;
                     for v in vault_hits {
                         hits.push(SearchHit {
                             id: v.id,

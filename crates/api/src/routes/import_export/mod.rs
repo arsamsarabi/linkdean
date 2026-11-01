@@ -9,6 +9,7 @@ use linkdean_core::import_export::{
     parse_raindrop_csv,
 };
 use linkdean_core::Error;
+use linkdean_core::VaultKeyring;
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -63,7 +64,16 @@ async fn import(
     let job = db::finish_import_job(&state.pool, job.id, total, imported, failed, None).await?;
 
     // reindex non-vault
-    if let Ok(items) = db::list_bookmarks(&state.pool, user.id, None, false, None, false).await {
+    if let Ok(items) = db::list_bookmarks(
+        &state.pool,
+        user.id,
+        None,
+        false,
+        &VaultKeyring::default(),
+        false,
+    )
+    .await
+    {
         for v in items {
             if let Err(e) = state.search.upsert_bookmark(&v).await {
                 tracing::warn!(bookmark_id = %v.id, error = %e, "meili reindex failed");

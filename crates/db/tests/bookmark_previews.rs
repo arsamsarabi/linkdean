@@ -2,6 +2,7 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
+use linkdean_core::VaultKeyring;
 use linkdean_core::{CreateBookmark, User};
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -32,7 +33,7 @@ async fn bookmark(pool: &PgPool, owner: &User) -> Uuid {
             url: format!("https://previews.example/{}", Uuid::new_v4()),
             ..Default::default()
         },
-        None,
+        &VaultKeyring::default(),
     )
     .await
     .expect("bookmark")

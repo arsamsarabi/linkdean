@@ -46,10 +46,8 @@ async fn restore(
         TrashKind::Bookmark => {
             db::restore_bookmark(&state.pool, user.id, id).await?;
             let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-            let key = state.vault_key(user.id).await;
-            if let Some(view) =
-                db::bookmark_to_view(&state.pool, raw, key.as_ref(), user.id).await?
-            {
+            let keyring = state.vault_keyring(user.id).await;
+            if let Some(view) = db::bookmark_to_view(&state.pool, raw, &keyring, user.id).await? {
                 if !view.is_vault {
                     if let Err(e) = state.search.upsert_bookmark(&view).await {
                         tracing::warn!(bookmark_id = %id, error = %e, "meili upsert after restore failed");
