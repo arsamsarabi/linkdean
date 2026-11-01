@@ -19,7 +19,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
 - Bulk select: move, tag, delete
 - Duplicate detection and merge UI
-- Broken-link list drawer + red badges on confirmed dead / unreachable cards
+- Broken-link header control + drawer; red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
 - Reading list (unread), favorites, and pin-to-top; opening a link can mark unread as read
 - Category manager in Settings (explorer + create drawer)
@@ -35,7 +35,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews
 - Admin reindex: rebuild Meili from Postgres (Settings → Admin)
-- Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; Library → Broken links drawer + card badges; `POST /bookmarks/{id}/check-link`
+- Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; shell header control (next to History) → drawer + card badges; `POST /bookmarks/{id}/check-link`
 
 ---
 

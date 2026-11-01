@@ -27,6 +27,8 @@ import {
 } from '@tabler/icons-react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
+  BrokenLinksButton,
+  BrokenLinksDrawer,
   CommandPalette,
   HistoryButton,
   HistoryDrawer,
@@ -54,6 +56,7 @@ export function AppShell(): ReactElement {
   const [paletteOpen, { open: openPalette, close: closePalette, toggle: togglePalette }] = useDisclosure(false)
   const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false)
   const [historyOpen, { open: openHistory, close: closeHistory }] = useDisclosure(false)
+  const [brokenOpen, { open: openBroken, close: closeBroken }] = useDisclosure(false)
   const [navOpen, { toggle: toggleNav, close: closeNav }] = useDisclosure(false)
   const unread = useUnreadNotificationCount(!!me.data)
 
@@ -146,6 +149,7 @@ export function AppShell(): ReactElement {
               <Skeleton circle height={36} width={36} />
             ) : (
               <Group gap="xs" wrap="nowrap">
+              <BrokenLinksButton onClick={openBroken} />
               <HistoryButton onClick={openHistory} />
               <Indicator
                 disabled={(unread.data?.count ?? 0) < 1}
@@ -244,6 +248,7 @@ export function AppShell(): ReactElement {
         </Stack>
       </Drawer>
       <CommandPalette opened={paletteOpen} onClose={closePalette} />
+      <BrokenLinksDrawer opened={brokenOpen} onClose={closeBroken} />
       <HistoryDrawer opened={historyOpen} onClose={closeHistory} />
       <NotificationsDrawer opened={notifOpen} onClose={closeNotif} />
     </MantineAppShell>

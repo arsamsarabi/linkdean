@@ -12,4 +12,9 @@ export {
   type BulkResult,
 } from './useBulkBookmarks'
 export { useDuplicates, useMergeDuplicateGroup } from './useDuplicates'
-export { useBrokenLinks, useRecheckBookmarkLink } from './useBrokenLinks'
+export {
+  brokenLinksQueryKey,
+  useBrokenLinks,
+  usePrefetchBrokenLinks,
+  useRecheckBookmarkLink,
+} from './useBrokenLinks'

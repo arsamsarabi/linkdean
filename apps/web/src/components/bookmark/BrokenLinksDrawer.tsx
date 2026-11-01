@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react'
 import {
+  ActionIcon,
   Box,
   Button,
   Drawer,
@@ -8,11 +9,12 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconExternalLink, IconRefresh } from '@tabler/icons-react'
+import { IconExternalLink, IconLinkOff, IconRefresh } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
-import { useBrokenLinks, useRecheckBookmarkLink } from '@/hooks'
+import { useBrokenLinks, usePrefetchBrokenLinks, useRecheckBookmarkLink } from '@/hooks'
 import type { Bookmark } from '@/schemas'
 
 type Props = {
@@ -137,5 +139,25 @@ export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElem
         </Stack>
       </Box>
     </Drawer>
+  )
+}
+
+export function BrokenLinksButton({ onClick }: { onClick: () => void }): ReactElement {
+  const prefetch = usePrefetchBrokenLinks()
+  return (
+    <Tooltip label="Broken links" position="bottom">
+      <ActionIcon
+        variant="subtle"
+        size="lg"
+        radius="md"
+        aria-label="Broken links"
+        onClick={onClick}
+        onMouseEnter={prefetch}
+        onFocus={prefetch}
+        onPointerDown={prefetch}
+      >
+        <IconLinkOff size={20} stroke={1.5} />
+      </ActionIcon>
+    </Tooltip>
   )
 }
