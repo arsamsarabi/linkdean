@@ -544,14 +544,12 @@ export function LibraryPage(): ReactElement {
     }
   }
 
-  const filterActive =
-    filterCats.length > 0 ||
-    filterTags.length > 0 ||
-    filterFlags.length > 0 ||
-    !!filterSince ||
-    vaultOnly
-  const filterCount =
-    filterCats.length + filterTags.length + filterFlags.length + (filterSince ? 1 : 0) + (vaultOnly ? 1 : 0)
+  // Panel filters only (not Favorites / Reading list / Pinned toggles).
+  const panelFilterActive =
+    filterCats.length > 0 || filterTags.length > 0 || !!filterSince || vaultOnly
+  const panelFilterCount =
+    filterCats.length + filterTags.length + (filterSince ? 1 : 0) + (vaultOnly ? 1 : 0)
+  const filterActive = panelFilterActive || filterFlags.length > 0
   const loading = bookmarks.isLoading || (searching && search.isFetching && !search.data)
   const emptyLibrary = !loading && !searching && !filterActive && list.length === 0
   const emptyFiltered = !loading && list.length === 0 && (searching || filterActive)
@@ -752,7 +750,7 @@ export function LibraryPage(): ReactElement {
             {viewMode === 'grid' ? (
               <Tooltip label="Filter by category or tag">
                 <Button
-                  variant={filterOpen || filterActive ? 'light' : 'default'}
+                  variant={filterOpen || panelFilterActive ? 'light' : 'default'}
                   leftSection={<IconFilter {...iconSm} />}
                   onClick={toggleFilter}
                   aria-expanded={filterOpen}
@@ -760,7 +758,7 @@ export function LibraryPage(): ReactElement {
                   h="100%"
                 >
                   Filter
-                  {filterActive ? ` (${filterCount})` : ''}
+                  {panelFilterActive ? ` (${panelFilterCount})` : ''}
                 </Button>
               </Tooltip>
             ) : null}
@@ -845,7 +843,8 @@ export function LibraryPage(): ReactElement {
           canCreate={canCreateInContext}
           viewerUserId={me.data?.user.id}
           filterOpen={filterOpen}
-          filterActive={filterActive}
+          panelFilterActive={panelFilterActive}
+          anyFilterActive={filterActive}
           filterPanelId={FILTER_PANEL_ID}
           draftFilterCats={draftFilterCats}
           draftFilterTags={draftFilterTags}
@@ -853,7 +852,6 @@ export function LibraryPage(): ReactElement {
           draftVaultOnly={draftVaultOnly}
           filterCats={filterCats}
           filterTags={filterTags}
-          filterFlags={filterFlags}
           filterSince={filterSince}
           vaultOnly={vaultOnly}
           catLabel={catLabel}
@@ -865,12 +863,15 @@ export function LibraryPage(): ReactElement {
           onDraftVaultOnly={setDraftVaultOnly}
           onApplyFilter={applyFilter}
           onCloseFilter={() => setFilterOpen(false)}
-          onClearFilters={() =>
-            setLibrarySearch({ category: [], tag: [], flag: [], since: null, vault: false })
-          }
+          onClearFilters={() => {
+            setDraftFilterCats([])
+            setDraftFilterTags([])
+            setDraftFilterSince(null)
+            setDraftVaultOnly(false)
+            setLibrarySearch({ category: [], tag: [], since: null, vault: false })
+          }}
           onRemoveCat={(id) => setLibrarySearch({ category: filterCats.filter((x) => x !== id) })}
           onRemoveTag={(t) => setLibrarySearch({ tag: filterTags.filter((x) => x !== t) })}
-          onRemoveFlag={(f) => setLibrarySearch({ flag: filterFlags.filter((x) => x !== f) })}
           onClearSince={() => setLibrarySearch({ since: null })}
           onClearVault={() => setLibrarySearch({ vault: false })}
           onClearSearchAndFilters={() => {

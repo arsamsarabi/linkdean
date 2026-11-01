@@ -22,19 +22,12 @@ import type { Category } from '@/schemas'
 import {
   FOLDER_UNCATEGORIZED,
   SINCE_FILTERS,
-  type FlagFilter,
   type LibraryListItem,
   type SinceFilter,
 } from '@/services'
 import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
-
-const FLAG_LABEL: Record<FlagFilter, string> = {
-  unread: 'Reading list',
-  favorite: 'Favorites',
-  pinned: 'Pinned',
-}
 
 const SINCE_LABEL: Record<SinceFilter, string> = {
   '7d': 'Last 7 days',
@@ -51,7 +44,10 @@ type Props = {
   emptyLibrary: boolean
   emptyFiltered: boolean
   filterOpen: boolean
-  filterActive: boolean
+  /** Category / tag / since / vault — drives pills + Filter badge. */
+  panelFilterActive: boolean
+  /** Includes flag toggles — empty-state messaging. */
+  anyFilterActive: boolean
   filterPanelId: string
   draftFilterCats: string[]
   draftFilterTags: string[]
@@ -59,7 +55,6 @@ type Props = {
   draftVaultOnly: boolean
   filterCats: string[]
   filterTags: string[]
-  filterFlags: FlagFilter[]
   filterSince: SinceFilter | null
   vaultOnly: boolean
   catLabel: Map<string, string>
@@ -74,7 +69,6 @@ type Props = {
   onClearFilters: () => void
   onRemoveCat: (id: string) => void
   onRemoveTag: (t: string) => void
-  onRemoveFlag: (f: FlagFilter) => void
   onClearSince: () => void
   onClearVault: () => void
   onClearSearchAndFilters: () => void
@@ -100,7 +94,8 @@ export function LibraryGridView({
   emptyLibrary,
   emptyFiltered,
   filterOpen,
-  filterActive,
+  panelFilterActive,
+  anyFilterActive,
   filterPanelId,
   draftFilterCats,
   draftFilterTags,
@@ -108,7 +103,6 @@ export function LibraryGridView({
   draftVaultOnly,
   filterCats,
   filterTags,
-  filterFlags,
   filterSince,
   vaultOnly,
   catLabel,
@@ -123,7 +117,6 @@ export function LibraryGridView({
   onClearFilters,
   onRemoveCat,
   onRemoveTag,
-  onRemoveFlag,
   onClearSince,
   onClearVault,
   onClearSearchAndFilters,
@@ -137,6 +130,12 @@ export function LibraryGridView({
   selectedIds,
   onToggleSelect,
 }: Props): ReactElement {
+  const draftHasFilters =
+    draftFilterCats.length > 0 ||
+    draftFilterTags.length > 0 ||
+    !!draftFilterSince ||
+    draftVaultOnly
+
   return (
     <Stack gap="md">
       <Collapse expanded={filterOpen}>
@@ -170,16 +169,25 @@ export function LibraryGridView({
             checked={draftVaultOnly}
             onChange={(e) => onDraftVaultOnly(e.currentTarget.checked)}
           />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={onCloseFilter}>
-              Cancel
+          <Group justify="space-between" wrap="wrap">
+            <Button
+              variant="subtle"
+              disabled={!draftHasFilters && !panelFilterActive}
+              onClick={onClearFilters}
+            >
+              Clear filters
             </Button>
-            <Button onClick={onApplyFilter}>Apply</Button>
+            <Group gap="sm">
+              <Button variant="default" onClick={onCloseFilter}>
+                Cancel
+              </Button>
+              <Button onClick={onApplyFilter}>Apply</Button>
+            </Group>
           </Group>
         </Stack>
       </Collapse>
 
-      {filterActive ? (
+      {panelFilterActive ? (
         <Group gap="xs">
           {filterCats.map((id) => (
             <Pill key={id} withRemoveButton onRemove={() => onRemoveCat(id)}>
@@ -189,11 +197,6 @@ export function LibraryGridView({
           {filterTags.map((t) => (
             <Pill key={t} withRemoveButton onRemove={() => onRemoveTag(t)}>
               #{t}
-            </Pill>
-          ))}
-          {filterFlags.map((f) => (
-            <Pill key={f} withRemoveButton onRemove={() => onRemoveFlag(f)}>
-              {FLAG_LABEL[f]}
             </Pill>
           ))}
           {filterSince ? (
@@ -206,9 +209,6 @@ export function LibraryGridView({
               Vault only
             </Pill>
           ) : null}
-          <Button variant="subtle" size="compact-sm" onClick={onClearFilters}>
-            Clear filters
-          </Button>
         </Group>
       ) : null}
 
@@ -239,7 +239,7 @@ export function LibraryGridView({
           title="Nothing matched"
           description="Try a different search or clear filters."
           action={
-            filterActive || searchQuery
+            anyFilterActive || searchQuery
               ? {
                   label: 'Clear search & filters',
                   onClick: onClearSearchAndFilters,
