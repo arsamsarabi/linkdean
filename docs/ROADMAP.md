@@ -8,16 +8,15 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Product**
 
-- Pending email invites for **single-bookmark** shares (lists + dashboards claim-on-register shipped; needs single-bookmark share first)
-- Broken-link checker (rate-limited worker)
 - Full-text notes and optional highlights
 - increase the number of icons offered to the user for the categories. paginate the icons so the user can scroll through them. add a search input to the icons page so the user can search for an icon.
 - Allow user to upload their own image for the bookmark items. replace the default image with the uploaded image.
+- break large components into smaller components. and reuse them across the app if possible. add this to the AGENTS.md file so the development agents follow this rule.
+- Go through the whole FE app and breakout logic from components into hooks. and reuse them across the app is possible. add this to the AGENTS.md file so the development agents follow this rule.
 
 **Social**
 
 - Save (“bookmark”) another user’s shared bookmark into own library
-- Share a **single bookmark** (not only folder / dashboard)
 - Follow / unfollow users
 - Block / unblock users
 - Mute / unmute users
@@ -97,3 +96,5 @@ Lowest numbered priority among the planned interactive surfaces.
 
 - Save current tab to Linkdean
 - Quick file-to-category from the extension
+
+5. can we get around cloudflare bot protection?
