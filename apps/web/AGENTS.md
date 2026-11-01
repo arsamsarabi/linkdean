@@ -65,6 +65,40 @@ If logic cannot be tested without React, it is in the wrong layer.
 
 ---
 
+### 3.3 File size and decomposition (mandatory)
+
+Keep modules small enough to review in one pass. Soft ceilings (prefer under; split when you exceed):
+
+| Kind | Soft max |
+| --- | --- |
+| Page / screen component | ~350 lines |
+| Presentational component | ~250 lines |
+| Domain hook (orchestration) | ~400 lines |
+| Service / pure module | ~300 lines |
+
+**When adding features to a large file:** split first (or as part of the same change). Do not keep growing a known oversized module.
+
+**Split components when:**
+
+- One file mixes unrelated UI regions (toolbar + filters + list + modals)
+- The same markup pattern appears in 2+ places → extract a shared presentational component under `components/<domain>/`
+- A page file is mostly JSX that can live as colocated children (`pages/<domain>/FooHeader.tsx`, etc.)
+
+**Extract hooks when:**
+
+- A component owns substantial state, effects, URL sync, mutations, or derived lists
+- Two screens need the same orchestration → shared hook under `hooks/<domain>/`
+- Logic can be unit-tested without rendering (prefer services for pure rules; hooks for React orchestration)
+
+**Rules of thumb:**
+
+- Components stay presentation-focused (see 3.1); hooks/services own behavior
+- Prefer domain folders + barrels over dumping helpers into a flat file
+- New shared UI goes in `components/`; page-only pieces stay under `pages/<domain>/`
+- After a split, delete dead code and update barrels (`index.ts`)
+
+---
+
 ## 4. State management
 
 ### 4.1 Tool selection
