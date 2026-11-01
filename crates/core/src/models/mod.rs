@@ -203,6 +203,8 @@ pub struct Category {
     pub is_vault: bool,
     /// Optional icon key (e.g. `star`, `code`). `None` = default folder.
     pub icon: Option<String>,
+    /// Unlisted public list slug (`ldl_…`). `None` = not published.
+    pub public_slug: Option<String>,
     pub position: i32,
     pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -347,6 +349,44 @@ pub struct CreateCategoryShare {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateCategoryShare {
     pub access: ShareAccess,
+}
+
+/// Owner-facing public-link state for a category (list).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryPublicLinkView {
+    pub enabled: bool,
+    /// Present when enabled. High-entropy unlisted slug.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slug: Option<String>,
+    /// SPA path, e.g. `/l/ldl_…`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+/// Anonymous read model for a published bookmark list.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicListView {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    pub owner_display_name: String,
+    pub bookmarks: Vec<PublicBookmarkView>,
+}
+
+/// Bookmark fields safe to expose on a public list (no notes / vault / owner ids).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicBookmarkView {
+    pub id: Uuid,
+    pub url: String,
+    pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub favicon_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview_image_url: Option<String>,
+    pub has_preview: bool,
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

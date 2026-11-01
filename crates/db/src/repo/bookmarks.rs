@@ -115,7 +115,7 @@ async fn set_bookmark_flags(
     Ok(())
 }
 
-async fn tags_for_bookmark(pool: &PgPool, bookmark_id: Uuid) -> Result<Vec<String>> {
+pub(crate) async fn tags_for_bookmark(pool: &PgPool, bookmark_id: Uuid) -> Result<Vec<String>> {
     let rows: Vec<(String,)> = sqlx::query_as(
         r#"
         SELECT t.name FROM tags t

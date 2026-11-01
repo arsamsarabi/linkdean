@@ -136,6 +136,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
                 parent_id: None,
                 is_hidden: None,
                 position: None,
+                icon: None,
             },
         )
         .await,
@@ -291,6 +292,7 @@ async fn share_read_and_write_membership() {
                 parent_id: None,
                 is_hidden: None,
                 position: None,
+                icon: None,
             },
         )
         .await,
@@ -464,5 +466,120 @@ async fn cannot_share_vault_category() {
         Err(Error::BadRequest(_))
     ));
 
+    assert!(matches!(
+        db::enable_category_public_link(&pool, user_a.id, vault_cat.id).await,
+        Err(Error::BadRequest(_))
+    ));
+
     let _ = db::delete_category(&pool, user_a.id, vault_cat.id).await;
+}
+
+#[tokio::test]
+async fn public_list_slug_is_unlisted_and_revocable() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+
+    let user_a = db::create_user(
+        &pool,
+        &unique_email("pub-a"),
+        Some("password-a-long"),
+        Some("Public A"),
+        None,
+        None,
+    )
+    .await
+    .expect("user a");
+    let user_b = db::create_user(
+        &pool,
+        &unique_email("pub-b"),
+        Some("password-b-long"),
+        Some("Public B"),
+        None,
+        None,
+    )
+    .await
+    .expect("user b");
+
+    let cat = db::create_category(
+        &pool,
+        user_a.id,
+        CreateCategory {
+            name: format!("PublicList-{}", Uuid::new_v4()),
+            parent_id: None,
+            is_hidden: false,
+            is_vault: false,
+            icon: None,
+        },
+    )
+    .await
+    .expect("cat");
+
+    let bm = db::create_bookmark(
+        &pool,
+        user_a.id,
+        CreateBookmark {
+            url: format!("https://public.example/{}/", Uuid::new_v4()),
+            title: Some("Public BM".into()),
+            description: Some("desc".into()),
+            notes: Some("secret notes".into()),
+            category_id: Some(cat.id),
+            category_ids: vec![cat.id],
+            tags: vec!["tag-a".into()],
+            ..Default::default()
+        },
+        None,
+    )
+    .await
+    .expect("bookmark");
+
+    // Stranger cannot list via normal ACL
+    assert!(matches!(
+        db::get_category(&pool, user_b.id, cat.id).await,
+        Err(Error::NotFound)
+    ));
+
+    let link = db::enable_category_public_link(&pool, user_a.id, cat.id)
+        .await
+        .expect("enable public");
+    assert!(link.enabled);
+    let slug = link.slug.expect("slug");
+
+    let pub_list = db::get_public_list_by_slug(&pool, &slug)
+        .await
+        .expect("resolve public");
+    assert_eq!(pub_list.name, cat.name);
+    assert_eq!(pub_list.owner_display_name, "Public A");
+    assert_eq!(pub_list.bookmarks.len(), 1);
+    assert_eq!(pub_list.bookmarks[0].id, bm.id);
+    assert_eq!(pub_list.bookmarks[0].title, "Public BM");
+    // notes never appear on PublicBookmarkView
+
+    let rotated = db::rotate_category_public_link(&pool, user_a.id, cat.id)
+        .await
+        .expect("rotate");
+    let new_slug = rotated.slug.expect("new slug");
+    assert_ne!(new_slug, slug);
+    assert!(matches!(
+        db::get_public_list_by_slug(&pool, &slug).await,
+        Err(Error::NotFound)
+    ));
+    assert!(db::get_public_list_by_slug(&pool, &new_slug).await.is_ok());
+
+    db::disable_category_public_link(&pool, user_a.id, cat.id)
+        .await
+        .expect("disable");
+    assert!(matches!(
+        db::get_public_list_by_slug(&pool, &new_slug).await,
+        Err(Error::NotFound)
+    ));
+
+    // Non-owner cannot manage link
+    assert!(matches!(
+        db::enable_category_public_link(&pool, user_b.id, cat.id).await,
+        Err(Error::NotFound | Error::Forbidden)
+    ));
+
+    let _ = db::delete_bookmark(&pool, user_a.id, bm.id).await;
+    let _ = db::delete_category(&pool, user_a.id, cat.id).await;
 }

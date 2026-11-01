@@ -5,8 +5,8 @@ use axum::extract::{Path, Query, State};
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::{
-    CategoryShareView, CategoryView, CreateCategory, CreateCategoryShare, ForkCategory,
-    UpdateCategory, UpdateCategoryShare,
+    CategoryPublicLinkView, CategoryShareView, CategoryView, CreateCategory, CreateCategoryShare,
+    ForkCategory, UpdateCategory, UpdateCategoryShare,
 };
 use linkdean_db::{self as db};
 use serde::Deserialize;
@@ -25,6 +25,16 @@ pub fn router() -> Router<AppState> {
         .route(
             "/categories/{id}/shares/{user_id}",
             patch(update_share).delete(delete_share),
+        )
+        .route(
+            "/categories/{id}/public-link",
+            get(get_public_link)
+                .post(enable_public_link)
+                .delete(disable_public_link),
+        )
+        .route(
+            "/categories/{id}/public-link/rotate",
+            post(rotate_public_link),
         )
 }
 
@@ -145,4 +155,40 @@ async fn delete_share(
 ) -> ApiResult<Json<serde_json::Value>> {
     db::delete_share(&state.pool, user.id, id, invitee_user_id).await?;
     Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+async fn get_public_link(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CategoryPublicLinkView>> {
+    let link = db::get_category_public_link(&state.pool, user.id, id).await?;
+    Ok(Json(link))
+}
+
+async fn enable_public_link(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CategoryPublicLinkView>> {
+    let link = db::enable_category_public_link(&state.pool, user.id, id).await?;
+    Ok(Json(link))
+}
+
+async fn rotate_public_link(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CategoryPublicLinkView>> {
+    let link = db::rotate_category_public_link(&state.pool, user.id, id).await?;
+    Ok(Json(link))
+}
+
+async fn disable_public_link(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CategoryPublicLinkView>> {
+    let link = db::disable_category_public_link(&state.pool, user.id, id).await?;
+    Ok(Json(link))
 }

@@ -8,6 +8,7 @@ mod dashboards;
 mod health;
 mod import_export;
 mod notifications;
+mod public;
 mod search;
 mod social;
 mod tags;
@@ -36,4 +37,5 @@ pub fn router() -> Router<AppState> {
         .merge(search::router())
         .merge(import_export::router())
         .merge(vault::router())
+        .merge(public::router())
 }

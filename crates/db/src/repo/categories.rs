@@ -1,16 +1,44 @@
+use linkdean_core::crypto;
 use linkdean_core::{
-    BookmarkView, Category, CategoryAccess, CategoryView, CreateBookmark, CreateCategory, Error,
-    ForkCategory, Result, UpdateCategory,
+    BookmarkView, Category, CategoryAccess, CategoryPublicLinkView, CategoryView, CreateBookmark,
+    CreateCategory, Error, ForkCategory, PublicBookmarkView, PublicListView, Result, UpdateCategory,
 };
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-use super::bookmarks::{bookmark_to_view, create_bookmark, get_bookmark_raw};
+use super::bookmarks::{bookmark_to_view, create_bookmark, get_bookmark_raw, tags_for_bookmark};
 use super::shares::{
     bookmark_can_read, category_access, list_shared_categories, owned_shared_out_invitees,
     require_category_owner, require_category_read, require_category_write,
 };
+use super::users::{find_user_by_id, user_share_label};
+
+const PUBLIC_SLUG_PREFIX: &str = "ldl_";
+
+fn public_list_path(slug: &str) -> String {
+    format!("/l/{slug}")
+}
+
+fn new_public_slug() -> String {
+    let secret = hex::encode(crypto::random_bytes(16));
+    format!("{PUBLIC_SLUG_PREFIX}{secret}")
+}
+
+fn to_public_link_view(slug: Option<&str>) -> CategoryPublicLinkView {
+    match slug {
+        Some(s) if !s.is_empty() => CategoryPublicLinkView {
+            enabled: true,
+            slug: Some(s.to_string()),
+            path: Some(public_list_path(s)),
+        },
+        _ => CategoryPublicLinkView {
+            enabled: false,
+            slug: None,
+            path: None,
+        },
+    }
+}
 
 /// Allowlist of category icon keys. Unknown / empty → `None` (default folder).
 fn normalize_category_icon(icon: Option<String>) -> Option<String> {
@@ -660,4 +688,216 @@ pub async fn fork_category(
         .ok_or_else(|| Error::msg("fork root missing"))?;
     let view = get_category(pool, user_id, new_root_id).await?;
     Ok((view, copied))
+}
+
+/// Owner: current public-link state for a category.
+pub async fn get_category_public_link(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    category_id: Uuid,
+) -> Result<CategoryPublicLinkView> {
+    let cat = require_category_owner(pool, owner_user_id, category_id).await?;
+    Ok(to_public_link_view(cat.public_slug.as_deref()))
+}
+
+/// Owner: enable public link (idempotent if already enabled).
+pub async fn enable_category_public_link(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    category_id: Uuid,
+) -> Result<CategoryPublicLinkView> {
+    let cat = require_category_owner(pool, owner_user_id, category_id).await?;
+    if cat.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    if cat.is_vault {
+        return Err(Error::BadRequest(
+            "vault categories cannot have a public link".into(),
+        ));
+    }
+    if let Some(slug) = cat.public_slug.as_deref().filter(|s| !s.is_empty()) {
+        return Ok(to_public_link_view(Some(slug)));
+    }
+
+    // Retry once on rare slug collision.
+    for _ in 0..2 {
+        let slug = new_public_slug();
+        let updated = sqlx::query_as::<_, Category>(
+            r#"
+            UPDATE categories
+            SET public_slug = $1, updated_at = now()
+            WHERE id = $2
+              AND owner_user_id = $3
+              AND is_vault = FALSE
+              AND deleted_at IS NULL
+              AND public_slug IS NULL
+            RETURNING *
+            "#,
+        )
+        .bind(&slug)
+        .bind(category_id)
+        .bind(owner_user_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| {
+            if e.to_string().contains("unique") || e.to_string().contains("duplicate") {
+                Error::Conflict("public slug collision".into())
+            } else {
+                Error::msg(e.to_string())
+            }
+        })?;
+
+        if let Some(row) = updated {
+            return Ok(to_public_link_view(row.public_slug.as_deref()));
+        }
+
+        // Lost race: another request enabled first — return current.
+        let again = get_category_by_id(pool, category_id).await?;
+        if let Some(s) = again.public_slug.as_deref().filter(|s| !s.is_empty()) {
+            return Ok(to_public_link_view(Some(s)));
+        }
+    }
+
+    Err(Error::msg("failed to enable public link"))
+}
+
+/// Owner: rotate slug (invalidates old URL). No-op enable if disabled.
+pub async fn rotate_category_public_link(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    category_id: Uuid,
+) -> Result<CategoryPublicLinkView> {
+    let cat = require_category_owner(pool, owner_user_id, category_id).await?;
+    if cat.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    if cat.is_vault {
+        return Err(Error::BadRequest(
+            "vault categories cannot have a public link".into(),
+        ));
+    }
+
+    for _ in 0..2 {
+        let slug = new_public_slug();
+        let updated = sqlx::query_as::<_, Category>(
+            r#"
+            UPDATE categories
+            SET public_slug = $1, updated_at = now()
+            WHERE id = $2
+              AND owner_user_id = $3
+              AND is_vault = FALSE
+              AND deleted_at IS NULL
+            RETURNING *
+            "#,
+        )
+        .bind(&slug)
+        .bind(category_id)
+        .bind(owner_user_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| {
+            if e.to_string().contains("unique") || e.to_string().contains("duplicate") {
+                Error::Conflict("public slug collision".into())
+            } else {
+                Error::msg(e.to_string())
+            }
+        })?;
+
+        if let Some(row) = updated {
+            return Ok(to_public_link_view(row.public_slug.as_deref()));
+        }
+    }
+
+    Err(Error::msg("failed to rotate public link"))
+}
+
+/// Owner: disable / revoke public link.
+pub async fn disable_category_public_link(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    category_id: Uuid,
+) -> Result<CategoryPublicLinkView> {
+    require_category_owner(pool, owner_user_id, category_id).await?;
+    sqlx::query(
+        r#"
+        UPDATE categories
+        SET public_slug = NULL, updated_at = now()
+        WHERE id = $1 AND owner_user_id = $2
+        "#,
+    )
+    .bind(category_id)
+    .bind(owner_user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(to_public_link_view(None))
+}
+
+/// Anonymous: resolve published list by slug (unlisted).
+pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<PublicListView> {
+    let slug = slug.trim();
+    if slug.is_empty() || !slug.starts_with(PUBLIC_SLUG_PREFIX) {
+        return Err(Error::NotFound);
+    }
+
+    let cat = sqlx::query_as::<_, Category>(
+        r#"
+        SELECT * FROM categories
+        WHERE public_slug = $1
+          AND is_vault = FALSE
+          AND deleted_at IS NULL
+        "#,
+    )
+    .bind(slug)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+
+    let owner = find_user_by_id(pool, cat.owner_user_id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    let owner_display_name = user_share_label(&owner);
+
+    let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(
+        r#"
+        SELECT b.* FROM bookmarks b
+        WHERE b.is_vault = FALSE
+          AND b.deleted_at IS NULL
+          AND (
+            b.category_id = $1
+            OR EXISTS (
+              SELECT 1 FROM bookmark_categories bc
+              WHERE bc.bookmark_id = b.id AND bc.category_id = $1
+            )
+          )
+        ORDER BY b.updated_at DESC
+        "#,
+    )
+    .bind(cat.id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let mut bookmarks = Vec::with_capacity(rows.len());
+    for b in rows {
+        let tags = tags_for_bookmark(pool, b.id).await?;
+        bookmarks.push(PublicBookmarkView {
+            id: b.id,
+            url: b.url,
+            title: b.title,
+            description: b.description,
+            favicon_url: b.favicon_url,
+            preview_image_url: b.preview_image_url,
+            has_preview: b.has_preview,
+            tags,
+        });
+    }
+
+    Ok(PublicListView {
+        name: cat.name,
+        icon: cat.icon,
+        owner_display_name,
+        bookmarks,
+    })
 }
