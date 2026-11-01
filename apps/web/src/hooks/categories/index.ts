@@ -23,3 +23,4 @@ export {
   useCategoryFolderActions,
   type CategoryFolderActions,
 } from './useCategoryFolderActions'
+export { useShareCategoryDrawer } from './useShareCategoryDrawer'

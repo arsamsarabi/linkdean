@@ -1,36 +1,9 @@
-import { useState, type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Alert,
-  Code,
-  CopyButton,
-  Divider,
-  Drawer,
-  Group,
-  Skeleton,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-  Tooltip,
-} from '@mantine/core'
+import { type ReactElement } from 'react'
+import { Divider, Drawer } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconCheck, IconCopy, IconRefresh } from '@tabler/icons-react'
-import { QueryErrorAlert } from '@/components/query-error-alert'
 import { ShareInvitePanel } from '@/components/share-invite'
-import {
-  useCategoryPublicLink,
-  useCategoryShares,
-  useCreateCategoryShare,
-  useDeleteCategoryPendingShare,
-  useDeleteCategoryShare,
-  useDisableCategoryPublicLink,
-  useEnableCategoryPublicLink,
-  useRotateCategoryPublicLink,
-  useUpdateCategoryPendingShare,
-  useUpdateCategoryShare,
-} from '@/hooks'
-import type { ShareAccess } from '@/schemas'
+import { useShareCategoryDrawer } from '@/hooks/categories'
+import { CategoryPublicLinkSection } from './CategoryPublicLinkSection'
 
 type Props = {
   categoryId: string | null
@@ -41,11 +14,6 @@ type Props = {
   onClose: () => void
 }
 
-function absolutePublicUrl(path: string): string {
-  if (typeof window === 'undefined') return path
-  return `${window.location.origin}${path}`
-}
-
 export function ShareCategoryDrawer({
   categoryId,
   categoryName,
@@ -53,70 +21,7 @@ export function ShareCategoryDrawer({
   opened,
   onClose,
 }: Props): ReactElement {
-  const [email, setEmail] = useState('')
-  const [access, setAccess] = useState<ShareAccess>('read')
-
-  const shares = useCategoryShares(opened ? categoryId : null)
-  const create = useCreateCategoryShare()
-  const update = useUpdateCategoryShare()
-  const remove = useDeleteCategoryShare()
-  const updatePending = useUpdateCategoryPendingShare()
-  const removePending = useDeleteCategoryPendingShare()
-
-  const publicLink = useCategoryPublicLink(opened ? categoryId : null, !isVault)
-  const enablePublic = useEnableCategoryPublicLink()
-  const rotatePublic = useRotateCategoryPublicLink()
-  const disablePublic = useDisableCategoryPublicLink()
-
-  async function onInvite(): Promise<void> {
-    if (!categoryId || !email.trim()) return
-    try {
-      const outcome = await create.mutateAsync({
-        categoryId,
-        email: email.trim(),
-        access,
-      })
-      setEmail('')
-      notifications.show({
-        message:
-          outcome.status === 'pending'
-            ? 'No account yet — access granted when they register'
-            : 'Invite added',
-      })
-    } catch (e) {
-      notifications.show({ color: 'red', message: String(e) })
-    }
-  }
-
-  async function onTogglePublic(next: boolean): Promise<void> {
-    if (!categoryId) return
-    try {
-      if (next) {
-        await enablePublic.mutateAsync(categoryId)
-        notifications.show({ message: 'Public link enabled' })
-      } else {
-        await disablePublic.mutateAsync(categoryId)
-        notifications.show({ message: 'Public link revoked' })
-      }
-    } catch (e) {
-      notifications.show({ color: 'red', message: String(e) })
-    }
-  }
-
-  async function onRotatePublic(): Promise<void> {
-    if (!categoryId) return
-    try {
-      await rotatePublic.mutateAsync(categoryId)
-      notifications.show({ message: 'Public link rotated — old URL no longer works' })
-    } catch (e) {
-      notifications.show({ color: 'red', message: String(e) })
-    }
-  }
-
-  const publicPath = publicLink.data?.path
-  const publicUrl = publicPath ? absolutePublicUrl(publicPath) : ''
-  const publicBusy =
-    enablePublic.isPending || rotatePublic.isPending || disablePublic.isPending
+  const s = useShareCategoryDrawer({ categoryId, opened, isVault })
 
   return (
     <Drawer
@@ -129,124 +34,59 @@ export function ShareCategoryDrawer({
     >
       <ShareInvitePanel
         description="Invite by email. Existing users get access now; unknown emails stay pending until they register. Read-write can edit bookmarks and add subfolders (not vault, share, or delete)."
-        email={email}
-        access={access}
-        onEmailChange={setEmail}
-        onAccessChange={setAccess}
-        onInvite={() => void onInvite()}
-        invitePending={create.isPending}
-        sharesError={shares.isError ? shares.error : null}
-        onRetryShares={() => void shares.refetch()}
-        sharesLoading={shares.isLoading}
-        activeShares={shares.data?.shares ?? []}
-        pendingInvites={shares.data?.pending ?? []}
-        removeBusy={remove.isPending || removePending.isPending}
+        email={s.email}
+        access={s.access}
+        onEmailChange={s.setEmail}
+        onAccessChange={s.setAccess}
+        onInvite={() => void s.onInvite()}
+        invitePending={s.create.isPending}
+        sharesError={s.shares.isError ? s.shares.error : null}
+        onRetryShares={() => void s.shares.refetch()}
+        sharesLoading={s.shares.isLoading}
+        activeShares={s.shares.data?.shares ?? []}
+        pendingInvites={s.shares.data?.pending ?? []}
+        removeBusy={s.remove.isPending || s.removePending.isPending}
         onUpdateAccess={(userId, next) => {
           if (!categoryId) return
-          void update
+          void s.update
             .mutateAsync({ categoryId, userId, access: next })
             .catch((e) => notifications.show({ color: 'red', message: String(e) }))
         }}
         onRevoke={(userId) => {
           if (!categoryId) return
-          void remove
+          void s.remove
             .mutateAsync({ categoryId, userId })
             .then(() => notifications.show({ message: 'Access revoked' }))
             .catch((e) => notifications.show({ color: 'red', message: String(e) }))
         }}
         onUpdatePendingAccess={(pendingId, next) => {
           if (!categoryId) return
-          void updatePending
+          void s.updatePending
             .mutateAsync({ categoryId, pendingId, access: next })
             .catch((e) => notifications.show({ color: 'red', message: String(e) }))
         }}
         onCancelPending={(pendingId) => {
           if (!categoryId) return
-          void removePending
+          void s.removePending
             .mutateAsync({ categoryId, pendingId })
             .then(() => notifications.show({ message: 'Pending invite cancelled' }))
             .catch((e) => notifications.show({ color: 'red', message: String(e) }))
         }}
       >
         <Divider label="Public link" labelPosition="left" />
-
-        {isVault ? (
-          <Alert color="gray" variant="light">
-            Vault lists cannot be published. Public links never include vault bookmarks.
-          </Alert>
-        ) : (
-          <Stack gap="sm">
-            <Text size="sm" c="dimmed">
-              Anyone with the link can view this list (read-only). Unlisted — not searchable. Notes
-              stay private.
-            </Text>
-
-            {publicLink.isError ? (
-              <QueryErrorAlert
-                error={publicLink.error}
-                onRetry={() => void publicLink.refetch()}
-              />
-            ) : null}
-
-            {publicLink.isLoading ? (
-              <Skeleton height={36} />
-            ) : (
-              <Switch
-                label="Enable public URL"
-                checked={!!publicLink.data?.enabled}
-                disabled={publicBusy}
-                onChange={(e) => void onTogglePublic(e.currentTarget.checked)}
-              />
-            )}
-
-            {publicLink.data?.enabled && publicUrl ? (
-              <Stack gap="xs">
-                <Group gap="xs" wrap="nowrap" align="flex-end">
-                  <TextInput
-                    label="Link"
-                    value={publicUrl}
-                    readOnly
-                    style={{ flex: 1 }}
-                    styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
-                  />
-                  <CopyButton value={publicUrl} timeout={1500}>
-                    {({ copied, copy }) => (
-                      <Tooltip label={copied ? 'Copied' : 'Copy'}>
-                        <ActionIcon
-                          variant="light"
-                          color={copied ? 'teal' : 'violet'}
-                          aria-label="Copy public link"
-                          onClick={copy}
-                          mb={2}
-                        >
-                          {copied ? (
-                            <IconCheck size={16} stroke={1.5} />
-                          ) : (
-                            <IconCopy size={16} stroke={1.5} />
-                          )}
-                        </ActionIcon>
-                      </Tooltip>
-                    )}
-                  </CopyButton>
-                  <Tooltip label="Rotate link">
-                    <ActionIcon
-                      variant="subtle"
-                      aria-label="Rotate public link"
-                      loading={rotatePublic.isPending}
-                      onClick={() => void onRotatePublic()}
-                      mb={2}
-                    >
-                      <IconRefresh size={16} stroke={1.5} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-                <Text size="xs" c="dimmed">
-                  Path <Code>{publicPath}</Code>
-                </Text>
-              </Stack>
-            ) : null}
-          </Stack>
-        )}
+        <CategoryPublicLinkSection
+          isVault={isVault}
+          loading={s.publicLink.isLoading}
+          error={s.publicLink.isError ? s.publicLink.error : null}
+          onRetry={() => void s.publicLink.refetch()}
+          enabled={!!s.publicLink.data?.enabled}
+          publicUrl={s.publicUrl}
+          publicPath={s.publicPath}
+          busy={s.publicBusy}
+          rotatePending={s.rotatePublic.isPending}
+          onToggle={(next) => void s.onTogglePublic(next)}
+          onRotate={() => void s.onRotatePublic()}
+        />
       </ShareInvitePanel>
     </Drawer>
   )
