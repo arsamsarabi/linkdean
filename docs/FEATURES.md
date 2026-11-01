@@ -62,7 +62,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Sharing (same instance)
 
 - Share folders with invitees: **read** or **write** ACL
-- Pending email invites: share with an address that has no account yet; access is claimed when they register (or first OIDC signup). SMTP delivery still backlog.
+- Pending email invites: share with an address that has no account yet; the invite waits for them to register, and access starts when they accept
+- Accept or decline shares from the notifications drawer; nothing appears in your library until you accept. Declining is silent and stops repeat invites until you restore it from Profile
 - Collaborative edit on write-shared collections
 - Save a shared bookmark into your own library (⋮ → Save to my library; lands in Unsorted)
 - Share dashboards: read / write; invitees see shared boards in the switcher

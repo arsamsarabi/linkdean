@@ -10,10 +10,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 - _(likes, comments, ratings on shared items — already shipped)_
 
-**Sharing**
-
-- Accept / reject share flow: share → notification only; accept adds to account, reject ignores (no immediate library inject)
-
 **Teams**
 
 - Create team; invite / remove members
