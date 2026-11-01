@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { bookmarkSchema } from '@/schemas/bookmarks'
-import { categoryAccessSchema, shareAccessSchema } from '@/schemas/categories'
+import {
+  categoryAccessSchema,
+  pendingShareInviteSchema,
+  shareAccessSchema,
+} from '@/schemas/categories'
 
 export const dashboardItemSchema = z.object({
   id: z.string(),
@@ -58,6 +62,16 @@ export const dashboardShareSchema = z.object({
 
 export const dashboardSharesSchema = z.array(dashboardShareSchema)
 
+export const dashboardSharesEnvelopeSchema = z.object({
+  shares: z.array(dashboardShareSchema),
+  pending: z.array(pendingShareInviteSchema).default([]),
+})
+
+export const createDashboardShareOutcomeSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('active'), share: dashboardShareSchema }),
+  z.object({ status: z.literal('pending'), invite: pendingShareInviteSchema }),
+])
+
 export const dashboardSummariesSchema = z.array(dashboardSummarySchema)
 
 export const putDashboardLayoutSchema = z.object({
@@ -84,6 +98,8 @@ export type DashboardSection = z.infer<typeof dashboardSectionSchema>
 export type Dashboard = z.infer<typeof dashboardSchema>
 export type DashboardSummary = z.infer<typeof dashboardSummarySchema>
 export type DashboardShare = z.infer<typeof dashboardShareSchema>
+export type DashboardSharesEnvelope = z.infer<typeof dashboardSharesEnvelopeSchema>
+export type CreateDashboardShareOutcome = z.infer<typeof createDashboardShareOutcomeSchema>
 export type PutDashboardLayout = z.infer<typeof putDashboardLayoutSchema>
 export type CreateDashboard = z.infer<typeof createDashboardSchema>
 export type PatchDashboard = z.infer<typeof patchDashboardSchema>

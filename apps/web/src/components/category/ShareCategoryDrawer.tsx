@@ -23,10 +23,12 @@ import {
   useCategoryPublicLink,
   useCategoryShares,
   useCreateCategoryShare,
+  useDeleteCategoryPendingShare,
   useDeleteCategoryShare,
   useDisableCategoryPublicLink,
   useEnableCategoryPublicLink,
   useRotateCategoryPublicLink,
+  useUpdateCategoryPendingShare,
   useUpdateCategoryShare,
 } from '@/hooks'
 import type { ShareAccess } from '@/schemas'
@@ -64,6 +66,8 @@ export function ShareCategoryDrawer({
   const create = useCreateCategoryShare()
   const update = useUpdateCategoryShare()
   const remove = useDeleteCategoryShare()
+  const updatePending = useUpdateCategoryPendingShare()
+  const removePending = useDeleteCategoryPendingShare()
 
   const publicLink = useCategoryPublicLink(opened ? categoryId : null, !isVault)
   const enablePublic = useEnableCategoryPublicLink()
@@ -73,17 +77,25 @@ export function ShareCategoryDrawer({
   async function onInvite(): Promise<void> {
     if (!categoryId || !email.trim()) return
     try {
-      await create.mutateAsync({
+      const outcome = await create.mutateAsync({
         categoryId,
         email: email.trim(),
         access,
       })
       setEmail('')
-      notifications.show({ message: 'Invite added' })
+      notifications.show({
+        message:
+          outcome.status === 'pending'
+            ? 'No account yet — access granted when they register'
+            : 'Invite added',
+      })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
   }
+
+  const activeShares = shares.data?.shares ?? []
+  const pendingInvites = shares.data?.pending ?? []
 
   async function onTogglePublic(next: boolean): Promise<void> {
     if (!categoryId) return
@@ -126,8 +138,8 @@ export function ShareCategoryDrawer({
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          Invite same-instance users by email. Read-only can view. Read-write can edit bookmarks and
-          add subfolders (not vault, share, or delete).
+          Invite by email. Existing users get access now; unknown emails stay pending until they
+          register. Read-write can edit bookmarks and add subfolders (not vault, share, or delete).
         </Text>
 
         <Stack gap="sm">
@@ -164,12 +176,12 @@ export function ShareCategoryDrawer({
           </Stack>
         ) : (
           <Stack gap="xs">
-            {(shares.data || []).length === 0 ? (
+            {activeShares.length === 0 && pendingInvites.length === 0 ? (
               <Text size="sm" c="dimmed">
                 No invitees yet.
               </Text>
             ) : null}
-            {(shares.data || []).map((s) => (
+            {activeShares.map((s) => (
               <Group key={s.id} justify="space-between" wrap="nowrap">
                 <Stack gap={0} style={{ minWidth: 0, flex: 1 }}>
                   <Text size="sm" truncate>
@@ -210,6 +222,53 @@ export function ShareCategoryDrawer({
                       void remove
                         .mutateAsync({ categoryId, userId: s.invitee_user_id })
                         .then(() => notifications.show({ message: 'Access revoked' }))
+                        .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+                    }}
+                  >
+                    <IconTrash size={14} stroke={1.5} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            ))}
+            {pendingInvites.map((p) => (
+              <Group key={p.id} justify="space-between" wrap="nowrap">
+                <Stack gap={0} style={{ minWidth: 0, flex: 1 }}>
+                  <Text size="sm" truncate>
+                    {p.invitee_email}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Pending — claims on register
+                  </Text>
+                </Stack>
+                <Select
+                  size="xs"
+                  data={accessOptions}
+                  value={p.access}
+                  allowDeselect={false}
+                  onChange={(v) => {
+                    if (!categoryId || !v) return
+                    void updatePending
+                      .mutateAsync({
+                        categoryId,
+                        pendingId: p.id,
+                        access: v as ShareAccess,
+                      })
+                      .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+                  }}
+                  w={130}
+                />
+                <Tooltip label="Cancel pending invite">
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="red"
+                    aria-label="Cancel pending invite"
+                    loading={removePending.isPending}
+                    onClick={() => {
+                      if (!categoryId) return
+                      void removePending
+                        .mutateAsync({ categoryId, pendingId: p.id })
+                        .then(() => notifications.show({ message: 'Pending invite cancelled' }))
                         .catch((e) => notifications.show({ color: 'red', message: String(e) }))
                     }}
                   >

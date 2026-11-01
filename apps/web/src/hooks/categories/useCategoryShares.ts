@@ -6,11 +6,17 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { CategoryShare, ShareAccess } from '@/schemas'
+import type {
+  CategoryShare,
+  CategorySharesEnvelope,
+  CreateCategoryShareOutcome,
+  PendingShareInvite,
+  ShareAccess,
+} from '@/schemas'
 
 export function useCategoryShares(
   categoryId: string | null
-): UseQueryResult<CategoryShare[]> {
+): UseQueryResult<CategorySharesEnvelope> {
   return useQuery({
     queryKey: ['category-shares', categoryId],
     queryFn: () => api.categoryShares(categoryId!),
@@ -20,7 +26,11 @@ export function useCategoryShares(
 
 type CreateShareVars = { categoryId: string; email: string; access: ShareAccess }
 
-export function useCreateCategoryShare(): UseMutationResult<CategoryShare, Error, CreateShareVars> {
+export function useCreateCategoryShare(): UseMutationResult<
+  CreateCategoryShareOutcome,
+  Error,
+  CreateShareVars
+> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ categoryId, email, access }: CreateShareVars) =>
@@ -56,6 +66,36 @@ export function useDeleteCategoryShare(): UseMutationResult<void, Error, DeleteS
     onSuccess: (_data, vars) => {
       void qc.invalidateQueries({ queryKey: ['category-shares', vars.categoryId] })
       void qc.invalidateQueries({ queryKey: ['categories'] })
+    },
+  })
+}
+
+type UpdatePendingVars = { categoryId: string; pendingId: string; access: ShareAccess }
+
+export function useUpdateCategoryPendingShare(): UseMutationResult<
+  PendingShareInvite,
+  Error,
+  UpdatePendingVars
+> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ categoryId, pendingId, access }: UpdatePendingVars) =>
+      api.updateCategoryPendingShare(categoryId, pendingId, { access }),
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({ queryKey: ['category-shares', vars.categoryId] })
+    },
+  })
+}
+
+type DeletePendingVars = { categoryId: string; pendingId: string }
+
+export function useDeleteCategoryPendingShare(): UseMutationResult<void, Error, DeletePendingVars> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ categoryId, pendingId }: DeletePendingVars) =>
+      api.deleteCategoryPendingShare(categoryId, pendingId),
+    onSuccess: (_data, vars) => {
+      void qc.invalidateQueries({ queryKey: ['category-shares', vars.categoryId] })
     },
   })
 }

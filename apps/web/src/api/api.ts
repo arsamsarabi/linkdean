@@ -12,15 +12,18 @@ import {
   bootstrapStatusSchema,
   categoriesSchema,
   categorySchema,
-  categorySharesSchema,
+  categorySharesEnvelopeSchema,
   categoryShareSchema,
+  createCategoryShareOutcomeSchema,
+  pendingShareInviteSchema,
   categoryPublicLinkSchema,
   publicListSchema,
   createApiKeyResponseSchema,
   forkCategoryResultSchema,
   dashboardSchema,
   dashboardShareSchema,
-  dashboardSharesSchema,
+  dashboardSharesEnvelopeSchema,
+  createDashboardShareOutcomeSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
   importResultSchema,
@@ -46,6 +49,9 @@ import {
   type Bookmark,
   type Category,
   type CategoryShare,
+  type CategorySharesEnvelope,
+  type CreateCategoryShareOutcome,
+  type PendingShareInvite,
   type CategoryPublicLink,
   type PublicList,
   type CreateApiKeyResponse,
@@ -54,6 +60,8 @@ import {
   type CreateDashboard,
   type Dashboard,
   type DashboardShare,
+  type DashboardSharesEnvelope,
+  type CreateDashboardShareOutcome,
   type DashboardSummary,
   type DuplicateGroup,
   type ForkCategoryResult,
@@ -270,17 +278,17 @@ export const api = {
   forkCategory: (id: string, body: { name?: string } = {}): Promise<ForkCategoryResult> =>
     req(`/categories/${id}/fork`, { method: 'POST', body: JSON.stringify(body) }, forkCategoryResultSchema),
 
-  categoryShares: (categoryId: string): Promise<CategoryShare[]> =>
-    req(`/categories/${categoryId}/shares`, {}, categorySharesSchema),
+  categoryShares: (categoryId: string): Promise<CategorySharesEnvelope> =>
+    req(`/categories/${categoryId}/shares`, {}, categorySharesEnvelopeSchema),
 
   createCategoryShare: (
     categoryId: string,
     body: { email: string; access: ShareAccess }
-  ): Promise<CategoryShare> =>
+  ): Promise<CreateCategoryShareOutcome> =>
     req(
       `/categories/${categoryId}/shares`,
       { method: 'POST', body: JSON.stringify(body) },
-      categoryShareSchema
+      createCategoryShareOutcomeSchema
     ),
 
   updateCategoryShare: (
@@ -296,6 +304,20 @@ export const api = {
 
   deleteCategoryShare: (categoryId: string, userId: string): Promise<void> =>
     req(`/categories/${categoryId}/shares/${userId}`, { method: 'DELETE' }),
+
+  updateCategoryPendingShare: (
+    categoryId: string,
+    pendingId: string,
+    body: { access: ShareAccess }
+  ): Promise<PendingShareInvite> =>
+    req(
+      `/categories/${categoryId}/pending-shares/${pendingId}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+      pendingShareInviteSchema
+    ),
+
+  deleteCategoryPendingShare: (categoryId: string, pendingId: string): Promise<void> =>
+    req(`/categories/${categoryId}/pending-shares/${pendingId}`, { method: 'DELETE' }),
 
   categoryPublicLink: (categoryId: string): Promise<CategoryPublicLink> =>
     req(`/categories/${categoryId}/public-link`, {}, categoryPublicLinkSchema),
@@ -396,17 +418,17 @@ export const api = {
   deleteDashboard: (id: string): Promise<DashboardSummary[]> =>
     req(`/dashboards/${id}`, { method: 'DELETE' }, dashboardSummariesSchema),
 
-  dashboardShares: (dashboardId: string): Promise<DashboardShare[]> =>
-    req(`/dashboards/${dashboardId}/shares`, {}, dashboardSharesSchema),
+  dashboardShares: (dashboardId: string): Promise<DashboardSharesEnvelope> =>
+    req(`/dashboards/${dashboardId}/shares`, {}, dashboardSharesEnvelopeSchema),
 
   createDashboardShare: (
     dashboardId: string,
     body: { email: string; access: ShareAccess }
-  ): Promise<DashboardShare> =>
+  ): Promise<CreateDashboardShareOutcome> =>
     req(
       `/dashboards/${dashboardId}/shares`,
       { method: 'POST', body: JSON.stringify(body) },
-      dashboardShareSchema
+      createDashboardShareOutcomeSchema
     ),
 
   updateDashboardShare: (
@@ -422,6 +444,20 @@ export const api = {
 
   deleteDashboardShare: (dashboardId: string, userId: string): Promise<void> =>
     req(`/dashboards/${dashboardId}/shares/${userId}`, { method: 'DELETE' }),
+
+  updateDashboardPendingShare: (
+    dashboardId: string,
+    pendingId: string,
+    body: { access: ShareAccess }
+  ): Promise<PendingShareInvite> =>
+    req(
+      `/dashboards/${dashboardId}/pending-shares/${pendingId}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+      pendingShareInviteSchema
+    ),
+
+  deleteDashboardPendingShare: (dashboardId: string, pendingId: string): Promise<void> =>
+    req(`/dashboards/${dashboardId}/pending-shares/${pendingId}`, { method: 'DELETE' }),
 
   trash: (): Promise<TrashItem[]> => req('/trash', {}, trashItemsSchema),
 

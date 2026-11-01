@@ -43,10 +43,35 @@ export const categoryShareSchema = z.object({
   updated_at: z.string().optional(),
 })
 
+export const pendingShareInviteSchema = z.object({
+  id: z.string(),
+  subject_type: z.enum(['category', 'dashboard']),
+  subject_id: z.string(),
+  invitee_email: z.string(),
+  access: shareAccessSchema,
+  invited_by_user_id: z.string(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+})
+
+export const categorySharesEnvelopeSchema = z.object({
+  shares: z.array(categoryShareSchema),
+  pending: z.array(pendingShareInviteSchema).default([]),
+})
+
+export const createCategoryShareOutcomeSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('active'), share: categoryShareSchema }),
+  z.object({ status: z.literal('pending'), invite: pendingShareInviteSchema }),
+])
+
+/** @deprecated Prefer categorySharesEnvelopeSchema */
 export const categorySharesSchema = z.array(categoryShareSchema)
 
 export type ShareAccess = z.infer<typeof shareAccessSchema>
 export type CategoryShare = z.infer<typeof categoryShareSchema>
+export type PendingShareInvite = z.infer<typeof pendingShareInviteSchema>
+export type CategorySharesEnvelope = z.infer<typeof categorySharesEnvelopeSchema>
+export type CreateCategoryShareOutcome = z.infer<typeof createCategoryShareOutcomeSchema>
 
 export const categoryPublicLinkSchema = z.object({
   enabled: z.boolean(),

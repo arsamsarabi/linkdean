@@ -17,7 +17,9 @@ import { QueryErrorAlert } from '@/components/query-error-alert'
 import {
   useCreateDashboardShare,
   useDashboardShares,
+  useDeleteDashboardPendingShare,
   useDeleteDashboardShare,
+  useUpdateDashboardPendingShare,
   useUpdateDashboardShare,
 } from '@/hooks'
 import type { ShareAccess } from '@/schemas'
@@ -47,21 +49,31 @@ export function ShareDashboardDrawer({
   const create = useCreateDashboardShare()
   const update = useUpdateDashboardShare()
   const remove = useDeleteDashboardShare()
+  const updatePending = useUpdateDashboardPendingShare()
+  const removePending = useDeleteDashboardPendingShare()
 
   async function onInvite(): Promise<void> {
     if (!dashboardId || !email.trim()) return
     try {
-      await create.mutateAsync({
+      const outcome = await create.mutateAsync({
         dashboardId,
         email: email.trim(),
         access,
       })
       setEmail('')
-      notifications.show({ message: 'Invite added' })
+      notifications.show({
+        message:
+          outcome.status === 'pending'
+            ? 'No account yet — access granted when they register'
+            : 'Invite added',
+      })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
   }
+
+  const activeShares = shares.data?.shares ?? []
+  const pendingInvites = shares.data?.pending ?? []
 
   return (
     <Drawer
@@ -74,8 +86,9 @@ export function ShareDashboardDrawer({
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          Invite same-instance users by email. Read-only can view the layout. Read-write can rearrange
-          sections and pins (not delete, share, or pin as default).
+          Invite by email. Existing users get access now; unknown emails stay pending until they
+          register. Read-write can rearrange sections and pins (not delete, share, or pin as
+          default).
         </Text>
 
         <Stack gap="sm">
@@ -108,12 +121,12 @@ export function ShareDashboardDrawer({
           </Stack>
         ) : (
           <Stack gap="xs">
-            {(shares.data || []).length === 0 ? (
+            {activeShares.length === 0 && pendingInvites.length === 0 ? (
               <Text size="sm" c="dimmed">
                 No invitees yet.
               </Text>
             ) : null}
-            {(shares.data || []).map((s) => (
+            {activeShares.map((s) => (
               <Group key={s.id} justify="space-between" wrap="nowrap">
                 <Stack gap={0} style={{ minWidth: 0, flex: 1 }}>
                   <Text size="sm" truncate>
@@ -154,6 +167,53 @@ export function ShareDashboardDrawer({
                       void remove
                         .mutateAsync({ dashboardId, userId: s.invitee_user_id })
                         .then(() => notifications.show({ message: 'Access revoked' }))
+                        .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+                    }}
+                  >
+                    <IconTrash size={14} stroke={1.5} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            ))}
+            {pendingInvites.map((p) => (
+              <Group key={p.id} justify="space-between" wrap="nowrap">
+                <Stack gap={0} style={{ minWidth: 0, flex: 1 }}>
+                  <Text size="sm" truncate>
+                    {p.invitee_email}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Pending — claims on register
+                  </Text>
+                </Stack>
+                <Select
+                  size="xs"
+                  data={accessOptions}
+                  value={p.access}
+                  allowDeselect={false}
+                  onChange={(v) => {
+                    if (!dashboardId || !v) return
+                    void updatePending
+                      .mutateAsync({
+                        dashboardId,
+                        pendingId: p.id,
+                        access: v as ShareAccess,
+                      })
+                      .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+                  }}
+                  w={130}
+                />
+                <Tooltip label="Cancel pending invite">
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="red"
+                    aria-label="Cancel pending invite"
+                    loading={removePending.isPending}
+                    onClick={() => {
+                      if (!dashboardId) return
+                      void removePending
+                        .mutateAsync({ dashboardId, pendingId: p.id })
+                        .then(() => notifications.show({ message: 'Pending invite cancelled' }))
                         .catch((e) => notifications.show({ color: 'red', message: String(e) }))
                     }}
                   >

@@ -10,6 +10,8 @@ export {
   useCreateCategoryShare,
   useUpdateCategoryShare,
   useDeleteCategoryShare,
+  useUpdateCategoryPendingShare,
+  useDeleteCategoryPendingShare,
 } from './useCategoryShares'
 export {
   useCategoryPublicLink,
