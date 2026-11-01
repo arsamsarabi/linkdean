@@ -26,7 +26,8 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 **Vault & privacy**
 
 - Client-held vault key option (true E2E; harder search tradeoff)
-- Multiple vaults, Per-category vault passphrases or global vaults passphrase (today: one vault per user)
+- Multiple vaults, Per-category vault passphrases or global vaults passphrase (today: one vault per user) ([spec](./superpowers/specs/2026-11-01-multiple-vaults-design.md))
+- Per-session vault unlock (today: unlocking on one device unlocks every session of that user)
 
 **Auth & multi-user**
 
