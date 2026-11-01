@@ -8,7 +8,26 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Social**
 
-- Profile + library visibility: public / private / followers-only; hidden profile; private bookmarks/lists
+- Profile (own & others) + library visibility: public / private / followers-only; hidden profile; private bookmarks/lists
+  - Profile page revamp
+  - Profile page header
+    - Avatar
+    - Display Name
+    - Bio
+    - Email
+    - Followers count (click through to followers list)
+    - Following count (click through to following list)
+    - Follow/Unfollow button (if not own profile)
+    - If own profile see edit profile button
+      - Edit profile Drawer
+        - Avatar
+        - Display Name
+        - Bio
+        - Email
+        - Password
+        - Save button
+        - Cancel button
+  - (if not own profile) Bookmarks list component (user's visible bookmarks, e.g. public, followers-only, etc.)
 - _(likes, comments, ratings on shared items — already shipped)_
 
 **Sharing**
