@@ -6,11 +6,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 ## Backlog 
 
-**Product**
-
-- increase the number of icons offered to the user for the categories. paginate the icons so the user can scroll through them. add a search input to the icons page so the user can search for an icon.
-- Allow user to upload their own image for the bookmark items. replace the default image with the uploaded image.
-
 **Social**
 
 - Save (“bookmark”) another user’s shared bookmark into own library
@@ -58,7 +53,11 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **possible bugs**
 
-- the sort by recently updated doesn't seem to sort the categories correctly. it should sort the categories by the recently updated date. and then below them any bookmarks that shared the parent category and have been updated recently.
+- Error when opening the broken-link list drawer:
+```
+Broken-link list failed
+Bad Request
+```
 
 ---
 

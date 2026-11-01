@@ -7,10 +7,11 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Library
 
 - Nested categories (folders) and tags
-- Optional category icons (picker on create / edit)
+- Optional category icons (large curated Tabler set; picker has search + scroll + pagination)
 - Edit category drawer (name, parent, icon, hidden) from folder menu
 - Bookmarks with title, URL, description, notes
 - Bookmark cards / glance tiles: title primary, full URL muted beneath
+- Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)
 - Grid and explorer library views (preference persisted)
 - Unsorted / uncategorized filter
