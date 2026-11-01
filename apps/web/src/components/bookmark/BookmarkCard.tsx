@@ -32,6 +32,7 @@ import {
   IconMessageCircle,
   IconStar,
   IconStarFilled,
+  IconLinkOff,
   IconTrash,
   IconWorld,
 } from '@tabler/icons-react'
@@ -67,6 +68,9 @@ export type BookmarkCardItem = {
   is_unread?: boolean
   is_pinned?: boolean
   deleted_at?: string | null
+  link_check_status?: 'ok' | 'broken' | 'unreachable' | 'unverifiable' | null
+  link_check_status_code?: number | null
+  link_check_error?: string | null
 }
 
 type PreviewFallbackProps = {
@@ -351,6 +355,24 @@ export function BookmarkCard({
             <Badge size="sm" variant="outline" color="red" tt="none">
               Pending delete
             </Badge>
+          ) : null}
+          {b.link_check_status === 'broken' || b.link_check_status === 'unreachable' ? (
+            <Tooltip
+              label={
+                b.link_check_status_code != null
+                  ? `${b.link_check_status} · HTTP ${b.link_check_status_code}`
+                  : b.link_check_error || b.link_check_status
+              }
+            >
+              <Badge
+                size="sm"
+                variant="light"
+                color="red"
+                leftSection={<IconLinkOff size={10} stroke={1.5} />}
+              >
+                {b.link_check_status}
+              </Badge>
+            </Tooltip>
           ) : null}
           {b.is_favorite ? (
             <Badge size="sm" variant="light" color="yellow" leftSection={<IconStarFilled size={10} stroke={1.5} />}>

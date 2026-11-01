@@ -29,6 +29,7 @@ import {
   IconFilter,
   IconFolders,
   IconLayoutGrid,
+  IconLinkOff,
   IconLockOpen,
   IconPin,
   IconSearch,
@@ -40,6 +41,7 @@ import {
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   BookmarkDrawer,
+  BrokenLinksDrawer,
   BulkEditDrawer,
   ConfirmModal,
   DuplicateMergeDrawer,
@@ -176,6 +178,7 @@ export function LibraryPage(): ReactElement {
   const [bulkMode, setBulkMode] = useState<BulkEditMode | null>(null)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [dupesOpen, { open: openDupes, close: closeDupes }] = useDisclosure(false)
+  const [brokenOpen, { open: openBroken, close: closeBroken }] = useDisclosure(false)
 
   const cats = useCategories()
   const bookmarks = useBookmarks()
@@ -616,6 +619,15 @@ export function LibraryPage(): ReactElement {
                   Duplicates
                 </Button>
               </Tooltip>
+              <Tooltip label="Bookmarks the checker marked broken or unreachable">
+                <Button
+                  variant="default"
+                  leftSection={<IconLinkOff {...iconSm} />}
+                  onClick={openBroken}
+                >
+                  Broken links
+                </Button>
+              </Tooltip>
             </>
           )}
           {canCreateInContext ? (
@@ -903,6 +915,15 @@ export function LibraryPage(): ReactElement {
       />
 
       <DuplicateMergeDrawer opened={dupesOpen} onClose={closeDupes} />
+
+      <BrokenLinksDrawer
+        opened={brokenOpen}
+        onClose={closeBroken}
+        onEdit={(id) => {
+          closeBroken()
+          openEdit(id)
+        }}
+      />
 
       {categoryActions.modals}
 

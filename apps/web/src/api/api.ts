@@ -395,6 +395,12 @@ export const api = {
   duplicates: (): Promise<{ urls: string[]; groups: DuplicateGroup[] }> =>
     req('/bookmarks/duplicates', {}, duplicatesSchema),
 
+  brokenBookmarks: (): Promise<Bookmark[]> =>
+    req('/bookmarks/broken', {}, z.array(bookmarkSchema)),
+
+  checkBookmarkLink: (id: string): Promise<Bookmark> =>
+    req(`/bookmarks/${id}/check-link`, { method: 'POST' }, bookmarkSchema),
+
   listDashboards: (): Promise<DashboardSummary[]> =>
     req('/dashboards', {}, dashboardSummariesSchema),
 

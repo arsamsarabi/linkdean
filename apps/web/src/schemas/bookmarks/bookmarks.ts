@@ -6,6 +6,8 @@ export const categoryRefSchema = z.object({
   path: z.string(),
 })
 
+export const linkCheckStatusSchema = z.enum(['ok', 'broken', 'unreachable', 'unverifiable'])
+
 export const bookmarkSchema = z.object({
   id: z.string(),
   owner_user_id: z.string(),
@@ -28,6 +30,10 @@ export const bookmarkSchema = z.object({
   is_unread: z.boolean().default(false),
   is_pinned: z.boolean().default(false),
   deleted_at: z.string().nullish(),
+  link_check_status: linkCheckStatusSchema.nullish(),
+  link_check_status_code: z.number().int().nullish(),
+  link_check_error: z.string().nullish(),
+  link_checked_at: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -71,6 +77,7 @@ export const duplicatesSchema = z.object({
 
 export type CategoryRef = z.infer<typeof categoryRefSchema>
 export type Bookmark = z.infer<typeof bookmarkSchema>
+export type LinkCheckStatus = z.infer<typeof linkCheckStatusSchema>
 export type SearchHit = z.infer<typeof searchHitSchema>
 export type SearchResponse = z.infer<typeof searchResponseSchema>
 export type ImportResult = z.infer<typeof importResultSchema>
