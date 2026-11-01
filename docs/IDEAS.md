@@ -2,4 +2,19 @@
 
 Scratch space for unprioritized ideas. Promote into [ROADMAP.md](./ROADMAP.md) when scheduled. Shipped product surface: [FEATURES.md](./FEATURES.md).
 
-_(empty — last promote: social, sharing accept/reject, teams, moderation/ban, vault Konami unlock, multi-provider SSO, profile revamp → backlog)_
+## API hardening
+
+Turn this into a full-fledged API platform enhancements plans, and fill the gaps in the APIs.
+
+- Error handling
+- Rate limiting
+- Caching
+- Authentication
+- Authorization
+- Logging
+- Monitoring
+- Metrics
+- Tracing
+- Debugging
+- Profiling
+- Testing
