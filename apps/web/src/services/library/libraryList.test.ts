@@ -1,16 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { FOLDER_UNCATEGORIZED } from './explorerLibrary'
-import { collectTagOptions, filterAndSortLibraryItems } from './libraryList'
+import { collectTagOptions, filterAndSortLibraryItems, sinceFilterToIso } from './libraryList'
+import { mergeSearchWithLocalCatchUp } from './searchCatchUp'
 
 const base = {
   owner_user_id: 'u1',
   categories: [] as { id: string; name: string; path: string }[],
   description: null,
+  notes: null as string | null,
   favicon_url: null,
   preview_image_url: null,
   has_preview: false,
   is_vault: false,
   can_write: true,
+  shared_out: false,
+  shared_with: [] as string[],
+  is_favorite: false,
+  is_unread: false,
+  is_pinned: false,
   tags: [] as string[],
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-02T00:00:00Z',
@@ -147,5 +154,96 @@ describe('collectTagOptions', () => {
       { value: 'b', label: 'b' },
       { value: 'c', label: 'c' },
     ])
+  })
+})
+
+describe('since + vault filters', () => {
+  it('filters vault only and created since cutoff', () => {
+    const now = Date.parse('2024-06-15T00:00:00Z')
+    const items = [
+      {
+        ...base,
+        id: '1',
+        url: 'https://a.example',
+        title: 'Old vault',
+        category_id: null,
+        is_vault: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      {
+        ...base,
+        id: '2',
+        url: 'https://b.example',
+        title: 'New vault',
+        category_id: null,
+        is_vault: true,
+        created_at: '2024-06-10T00:00:00Z',
+      },
+      {
+        ...base,
+        id: '3',
+        url: 'https://c.example',
+        title: 'New plain',
+        category_id: null,
+        is_vault: false,
+        created_at: '2024-06-10T00:00:00Z',
+      },
+    ]
+    const result = filterAndSortLibraryItems({
+      items,
+      filterCats: [],
+      filterTags: [],
+      vaultOnly: true,
+      sinceIso: sinceFilterToIso('7d', now),
+      sort: 'title_asc',
+    })
+    expect(result.map((i) => i.id)).toEqual(['2'])
+  })
+})
+
+describe('mergeSearchWithLocalCatchUp', () => {
+  it('appends local matches missing from Meili hits', () => {
+    const hits = [
+      {
+        id: '1',
+        owner_user_id: 'u1',
+        title: 'Alpha',
+        url: 'https://a.example',
+        description: null,
+        favicon_url: null,
+        preview_image_url: null,
+        has_preview: false,
+        tags: [] as string[],
+        category_id: null,
+        is_vault: false,
+        can_write: true,
+      },
+    ]
+    const bookmarks = [
+      {
+        ...base,
+        id: '1',
+        url: 'https://a.example',
+        title: 'Alpha',
+        category_id: null,
+      },
+      {
+        ...base,
+        id: '2',
+        url: 'https://b.example',
+        title: 'Brand new alpha doc',
+        category_id: null,
+      },
+      {
+        ...base,
+        id: '3',
+        url: 'https://c.example',
+        title: 'Other',
+        category_id: null,
+      },
+    ]
+    const { items, catchUpCount } = mergeSearchWithLocalCatchUp(hits, bookmarks, 'alpha')
+    expect(catchUpCount).toBe(1)
+    expect(items.map((i) => i.id)).toEqual(['1', '2'])
   })
 })

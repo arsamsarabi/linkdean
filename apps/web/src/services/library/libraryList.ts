@@ -7,16 +7,39 @@ export type LibraryListItem = Bookmark | (SearchHit & { categories?: Bookmark['c
 export const FLAG_FILTERS = ['unread', 'favorite', 'pinned'] as const
 export type FlagFilter = (typeof FLAG_FILTERS)[number]
 
+export const SINCE_FILTERS = ['7d', '30d', '90d', 'year'] as const
+export type SinceFilter = (typeof SINCE_FILTERS)[number]
+
 export type LibraryListInput = {
   items: readonly LibraryListItem[]
   filterCats: readonly string[]
   filterTags: readonly string[]
   filterFlags?: readonly FlagFilter[]
+  /** Keep only vault bookmarks when true. */
+  vaultOnly?: boolean
+  /** Keep items created on/after this ISO cutoff (usually from a since preset). */
+  sinceIso?: string | null
   sort: SortKey
 }
 
 function flagOf(item: LibraryListItem, key: 'is_favorite' | 'is_unread' | 'is_pinned'): boolean {
   return key in item ? Boolean((item as Bookmark)[key]) : false
+}
+
+function createdAtOf(item: LibraryListItem): string {
+  return 'created_at' in item && item.created_at ? item.created_at : ''
+}
+
+function isVaultOf(item: LibraryListItem): boolean {
+  return 'is_vault' in item ? Boolean(item.is_vault) : false
+}
+
+/** Resolve a since preset to an ISO timestamp relative to `now`. */
+export function sinceFilterToIso(since: SinceFilter | null | undefined, now = Date.now()): string | null {
+  if (!since) return null
+  const dayMs = 24 * 60 * 60 * 1000
+  const days = since === '7d' ? 7 : since === '30d' ? 30 : since === '90d' ? 90 : 365
+  return new Date(now - days * dayMs).toISOString()
 }
 
 export function filterAndSortLibraryItems(input: LibraryListInput): LibraryListItem[] {
@@ -43,6 +66,16 @@ export function filterAndSortLibraryItems(input: LibraryListInput): LibraryListI
         return flagOf(b, 'is_pinned')
       })
     )
+  }
+  if (input.vaultOnly) {
+    items = items.filter((b) => isVaultOf(b))
+  }
+  if (input.sinceIso) {
+    const cutoff = input.sinceIso
+    items = items.filter((b) => {
+      const created = createdAtOf(b)
+      return created && created >= cutoff
+    })
   }
 
   const sorted = [...items]

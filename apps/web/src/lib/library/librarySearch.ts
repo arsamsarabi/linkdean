@@ -5,6 +5,9 @@ export type SortKey = (typeof SORT_KEYS)[number]
 export const FLAG_KEYS = ['unread', 'favorite', 'pinned'] as const
 export type FlagKey = (typeof FLAG_KEYS)[number]
 
+export const SINCE_KEYS = ['7d', '30d', '90d', 'year'] as const
+export type SinceKey = (typeof SINCE_KEYS)[number]
+
 export type LibrarySearch = {
   q?: string
   sort?: SortKey
@@ -14,6 +17,10 @@ export type LibrarySearch = {
   tag?: string | string[]
   /** Reading-list / favorite / pin filters */
   flag?: string | string[]
+  /** Created within window: 7d / 30d / 90d / year */
+  since?: SinceKey
+  /** Vault-only filter (`1` in URL). */
+  vault?: '1'
   /** Explorer folder id (`uncategorized` or category uuid). Omit / `all` = root. */
   folder?: string
   /** One-shot: open create drawer (command palette). Consumed then stripped. */
@@ -49,6 +56,12 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
   const flag = asStringList(search.flag).filter((f): f is FlagKey =>
     (FLAG_KEYS as readonly string[]).includes(f)
   )
+  const sinceRaw = typeof search.since === 'string' ? search.since : undefined
+  const since =
+    sinceRaw && (SINCE_KEYS as readonly string[]).includes(sinceRaw) ? (sinceRaw as SinceKey) : undefined
+  const vaultRaw = search.vault
+  const vault =
+    vaultRaw === true || vaultRaw === 1 || vaultRaw === '1' || vaultRaw === 'true' ? ('1' as const) : undefined
   const q = typeof search.q === 'string' && search.q.trim() ? search.q : undefined
   const folderRaw = typeof search.folder === 'string' ? search.folder.trim() : ''
   const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
@@ -63,6 +76,8 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
     category: listToSearchParam(category),
     tag: listToSearchParam(tag),
     flag: listToSearchParam(flag),
+    since,
+    vault,
     folder,
     create,
     focus,
@@ -76,6 +91,8 @@ export function buildLibrarySearch(input: {
   category?: string[]
   tag?: string[]
   flag?: string[]
+  since?: SinceKey | null
+  vault?: boolean
   folder?: string
   create?: boolean
   focus?: 'search'
@@ -87,12 +104,16 @@ export function buildLibrarySearch(input: {
   const flag = (input.flag || []).filter((f): f is FlagKey =>
     (FLAG_KEYS as readonly string[]).includes(f)
   )
+  const since =
+    input.since && (SINCE_KEYS as readonly string[]).includes(input.since) ? input.since : undefined
   return {
     q,
     sort,
     category: listToSearchParam(input.category || []),
     tag: listToSearchParam(input.tag || []),
     flag: listToSearchParam(flag),
+    since,
+    vault: input.vault ? '1' : undefined,
     folder,
     create: input.create ? true : undefined,
     focus: input.focus === 'search' ? 'search' : undefined,

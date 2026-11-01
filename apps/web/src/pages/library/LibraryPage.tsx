@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   Affix,
+  Alert,
   Button,
   Center,
   Group,
@@ -67,6 +68,7 @@ import {
   canWriteCategory,
   categoryPath,
   type FlagKey,
+  type SinceKey,
   type SortKey,
 } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
@@ -77,12 +79,15 @@ import {
   draftFromBookmark,
   emptyDraft,
   filterAndSortLibraryItems,
+  mergeSearchWithLocalCatchUp,
   normalizeFolderId,
+  sinceFilterToIso,
   toggleId,
   writableIds,
   type ExplorerFolderId,
   type FlagFilter,
   type LibraryListItem,
+  type SinceFilter,
 } from '@/services'
 import { useUi } from '@/stores'
 import { LibraryGridView } from './LibraryGridView'
@@ -101,6 +106,8 @@ export function LibraryPage(): ReactElement {
     category?: string | string[]
     tag?: string | string[]
     flag?: string | string[]
+    since?: SinceKey
+    vault?: '1'
     folder?: string
     create?: true
     focus?: 'search'
@@ -118,6 +125,8 @@ export function LibraryPage(): ReactElement {
     () => asStringList(searchParams.flag).filter((f): f is FlagFilter => ['unread', 'favorite', 'pinned'].includes(f)),
     [searchParams.flag]
   )
+  const filterSince: SinceFilter | null = searchParams.since ?? null
+  const vaultOnly = searchParams.vault === '1'
   const sort: SortKey = searchParams.sort ?? 'updated_desc'
   const urlQ = searchParams.q ?? ''
   const folderId = normalizeFolderId(searchParams.folder)
@@ -154,6 +163,8 @@ export function LibraryPage(): ReactElement {
   const [filterOpen, setFilterOpen] = useState(false)
   const [draftFilterCats, setDraftFilterCats] = useState<string[]>([])
   const [draftFilterTags, setDraftFilterTags] = useState<string[]>([])
+  const [draftFilterSince, setDraftFilterSince] = useState<SinceFilter | null>(null)
+  const [draftVaultOnly, setDraftVaultOnly] = useState(false)
 
   const [drawerOpen, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [draft, setDraft] = useState<BookmarkDraft | null>(null)
@@ -188,6 +199,8 @@ export function LibraryPage(): ReactElement {
           category: filterCats,
           tag: filterTags,
           flag: filterFlags,
+          since: filterSince,
+          vault: vaultOnly,
           folder: FOLDER_ALL,
         }),
       })
@@ -206,6 +219,8 @@ export function LibraryPage(): ReactElement {
         category: filterCats,
         tag: filterTags,
         flag: filterFlags,
+        since: filterSince,
+        vault: vaultOnly,
         folder: folderId,
       }),
       replace: true,
@@ -218,6 +233,8 @@ export function LibraryPage(): ReactElement {
     category?: string[]
     tag?: string[]
     flag?: string[]
+    since?: SinceFilter | null
+    vault?: boolean
     /** Pass `all` or empty string to clear folder selection. */
     folder?: string
   }): void {
@@ -229,6 +246,8 @@ export function LibraryPage(): ReactElement {
         category: patch.category ?? filterCats,
         tag: patch.tag ?? filterTags,
         flag: patch.flag ?? filterFlags,
+        since: patch.since !== undefined ? patch.since : filterSince,
+        vault: patch.vault !== undefined ? patch.vault : vaultOnly,
         folder: patch.folder !== undefined ? patch.folder || FOLDER_ALL : folderId,
       }),
     })
@@ -270,8 +289,23 @@ export function LibraryPage(): ReactElement {
     return map
   }, [cats.data])
 
-  const list = useMemo((): LibraryListItem[] => {
-    const raw: LibraryListItem[] = searching ? search.data?.hits || [] : bookmarks.data || []
+  const { list, searchCatchUpCount } = useMemo((): {
+    list: LibraryListItem[]
+    searchCatchUpCount: number
+  } => {
+    let catchUpCount = 0
+    let raw: LibraryListItem[]
+    if (searching) {
+      const merged = mergeSearchWithLocalCatchUp(
+        search.data?.hits || [],
+        bookmarks.data || [],
+        debouncedQ
+      )
+      raw = merged.items
+      catchUpCount = merged.catchUpCount
+    } else {
+      raw = bookmarks.data || []
+    }
     const flagsById = new Map((bookmarks.data || []).map((b) => [b.id, b]))
     const items = raw.map((item) => {
       const full = flagsById.get(item.id)
@@ -281,29 +315,57 @@ export function LibraryPage(): ReactElement {
         is_favorite: full.is_favorite,
         is_unread: full.is_unread,
         is_pinned: full.is_pinned,
+        is_vault: full.is_vault,
+        created_at: full.created_at,
+        updated_at: full.updated_at,
+        categories: full.categories,
       }
     })
     const cats =
       folderId === FOLDER_UNCATEGORIZED && !filterCats.includes(FOLDER_UNCATEGORIZED)
         ? [...filterCats, FOLDER_UNCATEGORIZED]
         : filterCats
-    return filterAndSortLibraryItems({
-      items,
-      filterCats: cats,
-      filterTags,
-      filterFlags,
-      sort,
-    })
-  }, [bookmarks.data, search.data, searching, filterCats, filterTags, filterFlags, sort, folderId])
+    return {
+      list: filterAndSortLibraryItems({
+        items,
+        filterCats: cats,
+        filterTags,
+        filterFlags,
+        vaultOnly,
+        sinceIso: sinceFilterToIso(filterSince),
+        sort,
+      }),
+      searchCatchUpCount: catchUpCount,
+    }
+  }, [
+    bookmarks.data,
+    search.data,
+    searching,
+    debouncedQ,
+    filterCats,
+    filterTags,
+    filterFlags,
+    vaultOnly,
+    filterSince,
+    sort,
+    folderId,
+  ])
 
   function toggleFilter(): void {
     setDraftFilterCats(filterCats)
     setDraftFilterTags(filterTags)
+    setDraftFilterSince(filterSince)
+    setDraftVaultOnly(vaultOnly)
     setFilterOpen((o) => !o)
   }
 
   function applyFilter(): void {
-    setLibrarySearch({ category: draftFilterCats, tag: draftFilterTags })
+    setLibrarySearch({
+      category: draftFilterCats,
+      tag: draftFilterTags,
+      since: draftFilterSince,
+      vault: draftVaultOnly,
+    })
     setFilterOpen(false)
   }
 
@@ -375,6 +437,8 @@ export function LibraryPage(): ReactElement {
         category: filterCats,
         tag: filterTags,
         flag: filterFlags,
+        since: filterSince,
+        vault: vaultOnly,
         folder: folderId,
       }),
       replace: true,
@@ -480,7 +544,14 @@ export function LibraryPage(): ReactElement {
     }
   }
 
-  const filterActive = filterCats.length > 0 || filterTags.length > 0 || filterFlags.length > 0
+  const filterActive =
+    filterCats.length > 0 ||
+    filterTags.length > 0 ||
+    filterFlags.length > 0 ||
+    !!filterSince ||
+    vaultOnly
+  const filterCount =
+    filterCats.length + filterTags.length + filterFlags.length + (filterSince ? 1 : 0) + (vaultOnly ? 1 : 0)
   const loading = bookmarks.isLoading || (searching && search.isFetching && !search.data)
   const emptyLibrary = !loading && !searching && !filterActive && list.length === 0
   const emptyFiltered = !loading && list.length === 0 && (searching || filterActive)
@@ -624,6 +695,28 @@ export function LibraryPage(): ReactElement {
       {search.isError && searching ? (
         <QueryErrorAlert error={search.error} onRetry={() => void search.refetch()} title="Search failed" />
       ) : null}
+      {searching && searchCatchUpCount > 0 ? (
+        <Alert
+          color="yellow"
+          title="Search index catching up"
+          withCloseButton={false}
+        >
+          <Group justify="space-between" align="center" wrap="wrap" gap="sm">
+            <Text size="sm">
+              Showing {searchCatchUpCount} local match{searchCatchUpCount === 1 ? '' : 'es'} while Meilisearch
+              finishes indexing.
+            </Text>
+            <Button
+              size="compact-sm"
+              variant="light"
+              loading={search.isFetching}
+              onClick={() => void search.refetch()}
+            >
+              Retry search
+            </Button>
+          </Group>
+        </Alert>
+      ) : null}
 
       <Stack gap="md">
         <Group justify="space-between" align="stretch" wrap="wrap" gap="sm">
@@ -667,9 +760,7 @@ export function LibraryPage(): ReactElement {
                   h="100%"
                 >
                   Filter
-                  {filterActive
-                    ? ` (${filterCats.length + filterTags.length + filterFlags.length})`
-                    : ''}
+                  {filterActive ? ` (${filterCount})` : ''}
                 </Button>
               </Tooltip>
             ) : null}
@@ -757,23 +848,33 @@ export function LibraryPage(): ReactElement {
           filterPanelId={FILTER_PANEL_ID}
           draftFilterCats={draftFilterCats}
           draftFilterTags={draftFilterTags}
+          draftFilterSince={draftFilterSince}
+          draftVaultOnly={draftVaultOnly}
           filterCats={filterCats}
           filterTags={filterTags}
           filterFlags={filterFlags}
+          filterSince={filterSince}
+          vaultOnly={vaultOnly}
           catLabel={catLabel}
           categories={cats.data || []}
           allTags={allTags}
           onDraftCats={setDraftFilterCats}
           onDraftTags={setDraftFilterTags}
+          onDraftSince={setDraftFilterSince}
+          onDraftVaultOnly={setDraftVaultOnly}
           onApplyFilter={applyFilter}
           onCloseFilter={() => setFilterOpen(false)}
-          onClearFilters={() => setLibrarySearch({ category: [], tag: [], flag: [] })}
+          onClearFilters={() =>
+            setLibrarySearch({ category: [], tag: [], flag: [], since: null, vault: false })
+          }
           onRemoveCat={(id) => setLibrarySearch({ category: filterCats.filter((x) => x !== id) })}
           onRemoveTag={(t) => setLibrarySearch({ tag: filterTags.filter((x) => x !== t) })}
           onRemoveFlag={(f) => setLibrarySearch({ flag: filterFlags.filter((x) => x !== f) })}
+          onClearSince={() => setLibrarySearch({ since: null })}
+          onClearVault={() => setLibrarySearch({ vault: false })}
           onClearSearchAndFilters={() => {
             setQ('')
-            setLibrarySearch({ q: '', category: [], tag: [], flag: [] })
+            setLibrarySearch({ q: '', category: [], tag: [], flag: [], since: null, vault: false })
           }}
           onCreate={openCreate}
           onEdit={openEdit}
