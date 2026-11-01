@@ -436,6 +436,8 @@ pub struct PendingShareInvite {
     pub claimed_at: Option<DateTime<Utc>>,
     pub claimed_by_user_id: Option<Uuid>,
     pub revoked_at: Option<DateTime<Utc>>,
+    pub invitee_user_id: Option<Uuid>,
+    pub rejected_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -448,6 +450,20 @@ pub struct PendingShareInviteView {
     pub invited_by_user_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+/// An invite as its invitee sees it. `rejected_at` is set when they declined it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShareInviteInboxItem {
+    pub id: Uuid,
+    pub subject_type: PendingShareSubjectType,
+    pub subject_id: Uuid,
+    pub subject_title: String,
+    pub access: ShareAccess,
+    pub inviter_display_name: String,
+    pub created_at: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejected_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
