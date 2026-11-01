@@ -6,7 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { Category } from '@/schemas'
+import type { Category, CategoryVisibility } from '@/schemas'
 import { useUi } from '@/stores'
 
 export function useCategories(includeHidden?: boolean, includeVault?: boolean): UseQueryResult<Category[]> {
@@ -40,6 +40,7 @@ type UpdateCategoryVars = {
     is_hidden: boolean
     position: number
     icon: string | null
+    visibility: CategoryVisibility
   }>
 }
 

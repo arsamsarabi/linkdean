@@ -11,6 +11,7 @@ describe('bookmarks drafts', () => {
       tags: [],
       category_ids: [],
       is_favorite: false,
+      is_private: false,
       is_unread: false,
       is_pinned: false,
     })
@@ -33,6 +34,7 @@ describe('bookmarks drafts', () => {
       shared_out: false,
       shared_with: [],
       is_favorite: true,
+      is_private: false,
       is_unread: true,
       is_pinned: false,
       categories: [{ id: 'c1', name: 'C', path: 'C' }],
@@ -48,6 +50,7 @@ describe('bookmarks drafts', () => {
       tags: ['t'],
       category_ids: ['c1'],
       is_favorite: true,
+      is_private: false,
       is_unread: true,
       is_pinned: false,
       has_preview: false,

@@ -48,6 +48,7 @@ function invalidateFollowQueries(qc: ReturnType<typeof useQueryClient>, userId?:
   void qc.invalidateQueries({ queryKey: ['follows', 'status'] })
   if (userId) void qc.invalidateQueries({ queryKey: followStatusQueryKey(userId) })
   void qc.invalidateQueries({ queryKey: ['notifications'] })
+  void qc.invalidateQueries({ queryKey: ['profiles'] })
 }
 
 export function useFollowUser(): UseMutationResult<{ follow: FollowRelation }, Error, string> {

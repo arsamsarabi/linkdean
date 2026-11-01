@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { getToken } from '@/lib'
 import { useSyncDuringRender } from '../render'
 
-export function useAvatarImage(hasAvatar: boolean, bust?: number | string): string | undefined {
+export function useAvatarImage(hasAvatar: boolean, bust?: number | string, userId = 'me'): string | undefined {
   const [src, setSrc] = useState<string | undefined>()
 
   useSyncDuringRender([hasAvatar], () => {
@@ -15,7 +15,7 @@ export function useAvatarImage(hasAvatar: boolean, bust?: number | string): stri
     if (!hasAvatar) return
     const token = getToken()
     const q = bust != null ? `?v=${bust}` : ''
-    fetch(`/api/users/me/avatar${q}`, {
+    fetch(`/api/users/${userId}/avatar${q}`, {
       credentials: 'include',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -35,7 +35,7 @@ export function useAvatarImage(hasAvatar: boolean, bust?: number | string): stri
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [hasAvatar, bust])
+  }, [hasAvatar, bust, userId])
 
   return src
 }

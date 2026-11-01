@@ -6,7 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { ApiKey, CreateApiKeyResponse, MeResponse, UserPublic, UserSettings } from '@/schemas'
+import type { ApiKey, CreateApiKeyResponse, MeResponse, ProfileVisibility, UserPublic, UserSettings } from '@/schemas'
 import { useUi } from '@/stores'
 
 type SettingsEnvelope = { settings: UserSettings }
@@ -63,6 +63,7 @@ type ProfileBody = {
   bio?: string | null
   timezone?: string | null
   email?: string
+  profile_visibility?: ProfileVisibility
 }
 
 export function useUpdateProfile(): UseMutationResult<{ user: UserPublic }, Error, ProfileBody> {
@@ -71,6 +72,7 @@ export function useUpdateProfile(): UseMutationResult<{ user: UserPublic }, Erro
     mutationFn: (body: ProfileBody) => api.updateProfile(body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['me'] })
+      void qc.invalidateQueries({ queryKey: ['profiles'] })
     },
   })
 }

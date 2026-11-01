@@ -7,6 +7,7 @@ export const userPublicSchema = z.object({
   bio: z.string().nullish(),
   timezone: z.string().nullish(),
   has_avatar: z.boolean(),
+  profile_visibility: z.enum(['members', 'followers', 'hidden']).default('hidden'),
   has_password: z.boolean(),
   has_vault: z.boolean(),
   is_admin: z.boolean(),

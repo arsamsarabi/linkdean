@@ -35,6 +35,9 @@ import {
   okSchema,
   pendingShareInviteSchema,
   platformSettingsEnvelopeSchema,
+  profileBookmarksPageSchema,
+  profileSchema,
+  profileSummariesEnvelopeSchema,
   publicListSchema,
   registrationInvitesEnvelopeSchema,
   searchResponseSchema,
@@ -56,6 +59,7 @@ import {
   type CategoryPublicLink,
   type CategoryShare,
   type CategorySharesEnvelope,
+  type CategoryVisibility,
   type CreateApiKeyResponse,
   type CreateCategoryShareOutcome,
   type CreateDashboard,
@@ -74,6 +78,10 @@ import {
   type PatchDashboard,
   type PendingShareInvite,
   type PlatformSettings,
+  type Profile,
+  type ProfileBookmarksPage,
+  type ProfileSummary,
+  type ProfileVisibility,
   type PublicList,
   type PutDashboardLayout,
   type RegistrationInvite,
@@ -216,6 +224,7 @@ export const api = {
     bio?: string | null
     timezone?: string | null
     email?: string
+    profile_visibility?: ProfileVisibility
   }): Promise<{ user: UserPublic }> =>
     req('/users/me', { method: 'PATCH', body: JSON.stringify(body) }, userEnvelopeSchema),
 
@@ -256,6 +265,17 @@ export const api = {
   unfollowUser: (id: string): Promise<{ follow: FollowRelation }> =>
     req(`/users/${id}/follow`, { method: 'DELETE' }, followEnvelopeSchema),
 
+  userProfile: (id: string): Promise<Profile> => req(`/users/${id}/profile`, {}, profileSchema),
+
+  userBookmarks: (id: string, limit: number, offset: number): Promise<ProfileBookmarksPage> =>
+    req(`/users/${id}/bookmarks?limit=${limit}&offset=${offset}`, {}, profileBookmarksPageSchema),
+
+  userFollowers: (id: string): Promise<{ users: ProfileSummary[] }> =>
+    req(`/users/${id}/followers`, {}, profileSummariesEnvelopeSchema),
+
+  userFollowing: (id: string): Promise<{ users: ProfileSummary[] }> =>
+    req(`/users/${id}/following`, {}, profileSummariesEnvelopeSchema),
+
   followStatus: (id: string): Promise<{ follow: FollowRelation }> =>
     req(`/users/${id}/follow-status`, {}, followEnvelopeSchema),
 
@@ -289,6 +309,7 @@ export const api = {
       is_hidden: boolean
       position: number
       icon: string | null
+      visibility: CategoryVisibility
     }>
   ): Promise<Category> => req(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, categorySchema),
 
@@ -381,6 +402,7 @@ export const api = {
       is_favorite: boolean
       is_unread: boolean
       is_pinned: boolean
+      is_private: boolean
     }>
   ): Promise<Bookmark> => req(`/bookmarks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, bookmarkSchema),
 
