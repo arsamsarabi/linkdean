@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  activityEventsEnvelopeSchema,
   adminReindexSchema,
   adminUserEnvelopeSchema,
   adminUsersEnvelopeSchema,
@@ -35,6 +36,9 @@ import {
   unreadCountSchema,
   userEnvelopeSchema,
   vaultStatusSchema,
+  type ActivityAction,
+  type ActivityEvent,
+  type ActivitySubjectType,
   type AdminUserSummary,
   type ApiKey,
   type Bookmark,
@@ -117,6 +121,18 @@ export const api = {
 
   revokeApiKey: (id: string): Promise<{ ok: boolean }> =>
     req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),
+
+  listActivity: (opts?: {
+    limit?: number
+    subjectType?: ActivitySubjectType
+    action?: ActivityAction
+  }): Promise<{ events: ActivityEvent[] }> => {
+    const params = new URLSearchParams()
+    params.set('limit', String(opts?.limit ?? 50))
+    if (opts?.subjectType) params.set('subject_type', opts.subjectType)
+    if (opts?.action) params.set('action', opts.action)
+    return req(`/activity?${params.toString()}`, {}, activityEventsEnvelopeSchema)
+  },
 
   listNotifications: (limit = 50): Promise<{ notifications: Notification[] }> =>
     req(`/notifications?limit=${limit}`, {}, notificationsEnvelopeSchema),

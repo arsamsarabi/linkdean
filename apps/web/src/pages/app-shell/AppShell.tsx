@@ -28,6 +28,8 @@ import {
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   CommandPalette,
+  HistoryButton,
+  HistoryDrawer,
   LogoMark,
   NotificationsBell,
   NotificationsDrawer,
@@ -51,6 +53,7 @@ export function AppShell(): ReactElement {
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const [paletteOpen, { open: openPalette, close: closePalette, toggle: togglePalette }] = useDisclosure(false)
   const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false)
+  const [historyOpen, { open: openHistory, close: closeHistory }] = useDisclosure(false)
   const [navOpen, { toggle: toggleNav, close: closeNav }] = useDisclosure(false)
   const unread = useUnreadNotificationCount(!!me.data)
 
@@ -143,6 +146,7 @@ export function AppShell(): ReactElement {
               <Skeleton circle height={36} width={36} />
             ) : (
               <Group gap="xs" wrap="nowrap">
+              <HistoryButton onClick={openHistory} />
               <Indicator
                 disabled={(unread.data?.count ?? 0) < 1}
                 label={(unread.data?.count ?? 0) > 9 ? '9+' : unread.data?.count}
@@ -240,6 +244,7 @@ export function AppShell(): ReactElement {
         </Stack>
       </Drawer>
       <CommandPalette opened={paletteOpen} onClose={closePalette} />
+      <HistoryDrawer opened={historyOpen} onClose={closeHistory} />
       <NotificationsDrawer opened={notifOpen} onClose={closeNotif} />
     </MantineAppShell>
   )
