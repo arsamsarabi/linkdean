@@ -1,10 +1,10 @@
-//! Pinning a shared dashboard as the viewer's default.
+//! Pinning a shared dashboard as the viewer's default, and showing its pins' images.
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
 use linkdean_core::{
-    CreateDashboard, CreateDashboardShare, Dashboard, DashboardView, Error, PatchDashboard,
-    ShareAccess, User,
+    CreateBookmark, CreateDashboard, CreateDashboardShare, Dashboard, DashboardView, Error,
+    PatchDashboard, PutDashboardLayout, PutDashboardSection, ShareAccess, User,
 };
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -235,4 +235,82 @@ async fn pinning_does_not_grant_rename_or_access() {
 
     let outsider = db::patch_dashboard(&pool, stranger.id, board, pin(true), None).await;
     assert!(matches!(outsider, Err(Error::NotFound)));
+}
+
+async fn pinned_bookmark(pool: &PgPool, owner: &User, board: Uuid) -> Uuid {
+    let bookmark = db::create_bookmark(
+        pool,
+        owner.id,
+        CreateBookmark {
+            url: format!("https://pins.example/{}", Uuid::new_v4()),
+            title: Some("Pinned".into()),
+            ..Default::default()
+        },
+        None,
+    )
+    .await
+    .expect("bookmark");
+    db::put_dashboard(
+        pool,
+        owner.id,
+        board,
+        PutDashboardLayout {
+            title: None,
+            sections: vec![PutDashboardSection {
+                title: "Pins".into(),
+                bookmark_ids: vec![bookmark.id],
+            }],
+        },
+        None,
+    )
+    .await
+    .expect("layout");
+    bookmark.id
+}
+
+#[tokio::test]
+async fn invitee_can_load_images_for_dashboard_pins_only_while_shared() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let invitee = user(&pool, "invitee").await;
+    let stranger = user(&pool, "stranger").await;
+    let board = shared_board(&pool, &owner, &invitee, ShareAccess::Read).await;
+    let bookmark = pinned_bookmark(&pool, &owner, board).await;
+
+    db::get_bookmark_for_assets(&pool, invitee.id, bookmark)
+        .await
+        .expect("invitee image");
+    let outsider = db::get_bookmark_for_assets(&pool, stranger.id, bookmark).await;
+    assert!(matches!(outsider, Err(Error::NotFound)));
+
+    // Images only: full bookmark reads stay limited to folder shares.
+    let full = db::get_bookmark_raw(&pool, invitee.id, bookmark).await;
+    assert!(matches!(full, Err(Error::NotFound)));
+
+    db::delete_dashboard_share(&pool, owner.id, board, invitee.id)
+        .await
+        .expect("revoke");
+    let revoked = db::get_bookmark_for_assets(&pool, invitee.id, bookmark).await;
+    assert!(matches!(revoked, Err(Error::NotFound)));
+}
+
+#[tokio::test]
+async fn vault_pins_stay_hidden_from_invitees() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let invitee = user(&pool, "invitee").await;
+    let board = shared_board(&pool, &owner, &invitee, ShareAccess::Read).await;
+    let bookmark = pinned_bookmark(&pool, &owner, board).await;
+    sqlx::query("UPDATE bookmarks SET is_vault = TRUE WHERE id = $1")
+        .bind(bookmark)
+        .execute(&pool)
+        .await
+        .expect("mark vault");
+
+    let denied = db::get_bookmark_for_assets(&pool, invitee.id, bookmark).await;
+    assert!(matches!(denied, Err(Error::NotFound)));
 }

@@ -134,7 +134,7 @@ async fn get_preview(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    let raw = db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
     if !raw.has_preview {
         return Err(Error::NotFound.into());
     }
@@ -252,7 +252,7 @@ async fn get_favicon(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    let _raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    let _raw = db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
     serve_cached_asset(
         state.favicon_path(id),
         state.favicon_ct_path(id),
@@ -266,7 +266,7 @@ async fn get_og(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    let _raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    let _raw = db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
     serve_cached_asset(state.og_path(id), state.og_ct_path(id), "image/jpeg").await
 }
 

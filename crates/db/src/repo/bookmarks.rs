@@ -497,6 +497,38 @@ pub async fn get_bookmark_raw(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
         .ok_or(Error::NotFound)
 }
 
+/// Bookmark for serving its preview, favicon or OG image. A dashboard share shows its
+/// non-vault pins to invitees without granting `bookmark_can_read`, so those images
+/// are allowed here and nowhere else: this must not back social or write paths.
+pub async fn get_bookmark_for_assets(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Bookmark> {
+    match get_bookmark_raw(pool, user_id, id).await {
+        Err(Error::NotFound) => {}
+        result => return result,
+    }
+    sqlx::query_as::<_, Bookmark>(
+        r#"
+        SELECT b.*
+        FROM bookmarks b
+        JOIN dashboard_items di ON di.bookmark_id = b.id
+        JOIN dashboard_sections s ON s.id = di.section_id
+        JOIN dashboards d ON d.id = s.dashboard_id
+        JOIN dashboard_shares ds ON ds.dashboard_id = d.id
+        WHERE b.id = $1
+          AND ds.invitee_user_id = $2
+          AND d.deleted_at IS NULL
+          AND b.deleted_at IS NULL
+          AND b.is_vault = FALSE
+        LIMIT 1
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
+}
+
 pub async fn create_bookmark(
     pool: &PgPool,
     user_id: Uuid,
