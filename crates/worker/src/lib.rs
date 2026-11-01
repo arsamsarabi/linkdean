@@ -694,11 +694,13 @@ pub async fn backfill_previews(pool: PgPool, search: SearchClient, opts: EnrichO
 
 async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Result<Vec<u8>> {
     let ws = resolve_browser_ws(browser_http).await?;
-    let (mut browser, mut handler) = Browser::connect(ws).await?;
+    // Chrome is shared, so never call `browser.close()`: it shuts the whole process down.
+    let (browser, mut handler) = Browser::connect(ws).await?;
     let handle = tokio::spawn(async move { while let Some(_ev) = handler.next().await {} });
 
+    let page = browser.new_page("about:blank").await;
     let result = async {
-        let page = browser.new_page("about:blank").await?;
+        let page = page.as_ref().map_err(|e| anyhow::anyhow!("{e}"))?;
         // Viewport via CDP (Page::set_viewport removed in chromiumoxide 0.7).
         page.execute(
             chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams::builder()
@@ -725,12 +727,14 @@ async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Resul
         let jpeg = tokio::time::timeout(Duration::from_secs(10), page.screenshot(params))
             .await
             .map_err(|_| anyhow::anyhow!("screenshot timeout"))??;
-        let _ = page.close().await;
         Ok::<Vec<u8>, anyhow::Error>(jpeg)
     }
     .await;
 
-    let _ = browser.close().await;
+    if let Ok(page) = page {
+        let _ = page.close().await;
+    }
+    drop(browser);
     handle.abort();
     result
 }
@@ -742,26 +746,49 @@ async fn resolve_browser_ws(browser_http: &str) -> anyhow::Result<String> {
     if base.starts_with("ws://") || base.starts_with("wss://") {
         return Ok(base.to_string());
     }
-    let version_url = format!("{base}/json/version");
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()?;
-    let v: serde_json::Value = client.get(&version_url).send().await?.json().await?;
-    let ws = v
-        .get("webSocketDebuggerUrl")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| anyhow::anyhow!("no webSocketDebuggerUrl from {version_url}"))?;
-
-    let http = url::Url::parse(base)?;
+    let http = with_ip_host(url::Url::parse(base)?).await?;
     let host = http
         .host_str()
         .ok_or_else(|| anyhow::anyhow!("bad BROWSER_WS_URL host"))?;
     let port = http.port_or_known_default().unwrap_or(9222);
 
+    let version_url = http.join("json/version")?;
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()?;
+    let v: serde_json::Value = client
+        .get(version_url.clone())
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let ws = v
+        .get("webSocketDebuggerUrl")
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| anyhow::anyhow!("no webSocketDebuggerUrl from {version_url}"))?;
+
     let mut parsed = url::Url::parse(ws)?;
     let _ = parsed.set_host(Some(host));
     let _ = parsed.set_port(Some(port));
     Ok(parsed.to_string())
+}
+
+/// Chrome's DevTools server rejects a `Host` header that is a hostname other than
+/// localhost, so a Compose service name has to be replaced by its IP address.
+async fn with_ip_host(mut url: url::Url) -> anyhow::Result<url::Url> {
+    let Some(url::Host::Domain(host)) = url.host() else {
+        return Ok(url);
+    };
+    let port = url.port_or_known_default().unwrap_or(9222);
+    let ip = tokio::net::lookup_host((host, port))
+        .await?
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("no address for BROWSER_WS_URL host"))?
+        .ip();
+    url.set_ip_host(ip)
+        .map_err(|_| anyhow::anyhow!("bad BROWSER_WS_URL host"))?;
+    Ok(url)
 }
 
 #[derive(Default)]
@@ -813,6 +840,20 @@ fn parse_meta(body: &str) -> Meta {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn with_ip_host_replaces_hostnames_only() {
+        let named = url::Url::parse("http://localhost:9222").unwrap();
+        let resolved = super::with_ip_host(named).await.unwrap();
+        assert!(matches!(
+            resolved.host(),
+            Some(url::Host::Ipv4(_) | url::Host::Ipv6(_))
+        ));
+        assert_eq!(resolved.port(), Some(9222));
+
+        let ip = url::Url::parse("http://10.0.0.5:9222").unwrap();
+        assert_eq!(super::with_ip_host(ip.clone()).await.unwrap(), ip);
+    }
+
     use super::*;
 
     #[test]
