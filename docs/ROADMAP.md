@@ -8,8 +8,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Social**
 
-- Block / unblock users
-- Mute / unmute users
 - Profile + library visibility: public / private / followers-only; hidden profile; private bookmarks/lists
 - _(likes, comments, ratings on shared items — already shipped)_
 

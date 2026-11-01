@@ -15,9 +15,10 @@ import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { SocialDrawer } from '@/components/social'
-import { useFollowStatus, useFollowUser, useSaveBookmarkCopy, useUnfollowUser } from '@/hooks'
+import { useOwnerActions, useSaveBookmarkCopy } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
 import { FOLDER_UNCATEGORIZED, previewSrcCandidates } from '@/services'
+import { BlockOwnerModal } from './BlockOwnerModal'
 import { BookmarkCardBadges } from './BookmarkCardBadges'
 import { BookmarkCardMenu } from './BookmarkCardMenu'
 import { BookmarkCardPreview } from './BookmarkCardPreview'
@@ -65,11 +66,9 @@ export function BookmarkCard({
   const canFollowOwner =
     !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId
   const saveCopy = useSaveBookmarkCopy()
-  const follow = useFollowUser()
-  const unfollow = useUnfollowUser()
-  const followStatus = useFollowStatus(canFollowOwner ? b.owner_user_id : null, canFollowOwner)
-  const followingOwner = !!followStatus.data?.follow.following
+  const owner = useOwnerActions(b.owner_user_id, b.owner_display_name, canFollowOwner)
   const [socialOpen, setSocialOpen] = useState(false)
+  const [blockOpen, setBlockOpen] = useState(false)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
   async function onSaveCopy(): Promise<void> {
@@ -81,19 +80,8 @@ export function BookmarkCard({
     }
   }
 
-  async function onToggleFollowOwner(): Promise<void> {
-    if (!b.owner_user_id) return
-    try {
-      if (followingOwner) {
-        await unfollow.mutateAsync(b.owner_user_id)
-        notifications.show({ message: 'Unfollowed' })
-      } else {
-        await follow.mutateAsync(b.owner_user_id)
-        notifications.show({ message: `Following ${b.owner_display_name || 'user'}` })
-      }
-    } catch (e) {
-      notifications.show({ color: 'red', message: String(e) })
-    }
+  async function onConfirmBlock(): Promise<void> {
+    if (await owner.block()) setBlockOpen(false)
   }
 
   const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}:${b.updated_at}`
@@ -169,7 +157,8 @@ export function BookmarkCard({
               canWrite={canWrite}
               canSaveCopy={canSaveCopy}
               canFollowOwner={canFollowOwner}
-              followingOwner={followingOwner}
+              followingOwner={owner.following}
+              mutedOwner={owner.muted}
               ownerLabel={b.owner_display_name}
               socialEnabled={socialEnabled}
               isFavorite={b.is_favorite}
@@ -177,7 +166,9 @@ export function BookmarkCard({
               isPinned={b.is_pinned}
               onFlags={onFlags ? (patch) => onFlags(b.id, patch) : undefined}
               onSaveCopy={() => void onSaveCopy()}
-              onToggleFollowOwner={() => void onToggleFollowOwner()}
+              onToggleFollowOwner={() => void owner.toggleFollow()}
+              onToggleMuteOwner={() => void owner.toggleMute()}
+              onBlockOwner={() => setBlockOpen(true)}
               onOpenSocial={() => setSocialOpen(true)}
               onEdit={() => onEdit(b.id)}
               onDelete={() => onDelete(b.id)}
@@ -245,6 +236,15 @@ export function BookmarkCard({
           subjectType="bookmark"
           subjectId={b.id}
           title={title}
+        />
+      ) : null}
+      {canFollowOwner ? (
+        <BlockOwnerModal
+          opened={blockOpen}
+          ownerLabel={b.owner_display_name}
+          loading={owner.blocking}
+          onClose={() => setBlockOpen(false)}
+          onConfirm={() => void onConfirmBlock()}
         />
       ) : null}
     </>

@@ -26,9 +26,11 @@ import {
   createDashboardShareOutcomeSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
+  blockEnvelopeSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
   importResultSchema,
+  muteEnvelopeSchema,
   markAllReadSchema,
   meResponseSchema,
   notificationEnvelopeSchema,
@@ -66,8 +68,10 @@ import {
   type CreateDashboardShareOutcome,
   type DashboardSummary,
   type DuplicateGroup,
+  type BlockRelation,
   type FollowRelation,
   type FollowUser,
+  type MuteRelation,
   type ForkCategoryResult,
   type Notification,
   type PatchDashboard,
@@ -274,6 +278,24 @@ export const api = {
 
   followStatus: (id: string): Promise<{ follow: FollowRelation }> =>
     req(`/users/${id}/follow-status`, {}, followEnvelopeSchema),
+
+  myBlocked: (): Promise<{ users: FollowUser[] }> =>
+    req('/users/me/blocked', {}, followUsersEnvelopeSchema),
+
+  myMuted: (): Promise<{ users: FollowUser[] }> =>
+    req('/users/me/muted', {}, followUsersEnvelopeSchema),
+
+  blockUser: (id: string): Promise<{ block: BlockRelation }> =>
+    req(`/users/${id}/block`, { method: 'POST' }, blockEnvelopeSchema),
+
+  unblockUser: (id: string): Promise<{ block: BlockRelation }> =>
+    req(`/users/${id}/block`, { method: 'DELETE' }, blockEnvelopeSchema),
+
+  muteUser: (id: string): Promise<{ mute: MuteRelation }> =>
+    req(`/users/${id}/mute`, { method: 'POST' }, muteEnvelopeSchema),
+
+  unmuteUser: (id: string): Promise<{ mute: MuteRelation }> =>
+    req(`/users/${id}/mute`, { method: 'DELETE' }, muteEnvelopeSchema),
 
   categories: (include_hidden = false, include_vault = false): Promise<Category[]> =>
     req(`/categories?include_hidden=${include_hidden}&include_vault=${include_vault}`, {}, categoriesSchema),

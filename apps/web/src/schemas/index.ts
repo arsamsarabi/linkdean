@@ -1,5 +1,6 @@
 export * from './activity'
 export * from './auth'
+export * from './blocks'
 export * from './bookmarks'
 export * from './categories'
 export * from './dashboards'

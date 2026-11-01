@@ -81,6 +81,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Bell + drawer in the app shell (unread count)
 - Likes, comments, and 1–5 ratings on **shared** bookmarks, lists, and dashboards
 - Follow / unfollow users (⋮ on shared bookmarks; lists on Profile; notifies the followee)
+- Block / unblock users (⋮ on shared bookmarks; list on Profile): removes follows and shares both ways without telling them, and hides each other's social activity and notifications
+- Mute / unmute users (⋮ on shared bookmarks; list on Profile): one-way quiet, hides their social activity and notifications from you
 - Owner notified on social activity (API `/social/…`)
 
 ---

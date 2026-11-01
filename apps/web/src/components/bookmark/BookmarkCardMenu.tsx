@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { ActionIcon, CopyButton, Menu, Tooltip } from '@mantine/core'
 import {
+  IconBan,
   IconBookmark,
   IconBookmarkFilled,
   IconBookmarkPlus,
@@ -17,6 +18,8 @@ import {
   IconTrash,
   IconUserPlus,
   IconUserMinus,
+  IconVolume,
+  IconVolumeOff,
 } from '@tabler/icons-react'
 
 type FlagPatch = Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
@@ -29,6 +32,7 @@ type Props = {
   /** Follow / unfollow the bookmark owner (shared items). */
   canFollowOwner?: boolean
   followingOwner?: boolean
+  mutedOwner?: boolean
   ownerLabel?: string | null
   socialEnabled: boolean
   isFavorite?: boolean
@@ -37,6 +41,8 @@ type Props = {
   onFlags?: (patch: FlagPatch) => void
   onSaveCopy?: () => void
   onToggleFollowOwner?: () => void
+  onToggleMuteOwner?: () => void
+  onBlockOwner?: () => void
   onOpenSocial: () => void
   onEdit: () => void
   onDelete: () => void
@@ -48,6 +54,7 @@ export function BookmarkCardMenu({
   canSaveCopy = false,
   canFollowOwner = false,
   followingOwner = false,
+  mutedOwner = false,
   ownerLabel,
   socialEnabled,
   isFavorite,
@@ -56,10 +63,13 @@ export function BookmarkCardMenu({
   onFlags,
   onSaveCopy,
   onToggleFollowOwner,
+  onToggleMuteOwner,
+  onBlockOwner,
   onOpenSocial,
   onEdit,
   onDelete,
 }: Props): ReactElement {
+  const ownerSuffix = ownerLabel ? ` ${ownerLabel}` : ''
   return (
     <Menu shadow="md" width={200} position="bottom-end" withinPortal>
       <Menu.Target>
@@ -134,9 +144,26 @@ export function BookmarkCardMenu({
             }
             onClick={onToggleFollowOwner}
           >
-            {followingOwner
-              ? `Unfollow${ownerLabel ? ` ${ownerLabel}` : ''}`
-              : `Follow${ownerLabel ? ` ${ownerLabel}` : ''}`}
+            {followingOwner ? `Unfollow${ownerSuffix}` : `Follow${ownerSuffix}`}
+          </Menu.Item>
+        ) : null}
+        {canFollowOwner && onToggleMuteOwner ? (
+          <Menu.Item
+            leftSection={
+              mutedOwner ? (
+                <IconVolume size={14} stroke={1.5} />
+              ) : (
+                <IconVolumeOff size={14} stroke={1.5} />
+              )
+            }
+            onClick={onToggleMuteOwner}
+          >
+            {mutedOwner ? `Unmute${ownerSuffix}` : `Mute${ownerSuffix}`}
+          </Menu.Item>
+        ) : null}
+        {canFollowOwner && onBlockOwner ? (
+          <Menu.Item color="red" leftSection={<IconBan size={14} stroke={1.5} />} onClick={onBlockOwner}>
+            {`Block${ownerSuffix}`}
           </Menu.Item>
         ) : null}
         {socialEnabled ? (
