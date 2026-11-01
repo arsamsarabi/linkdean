@@ -1,7 +1,7 @@
 import { type ReactElement } from 'react'
-import { Button, Group, Modal, PasswordInput, Stack, Text } from '@mantine/core'
+import { Button, Group, Modal, PasswordInput, Select, Stack, Text } from '@mantine/core'
 import { IconLockOpen } from '@tabler/icons-react'
-import { BookmarkDrawer, BulkEditDrawer, ConfirmModal } from '@/components'
+import { BookmarkDrawer, BulkEditDrawer, ConfirmModal, MoveToVaultModal } from '@/components'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -52,6 +52,12 @@ export function LibraryPageModals(): ReactElement {
           <Text size="sm" c="dimmed">
             Config options say vault should be included in search. Unlock to include vault hits.
           </Text>
+          <Select
+            label="Vault"
+            data={lib.lockedVaults.map((v) => ({ value: v.id, label: v.name }))}
+            value={lib.unlockVaultId}
+            onChange={lib.setUnlockVaultId}
+          />
           <PasswordInput
             label="Vault passphrase"
             value={lib.vaultPass}
@@ -64,7 +70,7 @@ export function LibraryPageModals(): ReactElement {
             <Button
               leftSection={<IconLockOpen {...iconSm} />}
               onClick={() => void lib.unlockForSearch()}
-              disabled={lib.vaultPass.length < 8}
+              disabled={!lib.unlockVaultId || lib.vaultPass.length < 8}
               loading={lib.vaultUnlock.isPending}
             >
               Unlock
@@ -72,6 +78,14 @@ export function LibraryPageModals(): ReactElement {
           </Group>
         </Stack>
       </Modal>
+
+      {lib.moveTarget ? (
+        <MoveToVaultModal
+          categoryIds={lib.moveTarget.categoryIds}
+          bookmarkIds={lib.moveTarget.bookmarkIds}
+          onClose={() => lib.setMoveTarget(null)}
+        />
+      ) : null}
     </>
   )
 }

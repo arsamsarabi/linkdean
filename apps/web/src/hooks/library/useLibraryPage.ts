@@ -101,6 +101,7 @@ export function useLibraryPage() {
       onSocial: socialEnabled ? () => categoryActions.openSocial(cat) : undefined,
       onFork: () => categoryActions.forkCategory(cat),
       onDelete: () => categoryActions.openDelete(cat.id),
+      onMoveToVault: () => categoryActions.openMove(cat),
       forkPending: categoryActions.forkPending,
     }
   }

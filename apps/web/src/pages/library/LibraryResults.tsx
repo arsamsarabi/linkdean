@@ -24,6 +24,7 @@ export function LibraryResults(): ReactElement {
           onFolderChange={lib.onFolderChange}
           onEdit={lib.openEdit}
           onDelete={lib.setDeleteId}
+          onMoveToVault={(id) => lib.setMoveTarget({ categoryIds: [], bookmarkIds: [id] })}
           onFlags={lib.onFlags}
           filterFlags={lib.filterFlags}
           onCreate={lib.openCreate}

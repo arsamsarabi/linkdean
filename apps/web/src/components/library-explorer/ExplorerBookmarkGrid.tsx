@@ -9,6 +9,7 @@ type Props = {
   viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onMoveToVault?: (id: string) => void
   onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   selectMode?: boolean
   selectedIds?: ReadonlySet<string>
@@ -21,6 +22,7 @@ export function ExplorerBookmarkGrid({
   viewerUserId,
   onEdit,
   onDelete,
+  onMoveToVault,
   onFlags,
   selectMode,
   selectedIds,
@@ -36,6 +38,7 @@ export function ExplorerBookmarkGrid({
           viewerUserId={viewerUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          onMoveToVault={onMoveToVault}
           onFlags={onFlags}
           selectMode={selectMode}
           selected={selectedIds?.has(b.id)}

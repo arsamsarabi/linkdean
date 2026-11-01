@@ -65,8 +65,8 @@ export function useVaults(enabled = true): UseQueryResult<{ vaults: Vault[] }> {
   return useQuery({ queryKey: ['vaults'], queryFn: api.vaults, enabled })
 }
 
-export function useGlobalPassphrase(): UseQueryResult<{ enabled: boolean }> {
-  return useQuery({ queryKey: ['vaults', 'global'], queryFn: api.globalPassphrase })
+export function useGlobalPassphrase(enabled = true): UseQueryResult<{ enabled: boolean }> {
+  return useQuery({ queryKey: ['vaults', 'global'], queryFn: api.globalPassphrase, enabled })
 }
 
 function useVaultAction<T>(action: (input: T) => Promise<unknown>): UseMutationResult<unknown, Error, T> {

@@ -26,6 +26,7 @@ type Props = {
   onFolderChange: (id: ExplorerFolderId) => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onMoveToVault?: (id: string) => void
   onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   filterFlags?: FlagFilter[]
   onCreate: () => void
@@ -52,6 +53,7 @@ export function LibraryExplorerView({
   onFolderChange,
   onEdit,
   onDelete,
+  onMoveToVault,
   onFlags,
   filterFlags = [],
   onCreate,
@@ -103,6 +105,7 @@ export function LibraryExplorerView({
           viewerUserId={viewerUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          onMoveToVault={onMoveToVault}
           onFlags={onFlags}
           selectMode={selectMode}
           selectedIds={selectedIds}
@@ -176,6 +179,7 @@ export function LibraryExplorerView({
                 viewerUserId={viewerUserId}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onMoveToVault={onMoveToVault}
                 onFlags={onFlags}
                 selectMode={selectMode}
                 selectedIds={selectedIds}

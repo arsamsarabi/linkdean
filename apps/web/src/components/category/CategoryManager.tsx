@@ -71,6 +71,7 @@ export function CategoryManager(): ReactElement {
       onSocial: socialEnabled ? () => actions.openSocial(cat) : undefined,
       onFork: () => actions.forkCategory(cat),
       onDelete: () => actions.openDelete(cat.id),
+      onMoveToVault: () => actions.openMove(cat),
       forkPending: actions.forkPending,
     }
   }

@@ -1,4 +1,4 @@
-import { useEffect, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import { Drawer, Group, Loader, AppShell as MantineAppShell, NavLink, Stack } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { IconBooks, IconLayoutDashboard } from '@tabler/icons-react'
@@ -11,8 +11,17 @@ import {
   NotificationsDrawer,
   PageContainer,
   QueryErrorAlert,
+  UnlockAllVaultsModal,
 } from '@/components'
-import { useLogout, usePrefsHydration, useShareInvites, useUnreadNotificationCount } from '@/hooks'
+import {
+  useGlobalPassphrase,
+  useLockVault,
+  useLogout,
+  usePrefsHydration,
+  useShareInvites,
+  useUnreadNotificationCount,
+  useVaults,
+} from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
@@ -25,6 +34,10 @@ export function AppShell(): ReactElement {
   const logout = useLogout()
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const shell = useShellUi()
+  const vaults = useVaults(!!me.data)
+  const globalPassphrase = useGlobalPassphrase(!!me.data)
+  const lockVault = useLockVault()
+  const [unlockAllOpen, setUnlockAllOpen] = useState(false)
   const unread = useUnreadNotificationCount(!!me.data)
   const invites = useShareInvites(!!me.data)
   const pendingInvites = invites.data?.invites.filter((i) => !i.rejected_at).length ?? 0
@@ -80,11 +93,17 @@ export function AppShell(): ReactElement {
           email={user?.email}
           hasAvatar={!!user?.has_avatar}
           vaultUnlocked={vaultUnlocked}
+          vaults={vaults.data?.vaults ?? []}
+          globalEnabled={!!globalPassphrase.data?.enabled}
+          onLockVault={(id) => lockVault.mutate(id)}
+          onOpenUnlockAll={() => setUnlockAllOpen(true)}
           // A new invite is also an unread notification, so don't add the two.
           unreadCount={Math.max(unread.data?.count ?? 0, pendingInvites)}
           onLogout={() => void onLogout()}
         />
       </MantineAppShell.Header>
+
+      {unlockAllOpen ? <UnlockAllVaultsModal onClose={() => setUnlockAllOpen(false)} /> : null}
 
       <MantineAppShell.Main>
         <PageContainer pb="xl" fadeIn>

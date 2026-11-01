@@ -23,6 +23,8 @@ type Props = {
   viewerUserId?: string
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  /** Library only: owners can move a bookmark into or out of a vault. */
+  onMoveToVault?: (id: string) => void
   /** Toggle per-viewer flags (favorite / unread / pin). */
   onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   selectMode?: boolean
@@ -36,6 +38,7 @@ export function BookmarkCard({
   viewerUserId,
   onEdit,
   onDelete,
+  onMoveToVault,
   onFlags,
   selectMode = false,
   selected = false,
@@ -158,6 +161,11 @@ export function BookmarkCard({
               onOpenSocial={() => setSocialOpen(true)}
               onEdit={() => onEdit(b.id)}
               onDelete={() => onDelete(b.id)}
+              onMoveToVault={
+                onMoveToVault && b.owner_user_id === viewerUserId && !b.deleted_at
+                  ? () => onMoveToVault(b.id)
+                  : undefined
+              }
             />
           </Group>
 

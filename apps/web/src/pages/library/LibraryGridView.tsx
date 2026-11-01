@@ -69,6 +69,7 @@ export function LibraryGridView(): ReactElement {
               viewerUserId={lib.me.data?.user.id}
               onEdit={lib.openEdit}
               onDelete={lib.setDeleteId}
+              onMoveToVault={(id) => lib.setMoveTarget({ categoryIds: [], bookmarkIds: [id] })}
               onFlags={lib.onFlags}
               selectMode={lib.selectMode}
               selected={lib.selectedIds.has(b.id)}

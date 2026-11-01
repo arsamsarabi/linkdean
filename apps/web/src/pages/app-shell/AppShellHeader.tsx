@@ -1,6 +1,15 @@
 import { type ReactElement } from 'react'
 import { Burger, Button, Code, Group, Indicator, Menu, Skeleton, Title, Tooltip, UnstyledButton } from '@mantine/core'
-import { IconBooks, IconLayoutDashboard, IconLogout, IconSettings, IconTrash, IconUser } from '@tabler/icons-react'
+import {
+  IconBooks,
+  IconLayoutDashboard,
+  IconLock,
+  IconLockOpen,
+  IconLogout,
+  IconSettings,
+  IconTrash,
+  IconUser,
+} from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import {
   BrokenLinksButton,
@@ -12,6 +21,7 @@ import {
   ThemeMenuSwitch,
   UserAvatar,
 } from '@/components'
+import type { Vault } from '@/schemas'
 import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
 
@@ -28,6 +38,10 @@ type Props = {
   email: string | undefined
   hasAvatar: boolean
   vaultUnlocked: boolean
+  vaults: Vault[]
+  globalEnabled: boolean
+  onLockVault: (id: string) => void
+  onOpenUnlockAll: () => void
   unreadCount: number
   onLogout: () => void
 }
@@ -42,6 +56,10 @@ export function AppShellHeader({
   email,
   hasAvatar,
   vaultUnlocked,
+  vaults,
+  globalEnabled,
+  onLockVault,
+  onOpenUnlockAll,
   unreadCount,
   onLogout,
 }: Props): ReactElement {
@@ -119,7 +137,35 @@ export function AppShellHeader({
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>{displayName || email || 'User'}</Menu.Label>
-                {vaultUnlocked ? <Menu.Label c="green">Vault unlocked</Menu.Label> : null}
+                {vaults.length > 0 ? <Menu.Divider /> : null}
+                {vaults.length > 0 ? <Menu.Label>Vaults</Menu.Label> : null}
+                {vaults.map((vault) =>
+                  vault.unlocked ? (
+                    <Menu.Item
+                      key={vault.id}
+                      aria-label={`Lock ${vault.name}`}
+                      leftSection={<IconLockOpen {...iconProps} />}
+                      onClick={() => onLockVault(vault.id)}
+                    >
+                      {vault.name}
+                    </Menu.Item>
+                  ) : (
+                    <Menu.Item
+                      key={vault.id}
+                      aria-label={`Unlock ${vault.name} in settings`}
+                      component={Link}
+                      to="/settings"
+                      leftSection={<IconLock {...iconProps} />}
+                    >
+                      {vault.name}
+                    </Menu.Item>
+                  )
+                )}
+                {globalEnabled ? (
+                  <Menu.Item leftSection={<IconLockOpen {...iconProps} />} onClick={onOpenUnlockAll}>
+                    Unlock all
+                  </Menu.Item>
+                ) : null}
                 <Menu.Divider />
                 <Menu.Label>
                   <Group gap={6} align="center" justify="center">

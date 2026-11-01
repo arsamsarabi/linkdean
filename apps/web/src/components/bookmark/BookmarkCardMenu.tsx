@@ -9,6 +9,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconHeart,
+  IconLock,
   IconMessageCircle,
   IconPencil,
   IconPin,
@@ -47,6 +48,7 @@ type Props = {
   onOpenSocial: () => void
   onEdit: () => void
   onDelete: () => void
+  onMoveToVault?: () => void
 }
 
 export function BookmarkCardMenu({
@@ -70,6 +72,7 @@ export function BookmarkCardMenu({
   onOpenSocial,
   onEdit,
   onDelete,
+  onMoveToVault,
 }: Props): ReactElement {
   const ownerSuffix = ownerLabel ? ` ${ownerLabel}` : ''
   return (
@@ -115,6 +118,11 @@ export function BookmarkCardMenu({
               {isPinned ? 'Unpin' : 'Pin to top'}
             </Menu.Item>
           </>
+        ) : null}
+        {onMoveToVault ? (
+          <Menu.Item leftSection={<IconLock size={14} stroke={1.5} />} onClick={onMoveToVault}>
+            Move to vault
+          </Menu.Item>
         ) : null}
         {canSaveCopy && onSaveCopy ? (
           <Menu.Item leftSection={<IconBookmarkPlus size={14} stroke={1.5} />} onClick={onSaveCopy}>

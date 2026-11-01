@@ -3,7 +3,7 @@ import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import type { BookmarkDraft } from '@/components'
 import { useDeleteBookmark, useUpdateBookmark } from '@/hooks/bookmarks'
-import { useVaultUnlock } from '@/hooks/vault'
+import { useUnlockVault, useVaults } from '@/hooks/vault'
 import { canWriteCategory } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
 import { draftFromBookmark, emptyDraft } from '@/services'
@@ -20,17 +20,26 @@ type Input = {
   vaultPrompt: boolean
 }
 
+type MoveTarget = {
+  categoryIds: string[]
+  bookmarkIds: string[]
+}
+
 /** Create/edit drawer, single delete, vault unlock-for-search. */
 export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vaultPrompt }: Input) {
   const [drawerOpen, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [draft, setDraft] = useState<BookmarkDraft | null>(null)
   const [unlockOpen, setUnlockOpen] = useState(false)
   const [vaultPass, setVaultPass] = useState('')
+  const [unlockVaultId, setUnlockVaultId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null)
 
   const deleteBookmark = useDeleteBookmark()
   const updateBookmark = useUpdateBookmark()
-  const vaultUnlock = useVaultUnlock()
+  const vaultUnlock = useUnlockVault()
+  const vaults = useVaults(unlockOpen)
+  const lockedVaults = (vaults.data?.vaults ?? []).filter((v) => !v.unlocked)
 
   const canCreateInContext = !folderCat || canWriteCategory(folderCat)
 
@@ -80,9 +89,11 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
   }
 
   async function unlockForSearch(): Promise<void> {
+    if (!unlockVaultId) return
     try {
-      await vaultUnlock.mutateAsync(vaultPass)
+      await vaultUnlock.mutateAsync({ id: unlockVaultId, passphrase: vaultPass })
       setVaultPass('')
+      setUnlockVaultId(null)
       setUnlockOpen(false)
       notifications.show({ message: 'Vault unlocked' })
     } catch (e) {
@@ -109,6 +120,11 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
     setUnlockOpen,
     vaultPass,
     setVaultPass,
+    unlockVaultId,
+    setUnlockVaultId,
+    lockedVaults,
+    moveTarget,
+    setMoveTarget,
     deleteId,
     setDeleteId,
     deleteBookmark,

@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { Button, Group, Text } from '@mantine/core'
-import { IconFolders, IconTags, IconTrash } from '@tabler/icons-react'
+import { IconFolders, IconLock, IconTags, IconTrash } from '@tabler/icons-react'
 import styles from './LibraryPage.module.css'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
@@ -43,6 +43,15 @@ export function LibraryBulkBar(): ReactElement | null {
           onClick={() => lib.setBulkMode('tag')}
         >
           Tag
+        </Button>
+        <Button
+          size="compact-sm"
+          variant="light"
+          leftSection={<IconLock size={14} stroke={1.5} />}
+          disabled={selectedCount === 0}
+          onClick={() => lib.setMoveTarget({ categoryIds: [], bookmarkIds: [...lib.selectedIds] })}
+        >
+          Move to vault
         </Button>
         <Button
           size="compact-sm"

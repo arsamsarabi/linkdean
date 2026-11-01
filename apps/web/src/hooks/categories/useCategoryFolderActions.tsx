@@ -4,6 +4,7 @@ import { EditCategoryDrawer } from '@/components/category/EditCategoryDrawer'
 import { ShareCategoryDrawer } from '@/components/category/ShareCategoryDrawer'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { SocialDrawer } from '@/components/social'
+import { MoveToVaultModal } from '@/components/vault/MoveToVaultModal'
 import type { Category } from '@/schemas'
 import { useDeleteCategory, useForkCategory } from './useCategories'
 
@@ -18,6 +19,7 @@ export type CategoryFolderActions = {
   openShare: (cat: Category) => void
   openSocial: (cat: Category) => void
   openDelete: (id: string) => void
+  openMove: (cat: Category) => void
   forkCategory: (cat: Category) => void
   modals: ReactElement
 }
@@ -28,6 +30,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
   const [shareCat, setShareCat] = useState<Category | null>(null)
   const [socialCat, setSocialCat] = useState<Category | null>(null)
   const [editCat, setEditCat] = useState<Category | null>(null)
+  const [moveCat, setMoveCat] = useState<Category | null>(null)
 
   const remove = useDeleteCategory()
   const fork = useForkCategory()
@@ -77,6 +80,10 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
         isVault={!!shareCat?.is_vault}
       />
 
+      {moveCat ? (
+        <MoveToVaultModal categoryIds={[moveCat.id]} bookmarkIds={[]} onClose={() => setMoveCat(null)} />
+      ) : null}
+
       {socialCat ? (
         <SocialDrawer
           opened
@@ -95,6 +102,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
     openShare: setShareCat,
     openSocial: setSocialCat,
     openDelete: setDeleteId,
+    openMove: setMoveCat,
     forkCategory: (cat) => {
       void forkCategory(cat)
     },

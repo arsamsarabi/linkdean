@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactElement, ReactNode } from 'react'
 import { ActionIcon, Menu } from '@mantine/core'
-import { IconCopy, IconDots, IconMessageCircle, IconPencil, IconShare, IconTrash } from '@tabler/icons-react'
+import { IconCopy, IconDots, IconLock, IconMessageCircle, IconPencil, IconShare, IconTrash } from '@tabler/icons-react'
 import type { CategoryAccess } from '@/schemas'
 
 export type CategoryFolderMenuProps = {
@@ -12,6 +12,7 @@ export type CategoryFolderMenuProps = {
   onSocial?: () => void
   onFork?: () => void
   onDelete?: () => void
+  onMoveToVault?: () => void
   forkPending?: boolean
   /** Wrapper class for positioning (e.g. absolute corner). */
   className?: string
@@ -25,14 +26,15 @@ function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boolean {
     (!props.isVault && !!props.onFork) ||
     (isOwner && !props.isVault && !!props.onShare) ||
     !!props.onSocial ||
-    (isOwner && !!props.onDelete)
+    (isOwner && (!!props.onDelete || !!props.onMoveToVault))
   )
 }
 
 export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement | null {
   if (!categoryFolderMenuVisible(props)) return null
 
-  const { name, access, isVault, onEdit, onShare, onSocial, onFork, onDelete, forkPending, className } = props
+  const { name, access, isVault, onEdit, onShare, onSocial, onFork, onDelete, onMoveToVault, forkPending, className } =
+    props
   const isOwner = access === 'owner'
   const canWrite = isOwner || access === 'write'
 
@@ -65,6 +67,11 @@ export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement
           {isOwner && !isVault && onShare ? (
             <Menu.Item leftSection={<IconShare size={14} stroke={1.5} />} onClick={onShare}>
               Share
+            </Menu.Item>
+          ) : null}
+          {isOwner && onMoveToVault ? (
+            <Menu.Item leftSection={<IconLock size={14} stroke={1.5} />} onClick={onMoveToVault}>
+              Move to vault
             </Menu.Item>
           ) : null}
           {onSocial ? (
