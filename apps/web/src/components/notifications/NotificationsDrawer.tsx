@@ -62,10 +62,10 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
   useEffect(() => {
     const wasOpen = prevOpened.current
     prevOpened.current = opened
-    if (wasOpen === opened) return
-    // Open or close → mark everything read (idempotent if already clear).
+    if (!wasOpen || opened) return
+    // Unread items keep their highlight while the drawer is open.
     void markAll.mutateAsync().catch(() => undefined)
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- opened edges only
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- closing edge only
   }, [opened])
 
   async function openItem(n: Notification): Promise<void> {
