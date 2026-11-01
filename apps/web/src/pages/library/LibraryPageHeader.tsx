@@ -8,37 +8,16 @@ import {
   IconLayoutGrid,
 } from '@tabler/icons-react'
 import type { LibraryViewMode } from '@/hooks'
+import { useLibraryPageModel } from './LibraryPageContext'
 import styles from './LibraryPage.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
-type Props = {
-  loading: boolean
-  viewMode: LibraryViewMode
-  listCount: number
-  searching: boolean
-  selectMode: boolean
-  canCreate: boolean
-  onViewModeChange: (mode: LibraryViewMode) => void
-  onEnterSelect: () => void
-  onExitSelect: () => void
-  onOpenDupes: () => void
-  onCreate: () => void
-}
+export function LibraryPageHeader(): ReactElement {
+  const lib = useLibraryPageModel()
+  const { loading, viewMode, searching, selectMode, canCreateInContext: canCreate } = lib
+  const listCount = lib.list.length
 
-export function LibraryPageHeader({
-  loading,
-  viewMode,
-  listCount,
-  searching,
-  selectMode,
-  canCreate,
-  onViewModeChange,
-  onEnterSelect,
-  onExitSelect,
-  onOpenDupes,
-  onCreate,
-}: Props): ReactElement {
   return (
     <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
       <Stack gap={4}>
@@ -53,7 +32,7 @@ export function LibraryPageHeader({
         <SegmentedControl
           aria-label="Library view"
           value={viewMode}
-          onChange={(v) => onViewModeChange(v as LibraryViewMode)}
+          onChange={(v) => lib.onViewModeChange(v as LibraryViewMode)}
           data={[
             {
               value: 'grid',
@@ -76,7 +55,7 @@ export function LibraryPageHeader({
           ]}
         />
         {selectMode ? (
-          <Button variant="default" onClick={onExitSelect}>
+          <Button variant="default" onClick={lib.exitSelectMode}>
             Cancel select
           </Button>
         ) : (
@@ -84,13 +63,13 @@ export function LibraryPageHeader({
             <Button
               variant="default"
               leftSection={<IconCheck {...iconSm} />}
-              onClick={onEnterSelect}
+              onClick={lib.enterSelectMode}
               disabled={loading || listCount === 0}
             >
               Select
             </Button>
             <Tooltip label="Find and merge duplicate URLs">
-              <Button variant="default" leftSection={<IconCopy {...iconSm} />} onClick={onOpenDupes}>
+              <Button variant="default" leftSection={<IconCopy {...iconSm} />} onClick={lib.openDupes}>
                 Duplicates
               </Button>
             </Tooltip>
@@ -98,7 +77,7 @@ export function LibraryPageHeader({
         )}
         {canCreate ? (
           <Tooltip label="New bookmark (N)">
-            <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={onCreate}>
+            <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={lib.openCreate}>
               Add bookmark
             </Button>
           </Tooltip>

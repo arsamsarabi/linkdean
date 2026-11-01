@@ -10,8 +10,9 @@ import {
   Stack,
 } from '@mantine/core'
 import { categorySelectData } from '@/lib'
-import type { Category } from '@/schemas'
 import { FOLDER_UNCATEGORIZED, SINCE_FILTERS, type SinceFilter } from '@/services'
+import { LIBRARY_FILTER_PANEL_ID } from './libraryConstants'
+import { useLibraryPageModel } from './LibraryPageContext'
 import styles from './LibraryPage.module.css'
 
 const SINCE_LABEL: Record<SinceFilter, string> = {
@@ -21,84 +22,34 @@ const SINCE_LABEL: Record<SinceFilter, string> = {
   year: 'Last year',
 }
 
-type Props = {
-  filterOpen: boolean
-  panelFilterActive: boolean
-  filterPanelId: string
-  draftFilterCats: string[]
-  draftFilterTags: string[]
-  draftFilterSince: SinceFilter | null
-  draftVaultOnly: boolean
-  filterCats: string[]
-  filterTags: string[]
-  filterSince: SinceFilter | null
-  vaultOnly: boolean
-  catLabel: Map<string, string>
-  categories: Category[]
-  allTags: { value: string; label: string }[]
-  onDraftCats: (v: string[]) => void
-  onDraftTags: (v: string[]) => void
-  onDraftSince: (v: SinceFilter | null) => void
-  onDraftVaultOnly: (v: boolean) => void
-  onApplyFilter: () => void
-  onCloseFilter: () => void
-  onClearFilters: () => void
-  onRemoveCat: (id: string) => void
-  onRemoveTag: (t: string) => void
-  onClearSince: () => void
-  onClearVault: () => void
-}
-
-export function LibraryFilterPanel({
-  filterOpen,
-  panelFilterActive,
-  filterPanelId,
-  draftFilterCats,
-  draftFilterTags,
-  draftFilterSince,
-  draftVaultOnly,
-  filterCats,
-  filterTags,
-  filterSince,
-  vaultOnly,
-  catLabel,
-  categories,
-  allTags,
-  onDraftCats,
-  onDraftTags,
-  onDraftSince,
-  onDraftVaultOnly,
-  onApplyFilter,
-  onCloseFilter,
-  onClearFilters,
-  onRemoveCat,
-  onRemoveTag,
-  onClearSince,
-  onClearVault,
-}: Props): ReactElement {
+export function LibraryFilterPanel(): ReactElement {
+  const lib = useLibraryPageModel()
   const draftHasFilters =
-    draftFilterCats.length > 0 ||
-    draftFilterTags.length > 0 ||
-    !!draftFilterSince ||
-    draftVaultOnly
+    lib.draftFilterCats.length > 0 ||
+    lib.draftFilterTags.length > 0 ||
+    !!lib.draftFilterSince ||
+    lib.draftVaultOnly
 
   return (
     <>
-      <Collapse expanded={filterOpen}>
-        <Stack id={filterPanelId} p="lg" gap="md" className={styles.filterPanel}>
+      <Collapse expanded={lib.filterOpen}>
+        <Stack id={LIBRARY_FILTER_PANEL_ID} p="lg" gap="md" className={styles.filterPanel}>
           <MultiSelect
             label="Categories"
-            data={[{ value: FOLDER_UNCATEGORIZED, label: 'Unsorted' }, ...categorySelectData(categories)]}
-            value={draftFilterCats}
-            onChange={onDraftCats}
+            data={[
+              { value: FOLDER_UNCATEGORIZED, label: 'Unsorted' },
+              ...categorySelectData(lib.cats.data || []),
+            ]}
+            value={lib.draftFilterCats}
+            onChange={lib.setDraftFilterCats}
             searchable
             clearable
           />
           <MultiSelect
             label="Tags"
-            data={allTags}
-            value={draftFilterTags}
-            onChange={onDraftTags}
+            data={lib.allTags}
+            value={lib.draftFilterTags}
+            onChange={lib.setDraftFilterTags}
             searchable
             clearable
           />
@@ -106,9 +57,9 @@ export function LibraryFilterPanel({
             label="Created"
             placeholder="Any time"
             data={SINCE_FILTERS.map((s) => ({ value: s, label: SINCE_LABEL[s] }))}
-            value={draftFilterSince}
+            value={lib.draftFilterSince}
             onChange={(v) =>
-              onDraftSince(
+              lib.setDraftFilterSince(
                 v && (SINCE_FILTERS as readonly string[]).includes(v) ? (v as SinceFilter) : null
               )
             }
@@ -116,46 +67,62 @@ export function LibraryFilterPanel({
           />
           <Checkbox
             label="Vault only"
-            checked={draftVaultOnly}
-            onChange={(e) => onDraftVaultOnly(e.currentTarget.checked)}
+            checked={lib.draftVaultOnly}
+            onChange={(e) => lib.setDraftVaultOnly(e.currentTarget.checked)}
           />
           <Group justify="space-between" wrap="wrap">
             <Button
               variant="subtle"
-              disabled={!draftHasFilters && !panelFilterActive}
-              onClick={onClearFilters}
+              disabled={!draftHasFilters && !lib.panelFilterActive}
+              onClick={() => {
+                lib.setDraftFilterCats([])
+                lib.setDraftFilterTags([])
+                lib.setDraftFilterSince(null)
+                lib.setDraftVaultOnly(false)
+                lib.setLibrarySearch({ category: [], tag: [], since: null, vault: false })
+              }}
             >
               Clear filters
             </Button>
             <Group gap="sm">
-              <Button variant="default" onClick={onCloseFilter}>
+              <Button variant="default" onClick={() => lib.setFilterOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={onApplyFilter}>Apply</Button>
+              <Button onClick={lib.applyFilter}>Apply</Button>
             </Group>
           </Group>
         </Stack>
       </Collapse>
 
-      {panelFilterActive ? (
+      {lib.panelFilterActive ? (
         <Group gap="xs">
-          {filterCats.map((id) => (
-            <Pill key={id} withRemoveButton onRemove={() => onRemoveCat(id)}>
-              {catLabel.get(id) || id}
+          {lib.filterCats.map((id) => (
+            <Pill
+              key={id}
+              withRemoveButton
+              onRemove={() =>
+                lib.setLibrarySearch({ category: lib.filterCats.filter((x) => x !== id) })
+              }
+            >
+              {lib.catLabel.get(id) || id}
             </Pill>
           ))}
-          {filterTags.map((t) => (
-            <Pill key={t} withRemoveButton onRemove={() => onRemoveTag(t)}>
+          {lib.filterTags.map((t) => (
+            <Pill
+              key={t}
+              withRemoveButton
+              onRemove={() => lib.setLibrarySearch({ tag: lib.filterTags.filter((x) => x !== t) })}
+            >
               #{t}
             </Pill>
           ))}
-          {filterSince ? (
-            <Pill withRemoveButton onRemove={onClearSince}>
-              {SINCE_LABEL[filterSince]}
+          {lib.filterSince ? (
+            <Pill withRemoveButton onRemove={() => lib.setLibrarySearch({ since: null })}>
+              {SINCE_LABEL[lib.filterSince]}
             </Pill>
           ) : null}
-          {vaultOnly ? (
-            <Pill withRemoveButton onRemove={onClearVault}>
+          {lib.vaultOnly ? (
+            <Pill withRemoveButton onRemove={() => lib.setLibrarySearch({ vault: false })}>
               Vault only
             </Pill>
           ) : null}

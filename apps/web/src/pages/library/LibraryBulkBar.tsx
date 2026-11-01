@@ -1,27 +1,15 @@
 import { type ReactElement } from 'react'
 import { Button, Group, Text } from '@mantine/core'
 import { IconFolders, IconTags, IconTrash } from '@tabler/icons-react'
+import { useLibraryPageModel } from './LibraryPageContext'
 import styles from './LibraryPage.module.css'
 
-type Props = {
-  selectedCount: number
-  allVisibleSelected: boolean
-  selectableCount: number
-  onToggleSelectAll: () => void
-  onCategories: () => void
-  onTag: () => void
-  onDelete: () => void
-}
+export function LibraryBulkBar(): ReactElement | null {
+  const lib = useLibraryPageModel()
+  if (!lib.selectMode) return null
 
-export function LibraryBulkBar({
-  selectedCount,
-  allVisibleSelected,
-  selectableCount,
-  onToggleSelectAll,
-  onCategories,
-  onTag,
-  onDelete,
-}: Props): ReactElement {
+  const { selectedCount, allVisibleSelected, selectableIds } = lib
+
   return (
     <Group justify="space-between" wrap="wrap" gap="sm" p="sm" className={styles.filterPanel}>
       <Group gap="sm">
@@ -31,8 +19,10 @@ export function LibraryBulkBar({
         <Button
           size="compact-sm"
           variant="subtle"
-          onClick={onToggleSelectAll}
-          disabled={selectableCount === 0}
+          onClick={() =>
+            lib.setSelectedIds(allVisibleSelected ? new Set() : new Set(selectableIds))
+          }
+          disabled={selectableIds.length === 0}
         >
           {allVisibleSelected ? 'Clear all' : 'Select all'}
         </Button>
@@ -43,7 +33,7 @@ export function LibraryBulkBar({
           variant="light"
           leftSection={<IconFolders size={14} stroke={1.5} />}
           disabled={selectedCount === 0}
-          onClick={onCategories}
+          onClick={() => lib.setBulkMode('categories')}
         >
           Categories
         </Button>
@@ -52,7 +42,7 @@ export function LibraryBulkBar({
           variant="light"
           leftSection={<IconTags size={14} stroke={1.5} />}
           disabled={selectedCount === 0}
-          onClick={onTag}
+          onClick={() => lib.setBulkMode('tag')}
         >
           Tag
         </Button>
@@ -62,7 +52,7 @@ export function LibraryBulkBar({
           variant="light"
           leftSection={<IconTrash size={14} stroke={1.5} />}
           disabled={selectedCount === 0}
-          onClick={onDelete}
+          onClick={() => lib.setBulkDeleteOpen(true)}
         >
           Delete
         </Button>
