@@ -49,16 +49,13 @@ pub struct VaultKeys {
 }
 
 pub fn setup_vault(passphrase: &str) -> Result<VaultKeys> {
-    let kdf_salt = random_bytes(SALT_LEN);
-    let wrapping_key = derive_key(passphrase, &kdf_salt)?;
-    let mut data_key = [0u8; KEY_LEN];
-    rand::thread_rng().fill_bytes(&mut data_key);
-    let (wrapped_key, wrapped_nonce) = encrypt(&wrapping_key, &data_key)?;
+    let data_key = new_data_key();
+    let wrapped = wrap_data_key(passphrase, &data_key)?;
     Ok(VaultKeys {
-        kdf_salt,
+        kdf_salt: wrapped.kdf_salt,
         data_key,
-        wrapped_key,
-        wrapped_nonce,
+        wrapped_key: wrapped.wrapped_key,
+        wrapped_nonce: wrapped.wrapped_nonce,
     })
 }
 
@@ -77,6 +74,75 @@ pub fn unlock_vault(
     let mut key = [0u8; KEY_LEN];
     key.copy_from_slice(&plain);
     Ok(key)
+}
+
+/// A data key wrapped by a key derived from a secret.
+pub struct WrappedKey {
+    pub kdf_salt: Vec<u8>,
+    pub wrapped_key: Vec<u8>,
+    pub wrapped_nonce: Vec<u8>,
+}
+
+pub fn new_data_key() -> [u8; KEY_LEN] {
+    let mut key = [0u8; KEY_LEN];
+    rand::thread_rng().fill_bytes(&mut key);
+    key
+}
+
+/// Wrap `data_key` under `secret`. `unlock_vault` reverses it.
+pub fn wrap_data_key(secret: &str, data_key: &[u8; KEY_LEN]) -> Result<WrappedKey> {
+    let kdf_salt = random_bytes(SALT_LEN);
+    let wrapping_key = derive_key(secret, &kdf_salt)?;
+    let (wrapped_key, wrapped_nonce) = encrypt(&wrapping_key, data_key)?;
+    Ok(WrappedKey {
+        kdf_salt,
+        wrapped_key,
+        wrapped_nonce,
+    })
+}
+
+/// Wrap a vault's data key under the user's master key.
+pub fn wrap_with_key(
+    master: &[u8; KEY_LEN],
+    data_key: &[u8; KEY_LEN],
+) -> Result<(Vec<u8>, Vec<u8>)> {
+    encrypt(master, data_key)
+}
+
+pub fn unwrap_with_key(
+    master: &[u8; KEY_LEN],
+    wrapped_key: &[u8],
+    wrapped_nonce: &[u8],
+) -> Result<[u8; KEY_LEN]> {
+    let plain =
+        decrypt(master, wrapped_key, wrapped_nonce).map_err(|_| Error::VaultUnlockFailed)?;
+    plain.try_into().map_err(|_| Error::VaultUnlockFailed)
+}
+
+const RECOVERY_ALPHABET: &[u8; 32] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const RECOVERY_LEN: usize = 52;
+
+/// 52 base32 characters (260 bits), grouped in fours for reading.
+pub fn new_recovery_key() -> String {
+    random_bytes(RECOVERY_LEN)
+        .chunks(4)
+        .map(|chunk| {
+            chunk
+                .iter()
+                .map(|b| RECOVERY_ALPHABET[(*b & 31) as usize] as char)
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
+/// The form a recovery key is wrapped under, so case and spacing do not matter.
+pub fn normalize_recovery_key(input: &str) -> String {
+    input
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .map(|c| c.to_ascii_uppercase())
+        .collect()
 }
 
 pub fn encrypt_payload(
@@ -190,5 +256,60 @@ mod tests {
         assert!(matches!(bad_nonce, Err(crate::Error::VaultUnlockFailed)));
         let bad_key = super::decrypt(&[0u8; 4], b"x", &[0u8; super::NONCE_LEN]);
         assert!(matches!(bad_key, Err(crate::Error::VaultUnlockFailed)));
+    }
+}
+
+#[cfg(test)]
+mod key_wrap_tests {
+    use super::*;
+
+    #[test]
+    fn a_secret_wrap_round_trips() {
+        let key = [7u8; KEY_LEN];
+        let wrapped = wrap_data_key("correct horse", &key).unwrap();
+        let got = unlock_vault(
+            "correct horse",
+            &wrapped.kdf_salt,
+            &wrapped.wrapped_key,
+            &wrapped.wrapped_nonce,
+        )
+        .unwrap();
+        assert_eq!(got, key);
+    }
+
+    #[test]
+    fn a_wrong_secret_fails() {
+        let wrapped = wrap_data_key("correct horse", &[7u8; KEY_LEN]).unwrap();
+        let got = unlock_vault(
+            "wrong horse",
+            &wrapped.kdf_salt,
+            &wrapped.wrapped_key,
+            &wrapped.wrapped_nonce,
+        );
+        assert!(matches!(got, Err(Error::VaultUnlockFailed)));
+    }
+
+    #[test]
+    fn a_master_key_wrap_round_trips() {
+        let master = [1u8; KEY_LEN];
+        let key = [2u8; KEY_LEN];
+        let (ct, nonce) = wrap_with_key(&master, &key).unwrap();
+        assert_eq!(unwrap_with_key(&master, &ct, &nonce).unwrap(), key);
+        assert!(matches!(
+            unwrap_with_key(&[3u8; KEY_LEN], &ct, &nonce),
+            Err(Error::VaultUnlockFailed)
+        ));
+    }
+
+    #[test]
+    fn recovery_keys_are_long_and_normalize() {
+        let code = new_recovery_key();
+        assert_eq!(code.replace('-', "").len(), 52);
+        assert_ne!(code, new_recovery_key());
+        let messy = format!("  {} ", code.to_ascii_lowercase().replace('-', " "));
+        assert_eq!(
+            normalize_recovery_key(&messy),
+            normalize_recovery_key(&code)
+        );
     }
 }
