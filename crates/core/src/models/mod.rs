@@ -515,6 +515,41 @@ pub struct Tag {
     pub created_at: DateTime<Utc>,
 }
 
+/// Last probe result from the broken-link checker worker.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkCheckStatus {
+    Ok,
+    Broken,
+    Unreachable,
+    Unverifiable,
+}
+
+impl LinkCheckStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ok => "ok",
+            Self::Broken => "broken",
+            Self::Unreachable => "unreachable",
+            Self::Unverifiable => "unverifiable",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "ok" => Ok(Self::Ok),
+            "broken" => Ok(Self::Broken),
+            "unreachable" => Ok(Self::Unreachable),
+            "unverifiable" => Ok(Self::Unverifiable),
+            _ => Err(format!("unknown link_check_status: {s}")),
+        }
+    }
+
+    pub fn is_problem(self) -> bool {
+        matches!(self, Self::Broken | Self::Unreachable)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Bookmark {
     pub id: Uuid,
@@ -531,6 +566,11 @@ pub struct Bookmark {
     pub vault_ciphertext: Option<Vec<u8>>,
     pub vault_nonce: Option<Vec<u8>>,
     pub deleted_at: Option<DateTime<Utc>>,
+    pub link_check_status: Option<String>,
+    pub link_check_status_code: Option<i32>,
+    pub link_check_error: Option<String>,
+    pub link_checked_at: Option<DateTime<Utc>>,
+    pub link_check_fail_count: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -579,6 +619,15 @@ pub struct BookmarkView {
     pub is_pinned: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<DateTime<Utc>>,
+    /// `ok` / `broken` / `unreachable` / `unverifiable` — absent until first check.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_check_status: Option<LinkCheckStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_check_status_code: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_check_error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_checked_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

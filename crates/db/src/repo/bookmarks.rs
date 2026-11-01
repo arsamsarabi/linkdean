@@ -1,6 +1,7 @@
 use linkdean_core::crypto;
 use linkdean_core::{
-    Bookmark, BookmarkView, Category, CategoryRef, CreateBookmark, Error, Result, UpdateBookmark,
+    Bookmark, BookmarkView, Category, CategoryRef, CreateBookmark, Error, LinkCheckStatus, Result,
+    UpdateBookmark,
     VaultPayload,
 };
 use sqlx::PgPool;
@@ -319,11 +320,17 @@ pub async fn bookmark_to_view(
             is_unread: flags.is_unread,
             is_pinned: flags.is_pinned,
             deleted_at: b.deleted_at,
+            link_check_status: None,
+            link_check_status_code: None,
+            link_check_error: None,
+            link_checked_at: None,
             created_at: b.created_at,
             updated_at: b.updated_at,
         }));
     }
     let tags = tags_for_bookmark(pool, b.id).await?;
+    let (link_check_status, link_check_status_code, link_check_error, link_checked_at) =
+        link_check_fields(&b);
     Ok(Some(BookmarkView {
         id: b.id,
         owner_user_id: b.owner_user_id,
@@ -346,9 +353,33 @@ pub async fn bookmark_to_view(
         is_unread: flags.is_unread,
         is_pinned: flags.is_pinned,
         deleted_at: b.deleted_at,
+        link_check_status,
+        link_check_status_code,
+        link_check_error,
+        link_checked_at,
         created_at: b.created_at,
         updated_at: b.updated_at,
     }))
+}
+
+fn link_check_fields(
+    b: &Bookmark,
+) -> (
+    Option<LinkCheckStatus>,
+    Option<i32>,
+    Option<String>,
+    Option<chrono::DateTime<chrono::Utc>>,
+) {
+    let status = b
+        .link_check_status
+        .as_deref()
+        .and_then(|s| LinkCheckStatus::parse(s).ok());
+    (
+        status,
+        b.link_check_status_code,
+        b.link_check_error.clone(),
+        b.link_checked_at,
+    )
 }
 
 pub async fn list_bookmarks(
@@ -769,25 +800,49 @@ pub async fn update_bookmark(
     }
 
     let (changes, change_keys) = bookmark_content_changes(&req, Some(existing.title.as_str()));
+    let url_changed = req.url.as_ref().is_some_and(|u| u != &existing.url);
     let url = req.url.unwrap_or(existing.url);
     let title = req.title.unwrap_or(existing.title);
     let description = req.description.or(existing.description);
     let notes = req.notes.or(existing.notes);
-    sqlx::query(
-        r#"
-        UPDATE bookmarks
-        SET url=$1, title=$2, description=$3, notes=$4, updated_at=now()
-        WHERE id=$5
-        "#,
-    )
-    .bind(&url)
-    .bind(&title)
-    .bind(&description)
-    .bind(&notes)
-    .bind(id)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+    if url_changed {
+        sqlx::query(
+            r#"
+            UPDATE bookmarks
+            SET url=$1, title=$2, description=$3, notes=$4, updated_at=now(),
+                link_check_status = NULL,
+                link_check_status_code = NULL,
+                link_check_error = NULL,
+                link_checked_at = NULL,
+                link_check_fail_count = 0
+            WHERE id=$5
+            "#,
+        )
+        .bind(&url)
+        .bind(&title)
+        .bind(&description)
+        .bind(&notes)
+        .bind(id)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    } else {
+        sqlx::query(
+            r#"
+            UPDATE bookmarks
+            SET url=$1, title=$2, description=$3, notes=$4, updated_at=now()
+            WHERE id=$5
+            "#,
+        )
+        .bind(&url)
+        .bind(&title)
+        .bind(&description)
+        .bind(&notes)
+        .bind(id)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    }
     if let Some(tags) = req.tags {
         // Tags stay in the actor's tag namespace.
         set_bookmark_tags(pool, user_id, id, &tags).await?;
@@ -1020,6 +1075,130 @@ pub async fn list_bookmarks_needing_preview(pool: &PgPool) -> Result<Vec<(Uuid, 
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
     Ok(rows)
+}
+
+/// Claim a batch of bookmarks due for link checking (never-checked first, then stale).
+/// Soft failures (`link_check_fail_count > 0` but not yet confirmed) recheck after
+/// `soft_recheck_after`; healthy / confirmed rows use `recheck_after`.
+pub async fn claim_bookmarks_for_link_check(
+    pool: &PgPool,
+    limit: i64,
+    recheck_after: chrono::Duration,
+    soft_recheck_after: chrono::Duration,
+) -> Result<Vec<(Uuid, Uuid, String)>> {
+    let ok_cutoff = chrono::Utc::now() - recheck_after;
+    let soft_cutoff = chrono::Utc::now() - soft_recheck_after;
+    let rows: Vec<(Uuid, Uuid, String)> = sqlx::query_as(
+        r#"
+        SELECT owner_user_id, id, url FROM bookmarks
+        WHERE is_vault = FALSE
+          AND deleted_at IS NULL
+          AND url <> ''
+          AND (
+            link_checked_at IS NULL
+            OR (link_check_fail_count > 0 AND link_checked_at < $2)
+            OR link_checked_at < $1
+          )
+        ORDER BY link_checked_at NULLS FIRST, created_at ASC
+        LIMIT $3
+        "#,
+    )
+    .bind(ok_cutoff)
+    .bind(soft_cutoff)
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(rows)
+}
+
+pub async fn record_link_check(
+    pool: &PgPool,
+    bookmark_id: Uuid,
+    status: LinkCheckStatus,
+    status_code: Option<i32>,
+    error: Option<&str>,
+) -> Result<()> {
+    let row: Option<(Option<String>, i32)> = sqlx::query_as(
+        r#"
+        SELECT link_check_status, link_check_fail_count
+        FROM bookmarks
+        WHERE id = $1 AND is_vault = FALSE
+        "#,
+    )
+    .bind(bookmark_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let Some((prev_status, prev_fails)) = row else {
+        return Ok(());
+    };
+
+    let definitive_gone = matches!(status_code, Some(404) | Some(410));
+    let (stored_status, fail_count): (Option<String>, i32) = if status.is_problem() {
+        let fails = prev_fails.saturating_add(1);
+        let store = if definitive_gone || fails >= 2 {
+            Some(status.as_str().to_string())
+        } else {
+            // Soft fail: keep prior label (or still unchecked) until confirmed.
+            prev_status
+        };
+        (store, fails)
+    } else {
+        (Some(status.as_str().to_string()), 0)
+    };
+
+    sqlx::query(
+        r#"
+        UPDATE bookmarks
+        SET link_check_status = $2,
+            link_check_status_code = $3,
+            link_check_error = $4,
+            link_check_fail_count = $5,
+            link_checked_at = now(),
+            updated_at = now()
+        WHERE id = $1 AND is_vault = FALSE
+        "#,
+    )
+    .bind(bookmark_id)
+    .bind(stored_status.as_deref())
+    .bind(status_code)
+    .bind(error)
+    .bind(fail_count)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(())
+}
+
+/// Owner-only list of bookmarks currently flagged broken / unreachable.
+pub async fn list_broken_bookmarks(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<Vec<BookmarkView>> {
+    let rows = sqlx::query_as::<_, Bookmark>(
+        r#"
+        SELECT * FROM bookmarks
+        WHERE owner_user_id = $1
+          AND is_vault = FALSE
+          AND deleted_at IS NULL
+          AND link_check_status IN ('broken', 'unreachable')
+        ORDER BY link_checked_at DESC NULLS LAST, updated_at DESC
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let mut out = Vec::with_capacity(rows.len());
+    for b in rows {
+        if let Some(view) = bookmark_to_view(pool, b, None, user_id).await? {
+            out.push(view);
+        }
+    }
+    Ok(out)
 }
 
 pub async fn find_duplicate_urls(pool: &PgPool, user_id: Uuid) -> Result<Vec<String>> {
