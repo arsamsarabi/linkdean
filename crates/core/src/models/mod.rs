@@ -711,3 +711,91 @@ pub struct PutDashboardSection {
     pub title: String,
     pub bookmark_ids: Vec<Uuid>,
 }
+
+/// Shared-activity notification kinds (Milestone 5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationKind {
+    ShareInvite,
+    ShareAccessChanged,
+    ShareRevoked,
+    SharedEdit,
+}
+
+impl NotificationKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ShareInvite => "share_invite",
+            Self::ShareAccessChanged => "share_access_changed",
+            Self::ShareRevoked => "share_revoked",
+            Self::SharedEdit => "shared_edit",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "share_invite" => Ok(Self::ShareInvite),
+            "share_access_changed" => Ok(Self::ShareAccessChanged),
+            "share_revoked" => Ok(Self::ShareRevoked),
+            "shared_edit" => Ok(Self::SharedEdit),
+            _ => Err(format!("unknown notification kind: {s}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationSubjectType {
+    Category,
+    Dashboard,
+    Bookmark,
+}
+
+impl NotificationSubjectType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Category => "category",
+            Self::Dashboard => "dashboard",
+            Self::Bookmark => "bookmark",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "category" => Ok(Self::Category),
+            "dashboard" => Ok(Self::Dashboard),
+            "bookmark" => Ok(Self::Bookmark),
+            _ => Err(format!("unknown notification subject_type: {s}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Notification {
+    pub id: Uuid,
+    pub recipient_user_id: Uuid,
+    pub actor_user_id: Option<Uuid>,
+    pub kind: String,
+    pub subject_type: String,
+    pub subject_id: Uuid,
+    pub subject_title: String,
+    pub body: String,
+    pub payload: serde_json::Value,
+    pub read_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotificationView {
+    pub id: Uuid,
+    pub kind: NotificationKind,
+    pub subject_type: NotificationSubjectType,
+    pub subject_id: Uuid,
+    pub subject_title: String,
+    pub body: String,
+    pub payload: serde_json::Value,
+    pub actor_user_id: Option<Uuid>,
+    pub actor_display_name: Option<String>,
+    pub read_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}

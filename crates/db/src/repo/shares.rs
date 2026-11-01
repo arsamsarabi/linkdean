@@ -251,6 +251,9 @@ pub async fn create_share(
         return Err(Error::BadRequest("cannot share with yourself".into()));
     }
 
+    let existed = find_direct_share(pool, category_id, invitee.id)
+        .await?
+        .is_some();
     let access = req.access.as_str();
     let row = sqlx::query_as::<_, ShareRow>(
         r#"
@@ -272,7 +275,29 @@ pub async fn create_share(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    to_view(row)
+    let view = to_view(row)?;
+    if existed {
+        super::notifications::notify_category_share_access(
+            pool,
+            owner_user_id,
+            invitee.id,
+            category_id,
+            &cat.name,
+            view.access,
+        )
+        .await;
+    } else {
+        super::notifications::notify_category_share_invite(
+            pool,
+            owner_user_id,
+            invitee.id,
+            category_id,
+            &cat.name,
+            view.access,
+        )
+        .await;
+    }
+    Ok(view)
 }
 
 pub async fn update_share(
@@ -282,7 +307,7 @@ pub async fn update_share(
     invitee_user_id: Uuid,
     req: UpdateCategoryShare,
 ) -> Result<CategoryShareView> {
-    require_category_owner(pool, owner_user_id, category_id).await?;
+    let cat = require_category_owner(pool, owner_user_id, category_id).await?;
     let access = req.access.as_str();
     let row = sqlx::query_as::<_, ShareRow>(
         r#"
@@ -303,7 +328,17 @@ pub async fn update_share(
     .map_err(|e| Error::msg(e.to_string()))?
     .ok_or(Error::NotFound)?;
 
-    to_view(row)
+    let view = to_view(row)?;
+    super::notifications::notify_category_share_access(
+        pool,
+        owner_user_id,
+        invitee_user_id,
+        category_id,
+        &cat.name,
+        view.access,
+    )
+    .await;
+    Ok(view)
 }
 
 pub async fn delete_share(
@@ -312,7 +347,7 @@ pub async fn delete_share(
     category_id: Uuid,
     invitee_user_id: Uuid,
 ) -> Result<()> {
-    require_category_owner(pool, owner_user_id, category_id).await?;
+    let cat = require_category_owner(pool, owner_user_id, category_id).await?;
     let res = sqlx::query(
         "DELETE FROM category_shares WHERE category_id = $1 AND invitee_user_id = $2",
     )
@@ -324,6 +359,14 @@ pub async fn delete_share(
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::notifications::notify_category_share_revoked(
+        pool,
+        owner_user_id,
+        invitee_user_id,
+        category_id,
+        &cat.name,
+    )
+    .await;
     Ok(())
 }
 

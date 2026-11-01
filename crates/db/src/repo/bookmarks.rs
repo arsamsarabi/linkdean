@@ -705,6 +705,22 @@ pub async fn update_bookmark(
         set_bookmark_categories(pool, user_id, id, &c.into_iter().collect::<Vec<_>>()).await?;
     }
     let b = get_bookmark_raw(pool, user_id, id).await?;
+    if b.owner_user_id != user_id {
+        let title = if b.title.trim().is_empty() {
+            b.url.as_str()
+        } else {
+            b.title.as_str()
+        };
+        super::notifications::notify_shared_edit(
+            pool,
+            user_id,
+            b.owner_user_id,
+            linkdean_core::NotificationSubjectType::Bookmark,
+            b.id,
+            title,
+        )
+        .await;
+    }
     bookmark_to_view(pool, b, None, user_id)
         .await?
         .ok_or(Error::NotFound)

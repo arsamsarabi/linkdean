@@ -225,7 +225,7 @@ pub async fn create_dashboard_share(
     dashboard_id: Uuid,
     req: CreateDashboardShare,
 ) -> Result<DashboardShareView> {
-    require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+    let dash = require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
 
     let email = req.email.trim().to_ascii_lowercase();
     if email.is_empty() {
@@ -238,6 +238,9 @@ pub async fn create_dashboard_share(
         return Err(Error::BadRequest("cannot share with yourself".into()));
     }
 
+    let existed = find_direct_dashboard_share(pool, dashboard_id, invitee.id)
+        .await?
+        .is_some();
     let access = req.access.as_str();
     let row = sqlx::query_as::<_, DashShareRow>(
         r#"
@@ -259,7 +262,29 @@ pub async fn create_dashboard_share(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    to_view(row)
+    let view = to_view(row)?;
+    if existed {
+        super::notifications::notify_dashboard_share_access(
+            pool,
+            owner_user_id,
+            invitee.id,
+            dashboard_id,
+            &dash.title,
+            view.access,
+        )
+        .await;
+    } else {
+        super::notifications::notify_dashboard_share_invite(
+            pool,
+            owner_user_id,
+            invitee.id,
+            dashboard_id,
+            &dash.title,
+            view.access,
+        )
+        .await;
+    }
+    Ok(view)
 }
 
 pub async fn update_dashboard_share(
@@ -269,7 +294,7 @@ pub async fn update_dashboard_share(
     invitee_user_id: Uuid,
     req: UpdateDashboardShare,
 ) -> Result<DashboardShareView> {
-    require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+    let dash = require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
     let access = req.access.as_str();
     let row = sqlx::query_as::<_, DashShareRow>(
         r#"
@@ -290,7 +315,17 @@ pub async fn update_dashboard_share(
     .map_err(|e| Error::msg(e.to_string()))?
     .ok_or(Error::NotFound)?;
 
-    to_view(row)
+    let view = to_view(row)?;
+    super::notifications::notify_dashboard_share_access(
+        pool,
+        owner_user_id,
+        invitee_user_id,
+        dashboard_id,
+        &dash.title,
+        view.access,
+    )
+    .await;
+    Ok(view)
 }
 
 pub async fn delete_dashboard_share(
@@ -299,7 +334,7 @@ pub async fn delete_dashboard_share(
     dashboard_id: Uuid,
     invitee_user_id: Uuid,
 ) -> Result<()> {
-    require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+    let dash = require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
     let res = sqlx::query(
         "DELETE FROM dashboard_shares WHERE dashboard_id = $1 AND invitee_user_id = $2",
     )
@@ -311,5 +346,13 @@ pub async fn delete_dashboard_share(
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::notifications::notify_dashboard_share_revoked(
+        pool,
+        owner_user_id,
+        invitee_user_id,
+        dashboard_id,
+        &dash.title,
+    )
+    .await;
     Ok(())
 }

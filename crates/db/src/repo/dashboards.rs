@@ -391,6 +391,18 @@ pub async fn put_dashboard(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
 
+    if dash.owner_user_id != user_id {
+        super::notifications::notify_shared_edit(
+            pool,
+            user_id,
+            dash.owner_user_id,
+            linkdean_core::NotificationSubjectType::Dashboard,
+            dash.id,
+            title,
+        )
+        .await;
+    }
+
     get_dashboard(pool, user_id, id, vault_key).await
 }
 

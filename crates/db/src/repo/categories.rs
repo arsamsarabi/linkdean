@@ -223,6 +223,18 @@ pub async fn update_category(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
+    if !access.is_owner() {
+        super::notifications::notify_shared_edit(
+            pool,
+            user_id,
+            updated.owner_user_id,
+            linkdean_core::NotificationSubjectType::Category,
+            updated.id,
+            &updated.name,
+        )
+        .await;
+    }
+
     let access = category_access(pool, user_id, updated.id).await?;
     Ok(CategoryView::from_category(updated, access))
 }
