@@ -1,4 +1,5 @@
 export * from './useDashboard'
+export * from './useDashboardBoard'
 export * from './useDashboardEdit'
 export * from './useDashboardPage'
 export * from './useDashboardShares'

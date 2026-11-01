@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { useDisclosure, useHotkeys, useWindowScroll } from '@mantine/hooks'
+import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMe } from '@/hooks/auth'
 import { useCategoryFolderActions } from '@/hooks/categories'
@@ -9,6 +8,7 @@ import { FOLDER_ALL, FOLDER_UNCATEGORIZED, type ExplorerFolderId } from '@/servi
 import { useUi } from '@/stores'
 import { useLibraryBookmarkEditor } from './useLibraryBookmarkEditor'
 import { useLibraryList } from './useLibraryList'
+import { useLibraryPageChrome } from './useLibraryPageChrome'
 import { useLibrarySelection } from './useLibrarySelection'
 import { useLibraryUrlState } from './useLibraryUrlState'
 import { useLibraryViewMode } from './useLibraryViewMode'
@@ -20,9 +20,6 @@ export function useLibraryPage() {
   const nav = useNavigate()
   const me = useMe()
   const showHidden = useUi((s) => s.showHidden)
-  const searchRef = useRef<HTMLInputElement>(null)
-  const [scroll] = useWindowScroll()
-  const [dupesOpen, { open: openDupes, close: closeDupes }] = useDisclosure(false)
 
   const url = useLibraryUrlState()
   const { viewMode, onViewModeChange } = useLibraryViewMode()
@@ -61,6 +58,22 @@ export function useLibraryPage() {
     vaultPrompt: !!listState.search.data?.vault_prompt,
   })
 
+  const chrome = useLibraryPageChrome({
+    canCreate: editor.canCreateInContext,
+    selectMode: selection.selectMode,
+    openCreate: editor.openCreate,
+    exitSelectMode: selection.exitSelectMode,
+    searchParams: url.searchParams,
+    urlQ: url.urlQ,
+    sort: url.sort,
+    filterCats: url.filterCats,
+    filterTags: url.filterTags,
+    filterFlags: url.filterFlags,
+    filterSince: url.filterSince,
+    vaultOnly: url.vaultOnly,
+    folderId: url.folderId,
+  })
+
   const categoryActions = useCategoryFolderActions({
     onDeleted: (id) => {
       if (url.folderId !== id) return
@@ -79,49 +92,6 @@ export function useLibraryPage() {
       })
     },
   })
-
-  useHotkeys([
-    [
-      'n',
-      (e) => {
-        const t = e.target as HTMLElement | null
-        if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
-        if (!editor.canCreateInContext) return
-        e.preventDefault()
-        editor.openCreate()
-      },
-    ],
-    [
-      'Escape',
-      () => {
-        if (selection.selectMode) selection.exitSelectMode()
-      },
-    ],
-  ])
-
-  /** Consume one-shot command-palette flags (`create` / `focus`) then strip from URL. */
-  useEffect(() => {
-    if (!url.searchParams.create && url.searchParams.focus !== 'search') return
-    if (url.searchParams.create) editor.openCreate()
-    if (url.searchParams.focus === 'search') {
-      window.requestAnimationFrame(() => searchRef.current?.focus())
-    }
-    void nav({
-      to: '/library',
-      search: buildLibrarySearch({
-        q: url.urlQ,
-        sort: url.sort,
-        category: url.filterCats,
-        tag: url.filterTags,
-        flag: url.filterFlags,
-        since: url.filterSince,
-        vault: url.vaultOnly,
-        folder: url.folderId,
-      }),
-      replace: true,
-    })
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- one-shot URL flags only
-  }, [url.searchParams.create, url.searchParams.focus])
 
   function onFolderChange(id: ExplorerFolderId): void {
     url.setLibrarySearch({ folder: id })
@@ -142,18 +112,14 @@ export function useLibraryPage() {
   return {
     me,
     showHidden,
-    searchRef,
-    scroll,
     viewMode,
     onViewModeChange,
     ...url,
     ...listState,
     ...selection,
     ...editor,
+    ...chrome,
     folderCat,
-    dupesOpen,
-    openDupes,
-    closeDupes,
     categoryActions,
     onFolderChange,
     categoryMenuFor,
