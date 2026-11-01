@@ -73,7 +73,8 @@ Keep modules small enough to review in one pass. Soft ceilings (prefer under; sp
 | --- | --- |
 | Page / screen component | ~350 lines |
 | Presentational component | ~250 lines |
-| Domain hook (orchestration) | ~400 lines |
+| Single-concern domain hook | ~200 lines |
+| Page composition hook (`useXPage`) | ~150 lines (wire children only) |
 | Service / pure module | ~300 lines |
 
 **When adding features to a large file:** split first (or as part of the same change). Do not keep growing a known oversized module.
@@ -84,11 +85,21 @@ Keep modules small enough to review in one pass. Soft ceilings (prefer under; sp
 - The same markup pattern appears in 2+ places → extract a shared presentational component under `components/<domain>/`
 - A page file is mostly JSX that can live as colocated children (`pages/<domain>/FooHeader.tsx`, etc.)
 
-**Extract hooks when:**
+**Extract / split hooks when:**
 
 - A component owns substantial state, effects, URL sync, mutations, or derived lists
 - Two screens need the same orchestration → shared hook under `hooks/<domain>/`
 - Logic can be unit-tested without rendering (prefer services for pure rules; hooks for React orchestration)
+- A hook mixes unrelated concerns (URL + selection + editor + list derivation) → one hook per concern, then a thin `useXPage` that only composes them
+- A single hook file exceeds ~200 lines of real logic (not counting a tiny re-export barrel)
+
+**Hook decomposition rules:**
+
+- Name by concern: `useLibraryUrlState`, `useLibraryList`, `useLibrarySelection`, not `useLibraryStuff`
+- Composition roots (`useLibraryPage`, `useSettingsPage`, …) must not grow fat again — push new behavior into a focused child hook
+- Child hooks take plain inputs (ids, filter values, data arrays); avoid importing sibling page hooks in a cycle
+- Import sibling hooks via relative paths or `@/hooks/<domain>`, never `@/hooks` from inside `hooks/` (barrel cycles)
+- Prefer returning a focused object; do not force every leaf field through the composition root unless the page needs it
 
 **Rules of thumb:**
 
