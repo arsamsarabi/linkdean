@@ -52,6 +52,8 @@ export function OnboardingPage(): ReactElement {
   const completeOnboarding = useCompleteOnboarding()
 
   useEffect(() => {
+    // Only picks the starting step: later query updates must not move a user mid-flow.
+    if (ready) return
     if (bootstrap.isLoading) return
     if (bootstrap.isError) {
       void nav({ to: '/login' })
@@ -84,7 +86,7 @@ export function OnboardingPage(): ReactElement {
     }
     setStep(2)
     setReady(true)
-  }, [bootstrap.isLoading, bootstrap.isError, bootstrap.data, me.isLoading, me.isError, me.data, nav])
+  }, [ready, bootstrap.isLoading, bootstrap.isError, bootstrap.data, me.isLoading, me.isError, me.data, nav])
 
   async function createAdmin(): Promise<void> {
     const check = validatePasswordPair(password, password2)
@@ -164,7 +166,7 @@ export function OnboardingPage(): ReactElement {
   }
 
   return (
-    <Stack maw={560} mx="auto" mt={48} px="md" pb={48} gap="lg" className={motion.fadeIn}>
+    <Stack maw={760} mx="auto" mt={48} px="md" pb={48} gap="lg" className={motion.fadeIn}>
       <Stack gap={6}>
         <Title order={1} c="violet">
           Welcome to Linkdean
