@@ -6,6 +6,7 @@ import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-route
 import {
   BrokenLinksDrawer,
   CommandPalette,
+  DuplicateMergeDrawer,
   HistoryDrawer,
   NotificationsDrawer,
   PageContainer,
@@ -120,6 +121,7 @@ export function AppShell(): ReactElement {
 
       <CommandPalette opened={shell.paletteOpen} onClose={shell.closePalette} />
       <BrokenLinksDrawer opened={shell.brokenOpen} onClose={shell.closeBroken} />
+      <DuplicateMergeDrawer opened={shell.dupesOpen} onClose={shell.closeDupes} />
       <HistoryDrawer opened={shell.historyOpen} onClose={shell.closeHistory} />
       <NotificationsDrawer opened={shell.notifOpen} onClose={shell.closeNotif} />
     </MantineAppShell>

@@ -1,7 +1,7 @@
 import { type ReactElement } from 'react'
 import { Button, Group, Modal, PasswordInput, Stack, Text } from '@mantine/core'
 import { IconLockOpen } from '@tabler/icons-react'
-import { BookmarkDrawer, BulkEditDrawer, ConfirmModal, DuplicateMergeDrawer } from '@/components'
+import { BookmarkDrawer, BulkEditDrawer, ConfirmModal } from '@/components'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -24,8 +24,6 @@ export function LibraryPageModals(): ReactElement {
         onApplyCategories={(ids) => void lib.applyBulkCategories(ids)}
         onApplyTag={(tags, mode) => void lib.applyBulkTag(tags, mode)}
       />
-
-      <DuplicateMergeDrawer opened={lib.dupesOpen} onClose={lib.closeDupes} />
 
       {lib.categoryActions.modals}
 

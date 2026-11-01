@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { ActionIcon, Button, Group, Kbd, Select, Stack, TextInput, Tooltip } from '@mantine/core'
-import { IconBookmark, IconFilter, IconPin, IconSearch, IconStar, IconX } from '@tabler/icons-react'
+import { IconFilter, IconSearch, IconX } from '@tabler/icons-react'
 import { type SortKey } from '@/lib'
 import { LIBRARY_FILTER_PANEL_ID } from './libraryConstants'
 import styles from './LibraryPage.module.css'
@@ -59,32 +59,6 @@ export function LibrarySearchToolbar(): ReactElement {
               </Button>
             </Tooltip>
           ) : null}
-          <Button.Group className={styles.flagFilters}>
-            <Button
-              variant={lib.filterFlags.includes('unread') ? 'light' : 'default'}
-              leftSection={<IconBookmark {...iconSm} />}
-              onClick={() => lib.toggleFlagFilter('unread')}
-              h="100%"
-            >
-              Reading list
-            </Button>
-            <Button
-              variant={lib.filterFlags.includes('favorite') ? 'light' : 'default'}
-              leftSection={<IconStar {...iconSm} />}
-              onClick={() => lib.toggleFlagFilter('favorite')}
-              h="100%"
-            >
-              Favorites
-            </Button>
-            <Button
-              variant={lib.filterFlags.includes('pinned') ? 'light' : 'default'}
-              leftSection={<IconPin {...iconSm} />}
-              onClick={() => lib.toggleFlagFilter('pinned')}
-              h="100%"
-            >
-              Pinned
-            </Button>
-          </Button.Group>
           <Select
             aria-label="Sort"
             value={lib.sort}

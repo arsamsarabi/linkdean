@@ -4,6 +4,7 @@ import { IconBooks, IconLayoutDashboard, IconLogout, IconSettings, IconTrash, Ic
 import { Link } from '@tanstack/react-router'
 import {
   BrokenLinksButton,
+  DuplicatesButton,
   HistoryButton,
   LogoMark,
   NotificationsBell,
@@ -47,6 +48,7 @@ export function AppShellHeader({
   const navOpen = useShellUi((s) => s.navOpen)
   const toggleNav = useShellUi((s) => s.toggleNav)
   const openBroken = useShellUi((s) => s.openBroken)
+  const openDupes = useShellUi((s) => s.openDupes)
   const openHistory = useShellUi((s) => s.openHistory)
   const openNotif = useShellUi((s) => s.openNotif)
 
@@ -93,6 +95,7 @@ export function AppShellHeader({
           <Skeleton circle height={36} width={36} />
         ) : (
           <Group gap="xs" wrap="nowrap">
+            <DuplicatesButton onClick={openDupes} />
             <BrokenLinksButton onClick={openBroken} />
             <HistoryButton onClick={openHistory} />
             <Indicator

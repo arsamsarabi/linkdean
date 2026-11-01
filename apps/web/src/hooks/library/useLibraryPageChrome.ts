@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useDisclosure, useHotkeys, useWindowScroll } from '@mantine/hooks'
+import { useHotkeys, useWindowScroll } from '@mantine/hooks'
 import { useNavigate } from '@tanstack/react-router'
 import { buildLibrarySearch, type SortKey } from '@/lib'
 import type { ExplorerFolderId, FlagFilter, SinceFilter } from '@/services'
@@ -21,7 +21,7 @@ type Input = {
   folderId: ExplorerFolderId | undefined
 }
 
-/** Hotkeys, scroll, dupes modal, and one-shot palette URL flags for Library page. */
+/** Hotkeys, scroll, and one-shot palette URL flags for Library page. */
 export function useLibraryPageChrome({
   canCreate,
   selectMode,
@@ -40,7 +40,6 @@ export function useLibraryPageChrome({
   const nav = useNavigate()
   const searchRef = useRef<HTMLInputElement>(null)
   const [scroll] = useWindowScroll()
-  const [dupesOpen, { open: openDupes, close: closeDupes }] = useDisclosure(false)
 
   useHotkeys([
     [
@@ -88,8 +87,5 @@ export function useLibraryPageChrome({
   return {
     searchRef,
     scroll,
-    dupesOpen,
-    openDupes,
-    closeDupes,
   }
 }

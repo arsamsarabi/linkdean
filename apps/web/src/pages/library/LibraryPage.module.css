@@ -16,13 +16,3 @@
   min-width: 200px;
   max-width: 440px;
 }
-
-.flagFilters {
-  align-self: stretch;
-  display: inline-flex;
-  height: 100%;
-}
-
-.flagFilters :global(button) {
-  height: 100%;
-}

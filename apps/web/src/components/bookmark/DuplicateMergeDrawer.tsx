@@ -1,6 +1,19 @@
 import { useState, type ReactElement } from 'react'
-import { Box, Button, Drawer, Group, LoadingOverlay, Radio, Stack, Text, Title } from '@mantine/core'
+import {
+  ActionIcon,
+  Box,
+  Button,
+  Drawer,
+  Group,
+  LoadingOverlay,
+  Radio,
+  Stack,
+  Text,
+  Title,
+  Tooltip,
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { IconCopy } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useDuplicates, useMergeDuplicateGroup, useSyncDuringRender } from '@/hooks'
 import type { Bookmark, DuplicateGroup } from '@/schemas'
@@ -69,6 +82,16 @@ function GroupCard({
         </Button>
       </Group>
     </Stack>
+  )
+}
+
+export function DuplicatesButton({ onClick }: { onClick: () => void }): ReactElement {
+  return (
+    <Tooltip label="Find and merge duplicate URLs" position="bottom">
+      <ActionIcon variant="subtle" size="lg" radius="md" aria-label="Find and merge duplicate URLs" onClick={onClick}>
+        <IconCopy size={20} stroke={1.5} />
+      </ActionIcon>
+    </Tooltip>
   )
 }
 
