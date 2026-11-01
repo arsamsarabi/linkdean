@@ -250,6 +250,14 @@ pub async fn create_category(
     Ok(view)
 }
 
+fn visibility_label(visibility: &str) -> &'static str {
+    match visibility {
+        "followers" => "Followers",
+        "members" => "Members",
+        _ => "Only me",
+    }
+}
+
 pub async fn update_category(
     pool: &PgPool,
     user_id: Uuid,
@@ -260,6 +268,7 @@ pub async fn update_category(
     let before_name = cat.name.clone();
     let before_parent = cat.parent_id;
     let before_hidden = cat.is_hidden;
+    let before_visibility = cat.visibility.clone();
     let before_position = cat.position;
     let before_icon = cat.icon.clone();
 
@@ -290,6 +299,17 @@ pub async fn update_category(
         }
         cat.is_hidden = h;
     }
+    if let Some(visibility) = req.visibility {
+        if !access.is_owner() {
+            return Err(Error::Forbidden);
+        }
+        if cat.is_vault && visibility != linkdean_core::CategoryVisibility::Private {
+            return Err(Error::BadRequest(
+                "vault categories must stay private".into(),
+            ));
+        }
+        cat.visibility = visibility.as_str().to_string();
+    }
     if let Some(p) = req.position {
         cat.position = p;
     }
@@ -319,6 +339,13 @@ pub async fn update_category(
         });
         change_keys.push("is_hidden");
     }
+    if cat.visibility != before_visibility {
+        changes.push(format!(
+            "visibility set to {}",
+            visibility_label(&cat.visibility)
+        ));
+        change_keys.push("visibility");
+    }
     if cat.position != before_position {
         changes.push("reordered".into());
         change_keys.push("position");
@@ -334,7 +361,7 @@ pub async fn update_category(
     let updated = sqlx::query_as::<_, Category>(
         r#"
         UPDATE categories
-        SET name = $1, parent_id = $2, is_hidden = $3, position = $4, icon = $5, updated_at = now()
+        SET name = $1, parent_id = $2, is_hidden = $3, position = $4, icon = $5, visibility = $7, updated_at = now()
         WHERE id = $6
         RETURNING *
         "#,
@@ -345,6 +372,7 @@ pub async fn update_category(
     .bind(cat.position)
     .bind(&cat.icon)
     .bind(id)
+    .bind(&cat.visibility)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;

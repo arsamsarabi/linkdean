@@ -1,7 +1,11 @@
 //! Who can see a profile and its bookmarks.
 //! Requires `DATABASE_URL`. Skips when unset.
 
-use linkdean_core::{CreateBookmark, CreateCategory, Error, User};
+use linkdean_core::{
+    CategoryVisibility, CreateBookmark, CreateCategory, CreateCategoryShare, Error,
+    ListActivityFilter, ProfileVisibility, ShareAccess, UpdateBookmark, UpdateCategory,
+    UpdateProfile, User,
+};
 use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -421,4 +425,148 @@ async fn follow_lists_share_the_profile_gate_and_hide_unopenable_users() {
         .map(|u| u.id)
         .collect();
     assert_eq!(following, vec![target.id]);
+}
+
+fn visibility_patch(visibility: CategoryVisibility) -> UpdateCategory {
+    UpdateCategory {
+        name: None,
+        parent_id: None,
+        is_hidden: None,
+        position: None,
+        icon: None,
+        visibility: Some(visibility),
+    }
+}
+
+#[tokio::test]
+async fn owner_sets_profile_and_category_visibility() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let updated = db::update_profile(
+        &pool,
+        owner.id,
+        &UpdateProfile {
+            display_name: None,
+            bio: None,
+            timezone: None,
+            email: None,
+            profile_visibility: Some(ProfileVisibility::Followers),
+        },
+    )
+    .await
+    .expect("update profile");
+    assert_eq!(updated.profile_visibility, "followers");
+
+    let cat = category(&pool, &owner).await;
+    let view = db::update_category(
+        &pool,
+        owner.id,
+        cat,
+        visibility_patch(CategoryVisibility::Members),
+    )
+    .await
+    .expect("update category");
+    assert_eq!(view.visibility, "members");
+
+    let events = db::list_activity(
+        &pool,
+        owner.id,
+        ListActivityFilter {
+            limit: 50,
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("activity");
+    assert!(events
+        .iter()
+        .any(|e| e.subject_id == cat && e.summary.contains("Members")));
+}
+
+#[tokio::test]
+async fn vault_category_rejects_wider_visibility() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "vault").await;
+    let cat = category(&pool, &owner).await;
+    sqlx::query("UPDATE categories SET is_vault = TRUE WHERE id = $1")
+        .bind(cat)
+        .execute(&pool)
+        .await
+        .expect("mark vault");
+    let denied = db::update_category(
+        &pool,
+        owner.id,
+        cat,
+        visibility_patch(CategoryVisibility::Members),
+    )
+    .await;
+    assert!(matches!(denied, Err(Error::BadRequest(_))));
+}
+
+#[tokio::test]
+async fn only_the_owner_sets_visibility() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let writer = user(&pool, "writer").await;
+    let cat = category(&pool, &owner).await;
+    let bm = bookmark(&pool, &owner, vec![cat]).await;
+    db::create_share(
+        &pool,
+        owner.id,
+        cat,
+        CreateCategoryShare {
+            email: writer.email.clone(),
+            access: ShareAccess::Write,
+        },
+    )
+    .await
+    .expect("share");
+
+    let denied = db::update_category(
+        &pool,
+        writer.id,
+        cat,
+        visibility_patch(CategoryVisibility::Members),
+    )
+    .await;
+    assert!(matches!(denied, Err(Error::Forbidden)));
+
+    let patch = UpdateBookmark {
+        is_private: Some(true),
+        ..Default::default()
+    };
+    let denied = db::update_bookmark(&pool, writer.id, bm, patch, None).await;
+    assert!(matches!(denied, Err(Error::Forbidden)));
+}
+
+#[tokio::test]
+async fn is_private_round_trips_and_is_rejected_on_vault() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let cat = category(&pool, &owner).await;
+    let bm = bookmark(&pool, &owner, vec![cat]).await;
+    let patch = UpdateBookmark {
+        is_private: Some(true),
+        ..Default::default()
+    };
+    let view = db::update_bookmark(&pool, owner.id, bm, patch.clone(), None)
+        .await
+        .expect("set private");
+    assert!(view.is_private);
+
+    sqlx::query("UPDATE bookmarks SET is_vault = TRUE WHERE id = $1")
+        .bind(bm)
+        .execute(&pool)
+        .await
+        .expect("mark vault");
+    let denied = db::update_bookmark(&pool, owner.id, bm, patch, None).await;
+    assert!(matches!(denied, Err(Error::BadRequest(_))));
 }

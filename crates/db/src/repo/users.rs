@@ -384,6 +384,11 @@ pub async fn update_profile(pool: &PgPool, user_id: Uuid, patch: &UpdateProfile)
         None => user.email.clone(),
     };
 
+    let profile_visibility = patch
+        .profile_visibility
+        .map(|v| v.as_str().to_string())
+        .unwrap_or_else(|| user.profile_visibility.clone());
+
     sqlx::query_as::<_, User>(
         r#"
         UPDATE users SET
@@ -391,6 +396,7 @@ pub async fn update_profile(pool: &PgPool, user_id: Uuid, patch: &UpdateProfile)
             bio = $3,
             timezone = $4,
             email = $5,
+            profile_visibility = $6,
             updated_at = now()
         WHERE id = $1
         RETURNING *
@@ -401,6 +407,7 @@ pub async fn update_profile(pool: &PgPool, user_id: Uuid, patch: &UpdateProfile)
     .bind(bio)
     .bind(timezone)
     .bind(email)
+    .bind(profile_visibility)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))

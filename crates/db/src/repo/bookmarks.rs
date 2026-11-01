@@ -617,6 +617,7 @@ fn update_has_content(req: &UpdateBookmark) -> bool {
         || req.category_id.is_some()
         || req.category_ids.is_some()
         || req.tags.is_some()
+        || req.is_private.is_some()
 }
 
 fn update_has_flags(req: &UpdateBookmark) -> bool {
@@ -692,6 +693,57 @@ async fn record_bookmark_update_activity(
     .await;
 }
 
+/// Owner-only. Vault bookmarks never appear on a profile, so the flag does not apply to them.
+async fn set_bookmark_private(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+    is_private: bool,
+) -> Result<()> {
+    let existing = get_bookmark_raw(pool, user_id, id).await?;
+    if existing.owner_user_id != user_id {
+        return Err(Error::Forbidden);
+    }
+    if existing.is_vault {
+        return Err(Error::BadRequest(
+            "vault bookmarks cannot be marked private".into(),
+        ));
+    }
+    if existing.is_private == is_private {
+        return Ok(());
+    }
+    sqlx::query("UPDATE bookmarks SET is_private = $2, updated_at = now() WHERE id = $1")
+        .bind(id)
+        .bind(is_private)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    let change = if is_private {
+        "set to Only me"
+    } else {
+        "visible through its categories"
+    };
+    let summary = super::activity::update_summary(
+        linkdean_core::ActivitySubjectType::Bookmark,
+        &existing.title,
+        &[change.to_string()],
+    );
+    super::activity::record_activity_with(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Updated,
+        super::activity::ActivitySubject {
+            subject_type: linkdean_core::ActivitySubjectType::Bookmark,
+            subject_id: id,
+            subject_title: &existing.title,
+        },
+        Some(&summary),
+        serde_json::json!({ "changes": ["is_private"] }),
+    )
+    .await;
+    Ok(())
+}
+
 pub async fn update_bookmark(
     pool: &PgPool,
     user_id: Uuid,
@@ -715,6 +767,10 @@ pub async fn update_bookmark(
         }
     } else if !bookmark_can_read(pool, user_id, id).await? {
         return Err(Error::NotFound);
+    }
+
+    if let Some(is_private) = req.is_private {
+        set_bookmark_private(pool, user_id, id, is_private).await?;
     }
 
     if flags {
