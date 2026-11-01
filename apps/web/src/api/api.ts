@@ -26,6 +26,8 @@ import {
   createDashboardShareOutcomeSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
+  followEnvelopeSchema,
+  followUsersEnvelopeSchema,
   importResultSchema,
   markAllReadSchema,
   meResponseSchema,
@@ -64,6 +66,8 @@ import {
   type CreateDashboardShareOutcome,
   type DashboardSummary,
   type DuplicateGroup,
+  type FollowRelation,
+  type FollowUser,
   type ForkCategoryResult,
   type Notification,
   type PatchDashboard,
@@ -255,6 +259,21 @@ export const api = {
   },
 
   deleteAvatar: (): Promise<{ user: UserPublic }> => req('/users/me/avatar', { method: 'DELETE' }, userEnvelopeSchema),
+
+  myFollowers: (): Promise<{ users: FollowUser[] }> =>
+    req('/users/me/followers', {}, followUsersEnvelopeSchema),
+
+  myFollowing: (): Promise<{ users: FollowUser[] }> =>
+    req('/users/me/following', {}, followUsersEnvelopeSchema),
+
+  followUser: (id: string): Promise<{ follow: FollowRelation }> =>
+    req(`/users/${id}/follow`, { method: 'POST' }, followEnvelopeSchema),
+
+  unfollowUser: (id: string): Promise<{ follow: FollowRelation }> =>
+    req(`/users/${id}/follow`, { method: 'DELETE' }, followEnvelopeSchema),
+
+  followStatus: (id: string): Promise<{ follow: FollowRelation }> =>
+    req(`/users/${id}/follow-status`, {}, followEnvelopeSchema),
 
   categories: (include_hidden = false, include_vault = false): Promise<Category[]> =>
     req(`/categories?include_hidden=${include_hidden}&include_vault=${include_vault}`, {}, categoriesSchema),

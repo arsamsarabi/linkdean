@@ -955,6 +955,7 @@ pub enum NotificationKind {
     SocialLike,
     SocialComment,
     SocialRating,
+    UserFollowed,
 }
 
 impl NotificationKind {
@@ -967,6 +968,7 @@ impl NotificationKind {
             Self::SocialLike => "social_like",
             Self::SocialComment => "social_comment",
             Self::SocialRating => "social_rating",
+            Self::UserFollowed => "user_followed",
         }
     }
 
@@ -979,6 +981,7 @@ impl NotificationKind {
             "social_like" => Ok(Self::SocialLike),
             "social_comment" => Ok(Self::SocialComment),
             "social_rating" => Ok(Self::SocialRating),
+            "user_followed" => Ok(Self::UserFollowed),
             _ => Err(format!("unknown notification kind: {s}")),
         }
     }
@@ -990,6 +993,7 @@ pub enum NotificationSubjectType {
     Category,
     Dashboard,
     Bookmark,
+    User,
 }
 
 impl NotificationSubjectType {
@@ -998,6 +1002,7 @@ impl NotificationSubjectType {
             Self::Category => "category",
             Self::Dashboard => "dashboard",
             Self::Bookmark => "bookmark",
+            Self::User => "user",
         }
     }
 
@@ -1006,9 +1011,25 @@ impl NotificationSubjectType {
             "category" => Ok(Self::Category),
             "dashboard" => Ok(Self::Dashboard),
             "bookmark" => Ok(Self::Bookmark),
+            "user" => Ok(Self::User),
             _ => Err(format!("unknown notification subject_type: {s}")),
         }
     }
+}
+
+/// Public follow-list entry (no email).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FollowUserView {
+    pub id: Uuid,
+    pub display_name: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FollowRelation {
+    pub following: bool,
+    pub followers: i64,
+    pub following_count: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

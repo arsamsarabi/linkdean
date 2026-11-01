@@ -8,9 +8,10 @@ export const notificationKindSchema = z.enum([
   'social_like',
   'social_comment',
   'social_rating',
+  'user_followed',
 ])
 
-export const notificationSubjectTypeSchema = z.enum(['category', 'dashboard', 'bookmark'])
+export const notificationSubjectTypeSchema = z.enum(['category', 'dashboard', 'bookmark', 'user'])
 
 export const notificationSchema = z.object({
   id: z.string(),

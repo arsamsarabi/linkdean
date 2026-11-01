@@ -282,6 +282,7 @@ pub async fn notify_shared_edit(
         NotificationSubjectType::Category => "folder",
         NotificationSubjectType::Dashboard => "dashboard",
         NotificationSubjectType::Bookmark => "bookmark",
+        NotificationSubjectType::User => "profile",
     };
     try_notify(
         pool,

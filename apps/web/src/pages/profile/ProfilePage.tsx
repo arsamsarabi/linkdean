@@ -6,6 +6,7 @@ import { AvatarCropModal, QueryErrorAlert } from '@/components'
 import { useChangePassword, useDeleteAvatar, useMe, useUpdateProfile, useUploadAvatar } from '@/hooks'
 import { validatePasswordPair } from '@/services'
 import { ProfileAboutCard } from './ProfileAboutCard'
+import { ProfileFollowsCard } from './ProfileFollowsCard'
 import { ProfilePasswordCard } from './ProfilePasswordCard'
 
 function ProfileSkeleton(): ReactElement {
@@ -122,6 +123,8 @@ export function ProfilePage(): ReactElement {
               )
             }}
           />
+
+          <ProfileFollowsCard />
 
           <ProfilePasswordCard
             hasPassword={!!user.has_password}

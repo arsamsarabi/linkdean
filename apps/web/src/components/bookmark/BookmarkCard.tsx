@@ -15,7 +15,7 @@ import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { SocialDrawer } from '@/components/social'
-import { useSaveBookmarkCopy } from '@/hooks'
+import { useFollowStatus, useFollowUser, useSaveBookmarkCopy, useUnfollowUser } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
 import { FOLDER_UNCATEGORIZED, previewSrcCandidates } from '@/services'
 import { BookmarkCardBadges } from './BookmarkCardBadges'
@@ -62,7 +62,13 @@ export function BookmarkCard({
   const socialEnabled = !!share || showOutgoing
   const canSaveCopy =
     !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId && !b.is_vault
+  const canFollowOwner =
+    !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId
   const saveCopy = useSaveBookmarkCopy()
+  const follow = useFollowUser()
+  const unfollow = useUnfollowUser()
+  const followStatus = useFollowStatus(canFollowOwner ? b.owner_user_id : null, canFollowOwner)
+  const followingOwner = !!followStatus.data?.follow.following
   const [socialOpen, setSocialOpen] = useState(false)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
@@ -70,6 +76,21 @@ export function BookmarkCard({
     try {
       await saveCopy.mutateAsync(b.id)
       notifications.show({ message: 'Saved to your library (Unsorted)' })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
+  async function onToggleFollowOwner(): Promise<void> {
+    if (!b.owner_user_id) return
+    try {
+      if (followingOwner) {
+        await unfollow.mutateAsync(b.owner_user_id)
+        notifications.show({ message: 'Unfollowed' })
+      } else {
+        await follow.mutateAsync(b.owner_user_id)
+        notifications.show({ message: `Following ${b.owner_display_name || 'user'}` })
+      }
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
@@ -147,12 +168,16 @@ export function BookmarkCard({
               url={b.url}
               canWrite={canWrite}
               canSaveCopy={canSaveCopy}
+              canFollowOwner={canFollowOwner}
+              followingOwner={followingOwner}
+              ownerLabel={b.owner_display_name}
               socialEnabled={socialEnabled}
               isFavorite={b.is_favorite}
               isUnread={b.is_unread}
               isPinned={b.is_pinned}
               onFlags={onFlags ? (patch) => onFlags(b.id, patch) : undefined}
               onSaveCopy={() => void onSaveCopy()}
+              onToggleFollowOwner={() => void onToggleFollowOwner()}
               onOpenSocial={() => setSocialOpen(true)}
               onEdit={() => onEdit(b.id)}
               onDelete={() => onDelete(b.id)}

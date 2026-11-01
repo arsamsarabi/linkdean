@@ -1,7 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
-use axum::extract::{Multipart, State};
+use axum::extract::{Multipart, Path, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, patch, post};
@@ -10,6 +10,7 @@ use linkdean_core::avatar::{self, process_avatar};
 use linkdean_core::{ChangePassword, Error, UpdateProfile, UpdateSettings};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
+use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -23,6 +24,13 @@ pub fn router() -> Router<AppState> {
             "/users/me/avatar",
             get(get_avatar).post(upload_avatar).delete(delete_avatar),
         )
+        .route("/users/me/followers", get(my_followers))
+        .route("/users/me/following", get(my_following))
+        .route(
+            "/users/{id}/follow",
+            post(follow_user).delete(unfollow_user),
+        )
+        .route("/users/{id}/follow-status", get(follow_status))
 }
 
 async fn update_me(
@@ -142,4 +150,47 @@ async fn get_avatar(
         HeaderValue::from_static("private, max-age=3600"),
     );
     Ok((StatusCode::OK, headers, bytes))
+}
+
+async fn my_followers(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    let users = db::list_followers(&state.pool, user.id).await?;
+    Ok(Json(json!({ "users": users })))
+}
+
+async fn my_following(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    let users = db::list_following(&state.pool, user.id).await?;
+    Ok(Json(json!({ "users": users })))
+}
+
+async fn follow_user(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::follow_user(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "follow": relation })))
+}
+
+async fn unfollow_user(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::unfollow_user(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "follow": relation })))
+}
+
+async fn follow_status(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::follow_relation(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "follow": relation })))
 }

@@ -80,6 +80,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - In-app notifications: share invite / access change / revoke, shared edits
 - Bell + drawer in the app shell (unread count)
 - Likes, comments, and 1–5 ratings on **shared** bookmarks, lists, and dashboards
+- Follow / unfollow users (⋮ on shared bookmarks; lists on Profile; notifies the followee)
 - Owner notified on social activity (API `/social/…`)
 
 ---

@@ -54,6 +54,8 @@ function kindLabel(kind: Notification['kind']): string {
       return 'Comment'
     case 'social_rating':
       return 'Rating'
+    case 'user_followed':
+      return 'Follow'
   }
 }
 

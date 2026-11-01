@@ -15,6 +15,8 @@ import {
   IconStar,
   IconStarFilled,
   IconTrash,
+  IconUserPlus,
+  IconUserMinus,
 } from '@tabler/icons-react'
 
 type FlagPatch = Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
@@ -24,12 +26,17 @@ type Props = {
   canWrite: boolean
   /** Invitee viewing someone else's shared bookmark — copy into own library. */
   canSaveCopy?: boolean
+  /** Follow / unfollow the bookmark owner (shared items). */
+  canFollowOwner?: boolean
+  followingOwner?: boolean
+  ownerLabel?: string | null
   socialEnabled: boolean
   isFavorite?: boolean
   isUnread?: boolean
   isPinned?: boolean
   onFlags?: (patch: FlagPatch) => void
   onSaveCopy?: () => void
+  onToggleFollowOwner?: () => void
   onOpenSocial: () => void
   onEdit: () => void
   onDelete: () => void
@@ -39,12 +46,16 @@ export function BookmarkCardMenu({
   url,
   canWrite,
   canSaveCopy = false,
+  canFollowOwner = false,
+  followingOwner = false,
+  ownerLabel,
   socialEnabled,
   isFavorite,
   isUnread,
   isPinned,
   onFlags,
   onSaveCopy,
+  onToggleFollowOwner,
   onOpenSocial,
   onEdit,
   onDelete,
@@ -110,6 +121,22 @@ export function BookmarkCardMenu({
         {canSaveCopy && onSaveCopy ? (
           <Menu.Item leftSection={<IconBookmarkPlus size={14} stroke={1.5} />} onClick={onSaveCopy}>
             Save to my library
+          </Menu.Item>
+        ) : null}
+        {canFollowOwner && onToggleFollowOwner ? (
+          <Menu.Item
+            leftSection={
+              followingOwner ? (
+                <IconUserMinus size={14} stroke={1.5} />
+              ) : (
+                <IconUserPlus size={14} stroke={1.5} />
+              )
+            }
+            onClick={onToggleFollowOwner}
+          >
+            {followingOwner
+              ? `Unfollow${ownerLabel ? ` ${ownerLabel}` : ''}`
+              : `Follow${ownerLabel ? ` ${ownerLabel}` : ''}`}
           </Menu.Item>
         ) : null}
         {socialEnabled ? (
