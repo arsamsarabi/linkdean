@@ -1,25 +1,15 @@
-import { useMemo, type ReactElement } from 'react'
-import { SimpleGrid, Stack, Text } from '@mantine/core'
+import { type ReactElement } from 'react'
+import { Stack, Text } from '@mantine/core'
 import { IconFolder, IconSearch } from '@tabler/icons-react'
-import { BookmarkCard } from '@/components/bookmark'
 import type { CategoryFolderMenuProps } from '@/components/category/CategoryFolderMenu'
 import { EmptyState } from '@/components/empty-state'
+import { useLibraryExplorerContents } from '@/hooks/library'
 import type { SortKey } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
-import {
-  FOLDER_ALL,
-  filterAndSortLibraryItems,
-  folderBreadcrumb,
-  isSharedFolder,
-  listFolderContents,
-  sortExplorerFolders,
-  type ExplorerFolder,
-  type ExplorerFolderId,
-  type FlagFilter,
-  type LibraryListItem,
-} from '@/services'
+import type { ExplorerFolderId, FlagFilter, LibraryListItem } from '@/services'
+import { ExplorerBookmarkGrid } from './ExplorerBookmarkGrid'
 import { ExplorerBreadcrumb } from './ExplorerBreadcrumb'
-import { ExplorerFolderTile } from './ExplorerFolderTile'
+import { ExplorerFolderGrid } from './ExplorerFolderGrid'
 
 type CategoryMenuHandlers = Omit<CategoryFolderMenuProps, 'name' | 'access' | 'isVault' | 'className'>
 
@@ -52,72 +42,6 @@ type Props = {
   categoryMenuFor?: (cat: Category) => CategoryMenuHandlers | undefined
 }
 
-function BookmarkGrid({
-  items,
-  highlightQuery,
-  viewerUserId,
-  onEdit,
-  onDelete,
-  onFlags,
-  selectMode,
-  selectedIds,
-  onToggleSelect,
-}: {
-  items: LibraryListItem[]
-  highlightQuery?: string
-  viewerUserId?: string
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
-  onFlags?: (
-    id: string,
-    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
-  ) => void
-  selectMode?: boolean
-  selectedIds?: ReadonlySet<string>
-  onToggleSelect?: (id: string) => void
-}): ReactElement {
-  return (
-    <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-      {items.map((b) => (
-        <BookmarkCard
-          key={b.id}
-          bookmark={b}
-          highlightQuery={highlightQuery}
-          viewerUserId={viewerUserId}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onFlags={onFlags}
-          selectMode={selectMode}
-          selected={selectedIds?.has(b.id)}
-          onToggleSelect={onToggleSelect}
-        />
-      ))}
-    </SimpleGrid>
-  )
-}
-
-function FolderGrid({
-  folders,
-  categoriesById,
-  onOpen,
-  categoryMenuFor,
-}: {
-  folders: ExplorerFolder[]
-  categoriesById: Map<string, Category>
-  onOpen: (id: ExplorerFolderId) => void
-  categoryMenuFor?: (cat: Category) => CategoryMenuHandlers | undefined
-}): ReactElement {
-  return (
-    <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing="md">
-      {folders.map((f) => {
-        const cat = categoriesById.get(f.id)
-        const menu = cat && categoryMenuFor ? categoryMenuFor(cat) : undefined
-        return <ExplorerFolderTile key={f.id} folder={f} onOpen={onOpen} menu={menu} />
-      })}
-    </SimpleGrid>
-  )
-}
-
 export function LibraryExplorerView({
   categories,
   bookmarks,
@@ -142,49 +66,24 @@ export function LibraryExplorerView({
   onToggleSelect,
   categoryMenuFor,
 }: Props): ReactElement {
-  const selectedId: ExplorerFolderId = folderId || FOLDER_ALL
-  const atAll = selectedId === FOLDER_ALL
-
-  const byId = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
-  const crumbs = useMemo(() => folderBreadcrumb(selectedId, byId), [selectedId, byId])
-  const contents = useMemo(
-    () => listFolderContents(selectedId, categories, bookmarks, showHidden),
-    [selectedId, categories, bookmarks, showHidden]
-  )
-  const sortedFolders = useMemo(
-    () => sortExplorerFolders(contents.folders, sort),
-    [contents.folders, sort]
-  )
-  const ownedFolders = useMemo(
-    () => (atAll ? sortedFolders.filter((f) => !isSharedFolder(f)) : sortedFolders),
-    [atAll, sortedFolders]
-  )
-  const sharedFolders = useMemo(
-    () => (atAll ? sortedFolders.filter(isSharedFolder) : []),
-    [atAll, sortedFolders]
-  )
-  const sortedBookmarks = useMemo(
-    () =>
-      filterAndSortLibraryItems({
-        items: contents.bookmarks,
-        filterCats: [],
-        filterTags: [],
-        filterFlags,
-        sort,
-      }),
-    [contents.bookmarks, filterFlags, sort]
-  )
-  const sortedHits = useMemo(
-    () =>
-      filterAndSortLibraryItems({
-        items: searchHits,
-        filterCats: [],
-        filterTags: [],
-        filterFlags,
-        sort,
-      }),
-    [searchHits, filterFlags, sort]
-  )
+  const {
+    atAll,
+    byId,
+    crumbs,
+    sortedFolders,
+    ownedFolders,
+    sharedFolders,
+    sortedBookmarks,
+    sortedHits,
+  } = useLibraryExplorerContents({
+    categories,
+    bookmarks,
+    searchHits,
+    folderId,
+    sort,
+    showHidden,
+    filterFlags,
+  })
 
   if (loading) {
     return (
@@ -209,7 +108,7 @@ export function LibraryExplorerView({
         <Text size="sm" c="dimmed">
           {sortedHits.length} result{sortedHits.length === 1 ? '' : 's'}
         </Text>
-        <BookmarkGrid
+        <ExplorerBookmarkGrid
           items={sortedHits}
           highlightQuery={searchQuery}
           viewerUserId={viewerUserId}
@@ -257,7 +156,7 @@ export function LibraryExplorerView({
               <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
                 {splitShared ? 'Your folders' : 'Folders'}
               </Text>
-              <FolderGrid
+              <ExplorerFolderGrid
                 folders={ownedFolders}
                 categoriesById={byId}
                 onOpen={onFolderChange}
@@ -270,7 +169,7 @@ export function LibraryExplorerView({
               <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
                 Shared with you
               </Text>
-              <FolderGrid
+              <ExplorerFolderGrid
                 folders={sharedFolders}
                 categoriesById={byId}
                 onOpen={onFolderChange}
@@ -285,7 +184,7 @@ export function LibraryExplorerView({
                   Bookmarks
                 </Text>
               ) : null}
-              <BookmarkGrid
+              <ExplorerBookmarkGrid
                 items={sortedBookmarks}
                 viewerUserId={viewerUserId}
                 onEdit={onEdit}

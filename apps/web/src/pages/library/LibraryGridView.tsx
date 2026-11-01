@@ -1,15 +1,5 @@
 import type { ReactElement } from 'react'
-import {
-  Button,
-  Checkbox,
-  Collapse,
-  Group,
-  MultiSelect,
-  Pill,
-  Select,
-  SimpleGrid,
-  Stack,
-} from '@mantine/core'
+import { SimpleGrid, Stack } from '@mantine/core'
 import { IconBookmark, IconBookmarkPlus, IconSearch } from '@tabler/icons-react'
 import {
   BookmarkCard,
@@ -17,24 +7,11 @@ import {
   EmptyState,
   type BookmarkCardItem,
 } from '@/components'
-import { categorySelectData } from '@/lib'
 import type { Category } from '@/schemas'
-import {
-  FOLDER_UNCATEGORIZED,
-  SINCE_FILTERS,
-  type LibraryListItem,
-  type SinceFilter,
-} from '@/services'
-import styles from './LibraryPage.module.css'
+import type { LibraryListItem, SinceFilter } from '@/services'
+import { LibraryFilterPanel } from './LibraryFilterPanel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
-
-const SINCE_LABEL: Record<SinceFilter, string> = {
-  '7d': 'Last 7 days',
-  '30d': 'Last 30 days',
-  '90d': 'Last 90 days',
-  year: 'Last year',
-}
 
 type Props = {
   loading: boolean
@@ -130,87 +107,35 @@ export function LibraryGridView({
   selectedIds,
   onToggleSelect,
 }: Props): ReactElement {
-  const draftHasFilters =
-    draftFilterCats.length > 0 ||
-    draftFilterTags.length > 0 ||
-    !!draftFilterSince ||
-    draftVaultOnly
-
   return (
     <Stack gap="md">
-      <Collapse expanded={filterOpen}>
-        <Stack id={filterPanelId} p="lg" gap="md" className={styles.filterPanel}>
-          <MultiSelect
-            label="Categories"
-            data={[{ value: FOLDER_UNCATEGORIZED, label: 'Unsorted' }, ...categorySelectData(categories)]}
-            value={draftFilterCats}
-            onChange={onDraftCats}
-            searchable
-            clearable
-          />
-          <MultiSelect
-            label="Tags"
-            data={allTags}
-            value={draftFilterTags}
-            onChange={onDraftTags}
-            searchable
-            clearable
-          />
-          <Select
-            label="Created"
-            placeholder="Any time"
-            data={SINCE_FILTERS.map((s) => ({ value: s, label: SINCE_LABEL[s] }))}
-            value={draftFilterSince}
-            onChange={(v) => onDraftSince(v && (SINCE_FILTERS as readonly string[]).includes(v) ? (v as SinceFilter) : null)}
-            clearable
-          />
-          <Checkbox
-            label="Vault only"
-            checked={draftVaultOnly}
-            onChange={(e) => onDraftVaultOnly(e.currentTarget.checked)}
-          />
-          <Group justify="space-between" wrap="wrap">
-            <Button
-              variant="subtle"
-              disabled={!draftHasFilters && !panelFilterActive}
-              onClick={onClearFilters}
-            >
-              Clear filters
-            </Button>
-            <Group gap="sm">
-              <Button variant="default" onClick={onCloseFilter}>
-                Cancel
-              </Button>
-              <Button onClick={onApplyFilter}>Apply</Button>
-            </Group>
-          </Group>
-        </Stack>
-      </Collapse>
-
-      {panelFilterActive ? (
-        <Group gap="xs">
-          {filterCats.map((id) => (
-            <Pill key={id} withRemoveButton onRemove={() => onRemoveCat(id)}>
-              {catLabel.get(id) || id}
-            </Pill>
-          ))}
-          {filterTags.map((t) => (
-            <Pill key={t} withRemoveButton onRemove={() => onRemoveTag(t)}>
-              #{t}
-            </Pill>
-          ))}
-          {filterSince ? (
-            <Pill withRemoveButton onRemove={onClearSince}>
-              {SINCE_LABEL[filterSince]}
-            </Pill>
-          ) : null}
-          {vaultOnly ? (
-            <Pill withRemoveButton onRemove={onClearVault}>
-              Vault only
-            </Pill>
-          ) : null}
-        </Group>
-      ) : null}
+      <LibraryFilterPanel
+        filterOpen={filterOpen}
+        panelFilterActive={panelFilterActive}
+        filterPanelId={filterPanelId}
+        draftFilterCats={draftFilterCats}
+        draftFilterTags={draftFilterTags}
+        draftFilterSince={draftFilterSince}
+        draftVaultOnly={draftVaultOnly}
+        filterCats={filterCats}
+        filterTags={filterTags}
+        filterSince={filterSince}
+        vaultOnly={vaultOnly}
+        catLabel={catLabel}
+        categories={categories}
+        allTags={allTags}
+        onDraftCats={onDraftCats}
+        onDraftTags={onDraftTags}
+        onDraftSince={onDraftSince}
+        onDraftVaultOnly={onDraftVaultOnly}
+        onApplyFilter={onApplyFilter}
+        onCloseFilter={onCloseFilter}
+        onClearFilters={onClearFilters}
+        onRemoveCat={onRemoveCat}
+        onRemoveTag={onRemoveTag}
+        onClearSince={onClearSince}
+        onClearVault={onClearVault}
+      />
 
       {loading ? (
         <BookmarkGridSkeleton />
