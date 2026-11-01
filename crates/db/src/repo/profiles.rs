@@ -1,13 +1,16 @@
 //! Profile access. Visibility is computed per request and is separate from
 //! `category_access`, which only covers ownership and explicit shares.
 
-use linkdean_core::{Bookmark, Error, ProfileBookmarksPage, ProfileView, Result, User};
+use linkdean_core::{
+    Bookmark, Error, FollowUserView, ProfileBookmarksPage, ProfileSummary, ProfileView, Result,
+    User,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::blocks::is_blocked_either_way;
 use super::categories::public_bookmark_view;
-use super::follows::{follow_relation, is_following};
+use super::follows::{follow_relation, is_following, list_followers, list_following};
 use super::users::find_user_by_id;
 
 /// Display name without the email local part that `user_share_label` can fall back to.
@@ -150,4 +153,43 @@ pub async fn profile_visible_bookmarks(
         bookmarks.push(public_bookmark_view(pool, b).await?);
     }
     Ok(ProfileBookmarksPage { bookmarks, total })
+}
+
+async fn visible_summaries(
+    pool: &PgPool,
+    viewer_id: Uuid,
+    rows: Vec<FollowUserView>,
+) -> Result<Vec<ProfileSummary>> {
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Some(user) = find_user_by_id(pool, row.id).await? else {
+            continue;
+        };
+        if can_view_profile(pool, viewer_id, &user).await? {
+            out.push(ProfileSummary {
+                id: user.id,
+                display_name: profile_label(&user),
+                has_avatar: user.has_avatar,
+            });
+        }
+    }
+    Ok(out)
+}
+
+pub async fn profile_followers(
+    pool: &PgPool,
+    viewer_id: Uuid,
+    target_id: Uuid,
+) -> Result<Vec<ProfileSummary>> {
+    let target = require_viewable_profile(pool, viewer_id, target_id).await?;
+    visible_summaries(pool, viewer_id, list_followers(pool, target.id).await?).await
+}
+
+pub async fn profile_following(
+    pool: &PgPool,
+    viewer_id: Uuid,
+    target_id: Uuid,
+) -> Result<Vec<ProfileSummary>> {
+    let target = require_viewable_profile(pool, viewer_id, target_id).await?;
+    visible_summaries(pool, viewer_id, list_following(pool, target.id).await?).await
 }

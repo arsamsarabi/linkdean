@@ -384,3 +384,41 @@ async fn paging_reports_the_total() {
         assert!(matches!(bad, Err(Error::BadRequest(_))));
     }
 }
+
+#[tokio::test]
+async fn follow_lists_share_the_profile_gate_and_hide_unopenable_users() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let target = user(&pool, "target").await;
+    let viewer = user(&pool, "viewer").await;
+    let open_fan = user(&pool, "open").await;
+    let hidden_fan = user(&pool, "hidden").await;
+    set_profile(&pool, &open_fan, "members").await;
+    db::follow_user(&pool, open_fan.id, target.id)
+        .await
+        .expect("follow");
+    db::follow_user(&pool, hidden_fan.id, target.id)
+        .await
+        .expect("follow");
+
+    let denied = db::profile_followers(&pool, viewer.id, target.id).await;
+    assert!(matches!(denied, Err(Error::NotFound)));
+
+    set_profile(&pool, &target, "members").await;
+    let ids: Vec<Uuid> = db::profile_followers(&pool, viewer.id, target.id)
+        .await
+        .expect("followers")
+        .into_iter()
+        .map(|u| u.id)
+        .collect();
+    assert_eq!(ids, vec![open_fan.id]);
+
+    let following: Vec<Uuid> = db::profile_following(&pool, viewer.id, open_fan.id)
+        .await
+        .expect("following")
+        .into_iter()
+        .map(|u| u.id)
+        .collect();
+    assert_eq!(following, vec![target.id]);
+}
