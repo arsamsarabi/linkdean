@@ -940,11 +940,6 @@ pub struct AuthResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VaultSetupRequest {
-    pub passphrase: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultUnlockRequest {
     pub passphrase: String,
 }

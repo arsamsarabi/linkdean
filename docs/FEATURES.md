@@ -42,7 +42,10 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 ## Vault & privacy
 
-- Password-protected vault categories (Argon2id + AES-GCM)
+- Multiple named vaults, each with its own passphrase and key (Argon2id + AES-GCM)
+- Vaults hold categories and loose bookmarks; move items in, out and between vaults, with a checklist when something blocks the move
+- Recovery key per vault, shown once; a lost passphrase and recovery key means the contents are gone
+- Optional global passphrase that unlocks chosen vaults in one step, alongside each vault's own passphrase
 - Vault content never indexed in Meilisearch
 - Export never dumps vault bookmarks as plaintext
 - Vault unlock in session; optional auto-lock after inactivity (Settings)

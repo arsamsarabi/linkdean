@@ -4,7 +4,6 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::bookmarks::bookmark_to_view;
-use super::users::user_has_vault;
 
 pub async fn search_vault_bookmarks(
     pool: &PgPool,
@@ -270,49 +269,4 @@ pub async fn delete_vault(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
     Ok(())
-}
-
-pub async fn setup_vault(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Result<()> {
-    if user_has_vault(pool, user_id).await? {
-        return Err(Error::Conflict("vault already exists".into()));
-    }
-    let passphrase = passphrase.to_string();
-    let keys = super::blocking::run_blocking(move || crypto::setup_vault(&passphrase)).await?;
-    sqlx::query(
-        r#"
-        INSERT INTO vaults (user_id, name, kdf_salt, wrapped_key, wrapped_nonce)
-        VALUES ($1, 'Vault', $2, $3, $4)
-        "#,
-    )
-    .bind(user_id)
-    .bind(&keys.kdf_salt)
-    .bind(&keys.wrapped_key)
-    .bind(&keys.wrapped_nonce)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(())
-}
-
-pub async fn get_vault(pool: &PgPool, user_id: Uuid) -> Result<Vault> {
-    sqlx::query_as::<_, Vault>(
-        "SELECT * FROM vaults WHERE user_id = $1 ORDER BY created_at LIMIT 1",
-    )
-    .bind(user_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?
-    .ok_or(Error::NotFound)
-}
-
-pub async fn unlock_vault_key(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Result<[u8; 32]> {
-    let vault = get_vault(pool, user_id).await?;
-    let passphrase = passphrase.to_string();
-    let salt = vault.kdf_salt.clone();
-    let wrapped_key = vault.wrapped_key.clone();
-    let wrapped_nonce = vault.wrapped_nonce.clone();
-    super::blocking::run_blocking(move || {
-        crypto::unlock_vault(&passphrase, &salt, &wrapped_key, &wrapped_nonce)
-    })
-    .await
 }

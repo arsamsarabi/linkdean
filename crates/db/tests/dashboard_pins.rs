@@ -367,10 +367,9 @@ async fn vault_pins_stay_hidden_from_invitees() {
     let invitee = user(&pool, "invitee").await;
     let board = shared_board(&pool, &owner, &invitee, ShareAccess::Read).await;
     let bookmark = pinned_bookmark(&pool, &owner, board).await;
-    db::setup_vault(&pool, owner.id, "vault-passphrase")
+    let (vault, _, _) = db::create_vault(&pool, owner.id, "Vault", "vault-passphrase")
         .await
         .expect("vault");
-    let vault = db::get_vault(&pool, owner.id).await.expect("get vault");
     sqlx::query("UPDATE bookmarks SET is_vault = TRUE, vault_id = $2 WHERE id = $1")
         .bind(bookmark)
         .bind(vault.id)

@@ -52,7 +52,6 @@ import {
   unreadCountSchema,
   userEnvelopeSchema,
   vaultsEnvelopeSchema,
-  vaultStatusSchema,
   type ActivityAction,
   type ActivityEvent,
   type ActivitySubjectType,
@@ -439,16 +438,6 @@ export const api = {
     req('/import', { method: 'POST', body: JSON.stringify({ format, content }) }, importResultSchema),
 
   exportUrl: (format: string): string => `/api/export?format=${format}`,
-
-  vaultStatus: (): Promise<{ configured: boolean; unlocked: boolean }> => req('/vault/status', {}, vaultStatusSchema),
-
-  vaultSetup: (passphrase: string): Promise<unknown> =>
-    req('/vault/setup', { method: 'POST', body: JSON.stringify({ passphrase }) }),
-
-  vaultUnlock: (passphrase: string): Promise<unknown> =>
-    req('/vault/unlock', { method: 'POST', body: JSON.stringify({ passphrase }) }),
-
-  vaultLock: (): Promise<unknown> => req('/vault/lock', { method: 'POST' }),
 
   vaults: (): Promise<{ vaults: Vault[] }> => req('/vaults', {}, vaultsEnvelopeSchema),
 

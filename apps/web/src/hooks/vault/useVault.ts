@@ -6,11 +6,10 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { Vault, VaultStatus } from '@/schemas'
+import type { Vault } from '@/schemas'
 import { useUi } from '@/stores'
 
 function invalidateVaultRelated(qc: ReturnType<typeof useQueryClient>): void {
-  void qc.invalidateQueries({ queryKey: ['vault'] })
   void qc.invalidateQueries({ queryKey: ['vaults'] })
   void qc.invalidateQueries({ queryKey: ['me'] })
   void qc.invalidateQueries({ queryKey: ['categories'] })
@@ -18,42 +17,11 @@ function invalidateVaultRelated(qc: ReturnType<typeof useQueryClient>): void {
   void qc.invalidateQueries({ queryKey: ['search'] })
 }
 
-export function useVaultStatus(): UseQueryResult<VaultStatus> {
-  return useQuery({
-    queryKey: ['vault'],
-    queryFn: api.vaultStatus,
-  })
-}
-
-export function useVaultSetup(): UseMutationResult<unknown, Error, string> {
+export function useLockAllVaults(): UseMutationResult<unknown, Error, void> {
   const qc = useQueryClient()
   const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
   return useMutation({
-    mutationFn: (passphrase: string) => api.vaultSetup(passphrase),
-    onSuccess: () => {
-      setVaultUnlocked(true)
-      invalidateVaultRelated(qc)
-    },
-  })
-}
-
-export function useVaultUnlock(): UseMutationResult<unknown, Error, string> {
-  const qc = useQueryClient()
-  const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
-  return useMutation({
-    mutationFn: (passphrase: string) => api.vaultUnlock(passphrase),
-    onSuccess: () => {
-      setVaultUnlocked(true)
-      invalidateVaultRelated(qc)
-    },
-  })
-}
-
-export function useVaultLock(): UseMutationResult<unknown, Error, void> {
-  const qc = useQueryClient()
-  const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
-  return useMutation({
-    mutationFn: () => api.vaultLock(),
+    mutationFn: () => api.lockAllVaults(),
     onSuccess: () => {
       setVaultUnlocked(false)
       invalidateVaultRelated(qc)

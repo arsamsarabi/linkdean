@@ -1,12 +1,5 @@
 import { z } from 'zod'
 
-export const vaultStatusSchema = z.object({
-  configured: z.boolean(),
-  unlocked: z.boolean(),
-})
-
-export type VaultStatus = z.infer<typeof vaultStatusSchema>
-
 export const vaultSchema = z.object({
   id: z.string(),
   name: z.string(),

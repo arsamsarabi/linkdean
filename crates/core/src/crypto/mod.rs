@@ -41,24 +41,6 @@ pub fn hash_token(token: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
-pub struct VaultKeys {
-    pub kdf_salt: Vec<u8>,
-    pub data_key: [u8; KEY_LEN],
-    pub wrapped_key: Vec<u8>,
-    pub wrapped_nonce: Vec<u8>,
-}
-
-pub fn setup_vault(passphrase: &str) -> Result<VaultKeys> {
-    let data_key = new_data_key();
-    let wrapped = wrap_data_key(passphrase, &data_key)?;
-    Ok(VaultKeys {
-        kdf_salt: wrapped.kdf_salt,
-        data_key,
-        wrapped_key: wrapped.wrapped_key,
-        wrapped_nonce: wrapped.wrapped_nonce,
-    })
-}
-
 pub fn unlock_vault(
     passphrase: &str,
     kdf_salt: &[u8],
@@ -212,30 +194,8 @@ mod tests {
     }
 
     #[test]
-    fn vault_setup_unlock_round_trip() {
-        let keys = setup_vault("passphrase-long").unwrap();
-        let unlocked = unlock_vault(
-            "passphrase-long",
-            &keys.kdf_salt,
-            &keys.wrapped_key,
-            &keys.wrapped_nonce,
-        )
-        .unwrap();
-        assert_eq!(unlocked, keys.data_key);
-        assert!(matches!(
-            unlock_vault(
-                "wrong",
-                &keys.kdf_salt,
-                &keys.wrapped_key,
-                &keys.wrapped_nonce,
-            ),
-            Err(Error::VaultUnlockFailed)
-        ));
-    }
-
-    #[test]
     fn vault_payload_encrypt_decrypt() {
-        let keys = setup_vault("passphrase-long").unwrap();
+        let data_key = new_data_key();
         let payload = VaultPayload {
             url: "https://example.com".into(),
             title: "Example".into(),
@@ -243,8 +203,8 @@ mod tests {
             notes: None,
             tags: vec!["a".into()],
         };
-        let (ct, nonce) = encrypt_payload(&keys.data_key, &payload).unwrap();
-        let back = decrypt_payload(&keys.data_key, &ct, &nonce).unwrap();
+        let (ct, nonce) = encrypt_payload(&data_key, &payload).unwrap();
+        let back = decrypt_payload(&data_key, &ct, &nonce).unwrap();
         assert_eq!(back.url, payload.url);
         assert_eq!(back.title, payload.title);
         assert_eq!(back.tags, payload.tags);

@@ -2,15 +2,15 @@ import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { Center, Loader, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useNavigate } from '@tanstack/react-router'
-import { AvatarCropModal } from '@/components'
+import { AvatarCropModal, RecoveryKeyModal } from '@/components'
 import {
   useBootstrap,
   useCompleteOnboarding,
+  useCreateVault,
   useImportBookmarks,
   useMe,
   useRegister,
   useUploadAvatar,
-  useVaultSetup,
 } from '@/hooks'
 import { getToken, resolveDefaultLanding } from '@/lib'
 import { validatePasswordPair } from '@/services'
@@ -26,6 +26,7 @@ export function OnboardingPage(): ReactElement {
   const nav = useNavigate()
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [recoveryKey, setRecoveryKey] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [firstAccount, setFirstAccount] = useState(false)
 
@@ -48,7 +49,7 @@ export function OnboardingPage(): ReactElement {
   const me = useMe(!!getToken())
   const register = useRegister()
   const uploadAvatar = useUploadAvatar()
-  const vaultSetup = useVaultSetup()
+  const createVault = useCreateVault()
   const importBookmarks = useImportBookmarks()
   const completeOnboarding = useCompleteOnboarding()
 
@@ -133,9 +134,9 @@ export function OnboardingPage(): ReactElement {
     }
     setBusy(true)
     try {
-      await vaultSetup.mutateAsync(vaultPass)
+      const created = await createVault.mutateAsync({ name: 'Vault', passphrase: vaultPass })
       notifications.show({ message: 'Vault ready' })
-      setStep(3)
+      setRecoveryKey(created.recovery_key)
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     } finally {
@@ -182,6 +183,16 @@ export function OnboardingPage(): ReactElement {
           <Text c="dimmed">Two optional steps and you're in.</Text>
         )}
       </Stack>
+
+      {recoveryKey ? (
+        <RecoveryKeyModal
+          recoveryKey={recoveryKey}
+          onDone={() => {
+            setRecoveryKey(null)
+            setStep(3)
+          }}
+        />
+      ) : null}
 
       <OnboardingSteps
         firstAccount={firstAccount}

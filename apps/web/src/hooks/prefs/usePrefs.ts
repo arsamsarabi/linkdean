@@ -2,7 +2,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useMantineColorScheme } from '@mantine/core'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { useMe } from '@/hooks/auth'
-import { useVaultLock } from '@/hooks/vault'
+import { useLockAllVaults } from '@/hooks/vault'
 import type { MeResponse, UserSettings } from '@/schemas'
 import { useUi } from '@/stores'
 
@@ -14,7 +14,7 @@ export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> 
   const { setColorScheme } = useMantineColorScheme()
   const appliedTheme = useRef<string | null>(null)
   const me = useMe(enabled)
-  const vaultLock = useVaultLock()
+  const vaultLock = useLockAllVaults()
   const lockRef = useRef(vaultLock.mutateAsync)
 
   useEffect(() => {

@@ -18,7 +18,7 @@ vi.mock('@/api', async (importOriginal) => {
       bootstrap: vi.fn(),
       me: vi.fn(),
       register: vi.fn(),
-      vaultSetup: vi.fn(),
+      createVault: vi.fn(),
     },
   }
 })
@@ -119,7 +119,10 @@ describe('OnboardingPage', () => {
   })
 
   it('stays on import after enabling the vault refreshes the user', async (): Promise<void> => {
-    mocked.vaultSetup.mockResolvedValue({})
+    mocked.createVault.mockResolvedValue({
+      vault: { id: 'v1', name: 'Vault', unlocked: true, has_recovery_key: true, in_global: false },
+      recovery_key: 'ABCD-EFGH',
+    })
     const person = userEvent.setup()
     render(wrap(<OnboardingPage />))
 
@@ -129,6 +132,9 @@ describe('OnboardingPage', () => {
     await person.type(screen.getByLabelText(/^confirm passphrase/i), 'vault-pass-long')
     mocked.me.mockResolvedValue({ user: { ...user, has_vault: true }, settings: {} } as unknown as MeResponse)
     await person.click(screen.getByRole('button', { name: /enable vault/i }))
+
+    await person.click(await screen.findByLabelText('I saved this recovery key'))
+    await person.click(screen.getByRole('button', { name: 'Done' }))
 
     expect(await screen.findByRole('button', { name: /skip & finish/i })).toBeInTheDocument()
     await new Promise((resolve) => setTimeout(resolve, 50))

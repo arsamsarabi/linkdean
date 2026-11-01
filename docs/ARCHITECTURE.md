@@ -44,10 +44,10 @@ Browser ──► Vite (dev) or static SPA
 
 - **User:** local and/or OIDC; first user = `is_admin`; `onboarding_completed`; profile fields + avatar
 - **UserSettings:** per-user prefs (hidden, vault search, theme, auto-lock, landing)
-- **Category:** tree (`parent_id`); flags `is_hidden`, `is_vault`
+- **Category:** tree (`parent_id`); flags `is_hidden`, `is_vault`; `vault_id` when inside a vault
 - **Tag:** per-user; M2M with bookmarks
 - **Bookmark:** url/title/notes/tags; vault rows store ciphertext instead of plaintext fields
-- **Vault:** per-user wrapped data key (Argon2id + AES-GCM)
+- **Vault:** named, many per user; data key wrapped by its passphrase, by its recovery key, and optionally by the user's master key for the global passphrase (Argon2id + AES-GCM). Unlocked keys live in API memory, per user and vault
 - **ImportJob:** import run stats
 
 Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`/`write`) beside ownership; access covers the shared category and its non-vault descendants. Milestone 2 adds `dashboards` / `dashboard_sections` / `dashboard_items` for a per-user home layout (default dashboard auto-created). Categories may also carry an unlisted `public_slug` for anonymous read-only list URLs (`GET /api/public/lists/{slug}` → SPA `/l/{slug}`).

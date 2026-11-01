@@ -40,17 +40,22 @@ async fn mark_vault(pool: &PgPool, table: &str, id: Uuid) {
             .fetch_one(pool)
             .await
             .expect("owner");
-    if !db::user_has_vault(pool, owner).await.expect("has vault") {
-        db::setup_vault(pool, owner, "vault-passphrase")
-            .await
-            .expect("vault");
-    }
-    let vault = db::get_vault(pool, owner).await.expect("get vault");
+    let existing = db::list_vaults(pool, owner).await.expect("vaults");
+    let vault_id = match existing.first() {
+        Some(vault) => vault.id,
+        None => {
+            db::create_vault(pool, owner, "Vault", "vault-passphrase")
+                .await
+                .expect("vault")
+                .0
+                .id
+        }
+    };
     sqlx::query(&format!(
         "UPDATE {table} SET is_vault = TRUE, vault_id = $2 WHERE id = $1"
     ))
     .bind(id)
-    .bind(vault.id)
+    .bind(vault_id)
     .execute(pool)
     .await
     .expect("mark vault");
