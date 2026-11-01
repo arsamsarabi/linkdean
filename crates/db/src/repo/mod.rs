@@ -1,6 +1,7 @@
 mod activity;
 mod api_keys;
 mod blocking;
+mod blocks;
 mod bookmarks;
 mod categories;
 mod dashboard_shares;
@@ -21,6 +22,7 @@ mod vault;
 
 pub use activity::*;
 pub use api_keys::*;
+pub use blocks::*;
 pub use bookmarks::*;
 pub use categories::*;
 pub use dashboard_shares::*;

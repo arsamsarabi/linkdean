@@ -30,7 +30,7 @@ async fn resolve_subject(
     subject_type: SocialSubjectType,
     subject_id: Uuid,
 ) -> Result<SubjectMeta> {
-    match subject_type {
+    let meta = match subject_type {
         SocialSubjectType::Bookmark => {
             if !bookmark_can_read(pool, user_id, subject_id).await? {
                 return Err(Error::NotFound);
@@ -53,10 +53,10 @@ async fn resolve_subject(
                 return Err(Error::Forbidden);
             }
             require_shared_context(pool, subject_type, subject_id, owner).await?;
-            Ok(SubjectMeta {
+            SubjectMeta {
                 owner_user_id: owner,
                 title,
-            })
+            }
         }
         SocialSubjectType::Category => {
             let (cat, _) = require_category_read(pool, user_id, subject_id).await?;
@@ -64,10 +64,10 @@ async fn resolve_subject(
                 return Err(Error::Forbidden);
             }
             require_shared_context(pool, subject_type, subject_id, cat.owner_user_id).await?;
-            Ok(SubjectMeta {
+            SubjectMeta {
                 owner_user_id: cat.owner_user_id,
                 title: cat.name,
-            })
+            }
         }
         SocialSubjectType::Dashboard => {
             let (dash, _) = require_dashboard_read(pool, user_id, subject_id).await?;
@@ -75,12 +75,15 @@ async fn resolve_subject(
                 return Err(Error::NotFound);
             }
             require_shared_context(pool, subject_type, subject_id, dash.owner_user_id).await?;
-            Ok(SubjectMeta {
+            SubjectMeta {
                 owner_user_id: dash.owner_user_id,
                 title: dash.title,
-            })
+            }
         }
-    }
+    };
+    // Writes and reads require no block with the subject owner.
+    super::blocks::assert_not_blocked(pool, user_id, meta.owner_user_id).await?;
+    Ok(meta)
 }
 
 /// Social only on subjects that participate in sharing (outgoing share or invitee path).
@@ -169,12 +172,22 @@ pub async fn get_social_summary(
 
     let likes_count: (i64,) = sqlx::query_as(
         r#"
-        SELECT COUNT(*)::bigint FROM social_likes
-        WHERE subject_type = $1 AND subject_id = $2
+        SELECT COUNT(*)::bigint FROM social_likes sl
+        WHERE sl.subject_type = $1 AND sl.subject_id = $2
+          AND NOT EXISTS (
+            SELECT 1 FROM user_blocks ub
+            WHERE (ub.blocker_id = $3 AND ub.blocked_id = sl.user_id)
+               OR (ub.blocker_id = sl.user_id AND ub.blocked_id = $3)
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM user_mutes um
+            WHERE um.muter_id = $3 AND um.muted_id = sl.user_id
+          )
         "#,
     )
     .bind(st)
     .bind(subject_id)
+    .bind(user_id)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -194,13 +207,23 @@ pub async fn get_social_summary(
 
     let rating_stats: (Option<f64>, i64) = sqlx::query_as(
         r#"
-        SELECT AVG(rating)::float8, COUNT(*)::bigint
-        FROM social_ratings
-        WHERE subject_type = $1 AND subject_id = $2
+        SELECT AVG(sr.rating)::float8, COUNT(*)::bigint
+        FROM social_ratings sr
+        WHERE sr.subject_type = $1 AND sr.subject_id = $2
+          AND NOT EXISTS (
+            SELECT 1 FROM user_blocks ub
+            WHERE (ub.blocker_id = $3 AND ub.blocked_id = sr.user_id)
+               OR (ub.blocker_id = sr.user_id AND ub.blocked_id = $3)
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM user_mutes um
+            WHERE um.muter_id = $3 AND um.muted_id = sr.user_id
+          )
         "#,
     )
     .bind(st)
     .bind(subject_id)
+    .bind(user_id)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -220,14 +243,24 @@ pub async fn get_social_summary(
 
     let comment_rows = sqlx::query_as::<_, SocialComment>(
         r#"
-        SELECT * FROM social_comments
-        WHERE subject_type = $1 AND subject_id = $2
-        ORDER BY created_at ASC
+        SELECT sc.* FROM social_comments sc
+        WHERE sc.subject_type = $1 AND sc.subject_id = $2
+          AND NOT EXISTS (
+            SELECT 1 FROM user_blocks ub
+            WHERE (ub.blocker_id = $3 AND ub.blocked_id = sc.user_id)
+               OR (ub.blocker_id = sc.user_id AND ub.blocked_id = $3)
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM user_mutes um
+            WHERE um.muter_id = $3 AND um.muted_id = sc.user_id
+          )
+        ORDER BY sc.created_at ASC
         LIMIT 100
         "#,
     )
     .bind(st)
     .bind(subject_id)
+    .bind(user_id)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;

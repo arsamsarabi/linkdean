@@ -248,6 +248,7 @@ pub async fn create_dashboard_share(
     if invitee.id == owner_user_id {
         return Err(Error::BadRequest("cannot share with yourself".into()));
     }
+    super::blocks::assert_not_blocked(pool, owner_user_id, invitee.id).await?;
 
     let existed = find_direct_dashboard_share(pool, dashboard_id, invitee.id)
         .await?

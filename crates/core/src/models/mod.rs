@@ -1032,6 +1032,16 @@ pub struct FollowRelation {
     pub following_count: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlockRelation {
+    pub blocked: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MuteRelation {
+    pub muted: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Notification {
     pub id: Uuid,

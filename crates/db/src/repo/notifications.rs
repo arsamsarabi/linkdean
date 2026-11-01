@@ -70,6 +70,11 @@ async fn insert_notification(
     if actor_user_id == Some(recipient_user_id) {
         return Ok(());
     }
+    if let Some(actor) = actor_user_id {
+        if super::blocks::viewer_hides_user(pool, recipient_user_id, actor).await? {
+            return Ok(());
+        }
+    }
     sqlx::query(
         r#"
         INSERT INTO notifications (
@@ -328,6 +333,20 @@ pub async fn list_notifications(
         FROM notifications n
         LEFT JOIN users u ON u.id = n.actor_user_id
         WHERE n.recipient_user_id = $1
+          AND (
+            n.actor_user_id IS NULL
+            OR (
+              NOT EXISTS (
+                SELECT 1 FROM user_blocks ub
+                WHERE (ub.blocker_id = $1 AND ub.blocked_id = n.actor_user_id)
+                   OR (ub.blocker_id = n.actor_user_id AND ub.blocked_id = $1)
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM user_mutes um
+                WHERE um.muter_id = $1 AND um.muted_id = n.actor_user_id
+              )
+            )
+          )
         ORDER BY n.created_at DESC
         LIMIT $2
         "#,
@@ -343,8 +362,22 @@ pub async fn list_notifications(
 pub async fn unread_notification_count(pool: &PgPool, user_id: Uuid) -> Result<i64> {
     let (n,): (i64,) = sqlx::query_as(
         r#"
-        SELECT COUNT(*) FROM notifications
-        WHERE recipient_user_id = $1 AND read_at IS NULL
+        SELECT COUNT(*) FROM notifications n
+        WHERE n.recipient_user_id = $1 AND n.read_at IS NULL
+          AND (
+            n.actor_user_id IS NULL
+            OR (
+              NOT EXISTS (
+                SELECT 1 FROM user_blocks ub
+                WHERE (ub.blocker_id = $1 AND ub.blocked_id = n.actor_user_id)
+                   OR (ub.blocker_id = n.actor_user_id AND ub.blocked_id = $1)
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM user_mutes um
+                WHERE um.muter_id = $1 AND um.muted_id = n.actor_user_id
+              )
+            )
+          )
         "#,
     )
     .bind(user_id)

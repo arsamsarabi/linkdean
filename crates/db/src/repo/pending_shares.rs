@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use super::dashboard_shares::require_dashboard_owner;
 use super::shares::require_category_owner;
-use super::users::find_user_by_id;
+use super::users::{find_user_by_email, find_user_by_id};
 
 fn to_view(row: PendingShareInvite) -> Result<PendingShareInviteView> {
     Ok(PendingShareInviteView {
@@ -93,6 +93,9 @@ pub async fn upsert_pending_share_invite(
         if owner.email.eq_ignore_ascii_case(&email) {
             return Err(Error::BadRequest("cannot share with yourself".into()));
         }
+    }
+    if let Some(invitee) = find_user_by_email(pool, &email).await? {
+        super::blocks::assert_not_blocked(pool, owner_user_id, invitee.id).await?;
     }
 
     let row = sqlx::query_as::<_, PendingShareInvite>(
@@ -208,6 +211,23 @@ pub async fn claim_pending_share_invites(pool: &PgPool, email: &str, user_id: Uu
 
     let mut claimed = 0u32;
     for row in rows {
+        if super::blocks::is_blocked_either_way(pool, user_id, row.invited_by_user_id).await? {
+            // Mark claimed without applying so invite cannot linger.
+            sqlx::query(
+                r#"
+                UPDATE pending_share_invites
+                SET revoked_at = now(), updated_at = now()
+                WHERE id = $1
+                  AND claimed_at IS NULL
+                  AND revoked_at IS NULL
+                "#,
+            )
+            .bind(row.id)
+            .execute(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+            continue;
+        }
         let Ok(subject_type) = PendingShareSubjectType::parse(&row.subject_type) else {
             continue;
         };

@@ -66,6 +66,7 @@ pub async fn follow_user(pool: &PgPool, follower_id: Uuid, following_id: Uuid) -
     let _target = find_user_by_id(pool, following_id)
         .await?
         .ok_or(Error::NotFound)?;
+    super::blocks::assert_not_blocked(pool, follower_id, following_id).await?;
 
     let inserted = sqlx::query(
         r#"

@@ -26,11 +26,23 @@ pub fn router() -> Router<AppState> {
         )
         .route("/users/me/followers", get(my_followers))
         .route("/users/me/following", get(my_following))
+        .route("/users/me/blocked", get(my_blocked))
+        .route("/users/me/muted", get(my_muted))
         .route(
             "/users/{id}/follow",
             post(follow_user).delete(unfollow_user),
         )
         .route("/users/{id}/follow-status", get(follow_status))
+        .route(
+            "/users/{id}/block",
+            post(block_user).delete(unblock_user),
+        )
+        .route("/users/{id}/block-status", get(block_status))
+        .route(
+            "/users/{id}/mute",
+            post(mute_user).delete(unmute_user),
+        )
+        .route("/users/{id}/mute-status", get(mute_status))
 }
 
 async fn update_me(
@@ -193,4 +205,74 @@ async fn follow_status(
 ) -> ApiResult<Json<Value>> {
     let relation = db::follow_relation(&state.pool, user.id, id).await?;
     Ok(Json(json!({ "follow": relation })))
+}
+
+async fn my_blocked(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    let users = db::list_blocked(&state.pool, user.id).await?;
+    Ok(Json(json!({ "users": users })))
+}
+
+async fn my_muted(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    let users = db::list_muted(&state.pool, user.id).await?;
+    Ok(Json(json!({ "users": users })))
+}
+
+async fn block_user(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::block_user(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "block": relation })))
+}
+
+async fn unblock_user(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::unblock_user(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "block": relation })))
+}
+
+async fn block_status(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::block_relation(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "block": relation })))
+}
+
+async fn mute_user(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::mute_user(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "mute": relation })))
+}
+
+async fn unmute_user(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::unmute_user(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "mute": relation })))
+}
+
+async fn mute_status(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let relation = db::mute_relation(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "mute": relation })))
 }
