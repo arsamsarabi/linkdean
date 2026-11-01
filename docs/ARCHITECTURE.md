@@ -25,7 +25,6 @@ linkdean/
   crates/worker/      # metadata + favicon/OG disk cache
   migrations/         # sqlx migrations
   deploy/docker/      # compose + Dockerfile
-  deploy/homelab/     # Traefik snippet + notes
   docs/
 ```
 
@@ -40,8 +39,6 @@ Browser ──► Vite (dev) or static SPA
               ├── Meilisearch
               └── worker tasks (enrich title/favicon)
 ```
-
-Homelab: nova runs compose; ncc Traefik terminates TLS (`linkdean.arsam.app`). Authentik OIDC is optional.
 
 ## Domain (v1)
 
