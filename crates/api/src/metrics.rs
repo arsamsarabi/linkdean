@@ -21,7 +21,8 @@ static HTTP_DURATION: OnceLock<HistogramVec> = OnceLock::new();
 fn registry() -> &'static Registry {
     REGISTRY.get_or_init(|| {
         let reg = Registry::new();
-        // Process / Rust runtime collectors (CPU, RSS, threads, …).
+        // Process / Rust runtime collectors (CPU, RSS, threads, …). Linux-only in `prometheus`.
+        #[cfg(target_os = "linux")]
         let _ = reg.register(Box::new(
             prometheus::process_collector::ProcessCollector::for_self(),
         ));
