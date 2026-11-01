@@ -65,8 +65,7 @@ export function BulkEditDrawer({
           {mode === 'categories' ? (
             <>
               <Text size="sm" c="dimmed">
-                Merges folders onto each selected bookmark. Existing categories stay. Read-only shared
-                folders omitted.
+                Merges folders onto each selected bookmark. Existing categories stay. Read-only shared folders omitted.
               </Text>
               <MultiSelect
                 label="Categories"
@@ -77,10 +76,7 @@ export function BulkEditDrawer({
                 clearable
                 placeholder="Pick folders to add…"
               />
-              <Button
-                onClick={() => onApplyCategories(categoryIds)}
-                disabled={pending || categoryIds.length === 0}
-              >
+              <Button onClick={() => onApplyCategories(categoryIds)} disabled={pending || categoryIds.length === 0}>
                 Add categories
               </Button>
             </>

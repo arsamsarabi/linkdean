@@ -21,12 +21,7 @@ type Input = {
 }
 
 /** Create/edit drawer, single delete, vault unlock-for-search. */
-export function useLibraryBookmarkEditor({
-  bookmarks,
-  searchHits,
-  folderCat,
-  vaultPrompt,
-}: Input) {
+export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vaultPrompt }: Input) {
   const [drawerOpen, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [draft, setDraft] = useState<BookmarkDraft | null>(null)
   const [unlockOpen, setUnlockOpen] = useState(false)
@@ -75,10 +70,7 @@ export function useLibraryBookmarkEditor({
     notifications.show({ color: 'red', message: 'Open the bookmark from the library to edit' })
   }
 
-  function onFlags(
-    id: string,
-    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
-  ): void {
+  function onFlags(id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>): void {
     updateBookmark.mutate(
       { id, body: patch },
       {

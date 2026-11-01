@@ -1,16 +1,5 @@
 import { type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Drawer,
-  Group,
-  LoadingOverlay,
-  Stack,
-  Text,
-  Title,
-  Tooltip,
-} from '@mantine/core'
+import { ActionIcon, Box, Button, Drawer, Group, LoadingOverlay, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconExternalLink, IconLinkOff, IconRefresh } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
@@ -54,14 +43,7 @@ export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElem
   const items = broken.data ?? []
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      title="Broken links"
-      position="right"
-      size="md"
-      padding="lg"
-    >
+    <Drawer opened={opened} onClose={onClose} title="Broken links" position="right" size="md" padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={broken.isLoading} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
@@ -74,8 +56,8 @@ export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElem
           ) : null}
           {!broken.isLoading && !broken.isError && items.length === 0 ? (
             <Text size="sm" c="dimmed">
-              No confirmed broken or unreachable bookmarks. Vault links are skipped; soft failures
-              need two failed checks (or a 404/410) before they appear here.
+              No confirmed broken or unreachable bookmarks. Vault links are skipped; soft failures need two failed
+              checks (or a 404/410) before they appear here.
             </Text>
           ) : null}
           {items.length > 0 ? (
@@ -101,9 +83,7 @@ export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElem
                   </Text>
                   <Text size="xs" c="red">
                     {statusLabel(b)}
-                    {b.link_checked_at
-                      ? ` · checked ${new Date(b.link_checked_at).toLocaleString()}`
-                      : ''}
+                    {b.link_checked_at ? ` · checked ${new Date(b.link_checked_at).toLocaleString()}` : ''}
                   </Text>
                   <Group gap="xs" justify="flex-end">
                     <Button

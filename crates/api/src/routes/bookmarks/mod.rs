@@ -25,9 +25,7 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/{id}/save", post(save_copy))
         .route(
             "/bookmarks/{id}/preview",
-            get(get_preview)
-                .post(upload_preview)
-                .delete(delete_preview),
+            get(get_preview).post(upload_preview).delete(delete_preview),
         )
         .route("/bookmarks/{id}/favicon", get(get_favicon))
         .route("/bookmarks/{id}/og", get(get_og))

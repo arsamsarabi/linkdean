@@ -1,12 +1,6 @@
 import { type ReactElement } from 'react'
 import { Badge, Group, Tooltip } from '@mantine/core'
-import {
-  IconBookmarkFilled,
-  IconLinkOff,
-  IconLock,
-  IconPinFilled,
-  IconStarFilled,
-} from '@tabler/icons-react'
+import { IconBookmarkFilled, IconLinkOff, IconLock, IconPinFilled, IconStarFilled } from '@tabler/icons-react'
 import { ShareBadge } from '@/components/share-badge'
 import type { BookmarkCardItem } from './bookmarkCardTypes'
 
@@ -17,12 +11,7 @@ type Props = {
   pendingDelete: boolean
 }
 
-export function BookmarkCardBadges({
-  bookmark: b,
-  share,
-  showOutgoing,
-  pendingDelete,
-}: Props): ReactElement {
+export function BookmarkCardBadges({ bookmark: b, share, showOutgoing, pendingDelete }: Props): ReactElement {
   return (
     <Group gap={4} mt="auto" pt={4}>
       {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} size="sm" /> : null}
@@ -40,12 +29,7 @@ export function BookmarkCardBadges({
               : b.link_check_error || b.link_check_status
           }
         >
-          <Badge
-            size="sm"
-            variant="light"
-            color="red"
-            leftSection={<IconLinkOff size={10} stroke={1.5} />}
-          >
+          <Badge size="sm" variant="light" color="red" leftSection={<IconLinkOff size={10} stroke={1.5} />}>
             {b.link_check_status}
           </Badge>
         </Tooltip>

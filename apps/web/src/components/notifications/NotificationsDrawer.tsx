@@ -1,15 +1,5 @@
 import { useEffect, useRef, type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Drawer,
-  Group,
-  Skeleton,
-  Stack,
-  Text,
-  UnstyledButton,
-} from '@mantine/core'
+import { ActionIcon, Badge, Button, Drawer, Group, Skeleton, Stack, Text, UnstyledButton } from '@mantine/core'
 import { IconBell, IconCheck } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { QueryErrorAlert } from '@/components/query-error-alert'
@@ -67,8 +57,7 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
   const markAll = useMarkAllNotificationsRead()
   const prevOpened = useRef(opened)
   const unreadCount = unread.data?.count ?? 0
-  const hasUnread =
-    unreadCount > 0 || (list.data?.notifications.some((n) => !n.read_at) ?? false)
+  const hasUnread = unreadCount > 0 || (list.data?.notifications.some((n) => !n.read_at) ?? false)
 
   useEffect(() => {
     const wasOpen = prevOpened.current
@@ -110,9 +99,7 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
           </Button>
         </Group>
 
-        {list.isError ? (
-          <QueryErrorAlert error={list.error} onRetry={() => void list.refetch()} />
-        ) : null}
+        {list.isError ? <QueryErrorAlert error={list.error} onRetry={() => void list.refetch()} /> : null}
 
         {list.isLoading ? (
           <Stack gap="sm">
@@ -168,13 +155,7 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
   )
 }
 
-export function NotificationsBell({
-  unread,
-  onClick,
-}: {
-  unread: number
-  onClick: () => void
-}): ReactElement {
+export function NotificationsBell({ unread, onClick }: { unread: number; onClick: () => void }): ReactElement {
   return (
     <ActionIcon
       variant="subtle"

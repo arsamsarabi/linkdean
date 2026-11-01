@@ -64,9 +64,8 @@ mod tests {
     use image::{ImageBuffer, Rgb};
 
     fn tiny_png() -> Vec<u8> {
-        let img: ImageBuffer<Rgb<u8>, _> = ImageBuffer::from_fn(32, 24, |x, y| {
-            Rgb([(x * 8) as u8, (y * 10) as u8, 180])
-        });
+        let img: ImageBuffer<Rgb<u8>, _> =
+            ImageBuffer::from_fn(32, 24, |x, y| Rgb([(x * 8) as u8, (y * 10) as u8, 180]));
         let mut buf = Vec::new();
         let enc = image::codecs::png::PngEncoder::new(&mut buf);
         use image::ImageEncoder;

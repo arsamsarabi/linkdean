@@ -1,16 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import {
-  Alert,
-  Button,
-  Code,
-  Group,
-  Paper,
-  Skeleton,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { Alert, Button, Code, Group, Paper, Skeleton, Stack, Text, TextInput, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconCopy, IconKey, IconPlus, IconTrash } from '@tabler/icons-react'
 import { ConfirmModal, QueryErrorAlert } from '@/components'
@@ -63,8 +52,8 @@ export function ApiKeysPanel(): ReactElement {
   return (
     <Stack gap="lg" maw={640}>
       <Alert color="violet" variant="light" icon={<IconKey {...iconSm} />}>
-        Keys authenticate as you via <Code>Authorization: Bearer ldk_…</Code>. Scoped to your own
-        data. Secret shown once at create.
+        Keys authenticate as you via <Code>Authorization: Bearer ldk_…</Code>. Scoped to your own data. Secret shown
+        once at create.
       </Alert>
 
       {freshToken ? (
@@ -124,9 +113,7 @@ export function ApiKeysPanel(): ReactElement {
       <Paper p="xl" withBorder>
         <Stack gap="md">
           <Title order={4}>Active keys</Title>
-          {keys.isError ? (
-            <QueryErrorAlert error={keys.error} onRetry={() => void keys.refetch()} />
-          ) : null}
+          {keys.isError ? <QueryErrorAlert error={keys.error} onRetry={() => void keys.refetch()} /> : null}
           {keys.isLoading ? <Skeleton height={48} /> : null}
           {!keys.isLoading && (keys.data?.keys.length ?? 0) === 0 ? (
             <Text size="sm" c="dimmed">
@@ -141,9 +128,7 @@ export function ApiKeysPanel(): ReactElement {
                 </Text>
                 <Text size="xs" c="dimmed">
                   {k.prefix}… · created {new Date(k.created_at).toLocaleString()}
-                  {k.last_used_at
-                    ? ` · last used ${new Date(k.last_used_at).toLocaleString()}`
-                    : ' · never used'}
+                  {k.last_used_at ? ` · last used ${new Date(k.last_used_at).toLocaleString()}` : ' · never used'}
                 </Text>
               </Stack>
               <Button

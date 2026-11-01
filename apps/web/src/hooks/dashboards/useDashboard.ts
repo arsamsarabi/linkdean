@@ -6,13 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type {
-  CreateDashboard,
-  Dashboard,
-  DashboardSummary,
-  PatchDashboard,
-  PutDashboardLayout,
-} from '@/schemas'
+import type { CreateDashboard, Dashboard, DashboardSummary, PatchDashboard, PutDashboardLayout } from '@/schemas'
 
 export function useDashboards(): UseQueryResult<DashboardSummary[]> {
   return useQuery({
@@ -52,11 +46,7 @@ export function useCreateDashboard(): UseMutationResult<Dashboard, Error, Create
   })
 }
 
-export function usePutDashboard(): UseMutationResult<
-  Dashboard,
-  Error,
-  { id: string; body: PutDashboardLayout }
-> {
+export function usePutDashboard(): UseMutationResult<Dashboard, Error, { id: string; body: PutDashboardLayout }> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, body }) => api.putDashboard(id, body),
@@ -80,11 +70,7 @@ export function usePutDefaultDashboard(): UseMutationResult<Dashboard, Error, Pu
   })
 }
 
-export function usePatchDashboard(): UseMutationResult<
-  Dashboard,
-  Error,
-  { id: string; body: PatchDashboard }
-> {
+export function usePatchDashboard(): UseMutationResult<Dashboard, Error, { id: string; body: PatchDashboard }> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, body }) => api.patchDashboard(id, body),

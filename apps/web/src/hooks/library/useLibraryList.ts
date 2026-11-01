@@ -3,9 +3,9 @@ import { useBookmarks, useSearchBookmarks } from '@/hooks/bookmarks'
 import { useCategories } from '@/hooks/categories'
 import { categoryPath, type SortKey } from '@/lib'
 import {
-  FOLDER_UNCATEGORIZED,
   collectTagOptions,
   filterAndSortLibraryItems,
+  FOLDER_UNCATEGORIZED,
   mergeSearchWithLocalCatchUp,
   sinceFilterToIso,
   type ExplorerFolderId,
@@ -62,11 +62,7 @@ export function useLibraryList({
     let catchUpCount = 0
     let raw: LibraryListItem[]
     if (searching) {
-      const merged = mergeSearchWithLocalCatchUp(
-        search.data?.hits || [],
-        bookmarks.data || [],
-        debouncedQ
-      )
+      const merged = mergeSearchWithLocalCatchUp(search.data?.hits || [], bookmarks.data || [], debouncedQ)
       raw = merged.items
       catchUpCount = merged.catchUpCount
     } else {

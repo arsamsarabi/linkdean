@@ -1,22 +1,10 @@
 import { useMemo, useState, type KeyboardEvent, type ReactElement } from 'react'
 import { Group, Kbd, Modal, Stack, Text, TextInput } from '@mantine/core'
-import {
-  IconBookmarkPlus,
-  IconFolder,
-  IconFolders,
-  IconSearch,
-  IconTags,
-} from '@tabler/icons-react'
+import { IconBookmarkPlus, IconFolder, IconFolders, IconSearch, IconTags } from '@tabler/icons-react'
 import { useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useCategories } from '@/hooks'
 import { buildLibrarySearch, categoryPath } from '@/lib'
-import {
-  buildPaletteItems,
-  clampActiveIndex,
-  FOLDER_ALL,
-  FOLDER_UNCATEGORIZED,
-  type PaletteItem,
-} from '@/services'
+import { buildPaletteItems, clampActiveIndex, FOLDER_ALL, FOLDER_UNCATEGORIZED, type PaletteItem } from '@/services'
 import { useUi } from '@/stores'
 import styles from './CommandPalette.module.css'
 
@@ -75,10 +63,7 @@ export function CommandPalette({ opened, onClose }: Props): ReactElement {
     }))
   }, [cats.data])
 
-  const items = useMemo(
-    () => buildPaletteItems(query, categoryRows, { showHidden }),
-    [query, categoryRows, showHidden]
-  )
+  const items = useMemo(() => buildPaletteItems(query, categoryRows, { showHidden }), [query, categoryRows, showHidden])
 
   function run(item: PaletteItem): void {
     onClose()

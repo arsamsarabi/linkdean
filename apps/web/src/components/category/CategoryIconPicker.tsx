@@ -22,11 +22,7 @@ type Props = {
   label?: string
 }
 
-export function CategoryIconPicker({
-  value,
-  onChange,
-  label = 'Icon',
-}: Props): ReactElement {
+export function CategoryIconPicker({ value, onChange, label = 'Icon' }: Props): ReactElement {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
 
@@ -49,13 +45,7 @@ export function CategoryIconPicker({
           {label}
         </Text>
         {value ? (
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            size="sm"
-            aria-label="Clear icon"
-            onClick={() => onChange(null)}
-          >
+          <ActionIcon variant="subtle" color="gray" size="sm" aria-label="Clear icon" onClick={() => onChange(null)}>
             <IconX size={14} stroke={1.5} />
           </ActionIcon>
         ) : null}
@@ -68,13 +58,7 @@ export function CategoryIconPicker({
         leftSection={<IconSearch size={16} stroke={1.5} />}
         rightSection={
           query ? (
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size="sm"
-              aria-label="Clear search"
-              onClick={() => setQuery('')}
-            >
+            <ActionIcon variant="subtle" color="gray" size="sm" aria-label="Clear search" onClick={() => setQuery('')}>
               <IconX size={14} stroke={1.5} />
             </ActionIcon>
           ) : null
@@ -121,13 +105,7 @@ export function CategoryIconPicker({
             {totalPages > 1 ? ` · page ${safePage}/${totalPages}` : ''}
           </Text>
           {totalPages > 1 ? (
-            <Pagination
-              size="sm"
-              total={totalPages}
-              value={safePage}
-              onChange={setPage}
-              aria-label="Icon pages"
-            />
+            <Pagination size="sm" total={totalPages} value={safePage} onChange={setPage} aria-label="Icon pages" />
           ) : null}
         </Group>
       )}

@@ -11,7 +11,10 @@ export function pickDefaultKeepId(bookmarks: readonly Bookmark[]): string | null
   return best.id
 }
 
-export function mergeMeta(keep: Bookmark, losers: readonly Bookmark[]): {
+export function mergeMeta(
+  keep: Bookmark,
+  losers: readonly Bookmark[]
+): {
   tags: string[]
   category_ids: string[]
 } {

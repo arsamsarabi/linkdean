@@ -8,10 +8,7 @@ import {
 import { api } from '@/api'
 import type { CategoryPublicLink } from '@/schemas'
 
-export function useCategoryPublicLink(
-  categoryId: string | null,
-  enabled = true
-): UseQueryResult<CategoryPublicLink> {
+export function useCategoryPublicLink(categoryId: string | null, enabled = true): UseQueryResult<CategoryPublicLink> {
   return useQuery({
     queryKey: ['category-public-link', categoryId],
     queryFn: () => api.categoryPublicLink(categoryId!),
@@ -19,11 +16,7 @@ export function useCategoryPublicLink(
   })
 }
 
-export function useEnableCategoryPublicLink(): UseMutationResult<
-  CategoryPublicLink,
-  Error,
-  string
-> {
+export function useEnableCategoryPublicLink(): UseMutationResult<CategoryPublicLink, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (categoryId: string) => api.enableCategoryPublicLink(categoryId),
@@ -33,11 +26,7 @@ export function useEnableCategoryPublicLink(): UseMutationResult<
   })
 }
 
-export function useRotateCategoryPublicLink(): UseMutationResult<
-  CategoryPublicLink,
-  Error,
-  string
-> {
+export function useRotateCategoryPublicLink(): UseMutationResult<CategoryPublicLink, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (categoryId: string) => api.rotateCategoryPublicLink(categoryId),
@@ -47,11 +36,7 @@ export function useRotateCategoryPublicLink(): UseMutationResult<
   })
 }
 
-export function useDisableCategoryPublicLink(): UseMutationResult<
-  CategoryPublicLink,
-  Error,
-  string
-> {
+export function useDisableCategoryPublicLink(): UseMutationResult<CategoryPublicLink, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (categoryId: string) => api.disableCategoryPublicLink(categoryId),

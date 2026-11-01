@@ -19,12 +19,7 @@ type Props = {
   onClose: () => void
 }
 
-export function ShareDashboardDrawer({
-  dashboardId,
-  dashboardTitle,
-  opened,
-  onClose,
-}: Props): ReactElement {
+export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onClose }: Props): ReactElement {
   const [email, setEmail] = useState('')
   const [access, setAccess] = useState<ShareAccess>('read')
 
@@ -45,10 +40,7 @@ export function ShareDashboardDrawer({
       })
       setEmail('')
       notifications.show({
-        message:
-          outcome.status === 'pending'
-            ? 'No account yet — access granted when they register'
-            : 'Invite added',
+        message: outcome.status === 'pending' ? 'No account yet — access granted when they register' : 'Invite added',
       })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })

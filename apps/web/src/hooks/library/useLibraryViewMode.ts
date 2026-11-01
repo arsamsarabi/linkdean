@@ -11,8 +11,7 @@ export function useLibraryViewMode(): {
 } {
   const me = useMe()
   const updateSettings = useUpdateSettings()
-  const settingsView: LibraryViewMode =
-    me.data?.settings.library_view === 'explorer' ? 'explorer' : 'grid'
+  const settingsView: LibraryViewMode = me.data?.settings.library_view === 'explorer' ? 'explorer' : 'grid'
   const [viewMode, setViewMode] = useState<LibraryViewMode>(settingsView)
   const [viewFromSettings, setViewFromSettings] = useState<LibraryViewMode | null>(null)
   if (me.data && viewFromSettings !== settingsView) {

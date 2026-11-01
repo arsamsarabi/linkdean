@@ -131,13 +131,9 @@ async fn list_shares(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<CategorySharesEnvelope>> {
     let shares = db::list_shares_for_category(&state.pool, user.id, id).await?;
-    let pending = db::list_pending_for_subject(
-        &state.pool,
-        user.id,
-        PendingShareSubjectType::Category,
-        id,
-    )
-    .await?;
+    let pending =
+        db::list_pending_for_subject(&state.pool, user.id, PendingShareSubjectType::Category, id)
+            .await?;
     Ok(Json(CategorySharesEnvelope { shares, pending }))
 }
 

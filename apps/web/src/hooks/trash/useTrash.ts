@@ -24,11 +24,7 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>): void {
   void qc.invalidateQueries({ queryKey: ['me'] })
 }
 
-export function useRestoreTrashItem(): UseMutationResult<
-  { ok: boolean },
-  Error,
-  { kind: TrashKind; id: string }
-> {
+export function useRestoreTrashItem(): UseMutationResult<{ ok: boolean }, Error, { kind: TrashKind; id: string }> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ kind, id }) => api.restoreTrashItem(kind, id),
@@ -36,11 +32,7 @@ export function useRestoreTrashItem(): UseMutationResult<
   })
 }
 
-export function usePurgeTrashItem(): UseMutationResult<
-  { ok: boolean },
-  Error,
-  { kind: TrashKind; id: string }
-> {
+export function usePurgeTrashItem(): UseMutationResult<{ ok: boolean }, Error, { kind: TrashKind; id: string }> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ kind, id }) => api.purgeTrashItem(kind, id),

@@ -14,12 +14,7 @@ type Props = {
   categoryMenuFor?: (cat: Category) => CategoryMenuHandlers | undefined
 }
 
-export function ExplorerFolderGrid({
-  folders,
-  categoriesById,
-  onOpen,
-  categoryMenuFor,
-}: Props): ReactElement {
+export function ExplorerFolderGrid({ folders, categoriesById, onOpen, categoryMenuFor }: Props): ReactElement {
   return (
     <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 5 }} spacing="md">
       {folders.map((f) => {

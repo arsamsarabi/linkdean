@@ -97,7 +97,11 @@ fn owned_summary(d: Dashboard, shared_with: Vec<String>) -> DashboardSummary {
     }
 }
 
-fn shared_summary(d: Dashboard, access: CategoryAccess, owner_display_name: Option<String>) -> DashboardSummary {
+fn shared_summary(
+    d: Dashboard,
+    access: CategoryAccess,
+    owner_display_name: Option<String>,
+) -> DashboardSummary {
     DashboardSummary {
         id: d.id,
         owner_user_id: d.owner_user_id,
@@ -287,8 +291,7 @@ pub async fn create_dashboard(
 
     let title = dash.title.clone();
     let id = dash.id;
-    let view =
-        load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await?;
+    let view = load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await?;
     super::activity::record_activity(
         pool,
         user_id,
@@ -329,10 +332,7 @@ pub async fn put_dashboard(
     let section_count = req.sections.len();
     let pin_count: usize = req.sections.iter().map(|s| s.bookmark_ids.len()).sum();
 
-    let mut tx = pool
-        .begin()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
 
     sqlx::query(
         r#"
@@ -403,9 +403,7 @@ pub async fn put_dashboard(
         }
     }
 
-    tx.commit()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
 
     if dash.owner_user_id != user_id {
         super::notifications::notify_shared_edit(
@@ -425,7 +423,9 @@ pub async fn put_dashboard(
         changes.push(format!("renamed “{before_title}” → “{title}”"));
         change_keys.push("title");
     }
-    changes.push(format!("layout ({section_count} sections, {pin_count} pins)"));
+    changes.push(format!(
+        "layout ({section_count} sections, {pin_count} pins)"
+    ));
     change_keys.push("layout");
     let summary = super::activity::update_summary(
         linkdean_core::ActivitySubjectType::Dashboard,
@@ -448,10 +448,7 @@ pub async fn put_dashboard(
 }
 
 async fn pin_dashboard_row(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Dashboard> {
-    let mut tx = pool
-        .begin()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
 
     sqlx::query(
         r#"
@@ -480,9 +477,7 @@ async fn pin_dashboard_row(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Das
     .map_err(|e| Error::msg(e.to_string()))?
     .ok_or(Error::NotFound)?;
 
-    tx.commit()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
 
     Ok(dash)
 }

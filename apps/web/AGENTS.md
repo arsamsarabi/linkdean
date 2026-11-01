@@ -69,13 +69,13 @@ If logic cannot be tested without React, it is in the wrong layer.
 
 Keep modules small enough to review in one pass. Soft ceilings (prefer under; split when you exceed):
 
-| Kind | Soft max |
-| --- | --- |
-| Page / screen component | ~350 lines |
-| Presentational component | ~250 lines |
-| Single-concern domain hook | ~200 lines |
+| Kind                               | Soft max                        |
+| ---------------------------------- | ------------------------------- |
+| Page / screen component            | ~350 lines                      |
+| Presentational component           | ~250 lines                      |
+| Single-concern domain hook         | ~200 lines                      |
 | Page composition hook (`useXPage`) | ~150 lines (wire children only) |
-| Service / pure module | ~300 lines |
+| Service / pure module              | ~300 lines                      |
 
 **When adding features to a large file:** split first (or as part of the same change). Do not keep growing a known oversized module.
 
@@ -138,13 +138,13 @@ Keep modules small enough to review in one pass. Soft ceilings (prefer under; sp
 
 Avoid threading props through intermediate components that do not use them.
 
-| Need | Prefer |
-| --- | --- |
-| Server / API data | Tanstack Query domain hooks at the leaf (`useBookmarks`, `useMe`, …) |
-| URL / route state | Router hooks or domain URL hooks (`useLibraryUrlState`) at the leaf |
-| Shared UI across distant trees (shell drawers, vault unlocked, show-hidden) | **Zustand** with narrow selectors |
-| Page orchestration shared by many colocated siblings | Page-scoped context from the composition root (`LibraryPageProvider` + `useLibraryPageModel`) **or** a page Zustand store — never a 20+ field prop bag |
-| Truly local ephemeral UI (one component) | `useState` |
+| Need                                                                        | Prefer                                                                                                                                                 |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server / API data                                                           | Tanstack Query domain hooks at the leaf (`useBookmarks`, `useMe`, …)                                                                                   |
+| URL / route state                                                           | Router hooks or domain URL hooks (`useLibraryUrlState`) at the leaf                                                                                    |
+| Shared UI across distant trees (shell drawers, vault unlocked, show-hidden) | **Zustand** with narrow selectors                                                                                                                      |
+| Page orchestration shared by many colocated siblings                        | Page-scoped context from the composition root (`LibraryPageProvider` + `useLibraryPageModel`) **or** a page Zustand store — never a 20+ field prop bag |
+| Truly local ephemeral UI (one component)                                    | `useState`                                                                                                                                             |
 
 **Do not:**
 

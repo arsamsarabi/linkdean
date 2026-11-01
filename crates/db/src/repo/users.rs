@@ -205,9 +205,7 @@ pub async fn update_admin_user(
         if !is_admin && user.is_admin {
             let admins = count_admins(pool).await?;
             if admins <= 1 {
-                return Err(Error::BadRequest(
-                    "cannot demote the last admin".into(),
-                ));
+                return Err(Error::BadRequest("cannot demote the last admin".into()));
             }
         }
         user = sqlx::query_as::<_, User>(
@@ -317,9 +315,7 @@ pub async fn update_user_settings(
     }
     if let Some(v) = patch.trash_retention_days {
         if v <= 0 {
-            return Err(Error::BadRequest(
-                "trash_retention_days must be > 0".into(),
-            ));
+            return Err(Error::BadRequest("trash_retention_days must be > 0".into()));
         }
         s.trash_retention_days = v;
     }

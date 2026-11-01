@@ -16,7 +16,10 @@ fn expect_active_dash_share(
     match outcome {
         CreateDashboardShareOutcome::Active { share } => share,
         CreateDashboardShareOutcome::Pending { invite } => {
-            panic!("expected active share, got pending {}", invite.invitee_email)
+            panic!(
+                "expected active share, got pending {}",
+                invite.invitee_email
+            )
         }
     }
 }
@@ -422,11 +425,9 @@ async fn dashboard_share_read_write_and_revoke() {
     assert_eq!(rewritten.title, "Team board RW");
 
     let listed_b = db::list_dashboards(&pool, user_b.id).await.expect("list b");
-    assert!(
-        listed_b
-            .iter()
-            .any(|d| d.id == home.id && d.access == CategoryAccess::Write)
-    );
+    assert!(listed_b
+        .iter()
+        .any(|d| d.id == home.id && d.access == CategoryAccess::Write));
 
     db::delete_dashboard_share(&pool, user_a.id, home.id, user_b.id)
         .await

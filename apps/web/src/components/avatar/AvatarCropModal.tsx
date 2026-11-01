@@ -94,12 +94,7 @@ export function AvatarCropModal({
           <Button variant="default" leftSection={<IconX {...iconSm} />} onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            leftSection={<IconCheck {...iconSm} />}
-            loading={busy}
-            onClick={() => void save()}
-            disabled={!area}
-          >
+          <Button leftSection={<IconCheck {...iconSm} />} loading={busy} onClick={() => void save()} disabled={!area}>
             {confirmLabel}
           </Button>
         </Group>

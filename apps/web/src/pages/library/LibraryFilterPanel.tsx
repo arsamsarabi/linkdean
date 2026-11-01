@@ -1,19 +1,10 @@
 import type { ReactElement } from 'react'
-import {
-  Button,
-  Checkbox,
-  Collapse,
-  Group,
-  MultiSelect,
-  Pill,
-  Select,
-  Stack,
-} from '@mantine/core'
+import { Button, Checkbox, Collapse, Group, MultiSelect, Pill, Select, Stack } from '@mantine/core'
 import { categorySelectData } from '@/lib'
 import { FOLDER_UNCATEGORIZED, SINCE_FILTERS, type SinceFilter } from '@/services'
 import { LIBRARY_FILTER_PANEL_ID } from './libraryConstants'
-import { useLibraryPageModel } from './LibraryPageContext'
 import styles from './LibraryPage.module.css'
+import { useLibraryPageModel } from './LibraryPageContext'
 
 const SINCE_LABEL: Record<SinceFilter, string> = {
   '7d': 'Last 7 days',
@@ -25,10 +16,7 @@ const SINCE_LABEL: Record<SinceFilter, string> = {
 export function LibraryFilterPanel(): ReactElement {
   const lib = useLibraryPageModel()
   const draftHasFilters =
-    lib.draftFilterCats.length > 0 ||
-    lib.draftFilterTags.length > 0 ||
-    !!lib.draftFilterSince ||
-    lib.draftVaultOnly
+    lib.draftFilterCats.length > 0 || lib.draftFilterTags.length > 0 || !!lib.draftFilterSince || lib.draftVaultOnly
 
   return (
     <>
@@ -36,10 +24,7 @@ export function LibraryFilterPanel(): ReactElement {
         <Stack id={LIBRARY_FILTER_PANEL_ID} p="lg" gap="md" className={styles.filterPanel}>
           <MultiSelect
             label="Categories"
-            data={[
-              { value: FOLDER_UNCATEGORIZED, label: 'Unsorted' },
-              ...categorySelectData(lib.cats.data || []),
-            ]}
+            data={[{ value: FOLDER_UNCATEGORIZED, label: 'Unsorted' }, ...categorySelectData(lib.cats.data || [])]}
             value={lib.draftFilterCats}
             onChange={lib.setDraftFilterCats}
             searchable
@@ -59,9 +44,7 @@ export function LibraryFilterPanel(): ReactElement {
             data={SINCE_FILTERS.map((s) => ({ value: s, label: SINCE_LABEL[s] }))}
             value={lib.draftFilterSince}
             onChange={(v) =>
-              lib.setDraftFilterSince(
-                v && (SINCE_FILTERS as readonly string[]).includes(v) ? (v as SinceFilter) : null
-              )
+              lib.setDraftFilterSince(v && (SINCE_FILTERS as readonly string[]).includes(v) ? (v as SinceFilter) : null)
             }
             clearable
           />
@@ -100,9 +83,7 @@ export function LibraryFilterPanel(): ReactElement {
             <Pill
               key={id}
               withRemoveButton
-              onRemove={() =>
-                lib.setLibrarySearch({ category: lib.filterCats.filter((x) => x !== id) })
-              }
+              onRemove={() => lib.setLibrarySearch({ category: lib.filterCats.filter((x) => x !== id) })}
             >
               {lib.catLabel.get(id) || id}
             </Pill>

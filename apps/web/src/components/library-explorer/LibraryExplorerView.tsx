@@ -26,10 +26,7 @@ type Props = {
   onFolderChange: (id: ExplorerFolderId) => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
-  onFlags?: (
-    id: string,
-    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
-  ) => void
+  onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   filterFlags?: FlagFilter[]
   onCreate: () => void
   canCreate?: boolean
@@ -66,24 +63,16 @@ export function LibraryExplorerView({
   onToggleSelect,
   categoryMenuFor,
 }: Props): ReactElement {
-  const {
-    atAll,
-    byId,
-    crumbs,
-    sortedFolders,
-    ownedFolders,
-    sharedFolders,
-    sortedBookmarks,
-    sortedHits,
-  } = useLibraryExplorerContents({
-    categories,
-    bookmarks,
-    searchHits,
-    folderId,
-    sort,
-    showHidden,
-    filterFlags,
-  })
+  const { atAll, byId, crumbs, sortedFolders, ownedFolders, sharedFolders, sortedBookmarks, sortedHits } =
+    useLibraryExplorerContents({
+      categories,
+      bookmarks,
+      searchHits,
+      folderId,
+      sort,
+      showHidden,
+      filterFlags,
+    })
 
   if (loading) {
     return (
@@ -143,9 +132,7 @@ export function LibraryExplorerView({
           icon={<IconFolder size={28} stroke={1.5} />}
           title={folderReadOnly ? 'Shared folder is empty' : 'Empty folder'}
           description={
-            folderReadOnly
-              ? 'The owner has not added bookmarks here yet.'
-              : 'No subfolders or bookmarks here.'
+            folderReadOnly ? 'The owner has not added bookmarks here yet.' : 'No subfolders or bookmarks here.'
           }
           action={canCreate ? { label: 'Add bookmark', onClick: onCreate } : undefined}
         />

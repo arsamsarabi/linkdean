@@ -109,8 +109,7 @@ async fn reindex_search(
     let mut failed: u64 = 0;
 
     for u in users {
-        let Ok(items) =
-            db::list_bookmarks(&state.pool, u.id, None, false, None, false).await
+        let Ok(items) = db::list_bookmarks(&state.pool, u.id, None, false, None, false).await
         else {
             continue;
         };

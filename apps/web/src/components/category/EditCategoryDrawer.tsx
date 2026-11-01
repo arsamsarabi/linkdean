@@ -3,12 +3,7 @@ import { Box, Button, Checkbox, Drawer, Group, LoadingOverlay, Select, Stack, Te
 import { notifications } from '@mantine/notifications'
 import { IconDeviceFloppy } from '@tabler/icons-react'
 import { useCategories, useUpdateCategory } from '@/hooks'
-import {
-  categorySelectData,
-  categorySubtreeIds,
-  isCategoryIconKey,
-  type CategoryIconKey,
-} from '@/lib'
+import { categorySelectData, categorySubtreeIds, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
 import { CategoryIconPicker } from './CategoryIconPicker'
 
@@ -34,9 +29,7 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
   const parentOptions = useMemo(() => {
     if (!category) return [{ value: '', label: '- root -' }]
     const blocked = categorySubtreeIds(all, category.id)
-    const candidates = all.filter(
-      (c) => !blocked.has(c.id) && (c.access === 'owner' || c.access === 'write')
-    )
+    const candidates = all.filter((c) => !blocked.has(c.id) && (c.access === 'owner' || c.access === 'write'))
     return [{ value: '', label: '- root -' }, ...categorySelectData(candidates)]
   }, [all, category])
 
@@ -83,14 +76,7 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
   }
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      title="Edit category"
-      position="right"
-      size="md"
-      padding="lg"
-    >
+    <Drawer opened={opened} onClose={onClose} title="Edit category" position="right" size="md" padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={update.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
@@ -115,11 +101,7 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
             onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
           />
           {isOwner ? (
-            <Checkbox
-              label="Hidden"
-              checked={hidden}
-              onChange={(e) => setHidden(e.currentTarget.checked)}
-            />
+            <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
           ) : null}
           {category?.is_vault ? (
             <Text size="sm" c="dimmed">

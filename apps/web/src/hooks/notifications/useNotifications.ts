@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query'
 import { api } from '@/api'
 import type { Notification } from '@/schemas'
 
@@ -19,11 +25,7 @@ export function useNotifications(enabled = true): UseQueryResult<{ notifications
   })
 }
 
-export function useMarkNotificationRead(): UseMutationResult<
-  { notification: Notification },
-  Error,
-  string
-> {
+export function useMarkNotificationRead(): UseMutationResult<{ notification: Notification }, Error, string> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id) => api.markNotificationRead(id),
@@ -33,11 +35,7 @@ export function useMarkNotificationRead(): UseMutationResult<
   })
 }
 
-export function useMarkAllNotificationsRead(): UseMutationResult<
-  { ok: boolean; updated?: number },
-  Error,
-  void
-> {
+export function useMarkAllNotificationsRead(): UseMutationResult<{ ok: boolean; updated?: number }, Error, void> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.markAllNotificationsRead(),

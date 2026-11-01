@@ -1,8 +1,6 @@
 use chrono::Utc;
 use linkdean_core::crypto::{self, hash_token};
-use linkdean_core::{
-    ApiKey, ApiKeyView, CreateApiKey, CreateApiKeyResponse, Error, Result, User,
-};
+use linkdean_core::{ApiKey, ApiKeyView, CreateApiKey, CreateApiKeyResponse, Error, Result, User};
 use sqlx::PgPool;
 use uuid::Uuid;
 

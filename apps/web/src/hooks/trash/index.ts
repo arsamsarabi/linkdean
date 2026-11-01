@@ -1,6 +1,1 @@
-export {
-  useTrash,
-  useRestoreTrashItem,
-  usePurgeTrashItem,
-  usePurgeTrashSelected,
-} from './useTrash'
+export { useTrash, useRestoreTrashItem, usePurgeTrashItem, usePurgeTrashSelected } from './useTrash'

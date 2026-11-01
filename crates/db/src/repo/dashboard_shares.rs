@@ -102,7 +102,11 @@ pub async fn require_dashboard_write(
     Ok((dash, access))
 }
 
-pub async fn require_dashboard_owner(pool: &PgPool, user_id: Uuid, dashboard_id: Uuid) -> Result<Dashboard> {
+pub async fn require_dashboard_owner(
+    pool: &PgPool,
+    user_id: Uuid,
+    dashboard_id: Uuid,
+) -> Result<Dashboard> {
     let (dash, access) = require_dashboard_read(pool, user_id, dashboard_id).await?;
     if !access.is_owner() {
         return Err(Error::Forbidden);

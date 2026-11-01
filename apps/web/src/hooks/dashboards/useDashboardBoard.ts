@@ -105,8 +105,7 @@ export function useDashboardBoard() {
     const isPinned = !!view?.is_default
     const isOwner = view?.access === 'owner'
     const canEditLayout = view?.access === 'owner' || view?.access === 'write'
-    const inviteeAccess =
-      view?.access === 'read' || view?.access === 'write' ? view.access : null
+    const inviteeAccess = view?.access === 'read' || view?.access === 'write' ? view.access : null
     const socialEnabled = !!inviteeAccess || !!view?.shared_out
     return { empty, isPinned, isOwner, canEditLayout, inviteeAccess, socialEnabled }
   }

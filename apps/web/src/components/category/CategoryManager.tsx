@@ -106,8 +106,8 @@ export function CategoryManager(): ReactElement {
   return (
     <Stack gap="lg">
       <Text size="sm" c="dimmed">
-        Nested folders for the library. Browse like the explorer; add via the drawer. Share owned
-        folders with other users on this instance.
+        Nested folders for the library. Browse like the explorer; add via the drawer. Share owned folders with other
+        users on this instance.
       </Text>
 
       {cats.isError ? <QueryErrorAlert error={cats.error} onRetry={() => void cats.refetch()} /> : null}
@@ -127,9 +127,7 @@ export function CategoryManager(): ReactElement {
         </SimpleGrid>
       ) : atRoot ? (
         <Stack gap="md">
-          {ownedRoots.length === 0 && sharedRoots.length === 0 ? (
-            <Text c="dimmed">No categories yet.</Text>
-          ) : null}
+          {ownedRoots.length === 0 && sharedRoots.length === 0 ? <Text c="dimmed">No categories yet.</Text> : null}
           {ownedRoots.length > 0 ? (
             <Stack gap="sm">
               {sharedRoots.length > 0 ? (

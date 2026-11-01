@@ -166,27 +166,15 @@ describe('sortExplorerFolders', () => {
   ]
 
   it('sorts by name A–Z and keeps Unsorted last', () => {
-    expect(sortExplorerFolders(folders, 'title_asc').map((f) => f.id)).toEqual([
-      'a',
-      'z',
-      FOLDER_UNCATEGORIZED,
-    ])
+    expect(sortExplorerFolders(folders, 'title_asc').map((f) => f.id)).toEqual(['a', 'z', FOLDER_UNCATEGORIZED])
   })
 
   it('sorts by name Z–A and keeps Unsorted last', () => {
-    expect(sortExplorerFolders(folders, 'title_desc').map((f) => f.id)).toEqual([
-      'z',
-      'a',
-      FOLDER_UNCATEGORIZED,
-    ])
+    expect(sortExplorerFolders(folders, 'title_desc').map((f) => f.id)).toEqual(['z', 'a', FOLDER_UNCATEGORIZED])
   })
 
   it('date sorts fall back to name when timestamps missing', () => {
-    expect(sortExplorerFolders(folders, 'updated_desc').map((f) => f.id)).toEqual([
-      'a',
-      'z',
-      FOLDER_UNCATEGORIZED,
-    ])
+    expect(sortExplorerFolders(folders, 'updated_desc').map((f) => f.id)).toEqual(['a', 'z', FOLDER_UNCATEGORIZED])
   })
 
   it('sorts by updated_at newest first', () => {

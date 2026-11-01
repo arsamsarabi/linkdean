@@ -1,8 +1,7 @@
 use linkdean_core::crypto;
 use linkdean_core::{
     Bookmark, BookmarkView, Category, CategoryRef, CreateBookmark, Error, LinkCheckStatus, Result,
-    UpdateBookmark,
-    VaultPayload,
+    UpdateBookmark, VaultPayload,
 };
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -1212,10 +1211,7 @@ pub async fn save_bookmark_copy(
 }
 
 /// Owner-only list of bookmarks currently flagged broken / unreachable.
-pub async fn list_broken_bookmarks(
-    pool: &PgPool,
-    user_id: Uuid,
-) -> Result<Vec<BookmarkView>> {
+pub async fn list_broken_bookmarks(pool: &PgPool, user_id: Uuid) -> Result<Vec<BookmarkView>> {
     let rows = sqlx::query_as::<_, Bookmark>(
         r#"
         SELECT * FROM bookmarks

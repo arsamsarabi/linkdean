@@ -45,12 +45,7 @@ impl SearchClient {
         let _ = index; // exists ok
         let index = self.client.index(&self.index_name);
         index
-            .set_filterable_attributes([
-                "owner_user_id",
-                "category_id",
-                "category_ids",
-                "tags",
-            ])
+            .set_filterable_attributes(["owner_user_id", "category_id", "category_ids", "tags"])
             .await
             .context("filterable attrs")?;
         index

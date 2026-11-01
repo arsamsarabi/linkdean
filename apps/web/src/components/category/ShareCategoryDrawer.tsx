@@ -24,14 +24,7 @@ export function ShareCategoryDrawer({
   const s = useShareCategoryDrawer({ categoryId, opened, isVault })
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      title={`Share “${categoryName}”`}
-      position="right"
-      size="md"
-      padding="lg"
-    >
+    <Drawer opened={opened} onClose={onClose} title={`Share “${categoryName}”`} position="right" size="md" padding="lg">
       <ShareInvitePanel
         description="Invite by email. Existing users get access now; unknown emails stay pending until they register. Read-write can edit bookmarks and add subfolders (not vault, share, or delete)."
         email={s.email}

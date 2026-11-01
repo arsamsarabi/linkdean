@@ -1,16 +1,5 @@
 import { type ReactElement, type RefObject } from 'react'
-import {
-  Anchor,
-  Button,
-  FileButton,
-  Group,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { Anchor, Button, FileButton, Group, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
 import motion from '@/styles/motion.module.css'
 
@@ -78,17 +67,8 @@ export function RegisterForm({
               required={closed}
             />
           ) : null}
-          <TextInput
-            label="Display name"
-            value={displayName}
-            onChange={(e) => onDisplayName(e.currentTarget.value)}
-          />
-          <TextInput
-            label="Email"
-            required
-            value={email}
-            onChange={(e) => onEmail(e.currentTarget.value)}
-          />
+          <TextInput label="Display name" value={displayName} onChange={(e) => onDisplayName(e.currentTarget.value)} />
+          <TextInput label="Email" required value={email} onChange={(e) => onEmail(e.currentTarget.value)} />
           <PasswordInput
             label="Password"
             required
@@ -103,11 +83,7 @@ export function RegisterForm({
             onChange={(e) => onPassword2(e.currentTarget.value)}
           />
           <Group>
-            <FileButton
-              resetRef={resetRef}
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={onPickAvatar}
-            >
+            <FileButton resetRef={resetRef} accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPickAvatar}>
               {(props) => (
                 <Button {...props} variant="light" leftSection={<IconPhoto {...iconSm} />}>
                   {pendingAvatar ? 'Avatar ready — change' : 'Optional avatar'}
@@ -115,12 +91,7 @@ export function RegisterForm({
               )}
             </FileButton>
             {pendingAvatar ? (
-              <Button
-                variant="subtle"
-                color="red"
-                leftSection={<IconTrash {...iconSm} />}
-                onClick={onClearAvatar}
-              >
+              <Button variant="subtle" color="red" leftSection={<IconTrash {...iconSm} />} onClick={onClearAvatar}>
                 Clear
               </Button>
             ) : null}

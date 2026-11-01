@@ -10,22 +10,12 @@ export function DashboardPage(): ReactElement {
   const d = useDashboardPage()
 
   if (d.list.isError) {
-    return (
-      <QueryErrorAlert
-        error={d.list.error}
-        onRetry={() => void d.list.refetch()}
-        title="Dashboards failed"
-      />
-    )
+    return <QueryErrorAlert error={d.list.error} onRetry={() => void d.list.refetch()} title="Dashboards failed" />
   }
 
   if (d.dashboard.isError) {
     return (
-      <QueryErrorAlert
-        error={d.dashboard.error}
-        onRetry={() => void d.dashboard.refetch()}
-        title="Dashboard failed"
-      />
+      <QueryErrorAlert error={d.dashboard.error} onRetry={() => void d.dashboard.refetch()} title="Dashboard failed" />
     )
   }
 

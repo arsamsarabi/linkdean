@@ -1,16 +1,5 @@
 import { type ReactElement, type RefObject } from 'react'
-import {
-  Button,
-  Divider,
-  Fieldset,
-  FileButton,
-  Group,
-  Paper,
-  Select,
-  Stack,
-  Textarea,
-  TextInput,
-} from '@mantine/core'
+import { Button, Divider, Fieldset, FileButton, Group, Paper, Select, Stack, Textarea, TextInput } from '@mantine/core'
 import { IconDeviceFloppy, IconPhoto, IconTrash } from '@tabler/icons-react'
 import { UserAvatar } from '@/components'
 
@@ -63,11 +52,7 @@ export function ProfileAboutCard({
         <Group gap="lg" align="flex-start">
           <UserAvatar hasAvatar={hasAvatar} label={label} size={80} bust={avatarBust} />
           <Stack gap="xs">
-            <FileButton
-              resetRef={resetRef}
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={onPickAvatar}
-            >
+            <FileButton resetRef={resetRef} accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPickAvatar}>
               {(props) => (
                 <Button {...props} variant="light" leftSection={<IconPhoto {...iconSm} />}>
                   Upload avatar
@@ -75,12 +60,7 @@ export function ProfileAboutCard({
               )}
             </FileButton>
             {hasAvatar ? (
-              <Button
-                variant="subtle"
-                color="red"
-                leftSection={<IconTrash {...iconSm} />}
-                onClick={onRemoveAvatar}
-              >
+              <Button variant="subtle" color="red" leftSection={<IconTrash {...iconSm} />} onClick={onRemoveAvatar}>
                 Remove
               </Button>
             ) : null}
@@ -96,34 +76,13 @@ export function ProfileAboutCard({
               value={displayName}
               onChange={(e) => onDisplayName(e.currentTarget.value)}
             />
-            <Textarea
-              label="Bio"
-              value={bio}
-              onChange={(e) => onBio(e.currentTarget.value)}
-              minRows={2}
-              autosize
-            />
-            <Select
-              label="Timezone"
-              searchable
-              clearable
-              data={TIMEZONES}
-              value={timezone}
-              onChange={onTimezone}
-            />
-            <TextInput
-              label="Email"
-              value={email}
-              onChange={(e) => onEmail(e.currentTarget.value)}
-            />
+            <Textarea label="Bio" value={bio} onChange={(e) => onBio(e.currentTarget.value)} minRows={2} autosize />
+            <Select label="Timezone" searchable clearable data={TIMEZONES} value={timezone} onChange={onTimezone} />
+            <TextInput label="Email" value={email} onChange={(e) => onEmail(e.currentTarget.value)} />
           </Stack>
         </Fieldset>
 
-        <Button
-          leftSection={<IconDeviceFloppy {...iconSm} />}
-          loading={saving}
-          onClick={onSave}
-        >
+        <Button leftSection={<IconDeviceFloppy {...iconSm} />} loading={saving} onClick={onSave}>
           Save profile
         </Button>
       </Stack>

@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  CATEGORY_ICON_OPTIONS,
-  filterCategoryIcons,
-  isCategoryIconKey,
-} from './categoryIcons'
+import { CATEGORY_ICON_OPTIONS, filterCategoryIcons, isCategoryIconKey } from './categoryIcons'
 
 describe('categoryIcons', () => {
   it('keeps stable legacy keys', () => {
@@ -46,9 +42,7 @@ describe('categoryIcons', () => {
     expect(byLabel.some((o) => o.key === 'rocket')).toBe(true)
 
     const byKey = filterCategoryIcons('chart-')
-    expect(byKey.every((o) => o.key.includes('chart-') || o.label.toLowerCase().includes('chart-'))).toBe(
-      true
-    )
+    expect(byKey.every((o) => o.key.includes('chart-') || o.label.toLowerCase().includes('chart-'))).toBe(true)
     expect(byKey.length).toBeGreaterThan(0)
 
     expect(filterCategoryIcons('zzz-no-such-icon')).toEqual([])

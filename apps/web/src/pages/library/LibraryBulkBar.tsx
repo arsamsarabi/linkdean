@@ -1,8 +1,8 @@
 import { type ReactElement } from 'react'
 import { Button, Group, Text } from '@mantine/core'
 import { IconFolders, IconTags, IconTrash } from '@tabler/icons-react'
-import { useLibraryPageModel } from './LibraryPageContext'
 import styles from './LibraryPage.module.css'
+import { useLibraryPageModel } from './LibraryPageContext'
 
 export function LibraryBulkBar(): ReactElement | null {
   const lib = useLibraryPageModel()
@@ -19,9 +19,7 @@ export function LibraryBulkBar(): ReactElement | null {
         <Button
           size="compact-sm"
           variant="subtle"
-          onClick={() =>
-            lib.setSelectedIds(allVisibleSelected ? new Set() : new Set(selectableIds))
-          }
+          onClick={() => lib.setSelectedIds(allVisibleSelected ? new Set() : new Set(selectableIds))}
           disabled={selectableIds.length === 0}
         >
           {allVisibleSelected ? 'Clear all' : 'Select all'}

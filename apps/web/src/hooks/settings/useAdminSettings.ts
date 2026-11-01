@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query'
 import { api } from '@/api'
 import type {
   AdminUserSummary,
@@ -48,8 +54,7 @@ export function useUpdateAdminUser(): UseMutationResult<
 > {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, api_keys_enabled, is_admin }) =>
-      api.updateAdminUser(id, { api_keys_enabled, is_admin }),
+    mutationFn: ({ id, api_keys_enabled, is_admin }) => api.updateAdminUser(id, { api_keys_enabled, is_admin }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
       void qc.invalidateQueries({ queryKey: ['me'] })
@@ -57,11 +62,7 @@ export function useUpdateAdminUser(): UseMutationResult<
   })
 }
 
-export function useReindexSearch(): UseMutationResult<
-  { ok: boolean; upserted: number; failed: number },
-  Error,
-  void
-> {
+export function useReindexSearch(): UseMutationResult<{ ok: boolean; upserted: number; failed: number }, Error, void> {
   return useMutation({
     mutationFn: () => api.reindexSearch(),
   })

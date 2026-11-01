@@ -85,11 +85,7 @@ export function AppShell(): ReactElement {
       <MantineAppShell.Main>
         <PageContainer pb="xl" fadeIn>
           {me.isError ? (
-            <QueryErrorAlert
-              error={me.error}
-              onRetry={() => void me.refetch()}
-              title="Failed to load account"
-            />
+            <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} title="Failed to load account" />
           ) : null}
           {loading ? (
             <Group justify="center" py={80}>
@@ -101,14 +97,7 @@ export function AppShell(): ReactElement {
         </PageContainer>
       </MantineAppShell.Main>
 
-      <Drawer
-        opened={shell.navOpen}
-        onClose={shell.closeNav}
-        size="xs"
-        padding="md"
-        title="Navigate"
-        hiddenFrom="sm"
-      >
+      <Drawer opened={shell.navOpen} onClose={shell.closeNav} size="xs" padding="md" title="Navigate" hiddenFrom="sm">
         <Stack gap="xs">
           <NavLink
             component={Link}

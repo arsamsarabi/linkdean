@@ -14,9 +14,7 @@ import type {
   ShareAccess,
 } from '@/schemas'
 
-export function useDashboardShares(
-  dashboardId: string | null
-): UseQueryResult<DashboardSharesEnvelope> {
+export function useDashboardShares(dashboardId: string | null): UseQueryResult<DashboardSharesEnvelope> {
   return useQuery({
     queryKey: ['dashboard-shares', dashboardId],
     queryFn: () => api.dashboardShares(dashboardId!),
@@ -26,11 +24,7 @@ export function useDashboardShares(
 
 type CreateShareVars = { dashboardId: string; email: string; access: ShareAccess }
 
-export function useCreateDashboardShare(): UseMutationResult<
-  CreateDashboardShareOutcome,
-  Error,
-  CreateShareVars
-> {
+export function useCreateDashboardShare(): UseMutationResult<CreateDashboardShareOutcome, Error, CreateShareVars> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ dashboardId, email, access }: CreateShareVars) =>
@@ -45,11 +39,7 @@ export function useCreateDashboardShare(): UseMutationResult<
 
 type UpdateShareVars = { dashboardId: string; userId: string; access: ShareAccess }
 
-export function useUpdateDashboardShare(): UseMutationResult<
-  DashboardShare,
-  Error,
-  UpdateShareVars
-> {
+export function useUpdateDashboardShare(): UseMutationResult<DashboardShare, Error, UpdateShareVars> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ dashboardId, userId, access }: UpdateShareVars) =>
@@ -67,8 +57,7 @@ type DeleteShareVars = { dashboardId: string; userId: string }
 export function useDeleteDashboardShare(): UseMutationResult<void, Error, DeleteShareVars> {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ dashboardId, userId }: DeleteShareVars) =>
-      api.deleteDashboardShare(dashboardId, userId),
+    mutationFn: ({ dashboardId, userId }: DeleteShareVars) => api.deleteDashboardShare(dashboardId, userId),
     onSuccess: (_data, vars) => {
       void qc.invalidateQueries({ queryKey: ['dashboard-shares', vars.dashboardId] })
       void qc.invalidateQueries({ queryKey: ['dashboards'] })
@@ -79,11 +68,7 @@ export function useDeleteDashboardShare(): UseMutationResult<void, Error, Delete
 
 type UpdatePendingVars = { dashboardId: string; pendingId: string; access: ShareAccess }
 
-export function useUpdateDashboardPendingShare(): UseMutationResult<
-  PendingShareInvite,
-  Error,
-  UpdatePendingVars
-> {
+export function useUpdateDashboardPendingShare(): UseMutationResult<PendingShareInvite, Error, UpdatePendingVars> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ dashboardId, pendingId, access }: UpdatePendingVars) =>
@@ -96,11 +81,7 @@ export function useUpdateDashboardPendingShare(): UseMutationResult<
 
 type DeletePendingVars = { dashboardId: string; pendingId: string }
 
-export function useDeleteDashboardPendingShare(): UseMutationResult<
-  void,
-  Error,
-  DeletePendingVars
-> {
+export function useDeleteDashboardPendingShare(): UseMutationResult<void, Error, DeletePendingVars> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ dashboardId, pendingId }: DeletePendingVars) =>

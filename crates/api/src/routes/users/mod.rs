@@ -33,15 +33,9 @@ pub fn router() -> Router<AppState> {
             post(follow_user).delete(unfollow_user),
         )
         .route("/users/{id}/follow-status", get(follow_status))
-        .route(
-            "/users/{id}/block",
-            post(block_user).delete(unblock_user),
-        )
+        .route("/users/{id}/block", post(block_user).delete(unblock_user))
         .route("/users/{id}/block-status", get(block_status))
-        .route(
-            "/users/{id}/mute",
-            post(mute_user).delete(unmute_user),
-        )
+        .route("/users/{id}/mute", post(mute_user).delete(unmute_user))
         .route("/users/{id}/mute-status", get(mute_status))
 }
 

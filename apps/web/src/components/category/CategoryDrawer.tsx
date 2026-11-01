@@ -17,12 +17,7 @@ type Props = {
   defaultParentId?: string | null
 }
 
-export function CategoryDrawer({
-  opened,
-  onClose,
-  categories,
-  defaultParentId = null,
-}: Props): ReactElement {
+export function CategoryDrawer({ opened, onClose, categories, defaultParentId = null }: Props): ReactElement {
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState<string | null>(null)
   const [hidden, setHidden] = useState(false)
@@ -38,10 +33,7 @@ export function CategoryDrawer({
     [categories]
   )
 
-  const parentCat = useMemo(
-    () => (parentId ? categories.find((c) => c.id === parentId) : null),
-    [categories, parentId]
-  )
+  const parentCat = useMemo(() => (parentId ? categories.find((c) => c.id === parentId) : null), [categories, parentId])
   const canCreateVault = !parentCat || parentCat.access === 'owner'
 
   useEffect(() => {
@@ -70,14 +62,7 @@ export function CategoryDrawer({
   }
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      title="New category"
-      position="right"
-      size="md"
-      padding="lg"
-    >
+    <Drawer opened={opened} onClose={onClose} title="New category" position="right" size="md" padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={create.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
@@ -106,11 +91,7 @@ export function CategoryDrawer({
             onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
           />
           <Group gap="lg">
-            <Checkbox
-              label="Hidden"
-              checked={hidden}
-              onChange={(e) => setHidden(e.currentTarget.checked)}
-            />
+            <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
             <Checkbox
               label="Vault"
               checked={vault}

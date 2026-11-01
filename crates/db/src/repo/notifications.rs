@@ -169,9 +169,7 @@ pub async fn notify_category_share_access(
         NotificationSubjectType::Category,
         category_id,
         category_name,
-        &format!(
-            "{actor_label} changed your access on folder “{category_name}” to {access_label}"
-        ),
+        &format!("{actor_label} changed your access on folder “{category_name}” to {access_label}"),
         json!({ "access": access.as_str() }),
     )
     .await;

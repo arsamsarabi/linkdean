@@ -1,10 +1,6 @@
 import { z } from 'zod'
 import { bookmarkSchema } from '@/schemas/bookmarks'
-import {
-  categoryAccessSchema,
-  pendingShareInviteSchema,
-  shareAccessSchema,
-} from '@/schemas/categories'
+import { categoryAccessSchema, pendingShareInviteSchema, shareAccessSchema } from '@/schemas/categories'
 
 export const dashboardItemSchema = z.object({
   id: z.string(),

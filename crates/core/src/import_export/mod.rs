@@ -159,7 +159,7 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                     category_ids: vec![],
                     tags,
                     ..Default::default()
-            },
+                },
                 cat_path,
             ));
         }

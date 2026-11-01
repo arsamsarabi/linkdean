@@ -17,12 +17,11 @@ type Props = {
   /** Pending crop for a bookmark that is not saved yet. */
   pendingBlob: Blob | null
   onPendingChange: (blob: Blob | null) => void
-  onUploaded: (next: {
-    has_preview: boolean
-    preview_image_url?: string | null
-    updated_at: string
-  }) => void
-  onUpload: (id: string, blob: Blob) => Promise<{
+  onUploaded: (next: { has_preview: boolean; preview_image_url?: string | null; updated_at: string }) => void
+  onUpload: (
+    id: string,
+    blob: Blob
+  ) => Promise<{
     has_preview: boolean
     preview_image_url?: string | null
     updated_at: string
@@ -128,9 +127,7 @@ export function BookmarkPreviewField({
         <Text size="xs" c="dimmed">
           Replaces the default card image. Crop to 16:9.
         </Text>
-        {previewSrc ? (
-          <Image src={previewSrc} alt="" radius="sm" mah={140} fit="cover" />
-        ) : null}
+        {previewSrc ? <Image src={previewSrc} alt="" radius="sm" mah={140} fit="cover" /> : null}
         <Group gap="sm">
           <FileButton onChange={onPick} accept="image/*" disabled={disabled || busy}>
             {(props) => (

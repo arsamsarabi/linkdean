@@ -47,7 +47,8 @@ async fn restore(
             db::restore_bookmark(&state.pool, user.id, id).await?;
             let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
             let key = state.vault_key(user.id).await;
-            if let Some(view) = db::bookmark_to_view(&state.pool, raw, key.as_ref(), user.id).await?
+            if let Some(view) =
+                db::bookmark_to_view(&state.pool, raw, key.as_ref(), user.id).await?
             {
                 if !view.is_vault {
                     if let Err(e) = state.search.upsert_bookmark(&view).await {
@@ -74,11 +75,8 @@ async fn purge_one(
             if let Err(e) = state.search.delete_bookmark(id).await {
                 tracing::warn!(bookmark_id = %id, error = %e, "meili delete on purge failed");
             }
-            linkdean_worker::purge_preview_assets(
-                std::path::Path::new(&state.cfg.preview_dir),
-                id,
-            )
-            .await;
+            linkdean_worker::purge_preview_assets(std::path::Path::new(&state.cfg.preview_dir), id)
+                .await;
         }
         TrashKind::Category => db::purge_category(&state.pool, user.id, id).await?,
         TrashKind::Dashboard => db::purge_dashboard(&state.pool, user.id, id).await?,

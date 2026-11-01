@@ -4,19 +4,21 @@
 //! Skips when unset so CI without a DB stays green.
 
 use linkdean_core::{
-    CategoryAccess, CreateBookmark, CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome,
-    Error, ShareAccess, UpdateBookmark, UpdateCategory, UpdateCategoryShare,
+    CategoryAccess, CreateBookmark, CreateCategory, CreateCategoryShare,
+    CreateCategoryShareOutcome, Error, ShareAccess, UpdateBookmark, UpdateCategory,
+    UpdateCategoryShare,
 };
 use linkdean_db::{self as db};
 use uuid::Uuid;
 
-fn expect_active_share(
-    outcome: CreateCategoryShareOutcome,
-) -> linkdean_core::CategoryShareView {
+fn expect_active_share(outcome: CreateCategoryShareOutcome) -> linkdean_core::CategoryShareView {
     match outcome {
         CreateCategoryShareOutcome::Active { share } => share,
         CreateCategoryShareOutcome::Pending { invite } => {
-            panic!("expected active share, got pending {}", invite.invitee_email)
+            panic!(
+                "expected active share, got pending {}",
+                invite.invitee_email
+            )
         }
     }
 }
@@ -29,9 +31,7 @@ async fn pool_or_skip() -> Option<sqlx::PgPool> {
     let pool = db::connect(&url)
         .await
         .expect("connect postgres for authz tests");
-    db::migrate(&pool)
-        .await
-        .expect("migrate for authz tests");
+    db::migrate(&pool).await.expect("migrate for authz tests");
     Some(pool)
 }
 
@@ -392,18 +392,22 @@ async fn share_read_and_write_membership() {
         db::get_bookmark_raw(&pool, user_c.id, bm.id).await,
         Err(Error::NotFound)
     ));
-    assert!(!db::list_bookmarks(&pool, user_c.id, None, false, None, false)
-        .await
-        .expect("list c")
-        .iter()
-        .any(|x| x.id == bm.id || x.id == b_created.id));
+    assert!(
+        !db::list_bookmarks(&pool, user_c.id, None, false, None, false)
+            .await
+            .expect("list c")
+            .iter()
+            .any(|x| x.id == bm.id || x.id == b_created.id)
+    );
 
     // B sees shared bookmark in list
-    assert!(db::list_bookmarks(&pool, user_b.id, None, false, None, false)
-        .await
-        .expect("list b")
-        .iter()
-        .any(|x| x.id == bm.id));
+    assert!(
+        db::list_bookmarks(&pool, user_b.id, None, false, None, false)
+            .await
+            .expect("list b")
+            .iter()
+            .any(|x| x.id == bm.id)
+    );
 
     // Revoke → B loses access
     db::delete_share(&pool, user_a.id, cat.id, user_b.id)

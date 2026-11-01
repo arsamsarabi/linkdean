@@ -24,20 +24,18 @@ pub async fn is_following(pool: &PgPool, follower_id: Uuid, following_id: Uuid) 
 }
 
 pub async fn follow_counts(pool: &PgPool, user_id: Uuid) -> Result<(i64, i64)> {
-    let followers: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM user_follows WHERE following_id = $1",
-    )
-    .bind(user_id)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    let following: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM user_follows WHERE follower_id = $1",
-    )
-    .bind(user_id)
-    .fetch_one(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+    let followers: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM user_follows WHERE following_id = $1")
+            .bind(user_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+    let following: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM user_follows WHERE follower_id = $1")
+            .bind(user_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
     Ok((followers.0, following.0))
 }
 
@@ -59,7 +57,11 @@ pub async fn follow_relation(
     })
 }
 
-pub async fn follow_user(pool: &PgPool, follower_id: Uuid, following_id: Uuid) -> Result<FollowRelation> {
+pub async fn follow_user(
+    pool: &PgPool,
+    follower_id: Uuid,
+    following_id: Uuid,
+) -> Result<FollowRelation> {
     if follower_id == following_id {
         return Err(Error::BadRequest("cannot follow yourself".into()));
     }

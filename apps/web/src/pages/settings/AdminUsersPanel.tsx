@@ -1,14 +1,5 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import {
-  Divider,
-  Group,
-  Pagination,
-  Paper,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-} from '@mantine/core'
+import { Divider, Group, Pagination, Paper, Stack, Switch, Text, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconSearch } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
@@ -21,10 +12,7 @@ const ADMIN_USERS_PAGE_SIZE = 10
 function matchesAdminUser(u: AdminUserSummary, q: string): boolean {
   const needle = q.trim().toLowerCase()
   if (!needle) return true
-  return (
-    u.email.toLowerCase().includes(needle) ||
-    (u.display_name?.toLowerCase().includes(needle) ?? false)
-  )
+  return u.email.toLowerCase().includes(needle) || (u.display_name?.toLowerCase().includes(needle) ?? false)
 }
 
 export function AdminUsersPanel(): ReactElement {
@@ -35,10 +23,7 @@ export function AdminUsersPanel(): ReactElement {
   const allUsers = users.data?.users ?? []
   const adminCount = allUsers.filter((u) => u.is_admin).length
 
-  const filteredUsers = useMemo(
-    () => allUsers.filter((u) => matchesAdminUser(u, userQuery)),
-    [allUsers, userQuery]
-  )
+  const filteredUsers = useMemo(() => allUsers.filter((u) => matchesAdminUser(u, userQuery)), [allUsers, userQuery])
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ADMIN_USERS_PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const pageUsers = useMemo(() => {
@@ -65,9 +50,7 @@ export function AdminUsersPanel(): ReactElement {
           }}
           aria-label="Filter users"
         />
-        {users.isError ? (
-          <QueryErrorAlert error={users.error} onRetry={() => void users.refetch()} />
-        ) : null}
+        {users.isError ? <QueryErrorAlert error={users.error} onRetry={() => void users.refetch()} /> : null}
         {users.isLoading ? <SettingsSkeleton /> : null}
         {!users.isLoading && filteredUsers.length === 0 ? (
           <Text size="sm" c="dimmed">
@@ -124,13 +107,9 @@ export function AdminUsersPanel(): ReactElement {
             <Text size="xs" c="dimmed">
               {filteredUsers.length} user{filteredUsers.length === 1 ? '' : 's'}
               {userQuery.trim() ? ' match' : ''}
-              {filteredUsers.length > ADMIN_USERS_PAGE_SIZE
-                ? ` · page ${safePage} of ${totalPages}`
-                : ''}
+              {filteredUsers.length > ADMIN_USERS_PAGE_SIZE ? ` · page ${safePage} of ${totalPages}` : ''}
             </Text>
-            {totalPages > 1 ? (
-              <Pagination value={safePage} onChange={setPage} total={totalPages} size="sm" />
-            ) : null}
+            {totalPages > 1 ? <Pagination value={safePage} onChange={setPage} total={totalPages} size="sm" /> : null}
           </Group>
         ) : null}
       </Stack>

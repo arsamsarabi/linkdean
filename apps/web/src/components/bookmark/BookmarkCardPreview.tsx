@@ -35,13 +35,7 @@ type Props = {
   onPreviewError: () => void
 }
 
-export function BookmarkCardPreview({
-  url,
-  title,
-  previewSrc,
-  faviconUrl,
-  onPreviewError,
-}: Props): ReactElement {
+export function BookmarkCardPreview({ url, title, previewSrc, faviconUrl, onPreviewError }: Props): ReactElement {
   return (
     <UnstyledButton
       component="a"

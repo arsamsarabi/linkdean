@@ -1,16 +1,5 @@
 import { type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Group,
-  Menu,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { ActionIcon, Badge, Button, Group, Menu, Select, Stack, Text, TextInput, Title } from '@mantine/core'
 import {
   IconDeviceFloppy,
   IconDotsVertical,
@@ -91,12 +80,8 @@ export function DashboardPageHeader({
         ) : (
           <Group gap="sm" align="center" wrap="wrap" style={{ flex: '1 1 220px', minWidth: 220 }}>
             <Title order={2}>{view.title}</Title>
-            {inviteeAccess ? (
-              <ShareBadge access={inviteeAccess} ownerLabel={view.owner_display_name} />
-            ) : null}
-            {isOwner && view.shared_out ? (
-              <ShareBadge outgoing sharedWith={view.shared_with} />
-            ) : null}
+            {inviteeAccess ? <ShareBadge access={inviteeAccess} ownerLabel={view.owner_display_name} /> : null}
+            {isOwner && view.shared_out ? <ShareBadge outgoing sharedWith={view.shared_with} /> : null}
             {view.deleted_at ? (
               <Badge size="sm" variant="outline" color="red" tt="none">
                 Pending delete
@@ -132,19 +117,13 @@ export function DashboardPageHeader({
                   New dashboard
                 </Menu.Item>
                 {socialEnabled ? (
-                  <Menu.Item
-                    leftSection={<IconMessageCircle size={14} stroke={1.5} />}
-                    onClick={onOpenSocial}
-                  >
+                  <Menu.Item leftSection={<IconMessageCircle size={14} stroke={1.5} />} onClick={onOpenSocial}>
                     Likes & comments
                   </Menu.Item>
                 ) : null}
                 {isOwner ? (
                   <>
-                    <Menu.Item
-                      leftSection={<IconShare size={14} stroke={1.5} />}
-                      onClick={onOpenShare}
-                    >
+                    <Menu.Item leftSection={<IconShare size={14} stroke={1.5} />} onClick={onOpenShare}>
                       Share…
                     </Menu.Item>
                     <Menu.Item
@@ -155,11 +134,7 @@ export function DashboardPageHeader({
                       {isPinned ? 'Already default' : 'Set as default'}
                     </Menu.Item>
                     <Menu.Divider />
-                    <Menu.Item
-                      color="red"
-                      leftSection={<IconTrash size={14} stroke={1.5} />}
-                      onClick={onOpenDelete}
-                    >
+                    <Menu.Item color="red" leftSection={<IconTrash size={14} stroke={1.5} />} onClick={onOpenDelete}>
                       Delete dashboard
                     </Menu.Item>
                   </>

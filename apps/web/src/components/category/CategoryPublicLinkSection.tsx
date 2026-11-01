@@ -53,8 +53,7 @@ export function CategoryPublicLinkSection({
   return (
     <Stack gap="sm">
       <Text size="sm" c="dimmed">
-        Anyone with the link can view this list (read-only). Unlisted — not searchable. Notes stay
-        private.
+        Anyone with the link can view this list (read-only). Unlisted — not searchable. Notes stay private.
       </Text>
 
       {error ? <QueryErrorAlert error={error} onRetry={onRetry} /> : null}
@@ -90,11 +89,7 @@ export function CategoryPublicLinkSection({
                     onClick={copy}
                     mb={2}
                   >
-                    {copied ? (
-                      <IconCheck size={16} stroke={1.5} />
-                    ) : (
-                      <IconCopy size={16} stroke={1.5} />
-                    )}
+                    {copied ? <IconCheck size={16} stroke={1.5} /> : <IconCopy size={16} stroke={1.5} />}
                   </ActionIcon>
                 </Tooltip>
               )}

@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import type { SortKey } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
 import {
-  FOLDER_ALL,
   filterAndSortLibraryItems,
+  FOLDER_ALL,
   folderBreadcrumb,
   isSharedFolder,
   listFolderContents,
@@ -42,18 +42,12 @@ export function useLibraryExplorerContents({
     () => listFolderContents(selectedId, categories, bookmarks, showHidden),
     [selectedId, categories, bookmarks, showHidden]
   )
-  const sortedFolders = useMemo(
-    () => sortExplorerFolders(contents.folders, sort),
-    [contents.folders, sort]
-  )
+  const sortedFolders = useMemo(() => sortExplorerFolders(contents.folders, sort), [contents.folders, sort])
   const ownedFolders = useMemo(
     () => (atAll ? sortedFolders.filter((f) => !isSharedFolder(f)) : sortedFolders),
     [atAll, sortedFolders]
   )
-  const sharedFolders = useMemo(
-    () => (atAll ? sortedFolders.filter(isSharedFolder) : []),
-    [atAll, sortedFolders]
-  )
+  const sharedFolders = useMemo(() => (atAll ? sortedFolders.filter(isSharedFolder) : []), [atAll, sortedFolders])
   const sortedBookmarks = useMemo(
     () =>
       filterAndSortLibraryItems({

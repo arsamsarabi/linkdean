@@ -12,12 +12,7 @@ import {
   TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  useCreateBookmark,
-  useDeleteBookmarkPreview,
-  useUpdateBookmark,
-  useUploadBookmarkPreview,
-} from '@/hooks'
+import { useCreateBookmark, useDeleteBookmarkPreview, useUpdateBookmark, useUploadBookmarkPreview } from '@/hooks'
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
@@ -42,10 +37,7 @@ export function BookmarkDrawer({ opened, onClose, categories, initial }: Props):
   const uploadPreview = useUploadBookmarkPreview()
   const deletePreview = useDeleteBookmarkPreview()
   const pending =
-    createBookmark.isPending ||
-    updateBookmark.isPending ||
-    uploadPreview.isPending ||
-    deletePreview.isPending
+    createBookmark.isPending || updateBookmark.isPending || uploadPreview.isPending || deletePreview.isPending
 
   useEffect(() => {
     if (!opened) return

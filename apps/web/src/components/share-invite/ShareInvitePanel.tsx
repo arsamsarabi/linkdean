@@ -1,15 +1,5 @@
 import { type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Button,
-  Group,
-  Select,
-  Skeleton,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-} from '@mantine/core'
+import { ActionIcon, Button, Group, Select, Skeleton, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import { IconTrash } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import type { ShareAccess } from '@/schemas'

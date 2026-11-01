@@ -37,13 +37,7 @@ export function ShareBadge(props: Props): ReactElement {
   if (props.outgoing) {
     return (
       <Tooltip label={outgoingTooltip(props.sharedWith)}>
-        <Badge
-          size={size}
-          variant="light"
-          color="blue"
-          tt="none"
-          leftSection={<IconShare size={10} stroke={1.5} />}
-        >
+        <Badge size={size} variant="light" color="blue" tt="none" leftSection={<IconShare size={10} stroke={1.5} />}>
           Shared
         </Badge>
       </Tooltip>

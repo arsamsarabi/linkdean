@@ -11,10 +11,7 @@ use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route(
-            "/social/{subject_type}/{subject_id}",
-            get(summary),
-        )
+        .route("/social/{subject_type}/{subject_id}", get(summary))
         .route(
             "/social/{subject_type}/{subject_id}/like",
             post(like).delete(unlike),
@@ -27,7 +24,10 @@ pub fn router() -> Router<AppState> {
             "/social/{subject_type}/{subject_id}/rating",
             post(rate).delete(unrate),
         )
-        .route("/social/comments/{id}", axum::routing::delete(delete_comment))
+        .route(
+            "/social/comments/{id}",
+            axum::routing::delete(delete_comment),
+        )
 }
 
 fn parse_subject(s: &str) -> Result<SocialSubjectType, linkdean_core::Error> {

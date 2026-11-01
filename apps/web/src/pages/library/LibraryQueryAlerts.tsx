@@ -9,11 +9,7 @@ export function LibraryQueryAlerts(): ReactElement | null {
   return (
     <>
       {lib.cats.isError ? (
-        <QueryErrorAlert
-          error={lib.cats.error}
-          onRetry={() => void lib.cats.refetch()}
-          title="Categories failed"
-        />
+        <QueryErrorAlert error={lib.cats.error} onRetry={() => void lib.cats.refetch()} title="Categories failed" />
       ) : null}
       {lib.bookmarks.isError && !lib.searching ? (
         <QueryErrorAlert
@@ -23,11 +19,7 @@ export function LibraryQueryAlerts(): ReactElement | null {
         />
       ) : null}
       {lib.search.isError && lib.searching ? (
-        <QueryErrorAlert
-          error={lib.search.error}
-          onRetry={() => void lib.search.refetch()}
-          title="Search failed"
-        />
+        <QueryErrorAlert error={lib.search.error} onRetry={() => void lib.search.refetch()} title="Search failed" />
       ) : null}
       {lib.searching && lib.searchCatchUpCount > 0 ? (
         <Alert color="yellow" title="Search index catching up" withCloseButton={false}>

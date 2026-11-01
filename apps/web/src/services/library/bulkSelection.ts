@@ -1,7 +1,5 @@
 /** Writable bookmark ids from a visible list (RO shares excluded). */
-export function writableIds(
-  items: ReadonlyArray<{ id: string; can_write?: boolean }>
-): string[] {
+export function writableIds(items: ReadonlyArray<{ id: string; can_write?: boolean }>): string[] {
   return items.filter((b) => b.can_write !== false).map((b) => b.id)
 }
 

@@ -19,8 +19,5 @@ export {
   useRotateCategoryPublicLink,
   useDisableCategoryPublicLink,
 } from './useCategoryPublicLink'
-export {
-  useCategoryFolderActions,
-  type CategoryFolderActions,
-} from './useCategoryFolderActions'
+export { useCategoryFolderActions, type CategoryFolderActions } from './useCategoryFolderActions'
 export { useShareCategoryDrawer } from './useShareCategoryDrawer'

@@ -83,7 +83,8 @@ async fn register(
     .await?;
     if must_consume_invite {
         if let Some(code) = invite_code {
-            if let Err(e) = db::consume_registration_invite(&state.pool, code, &req.email, user.id).await
+            if let Err(e) =
+                db::consume_registration_invite(&state.pool, code, &req.email, user.id).await
             {
                 tracing::warn!(user_id = %user.id, error = %e, "invite consume failed after register");
                 return Err(e.into());
@@ -91,7 +92,9 @@ async fn register(
         }
     }
     match db::claim_pending_share_invites(&state.pool, &req.email, user.id).await {
-        Ok(n) if n > 0 => tracing::info!(user_id = %user.id, claimed = n, "claimed pending share invites"),
+        Ok(n) if n > 0 => {
+            tracing::info!(user_id = %user.id, claimed = n, "claimed pending share invites")
+        }
         Ok(_) => {}
         Err(e) => tracing::warn!(user_id = %user.id, error = %e, "pending share claim failed"),
     }

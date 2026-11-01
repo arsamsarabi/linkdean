@@ -20,8 +20,7 @@ export function AdminInvitesPanel(): ReactElement {
         <div>
           <Text fw={500}>Registration invites</Text>
           <Text size="sm" c="dimmed">
-            Issue one-time codes when registration is closed. Share the link; email delivery comes
-            later with SMTP.
+            Issue one-time codes when registration is closed. Share the link; email delivery comes later with SMTP.
           </Text>
         </div>
         <Group align="flex-end" wrap="wrap" gap="sm">
@@ -100,9 +99,7 @@ export function AdminInvitesPanel(): ReactElement {
             </Stack>
           </Paper>
         ) : null}
-        {invites.isError ? (
-          <QueryErrorAlert error={invites.error} onRetry={() => void invites.refetch()} />
-        ) : null}
+        {invites.isError ? <QueryErrorAlert error={invites.error} onRetry={() => void invites.refetch()} /> : null}
         {invites.isLoading ? <SettingsSkeleton /> : null}
         {(invites.data?.invites ?? []).length === 0 && !invites.isLoading ? (
           <Text size="sm" c="dimmed">

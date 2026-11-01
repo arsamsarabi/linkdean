@@ -13,10 +13,7 @@ export function useLibraryUrlState() {
   const filterCats = useMemo(() => asStringList(searchParams.category), [searchParams.category])
   const filterTags = useMemo(() => asStringList(searchParams.tag), [searchParams.tag])
   const filterFlags = useMemo(
-    () =>
-      asStringList(searchParams.flag).filter((f): f is FlagFilter =>
-        ['unread', 'favorite', 'pinned'].includes(f)
-      ),
+    () => asStringList(searchParams.flag).filter((f): f is FlagFilter => ['unread', 'favorite', 'pinned'].includes(f)),
     [searchParams.flag]
   )
   const filterSince: SinceFilter | null = searchParams.since ?? null
@@ -76,9 +73,7 @@ export function useLibraryUrlState() {
   }
 
   function toggleFlagFilter(key: FlagKey): void {
-    const next = filterFlags.includes(key)
-      ? filterFlags.filter((f) => f !== key)
-      : [...filterFlags, key]
+    const next = filterFlags.includes(key) ? filterFlags.filter((f) => f !== key) : [...filterFlags, key]
     setLibrarySearch({ flag: next })
   }
 
@@ -100,10 +95,8 @@ export function useLibraryUrlState() {
     setFilterOpen(false)
   }
 
-  const panelFilterActive =
-    filterCats.length > 0 || filterTags.length > 0 || !!filterSince || vaultOnly
-  const panelFilterCount =
-    filterCats.length + filterTags.length + (filterSince ? 1 : 0) + (vaultOnly ? 1 : 0)
+  const panelFilterActive = filterCats.length > 0 || filterTags.length > 0 || !!filterSince || vaultOnly
+  const panelFilterCount = filterCats.length + filterTags.length + (filterSince ? 1 : 0) + (vaultOnly ? 1 : 0)
   const filterActive = panelFilterActive || filterFlags.length > 0
 
   return {

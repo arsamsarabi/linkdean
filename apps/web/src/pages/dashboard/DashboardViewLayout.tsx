@@ -15,13 +15,7 @@ type Props = {
   onStartEdit: () => void
 }
 
-export function DashboardViewLayout({
-  view,
-  empty,
-  canEditLayout,
-  viewerUserId,
-  onStartEdit,
-}: Props): ReactElement {
+export function DashboardViewLayout({ view, empty, canEditLayout, viewerUserId, onStartEdit }: Props): ReactElement {
   if (empty) {
     return (
       <EmptyState

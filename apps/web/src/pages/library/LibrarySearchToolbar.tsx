@@ -1,26 +1,10 @@
 import { type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Button,
-  Group,
-  Kbd,
-  Select,
-  Stack,
-  TextInput,
-  Tooltip,
-} from '@mantine/core'
-import {
-  IconBookmark,
-  IconFilter,
-  IconPin,
-  IconSearch,
-  IconStar,
-  IconX,
-} from '@tabler/icons-react'
+import { ActionIcon, Button, Group, Kbd, Select, Stack, TextInput, Tooltip } from '@mantine/core'
+import { IconBookmark, IconFilter, IconPin, IconSearch, IconStar, IconX } from '@tabler/icons-react'
 import { type SortKey } from '@/lib'
 import { LIBRARY_FILTER_PANEL_ID } from './libraryConstants'
-import { useLibraryPageModel } from './LibraryPageContext'
 import styles from './LibraryPage.module.css'
+import { useLibraryPageModel } from './LibraryPageContext'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

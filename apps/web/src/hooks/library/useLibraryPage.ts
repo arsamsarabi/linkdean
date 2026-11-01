@@ -41,11 +41,7 @@ export function useLibraryPage() {
   })
 
   const folderCat = useMemo(() => {
-    if (
-      !url.folderId ||
-      url.folderId === FOLDER_ALL ||
-      url.folderId === FOLDER_UNCATEGORIZED
-    ) {
+    if (!url.folderId || url.folderId === FOLDER_ALL || url.folderId === FOLDER_UNCATEGORIZED) {
       return null
     }
     return (listState.cats.data || []).find((c) => c.id === url.folderId) ?? null

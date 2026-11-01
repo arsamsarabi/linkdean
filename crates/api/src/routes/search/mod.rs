@@ -52,8 +52,7 @@ async fn search(
             Ok(docs) => {
                 for d in docs {
                     let id = Uuid::parse_str(&d.id).unwrap_or_else(|_| Uuid::nil());
-                    let owner_user_id =
-                        Uuid::parse_str(&d.owner_user_id).unwrap_or(user.id);
+                    let owner_user_id = Uuid::parse_str(&d.owner_user_id).unwrap_or(user.id);
                     let can_write = db::bookmark_can_write(&state.pool, user.id, id)
                         .await
                         .unwrap_or(false);

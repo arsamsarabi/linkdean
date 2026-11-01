@@ -1,18 +1,8 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import {
-  Box,
-  Button,
-  Drawer,
-  Group,
-  LoadingOverlay,
-  Radio,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core'
+import { Box, Button, Drawer, Group, LoadingOverlay, Radio, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { useDuplicates, useMergeDuplicateGroup } from '@/hooks'
 import { QueryErrorAlert } from '@/components/query-error-alert'
+import { useDuplicates, useMergeDuplicateGroup } from '@/hooks'
 import type { Bookmark, DuplicateGroup } from '@/schemas'
 import { pickDefaultKeepId } from '@/services'
 
@@ -116,14 +106,11 @@ export function DuplicateMergeDrawer({ opened, onClose }: Props): ReactElement {
           ) : null}
           {groups.length > 0 ? (
             <>
-              <Title order={5}>{groups.length} duplicate group{groups.length === 1 ? '' : 's'}</Title>
+              <Title order={5}>
+                {groups.length} duplicate group{groups.length === 1 ? '' : 's'}
+              </Title>
               {groups.map((g) => (
-                <GroupCard
-                  key={g.url}
-                  group={g}
-                  merging={busyUrl === g.url && merge.isPending}
-                  onMerge={onMerge}
-                />
+                <GroupCard key={g.url} group={g} merging={busyUrl === g.url && merge.isPending} onMerge={onMerge} />
               ))}
             </>
           ) : null}

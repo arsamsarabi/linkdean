@@ -20,7 +20,10 @@ pub fn router() -> Router<AppState> {
         .route("/dashboards/default", get(get_default).put(put_default))
         .route(
             "/dashboards/{id}",
-            get(get_one).put(put_one).patch(patch_one).delete(delete_one),
+            get(get_one)
+                .put(put_one)
+                .patch(patch_one)
+                .delete(delete_one),
         )
         .route(
             "/dashboards/{id}/shares",
@@ -41,8 +44,8 @@ async fn list(
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<Vec<DashboardSummary>>> {
     let settings = db::get_user_settings(&state.pool, user.id).await?;
-    let rows =
-        db::list_dashboards_filtered(&state.pool, user.id, settings.show_deleted_in_library).await?;
+    let rows = db::list_dashboards_filtered(&state.pool, user.id, settings.show_deleted_in_library)
+        .await?;
     Ok(Json(rows))
 }
 
@@ -122,13 +125,9 @@ async fn list_shares(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<DashboardSharesEnvelope>> {
     let shares = db::list_shares_for_dashboard(&state.pool, user.id, id).await?;
-    let pending = db::list_pending_for_subject(
-        &state.pool,
-        user.id,
-        PendingShareSubjectType::Dashboard,
-        id,
-    )
-    .await?;
+    let pending =
+        db::list_pending_for_subject(&state.pool, user.id, PendingShareSubjectType::Dashboard, id)
+            .await?;
     Ok(Json(DashboardSharesEnvelope { shares, pending }))
 }
 

@@ -53,12 +53,9 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
 
   const category = asStringList(search.category)
   const tag = asStringList(search.tag)
-  const flag = asStringList(search.flag).filter((f): f is FlagKey =>
-    (FLAG_KEYS as readonly string[]).includes(f)
-  )
+  const flag = asStringList(search.flag).filter((f): f is FlagKey => (FLAG_KEYS as readonly string[]).includes(f))
   const sinceRaw = typeof search.since === 'string' ? search.since : undefined
-  const since =
-    sinceRaw && (SINCE_KEYS as readonly string[]).includes(sinceRaw) ? (sinceRaw as SinceKey) : undefined
+  const since = sinceRaw && (SINCE_KEYS as readonly string[]).includes(sinceRaw) ? (sinceRaw as SinceKey) : undefined
   const vaultRaw = search.vault
   const vault =
     vaultRaw === true || vaultRaw === 1 || vaultRaw === '1' || vaultRaw === 'true' ? ('1' as const) : undefined
@@ -66,8 +63,7 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
   const folderRaw = typeof search.folder === 'string' ? search.folder.trim() : ''
   const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
   const createRaw = search.create
-  const create =
-    createRaw === true || createRaw === 1 || createRaw === '1' || createRaw === 'true' ? true : undefined
+  const create = createRaw === true || createRaw === 1 || createRaw === '1' || createRaw === 'true' ? true : undefined
   const focus = search.focus === 'search' ? ('search' as const) : undefined
 
   return {
@@ -101,11 +97,8 @@ export function buildLibrarySearch(input: {
   const sort = input.sort && input.sort !== 'updated_desc' ? input.sort : undefined
   const folderRaw = input.folder?.trim() || undefined
   const folder = folderRaw && folderRaw !== 'all' ? folderRaw : undefined
-  const flag = (input.flag || []).filter((f): f is FlagKey =>
-    (FLAG_KEYS as readonly string[]).includes(f)
-  )
-  const since =
-    input.since && (SINCE_KEYS as readonly string[]).includes(input.since) ? input.since : undefined
+  const flag = (input.flag || []).filter((f): f is FlagKey => (FLAG_KEYS as readonly string[]).includes(f))
+  const since = input.since && (SINCE_KEYS as readonly string[]).includes(input.since) ? input.since : undefined
   return {
     q,
     sort,

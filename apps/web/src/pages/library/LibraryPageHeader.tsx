@@ -1,15 +1,9 @@
 import { type ReactElement } from 'react'
 import { Button, Center, Group, SegmentedControl, Stack, Text, Title, Tooltip } from '@mantine/core'
-import {
-  IconBookmarkPlus,
-  IconCheck,
-  IconCopy,
-  IconFolders,
-  IconLayoutGrid,
-} from '@tabler/icons-react'
+import { IconBookmarkPlus, IconCheck, IconCopy, IconFolders, IconLayoutGrid } from '@tabler/icons-react'
 import type { LibraryViewMode } from '@/hooks'
-import { useLibraryPageModel } from './LibraryPageContext'
 import styles from './LibraryPage.module.css'
+import { useLibraryPageModel } from './LibraryPageContext'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 

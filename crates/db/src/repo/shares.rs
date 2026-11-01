@@ -365,14 +365,13 @@ pub async fn delete_share(
     invitee_user_id: Uuid,
 ) -> Result<()> {
     let cat = require_category_owner(pool, owner_user_id, category_id).await?;
-    let res = sqlx::query(
-        "DELETE FROM category_shares WHERE category_id = $1 AND invitee_user_id = $2",
-    )
-    .bind(category_id)
-    .bind(invitee_user_id)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+    let res =
+        sqlx::query("DELETE FROM category_shares WHERE category_id = $1 AND invitee_user_id = $2")
+            .bind(category_id)
+            .bind(invitee_user_id)
+            .execute(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
@@ -389,14 +388,13 @@ pub async fn delete_share(
 
 /// True if user can read the bookmark via ownership or a linked category share.
 pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) -> Result<bool> {
-    let owned: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT id FROM bookmarks WHERE id = $1 AND owner_user_id = $2",
-    )
-    .bind(bookmark_id)
-    .bind(user_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+    let owned: Option<(Uuid,)> =
+        sqlx::query_as("SELECT id FROM bookmarks WHERE id = $1 AND owner_user_id = $2")
+            .bind(bookmark_id)
+            .bind(user_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
     if owned.is_some() {
         return Ok(true);
     }
@@ -423,14 +421,13 @@ pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) 
 
 /// True if user can mutate bookmark: owns it, or has write on any linked category.
 pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) -> Result<bool> {
-    let owned: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT id FROM bookmarks WHERE id = $1 AND owner_user_id = $2",
-    )
-    .bind(bookmark_id)
-    .bind(user_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+    let owned: Option<(Uuid,)> =
+        sqlx::query_as("SELECT id FROM bookmarks WHERE id = $1 AND owner_user_id = $2")
+            .bind(bookmark_id)
+            .bind(user_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
     if owned.is_some() {
         return Ok(true);
     }

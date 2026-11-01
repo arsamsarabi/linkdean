@@ -1,15 +1,5 @@
 import { type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Button,
-  Group,
-  MultiSelect,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-} from '@mantine/core'
+import { ActionIcon, Button, Group, MultiSelect, SimpleGrid, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import { IconArrowDown, IconArrowUp, IconPlus, IconTrash } from '@tabler/icons-react'
 import { BookmarkCard } from '@/components'
 import type { Bookmark } from '@/schemas'

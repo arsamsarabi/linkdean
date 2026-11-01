@@ -1,11 +1,7 @@
 import { useMemo, useState } from 'react'
 import { notifications } from '@mantine/notifications'
 import type { BulkEditMode } from '@/components'
-import {
-  useBulkAddCategories,
-  useBulkDeleteBookmarks,
-  useBulkTagBookmarks,
-} from '@/hooks/bookmarks'
+import { useBulkAddCategories, useBulkDeleteBookmarks, useBulkTagBookmarks } from '@/hooks/bookmarks'
 import type { Bookmark } from '@/schemas'
 import { toggleId, writableIds, type LibraryListItem } from '@/services'
 
@@ -39,8 +35,7 @@ export function useLibrarySelection({ list, bookmarks }: Input) {
 
   const selectableIds = useMemo(() => writableIds(list), [list])
   const selectedCount = selectedIds.size
-  const allVisibleSelected =
-    selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id))
+  const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id))
 
   function exitSelectMode(): void {
     setSelectMode(false)

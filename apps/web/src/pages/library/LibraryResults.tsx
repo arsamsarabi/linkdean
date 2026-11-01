@@ -1,9 +1,9 @@
 import { type ReactElement } from 'react'
 import { LibraryExplorerView } from '@/components'
 import { canWriteCategory } from '@/lib'
-import { useLibraryPageModel } from './LibraryPageContext'
 import { LibraryGridView } from './LibraryGridView'
 import styles from './LibraryPage.module.css'
+import { useLibraryPageModel } from './LibraryPageContext'
 
 export function LibraryResults(): ReactElement {
   const lib = useLibraryPageModel()

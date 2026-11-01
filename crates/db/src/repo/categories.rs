@@ -1,7 +1,8 @@
 use linkdean_core::crypto;
 use linkdean_core::{
     BookmarkView, Category, CategoryAccess, CategoryPublicLinkView, CategoryView, CreateBookmark,
-    CreateCategory, Error, ForkCategory, PublicBookmarkView, PublicListView, Result, UpdateCategory,
+    CreateCategory, Error, ForkCategory, PublicBookmarkView, PublicListView, Result,
+    UpdateCategory,
 };
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
@@ -70,7 +71,10 @@ fn normalize_category_icon(icon: Option<String>) -> Option<String> {
     if key.is_empty() {
         return None;
     }
-    ALLOWED.iter().find(|&&a| a == key).map(|s| (*s).to_string())
+    ALLOWED
+        .iter()
+        .find(|&&a| a == key)
+        .map(|s| (*s).to_string())
 }
 
 pub async fn get_category_by_id(pool: &PgPool, id: Uuid) -> Result<Category> {
@@ -137,7 +141,11 @@ pub async fn list_categories(
                     .await?;
         }
     }
-    out.sort_by(|a, b| a.position.cmp(&b.position).then_with(|| a.name.cmp(&b.name)));
+    out.sort_by(|a, b| {
+        a.position
+            .cmp(&b.position)
+            .then_with(|| a.name.cmp(&b.name))
+    });
     Ok(out)
 }
 

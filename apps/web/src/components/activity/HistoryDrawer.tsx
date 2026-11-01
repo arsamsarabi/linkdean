@@ -1,15 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Drawer,
-  Group,
-  SegmentedControl,
-  Skeleton,
-  Stack,
-  Text,
-} from '@mantine/core'
+import { ActionIcon, Badge, Box, Drawer, Group, SegmentedControl, Skeleton, Stack, Text } from '@mantine/core'
 import { IconHistory } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useActivity, usePrefetchActivity } from '@/hooks'
@@ -93,9 +83,7 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
           ]}
         />
 
-        {list.isError && !list.data ? (
-          <QueryErrorAlert error={list.error} onRetry={() => void list.refetch()} />
-        ) : null}
+        {list.isError && !list.data ? <QueryErrorAlert error={list.error} onRetry={() => void list.refetch()} /> : null}
 
         {showSkeleton ? (
           <Stack gap="sm">

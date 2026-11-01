@@ -1,10 +1,7 @@
 import type { ReactElement } from 'react'
 import { Badge, Group, Text } from '@mantine/core'
 import { IconLock } from '@tabler/icons-react'
-import {
-  CategoryFolderMenu,
-  type CategoryFolderMenuProps,
-} from '@/components/category/CategoryFolderMenu'
+import { CategoryFolderMenu, type CategoryFolderMenuProps } from '@/components/category/CategoryFolderMenu'
 import { ShareBadge } from '@/components/share-badge'
 import { CategoryIcon } from '@/lib'
 import type { CategoryAccess } from '@/schemas'
@@ -46,10 +43,7 @@ export function FolderTile({
   const showOutgoing = !shared && !!sharedOut
   const pendingDelete = !!deletedAt
   const showBadges = isVault || isHidden || !!shared || showOutgoing || pendingDelete
-  const menuProps =
-    menu && access
-      ? { name, access, isVault, className: styles.menu, ...menu }
-      : null
+  const menuProps = menu && access ? { name, access, isVault, className: styles.menu, ...menu } : null
 
   return (
     <button

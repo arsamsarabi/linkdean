@@ -28,13 +28,26 @@ async fn category_share_emits_invite_access_revoke() {
         return;
     };
 
-    let owner = db::create_user(&pool, &email("own"), Some("password-long"), Some("Own"), None, None)
-        .await
-        .expect("owner");
-    let invitee =
-        db::create_user(&pool, &email("inv"), Some("password-long"), Some("Inv"), None, None)
-            .await
-            .expect("invitee");
+    let owner = db::create_user(
+        &pool,
+        &email("own"),
+        Some("password-long"),
+        Some("Own"),
+        None,
+        None,
+    )
+    .await
+    .expect("owner");
+    let invitee = db::create_user(
+        &pool,
+        &email("inv"),
+        Some("password-long"),
+        Some("Inv"),
+        None,
+        None,
+    )
+    .await
+    .expect("invitee");
 
     let cat = db::create_category(
         &pool,
@@ -66,9 +79,7 @@ async fn category_share_emits_invite_access_revoke() {
         .await
         .expect("list");
     assert!(list.iter().any(|n| {
-        n.kind == NotificationKind::ShareInvite
-            && n.subject_id == cat.id
-            && n.read_at.is_none()
+        n.kind == NotificationKind::ShareInvite && n.subject_id == cat.id && n.read_at.is_none()
     }));
 
     db::update_share(
@@ -96,7 +107,9 @@ async fn category_share_emits_invite_access_revoke() {
     let list = db::list_notifications(&pool, invitee.id, 20)
         .await
         .expect("list3");
-    assert!(list.iter().any(|n| n.kind == NotificationKind::ShareRevoked));
+    assert!(list
+        .iter()
+        .any(|n| n.kind == NotificationKind::ShareRevoked));
 
     let unread = db::unread_notification_count(&pool, invitee.id)
         .await
@@ -120,13 +133,26 @@ async fn shared_bookmark_edit_notifies_owner() {
         return;
     };
 
-    let owner = db::create_user(&pool, &email("o2"), Some("password-long"), Some("O2"), None, None)
-        .await
-        .expect("owner");
-    let writer =
-        db::create_user(&pool, &email("w2"), Some("password-long"), Some("W2"), None, None)
-            .await
-            .expect("writer");
+    let owner = db::create_user(
+        &pool,
+        &email("o2"),
+        Some("password-long"),
+        Some("O2"),
+        None,
+        None,
+    )
+    .await
+    .expect("owner");
+    let writer = db::create_user(
+        &pool,
+        &email("w2"),
+        Some("password-long"),
+        Some("W2"),
+        None,
+        None,
+    )
+    .await
+    .expect("writer");
 
     let cat = db::create_category(
         &pool,
@@ -202,13 +228,26 @@ async fn shared_dashboard_edit_notifies_owner() {
         return;
     };
 
-    let owner = db::create_user(&pool, &email("o3"), Some("password-long"), Some("O3"), None, None)
-        .await
-        .expect("owner");
-    let writer =
-        db::create_user(&pool, &email("w3"), Some("password-long"), Some("W3"), None, None)
-            .await
-            .expect("writer");
+    let owner = db::create_user(
+        &pool,
+        &email("o3"),
+        Some("password-long"),
+        Some("O3"),
+        None,
+        None,
+    )
+    .await
+    .expect("owner");
+    let writer = db::create_user(
+        &pool,
+        &email("w3"),
+        Some("password-long"),
+        Some("W3"),
+        None,
+        None,
+    )
+    .await
+    .expect("writer");
 
     let home = db::create_dashboard(
         &pool,
@@ -254,7 +293,7 @@ async fn shared_dashboard_edit_notifies_owner() {
     let list = db::list_notifications(&pool, owner.id, 20)
         .await
         .expect("list");
-    assert!(list.iter().any(|n| {
-        n.kind == NotificationKind::SharedEdit && n.subject_id == home.id
-    }));
+    assert!(list
+        .iter()
+        .any(|n| { n.kind == NotificationKind::SharedEdit && n.subject_id == home.id }));
 }

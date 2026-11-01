@@ -1,6 +1,6 @@
 use linkdean_core::{
-    Error, PendingShareInvite, PendingShareInviteView, PendingShareSubjectType, Result, ShareAccess,
-    UpdatePendingShareInvite,
+    Error, PendingShareInvite, PendingShareInviteView, PendingShareSubjectType, Result,
+    ShareAccess, UpdatePendingShareInvite,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -12,7 +12,8 @@ use super::users::{find_user_by_email, find_user_by_id};
 fn to_view(row: PendingShareInvite) -> Result<PendingShareInviteView> {
     Ok(PendingShareInviteView {
         id: row.id,
-        subject_type: PendingShareSubjectType::parse(&row.subject_type).map_err(Error::BadRequest)?,
+        subject_type: PendingShareSubjectType::parse(&row.subject_type)
+            .map_err(Error::BadRequest)?,
         subject_id: row.subject_id,
         invitee_email: row.invitee_email,
         access: ShareAccess::parse(&row.access).map_err(Error::BadRequest)?,

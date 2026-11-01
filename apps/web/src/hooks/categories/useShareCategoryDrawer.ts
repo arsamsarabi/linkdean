@@ -54,10 +54,7 @@ export function useShareCategoryDrawer({ categoryId, opened, isVault }: Input) {
       })
       setEmail('')
       notifications.show({
-        message:
-          outcome.status === 'pending'
-            ? 'No account yet — access granted when they register'
-            : 'Invite added',
+        message: outcome.status === 'pending' ? 'No account yet — access granted when they register' : 'Invite added',
       })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
@@ -91,8 +88,7 @@ export function useShareCategoryDrawer({ categoryId, opened, isVault }: Input) {
 
   const publicPath = publicLink.data?.path
   const publicUrl = publicPath ? absolutePublicUrl(publicPath) : ''
-  const publicBusy =
-    enablePublic.isPending || rotatePublic.isPending || disablePublic.isPending
+  const publicBusy = enablePublic.isPending || rotatePublic.isPending || disablePublic.isPending
 
   return {
     email,

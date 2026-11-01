@@ -10,21 +10,14 @@ type Props = {
   onLogin: () => void
 }
 
-export function RegisterInviteGate({
-  inviteCode,
-  onInviteCode,
-  onContinue,
-  onLogin,
-}: Props): ReactElement {
+export function RegisterInviteGate({ inviteCode, onInviteCode, onContinue, onLogin }: Props): ReactElement {
   return (
     <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className={motion.fadeIn}>
       <Stack gap={6}>
         <Title order={1} c="violet">
           Registration closed
         </Title>
-        <Text c="dimmed">
-          This instance is invite-only. Ask an admin for an invite link, or paste a code below.
-        </Text>
+        <Text c="dimmed">This instance is invite-only. Ask an admin for an invite link, or paste a code below.</Text>
       </Stack>
       <Paper p="xl" radius="md" withBorder>
         <Stack gap="md">

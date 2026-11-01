@@ -66,13 +66,9 @@ export function TrashPage(): ReactElement {
         await purgeOne.mutateAsync({ kind: item.kind, id: item.id })
         notifications.show({ message: 'Permanently deleted' })
       } else {
-        const result = await purgeMany.mutateAsync(
-          purgeConfirm.map((i) => ({ kind: i.kind, id: i.id }))
-        )
+        const result = await purgeMany.mutateAsync(purgeConfirm.map((i) => ({ kind: i.kind, id: i.id })))
         notifications.show({
-          message: `Purged ${result.purged ?? purgeConfirm.length}${
-            result.failed ? `, ${result.failed} failed` : ''
-          }`,
+          message: `Purged ${result.purged ?? purgeConfirm.length}${result.failed ? `, ${result.failed} failed` : ''}`,
         })
       }
       setSelected(new Set())
@@ -138,9 +134,7 @@ export function TrashPage(): ReactElement {
                   aria-label="Select all"
                   checked={allSelected}
                   indeterminate={selected.size > 0 && !allSelected}
-                  onChange={() =>
-                    setSelected(allSelected ? new Set() : new Set(allKeys))
-                  }
+                  onChange={() => setSelected(allSelected ? new Set() : new Set(allKeys))}
                 />
               </Table.Th>
               <Table.Th>Type</Table.Th>
@@ -185,12 +179,7 @@ export function TrashPage(): ReactElement {
                       >
                         Restore
                       </Button>
-                      <Button
-                        size="compact-xs"
-                        color="red"
-                        variant="subtle"
-                        onClick={() => setPurgeConfirm([item])}
-                      >
+                      <Button size="compact-xs" color="red" variant="subtle" onClick={() => setPurgeConfirm([item])}>
                         Delete forever
                       </Button>
                     </Group>

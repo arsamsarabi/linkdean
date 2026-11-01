@@ -39,24 +39,15 @@ impl AppState {
     }
 
     pub fn preview_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
-        linkdean_worker::preview_file(
-            std::path::Path::new(&self.cfg.preview_dir),
-            bookmark_id,
-        )
+        linkdean_worker::preview_file(std::path::Path::new(&self.cfg.preview_dir), bookmark_id)
     }
 
     pub fn favicon_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
-        linkdean_worker::favicon_file(
-            std::path::Path::new(&self.cfg.preview_dir),
-            bookmark_id,
-        )
+        linkdean_worker::favicon_file(std::path::Path::new(&self.cfg.preview_dir), bookmark_id)
     }
 
     pub fn favicon_ct_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {
-        linkdean_worker::favicon_ct_file(
-            std::path::Path::new(&self.cfg.preview_dir),
-            bookmark_id,
-        )
+        linkdean_worker::favicon_ct_file(std::path::Path::new(&self.cfg.preview_dir), bookmark_id)
     }
 
     pub fn og_path(&self, bookmark_id: Uuid) -> std::path::PathBuf {

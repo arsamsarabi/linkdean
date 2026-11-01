@@ -17,8 +17,8 @@ import {
   IconBackpack,
   IconBallBasketball,
   IconBallFootball,
-  IconBallTennis,
   IconBalloon,
+  IconBallTennis,
   IconBarbell,
   IconBasket,
   IconBath,
@@ -119,8 +119,8 @@ import {
   IconHammer,
   IconHash,
   IconHeadphones,
-  IconHeartbeat,
   IconHeart,
+  IconHeartbeat,
   IconHome,
   IconHomeHeart,
   IconHorse,
@@ -128,8 +128,8 @@ import {
   IconId,
   IconInbox,
   IconKayak,
-  IconKeyboard,
   IconKey,
+  IconKeyboard,
   IconLanguage,
   IconLayersSubtract,
   IconLeaf,
@@ -149,8 +149,8 @@ import {
   IconMessageChatbot,
   IconMicrophone,
   IconMicroscope,
-  IconMoon,
   IconMoodSmile,
+  IconMoon,
   IconMotorbike,
   IconMountain,
   IconMovie,
@@ -191,6 +191,7 @@ import {
   IconRun,
   IconSailboat,
   IconSalad,
+  IconSatellite,
   IconScale,
   IconSchool,
   IconScooter,
@@ -219,7 +220,6 @@ import {
   IconTag,
   IconTags,
   IconTarget,
-  IconSatellite,
   IconTemperature,
   IconTent,
   IconTerminal2,
@@ -527,9 +527,7 @@ export const CATEGORY_ICON_OPTIONS = [
 
 export type CategoryIconKey = (typeof CATEGORY_ICON_OPTIONS)[number]['key']
 
-const BY_KEY = new Map<string, (typeof CATEGORY_ICON_OPTIONS)[number]>(
-  CATEGORY_ICON_OPTIONS.map((o) => [o.key, o])
-)
+const BY_KEY = new Map<string, (typeof CATEGORY_ICON_OPTIONS)[number]>(CATEGORY_ICON_OPTIONS.map((o) => [o.key, o]))
 
 export function isCategoryIconKey(v: string | null | undefined): v is CategoryIconKey {
   return !!v && BY_KEY.has(v)
@@ -550,12 +548,8 @@ export function CategoryIcon({ icon, ...props }: CategoryIconProps): ReactElemen
 }
 
 /** Case-insensitive match on key + label. */
-export function filterCategoryIcons(
-  query: string
-): readonly (typeof CATEGORY_ICON_OPTIONS)[number][] {
+export function filterCategoryIcons(query: string): readonly (typeof CATEGORY_ICON_OPTIONS)[number][] {
   const q = query.trim().toLowerCase()
   if (!q) return CATEGORY_ICON_OPTIONS
-  return CATEGORY_ICON_OPTIONS.filter(
-    (o) => o.key.includes(q) || o.label.toLowerCase().includes(q)
-  )
+  return CATEGORY_ICON_OPTIONS.filter((o) => o.key.includes(q) || o.label.toLowerCase().includes(q))
 }

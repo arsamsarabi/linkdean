@@ -28,10 +28,7 @@ export type BulkResult = {
   errors: string[]
 }
 
-async function runAll(
-  ids: string[],
-  fn: (id: string) => Promise<unknown>
-): Promise<BulkResult> {
+async function runAll(ids: string[], fn: (id: string) => Promise<unknown>): Promise<BulkResult> {
   let ok = 0
   const errors: string[] = []
   for (const id of ids) {
@@ -73,9 +70,7 @@ export function useBulkTagBookmarks(): UseMutationResult<BulkResult, Error, Bulk
     mutationFn: ({ ids, tags, mode, byId }: BulkTagVars) =>
       runAll(ids, (id) => {
         const next =
-          mode === 'replace'
-            ? tags.map((t) => t.trim()).filter(Boolean)
-            : unionTags(byId.get(id)?.tags ?? [], tags)
+          mode === 'replace' ? tags.map((t) => t.trim()).filter(Boolean) : unionTags(byId.get(id)?.tags ?? [], tags)
         return api.updateBookmark(id, { tags: next })
       }),
     onSuccess: () => invalidate(qc),

@@ -133,12 +133,7 @@ export function OnboardingSteps({
                 )}
               </FileButton>
               {pendingAvatar ? (
-                <Button
-                  variant="subtle"
-                  color="red"
-                  leftSection={<IconTrash {...iconSm} />}
-                  onClick={onClearAvatar}
-                >
+                <Button variant="subtle" color="red" leftSection={<IconTrash {...iconSm} />} onClick={onClearAvatar}>
                   Clear
                 </Button>
               ) : null}
@@ -173,11 +168,7 @@ export function OnboardingSteps({
               <Button leftSection={<IconLockPlus {...iconSm} />} loading={busy} onClick={onSetupVault}>
                 Enable vault
               </Button>
-              <Button
-                variant="subtle"
-                leftSection={<IconPlayerSkipForward {...iconSm} />}
-                onClick={() => onStep(3)}
-              >
+              <Button variant="subtle" leftSection={<IconPlayerSkipForward {...iconSm} />} onClick={() => onStep(3)}>
                 Skip for now
               </Button>
             </Group>

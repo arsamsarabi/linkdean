@@ -1,31 +1,9 @@
 import { type ReactElement } from 'react'
-import {
-  Group,
-  Paper,
-  Stack,
-  Tabs,
-  Text,
-  ThemeIcon,
-  Title,
-  useMantineColorScheme,
-} from '@mantine/core'
+import { Group, Paper, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconArrowsExchange,
-  IconFolder,
-  IconKey,
-  IconLock,
-  IconSettings,
-  IconShield,
-} from '@tabler/icons-react'
+import { IconArrowsExchange, IconFolder, IconKey, IconLock, IconSettings, IconShield } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import {
-  ApiKeysPanel,
-  CategoryManager,
-  ImportExportPanel,
-  QueryErrorAlert,
-  VaultPanel,
-} from '@/components'
+import { ApiKeysPanel, CategoryManager, ImportExportPanel, QueryErrorAlert, VaultPanel } from '@/components'
 import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { AdminPlatformSettings } from './AdminPlatformSettings'

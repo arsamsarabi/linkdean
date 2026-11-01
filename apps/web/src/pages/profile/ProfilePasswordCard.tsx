@@ -55,11 +55,7 @@ export function ProfilePasswordCard({
           value={newPw}
           onChange={(e) => onNewPw(e.currentTarget.value)}
         />
-        <PasswordInput
-          label="Confirm new password"
-          value={newPw2}
-          onChange={(e) => onNewPw2(e.currentTarget.value)}
-        />
+        <PasswordInput label="Confirm new password" value={newPw2} onChange={(e) => onNewPw2(e.currentTarget.value)} />
         <Button
           leftSection={<IconKey {...iconSm} />}
           loading={saving}

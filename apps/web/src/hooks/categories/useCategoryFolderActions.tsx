@@ -1,8 +1,8 @@
 import { useState, type ReactElement } from 'react'
 import { notifications } from '@mantine/notifications'
-import { ConfirmModal } from '@/components/confirm-modal'
 import { EditCategoryDrawer } from '@/components/category/EditCategoryDrawer'
 import { ShareCategoryDrawer } from '@/components/category/ShareCategoryDrawer'
+import { ConfirmModal } from '@/components/confirm-modal'
 import { SocialDrawer } from '@/components/social'
 import type { Category } from '@/schemas'
 import { useDeleteCategory, useForkCategory } from './useCategories'
@@ -67,11 +67,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
         loading={remove.isPending}
       />
 
-      <EditCategoryDrawer
-        opened={!!editCat}
-        onClose={() => setEditCat(null)}
-        category={editCat}
-      />
+      <EditCategoryDrawer opened={!!editCat} onClose={() => setEditCat(null)} category={editCat} />
 
       <ShareCategoryDrawer
         opened={!!shareCat}

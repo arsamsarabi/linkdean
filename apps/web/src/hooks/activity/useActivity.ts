@@ -35,10 +35,7 @@ export function activityQueryKey(params: ActivityListParams = {}): readonly unkn
   return ['activity', 'list', subjectType ?? 'all', action ?? 'all', limit] as const
 }
 
-export function prefetchActivity(
-  qc: QueryClient,
-  params: ActivityListParams = {}
-): Promise<void> {
+export function prefetchActivity(qc: QueryClient, params: ActivityListParams = {}): Promise<void> {
   const { subjectType, action, limit } = normalizeParams(params)
   return qc.prefetchQuery({
     queryKey: activityQueryKey(params),

@@ -2,9 +2,7 @@ import type { Bookmark, SearchHit } from '@/schemas'
 import type { LibraryListItem } from './libraryList'
 
 function haystack(b: Pick<Bookmark, 'title' | 'url' | 'description' | 'notes' | 'tags'>): string {
-  return [b.title, b.url, b.description || '', b.notes || '', ...(b.tags || [])]
-    .join(' ')
-    .toLowerCase()
+  return [b.title, b.url, b.description || '', b.notes || '', ...(b.tags || [])].join(' ').toLowerCase()
 }
 
 function matchesQuery(b: Bookmark, query: string): boolean {

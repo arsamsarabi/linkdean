@@ -1,4 +1,4 @@
-import type { ReactElement, MouseEvent, ReactNode } from 'react'
+import type { MouseEvent, ReactElement, ReactNode } from 'react'
 import { ActionIcon, Menu } from '@mantine/core'
 import { IconCopy, IconDots, IconMessageCircle, IconPencil, IconShare, IconTrash } from '@tabler/icons-react'
 import type { CategoryAccess } from '@/schemas'
@@ -32,8 +32,7 @@ export function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boole
 export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement | null {
   if (!categoryFolderMenuVisible(props)) return null
 
-  const { name, access, isVault, onEdit, onShare, onSocial, onFork, onDelete, forkPending, className } =
-    props
+  const { name, access, isVault, onEdit, onShare, onSocial, onFork, onDelete, forkPending, className } = props
   const isOwner = access === 'owner'
   const canWrite = isOwner || access === 'write'
 
@@ -59,11 +58,7 @@ export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement
             </Menu.Item>
           ) : null}
           {!isVault && onFork ? (
-            <Menu.Item
-              leftSection={<IconCopy size={14} stroke={1.5} />}
-              disabled={forkPending}
-              onClick={onFork}
-            >
+            <Menu.Item leftSection={<IconCopy size={14} stroke={1.5} />} disabled={forkPending} onClick={onFork}>
               Duplicate
             </Menu.Item>
           ) : null}

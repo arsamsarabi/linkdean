@@ -4,39 +4,39 @@ import {
   adminReindexSchema,
   adminUserEnvelopeSchema,
   adminUsersEnvelopeSchema,
-  createRegistrationInviteResponseSchema,
-  registrationInvitesEnvelopeSchema,
   apiKeysEnvelopeSchema,
   authTokenResponseSchema,
+  blockEnvelopeSchema,
   bookmarkSchema,
   bootstrapStatusSchema,
   categoriesSchema,
-  categorySchema,
-  categorySharesEnvelopeSchema,
-  categoryShareSchema,
-  createCategoryShareOutcomeSchema,
-  pendingShareInviteSchema,
   categoryPublicLinkSchema,
-  publicListSchema,
+  categorySchema,
+  categoryShareSchema,
+  categorySharesEnvelopeSchema,
   createApiKeyResponseSchema,
-  forkCategoryResultSchema,
+  createCategoryShareOutcomeSchema,
+  createDashboardShareOutcomeSchema,
+  createRegistrationInviteResponseSchema,
   dashboardSchema,
   dashboardShareSchema,
   dashboardSharesEnvelopeSchema,
-  createDashboardShareOutcomeSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
-  blockEnvelopeSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
+  forkCategoryResultSchema,
   importResultSchema,
-  muteEnvelopeSchema,
   markAllReadSchema,
   meResponseSchema,
+  muteEnvelopeSchema,
   notificationEnvelopeSchema,
   notificationsEnvelopeSchema,
   okSchema,
+  pendingShareInviteSchema,
   platformSettingsEnvelopeSchema,
+  publicListSchema,
+  registrationInvitesEnvelopeSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
   socialEnvelopeSchema,
@@ -50,33 +50,33 @@ import {
   type ActivitySubjectType,
   type AdminUserSummary,
   type ApiKey,
+  type BlockRelation,
   type Bookmark,
   type Category,
+  type CategoryPublicLink,
   type CategoryShare,
   type CategorySharesEnvelope,
-  type CreateCategoryShareOutcome,
-  type PendingShareInvite,
-  type CategoryPublicLink,
-  type PublicList,
   type CreateApiKeyResponse,
-  type CreateRegistrationInviteResponse,
-  type RegistrationInvite,
+  type CreateCategoryShareOutcome,
   type CreateDashboard,
+  type CreateDashboardShareOutcome,
+  type CreateRegistrationInviteResponse,
   type Dashboard,
   type DashboardShare,
   type DashboardSharesEnvelope,
-  type CreateDashboardShareOutcome,
   type DashboardSummary,
   type DuplicateGroup,
-  type BlockRelation,
   type FollowRelation,
   type FollowUser,
-  type MuteRelation,
   type ForkCategoryResult,
+  type MuteRelation,
   type Notification,
   type PatchDashboard,
+  type PendingShareInvite,
   type PlatformSettings,
+  type PublicList,
   type PutDashboardLayout,
+  type RegistrationInvite,
   type ShareAccess,
   type SocialSubjectType,
   type SocialSummary,
@@ -100,14 +100,9 @@ export const api = {
     registration_open?: boolean
     api_keys_enabled?: boolean
   }): Promise<{ settings: PlatformSettings }> =>
-    req(
-      '/admin/platform-settings',
-      { method: 'PATCH', body: JSON.stringify(body) },
-      platformSettingsEnvelopeSchema
-    ),
+    req('/admin/platform-settings', { method: 'PATCH', body: JSON.stringify(body) }, platformSettingsEnvelopeSchema),
 
-  listAdminUsers: (): Promise<{ users: AdminUserSummary[] }> =>
-    req('/admin/users', {}, adminUsersEnvelopeSchema),
+  listAdminUsers: (): Promise<{ users: AdminUserSummary[] }> => req('/admin/users', {}, adminUsersEnvelopeSchema),
 
   updateAdminUser: (
     id: string,
@@ -125,11 +120,7 @@ export const api = {
     email?: string
     expires_in_days?: number
   }): Promise<CreateRegistrationInviteResponse> =>
-    req(
-      '/admin/invites',
-      { method: 'POST', body: JSON.stringify(body) },
-      createRegistrationInviteResponseSchema
-    ),
+    req('/admin/invites', { method: 'POST', body: JSON.stringify(body) }, createRegistrationInviteResponseSchema),
 
   revokeRegistrationInvite: (id: string): Promise<{ ok: boolean }> =>
     req(`/admin/invites/${id}`, { method: 'DELETE' }, okSchema),
@@ -139,8 +130,7 @@ export const api = {
   createApiKey: (body: { name: string }): Promise<CreateApiKeyResponse> =>
     req('/api-keys', { method: 'POST', body: JSON.stringify(body) }, createApiKeyResponseSchema),
 
-  revokeApiKey: (id: string): Promise<{ ok: boolean }> =>
-    req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),
+  revokeApiKey: (id: string): Promise<{ ok: boolean }> => req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),
 
   listActivity: (opts?: {
     limit?: number
@@ -157,8 +147,7 @@ export const api = {
   listNotifications: (limit = 50): Promise<{ notifications: Notification[] }> =>
     req(`/notifications?limit=${limit}`, {}, notificationsEnvelopeSchema),
 
-  unreadNotificationCount: (): Promise<{ count: number }> =>
-    req('/notifications/unread-count', {}, unreadCountSchema),
+  unreadNotificationCount: (): Promise<{ count: number }> => req('/notifications/unread-count', {}, unreadCountSchema),
 
   markNotificationRead: (id: string): Promise<{ notification: Notification }> =>
     req(`/notifications/${id}/read`, { method: 'POST' }, notificationEnvelopeSchema),
@@ -189,21 +178,14 @@ export const api = {
   deleteSocialComment: (id: string): Promise<{ ok: boolean }> =>
     req(`/social/comments/${id}`, { method: 'DELETE' }, okSchema),
 
-  rateSocial: (
-    subjectType: SocialSubjectType,
-    subjectId: string,
-    rating: number
-  ): Promise<{ social: SocialSummary }> =>
+  rateSocial: (subjectType: SocialSubjectType, subjectId: string, rating: number): Promise<{ social: SocialSummary }> =>
     req(
       `/social/${subjectType}/${subjectId}/rating`,
       { method: 'POST', body: JSON.stringify({ rating }) },
       socialEnvelopeSchema
     ),
 
-  clearSocialRating: (
-    subjectType: SocialSubjectType,
-    subjectId: string
-  ): Promise<{ social: SocialSummary }> =>
+  clearSocialRating: (subjectType: SocialSubjectType, subjectId: string): Promise<{ social: SocialSummary }> =>
     req(`/social/${subjectType}/${subjectId}/rating`, { method: 'DELETE' }, socialEnvelopeSchema),
 
   register: (body: {
@@ -264,11 +246,9 @@ export const api = {
 
   deleteAvatar: (): Promise<{ user: UserPublic }> => req('/users/me/avatar', { method: 'DELETE' }, userEnvelopeSchema),
 
-  myFollowers: (): Promise<{ users: FollowUser[] }> =>
-    req('/users/me/followers', {}, followUsersEnvelopeSchema),
+  myFollowers: (): Promise<{ users: FollowUser[] }> => req('/users/me/followers', {}, followUsersEnvelopeSchema),
 
-  myFollowing: (): Promise<{ users: FollowUser[] }> =>
-    req('/users/me/following', {}, followUsersEnvelopeSchema),
+  myFollowing: (): Promise<{ users: FollowUser[] }> => req('/users/me/following', {}, followUsersEnvelopeSchema),
 
   followUser: (id: string): Promise<{ follow: FollowRelation }> =>
     req(`/users/${id}/follow`, { method: 'POST' }, followEnvelopeSchema),
@@ -279,11 +259,9 @@ export const api = {
   followStatus: (id: string): Promise<{ follow: FollowRelation }> =>
     req(`/users/${id}/follow-status`, {}, followEnvelopeSchema),
 
-  myBlocked: (): Promise<{ users: FollowUser[] }> =>
-    req('/users/me/blocked', {}, followUsersEnvelopeSchema),
+  myBlocked: (): Promise<{ users: FollowUser[] }> => req('/users/me/blocked', {}, followUsersEnvelopeSchema),
 
-  myMuted: (): Promise<{ users: FollowUser[] }> =>
-    req('/users/me/muted', {}, followUsersEnvelopeSchema),
+  myMuted: (): Promise<{ users: FollowUser[] }> => req('/users/me/muted', {}, followUsersEnvelopeSchema),
 
   blockUser: (id: string): Promise<{ block: BlockRelation }> =>
     req(`/users/${id}/block`, { method: 'POST' }, blockEnvelopeSchema),
@@ -332,11 +310,7 @@ export const api = {
       createCategoryShareOutcomeSchema
     ),
 
-  updateCategoryShare: (
-    categoryId: string,
-    userId: string,
-    body: { access: ShareAccess }
-  ): Promise<CategoryShare> =>
+  updateCategoryShare: (categoryId: string, userId: string, body: { access: ShareAccess }): Promise<CategoryShare> =>
     req(
       `/categories/${categoryId}/shares/${userId}`,
       { method: 'PATCH', body: JSON.stringify(body) },
@@ -367,11 +341,7 @@ export const api = {
     req(`/categories/${categoryId}/public-link`, { method: 'POST' }, categoryPublicLinkSchema),
 
   rotateCategoryPublicLink: (categoryId: string): Promise<CategoryPublicLink> =>
-    req(
-      `/categories/${categoryId}/public-link/rotate`,
-      { method: 'POST' },
-      categoryPublicLinkSchema
-    ),
+    req(`/categories/${categoryId}/public-link/rotate`, { method: 'POST' }, categoryPublicLinkSchema),
 
   disableCategoryPublicLink: (categoryId: string): Promise<CategoryPublicLink> =>
     req(`/categories/${categoryId}/public-link`, { method: 'DELETE' }, categoryPublicLinkSchema),
@@ -445,17 +415,14 @@ export const api = {
   duplicates: (): Promise<{ urls: string[]; groups: DuplicateGroup[] }> =>
     req('/bookmarks/duplicates', {}, duplicatesSchema),
 
-  brokenBookmarks: (): Promise<Bookmark[]> =>
-    req('/bookmarks/broken-links', {}, z.array(bookmarkSchema)),
+  brokenBookmarks: (): Promise<Bookmark[]> => req('/bookmarks/broken-links', {}, z.array(bookmarkSchema)),
 
   checkBookmarkLink: (id: string): Promise<Bookmark> =>
     req(`/bookmarks/${id}/check-link`, { method: 'POST' }, bookmarkSchema),
 
-  saveBookmarkCopy: (id: string): Promise<Bookmark> =>
-    req(`/bookmarks/${id}/save`, { method: 'POST' }, bookmarkSchema),
+  saveBookmarkCopy: (id: string): Promise<Bookmark> => req(`/bookmarks/${id}/save`, { method: 'POST' }, bookmarkSchema),
 
-  listDashboards: (): Promise<DashboardSummary[]> =>
-    req('/dashboards', {}, dashboardSummariesSchema),
+  listDashboards: (): Promise<DashboardSummary[]> => req('/dashboards', {}, dashboardSummariesSchema),
 
   createDashboard: (body: CreateDashboard = {}): Promise<Dashboard> =>
     req('/dashboards', { method: 'POST', body: JSON.stringify(body) }, dashboardSchema),
@@ -465,8 +432,7 @@ export const api = {
   putDefaultDashboard: (body: PutDashboardLayout): Promise<Dashboard> =>
     req('/dashboards/default', { method: 'PUT', body: JSON.stringify(body) }, dashboardSchema),
 
-  getDashboard: (id: string): Promise<Dashboard> =>
-    req(`/dashboards/${id}`, {}, dashboardSchema),
+  getDashboard: (id: string): Promise<Dashboard> => req(`/dashboards/${id}`, {}, dashboardSchema),
 
   putDashboard: (id: string, body: PutDashboardLayout): Promise<Dashboard> =>
     req(`/dashboards/${id}`, { method: 'PUT', body: JSON.stringify(body) }, dashboardSchema),
@@ -490,11 +456,7 @@ export const api = {
       createDashboardShareOutcomeSchema
     ),
 
-  updateDashboardShare: (
-    dashboardId: string,
-    userId: string,
-    body: { access: ShareAccess }
-  ): Promise<DashboardShare> =>
+  updateDashboardShare: (dashboardId: string, userId: string, body: { access: ShareAccess }): Promise<DashboardShare> =>
     req(
       `/dashboards/${dashboardId}/shares/${userId}`,
       { method: 'PATCH', body: JSON.stringify(body) },

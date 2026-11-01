@@ -14,11 +14,7 @@ function socialKey(subjectType: SocialSubjectType, subjectId: string) {
   return ['social', subjectType, subjectId] as const
 }
 
-export function useSocial(
-  subjectType: SocialSubjectType,
-  subjectId: string,
-  enabled = true
-): UseQueryResult<Envelope> {
+export function useSocial(subjectType: SocialSubjectType, subjectId: string, enabled = true): UseQueryResult<Envelope> {
   return useQuery({
     queryKey: socialKey(subjectType, subjectId),
     queryFn: () => api.getSocial(subjectType, subjectId),
@@ -77,9 +73,7 @@ export function useSetSocialRating(
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (rating: number | null) =>
-      rating == null
-        ? api.clearSocialRating(subjectType, subjectId)
-        : api.rateSocial(subjectType, subjectId, rating),
+      rating == null ? api.clearSocialRating(subjectType, subjectId) : api.rateSocial(subjectType, subjectId, rating),
     onSuccess: (res) => {
       qc.setQueryData(socialKey(subjectType, subjectId), res)
       void qc.invalidateQueries({ queryKey: ['notifications'] })

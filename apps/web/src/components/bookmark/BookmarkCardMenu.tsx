@@ -16,8 +16,8 @@ import {
   IconStar,
   IconStarFilled,
   IconTrash,
-  IconUserPlus,
   IconUserMinus,
+  IconUserPlus,
   IconVolume,
   IconVolumeOff,
 } from '@tabler/icons-react'
@@ -83,9 +83,7 @@ export function BookmarkCardMenu({
         <CopyButton value={url} timeout={1500}>
           {({ copied, copy }) => (
             <Menu.Item
-              leftSection={
-                copied ? <IconCheck size={14} stroke={1.5} /> : <IconCopy size={14} stroke={1.5} />
-              }
+              leftSection={copied ? <IconCheck size={14} stroke={1.5} /> : <IconCopy size={14} stroke={1.5} />}
               onClick={copy}
             >
               {copied ? 'Copied' : 'Copy URL'}
@@ -95,33 +93,21 @@ export function BookmarkCardMenu({
         {onFlags ? (
           <>
             <Menu.Item
-              leftSection={
-                isFavorite ? (
-                  <IconStarFilled size={14} stroke={1.5} />
-                ) : (
-                  <IconStar size={14} stroke={1.5} />
-                )
-              }
+              leftSection={isFavorite ? <IconStarFilled size={14} stroke={1.5} /> : <IconStar size={14} stroke={1.5} />}
               onClick={() => onFlags({ is_favorite: !isFavorite })}
             >
               {isFavorite ? 'Unfavorite' : 'Favorite'}
             </Menu.Item>
             <Menu.Item
               leftSection={
-                isUnread ? (
-                  <IconBookmarkFilled size={14} stroke={1.5} />
-                ) : (
-                  <IconBookmark size={14} stroke={1.5} />
-                )
+                isUnread ? <IconBookmarkFilled size={14} stroke={1.5} /> : <IconBookmark size={14} stroke={1.5} />
               }
               onClick={() => onFlags({ is_unread: !isUnread })}
             >
               {isUnread ? 'Mark read' : 'Reading list'}
             </Menu.Item>
             <Menu.Item
-              leftSection={
-                isPinned ? <IconPinFilled size={14} stroke={1.5} /> : <IconPin size={14} stroke={1.5} />
-              }
+              leftSection={isPinned ? <IconPinFilled size={14} stroke={1.5} /> : <IconPin size={14} stroke={1.5} />}
               onClick={() => onFlags({ is_pinned: !isPinned })}
             >
               {isPinned ? 'Unpin' : 'Pin to top'}
@@ -136,11 +122,7 @@ export function BookmarkCardMenu({
         {canFollowOwner && onToggleFollowOwner ? (
           <Menu.Item
             leftSection={
-              followingOwner ? (
-                <IconUserMinus size={14} stroke={1.5} />
-              ) : (
-                <IconUserPlus size={14} stroke={1.5} />
-              )
+              followingOwner ? <IconUserMinus size={14} stroke={1.5} /> : <IconUserPlus size={14} stroke={1.5} />
             }
             onClick={onToggleFollowOwner}
           >
@@ -149,13 +131,7 @@ export function BookmarkCardMenu({
         ) : null}
         {canFollowOwner && onToggleMuteOwner ? (
           <Menu.Item
-            leftSection={
-              mutedOwner ? (
-                <IconVolume size={14} stroke={1.5} />
-              ) : (
-                <IconVolumeOff size={14} stroke={1.5} />
-              )
-            }
+            leftSection={mutedOwner ? <IconVolume size={14} stroke={1.5} /> : <IconVolumeOff size={14} stroke={1.5} />}
             onClick={onToggleMuteOwner}
           >
             {mutedOwner ? `Unmute${ownerSuffix}` : `Mute${ownerSuffix}`}

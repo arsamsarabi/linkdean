@@ -1,16 +1,5 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import {
-  Card,
-  Checkbox,
-  Group,
-  Highlight,
-  Pill,
-  Spoiler,
-  Stack,
-  Text,
-  Tooltip,
-  UnstyledButton,
-} from '@mantine/core'
+import { Card, Checkbox, Group, Highlight, Pill, Spoiler, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
@@ -19,11 +8,11 @@ import { useOwnerActions, useSaveBookmarkCopy } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
 import { FOLDER_UNCATEGORIZED, previewSrcCandidates } from '@/services'
 import { BlockOwnerModal } from './BlockOwnerModal'
+import styles from './BookmarkCard.module.css'
 import { BookmarkCardBadges } from './BookmarkCardBadges'
 import { BookmarkCardMenu } from './BookmarkCardMenu'
 import { BookmarkCardPreview } from './BookmarkCardPreview'
 import type { BookmarkCardItem } from './bookmarkCardTypes'
-import styles from './BookmarkCard.module.css'
 
 export type { BookmarkCardItem } from './bookmarkCardTypes'
 
@@ -35,10 +24,7 @@ type Props = {
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   /** Toggle per-viewer flags (favorite / unread / pin). */
-  onFlags?: (
-    id: string,
-    patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>
-  ) => void
+  onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   selectMode?: boolean
   selected?: boolean
   onToggleSelect?: (id: string) => void
@@ -61,10 +47,8 @@ export function BookmarkCard({
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
   const socialEnabled = !!share || showOutgoing
-  const canSaveCopy =
-    !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId && !b.is_vault
-  const canFollowOwner =
-    !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId
+  const canSaveCopy = !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId && !b.is_vault
+  const canFollowOwner = !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId
   const saveCopy = useSaveBookmarkCopy()
   const owner = useOwnerActions(b.owner_user_id, b.owner_display_name, canFollowOwner)
   const [socialOpen, setSocialOpen] = useState(false)
@@ -221,12 +205,7 @@ export function BookmarkCard({
             </Group>
           )}
 
-          <BookmarkCardBadges
-            bookmark={b}
-            share={share}
-            showOutgoing={showOutgoing}
-            pendingDelete={pendingDelete}
-          />
+          <BookmarkCardBadges bookmark={b} share={share} showOutgoing={showOutgoing} pendingDelete={pendingDelete} />
         </Stack>
       </Card>
       {socialEnabled ? (

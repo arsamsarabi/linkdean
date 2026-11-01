@@ -1,24 +1,6 @@
 import { type ReactElement } from 'react'
-import {
-  Burger,
-  Button,
-  Code,
-  Group,
-  Indicator,
-  Menu,
-  Skeleton,
-  Title,
-  Tooltip,
-  UnstyledButton,
-} from '@mantine/core'
-import {
-  IconBooks,
-  IconLayoutDashboard,
-  IconLogout,
-  IconSettings,
-  IconTrash,
-  IconUser,
-} from '@tabler/icons-react'
+import { Burger, Button, Code, Group, Indicator, Menu, Skeleton, Title, Tooltip, UnstyledButton } from '@mantine/core'
+import { IconBooks, IconLayoutDashboard, IconLogout, IconSettings, IconTrash, IconUser } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import {
   BrokenLinksButton,
@@ -72,13 +54,7 @@ export function AppShellHeader({
     <PageContainer h="100%">
       <Group h="100%" justify="space-between">
         <Group gap="md" wrap="nowrap">
-          <Burger
-            opened={navOpen}
-            onClick={toggleNav}
-            hiddenFrom="sm"
-            size="sm"
-            aria-label="Open navigation"
-          />
+          <Burger opened={navOpen} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Open navigation" />
           <UnstyledButton
             component={Link}
             to={landing}
@@ -132,14 +108,7 @@ export function AppShellHeader({
               <Menu.Target>
                 <Tooltip label="Account" position="bottom">
                   <UnstyledButton aria-label="Account menu">
-                    <Indicator
-                      disabled={!vaultUnlocked}
-                      color="green"
-                      size={10}
-                      offset={4}
-                      processing
-                      withBorder
-                    >
+                    <Indicator disabled={!vaultUnlocked} color="green" size={10} offset={4} processing withBorder>
                       <UserAvatar hasAvatar={hasAvatar} label={label} alt={label} />
                     </Indicator>
                   </UnstyledButton>
@@ -159,11 +128,7 @@ export function AppShellHeader({
                 <Menu.Item component={Link} to="/profile" leftSection={<IconUser {...iconProps} />}>
                   Profile
                 </Menu.Item>
-                <Menu.Item
-                  component={Link}
-                  to="/settings"
-                  leftSection={<IconSettings {...iconProps} />}
-                >
+                <Menu.Item component={Link} to="/settings" leftSection={<IconSettings {...iconProps} />}>
                   Config options
                 </Menu.Item>
                 <Menu.Item component={Link} to="/trash" leftSection={<IconTrash {...iconProps} />}>
@@ -172,11 +137,7 @@ export function AppShellHeader({
                 <Menu.Divider />
                 <ThemeMenuSwitch />
                 <Menu.Divider />
-                <Menu.Item
-                  color="red"
-                  onClick={onLogout}
-                  leftSection={<IconLogout {...iconProps} />}
-                >
+                <Menu.Item color="red" onClick={onLogout} leftSection={<IconLogout {...iconProps} />}>
                   Logout
                 </Menu.Item>
               </Menu.Dropdown>

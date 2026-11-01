@@ -347,7 +347,9 @@ pub async fn add_comment(
 ) -> Result<SocialSummary> {
     let body = req.body.trim().to_string();
     if body.is_empty() || body.chars().count() > 4000 {
-        return Err(Error::BadRequest("comment must be 1–4000 characters".into()));
+        return Err(Error::BadRequest(
+            "comment must be 1–4000 characters".into(),
+        ));
     }
     let meta = resolve_subject(pool, user_id, subject_type, subject_id).await?;
     sqlx::query(

@@ -31,13 +31,7 @@ type Props = {
   title?: string
 }
 
-export function SocialDrawer({
-  opened,
-  onClose,
-  subjectType,
-  subjectId,
-  title,
-}: Props): ReactElement {
+export function SocialDrawer({ opened, onClose, subjectType, subjectId, title }: Props): ReactElement {
   const social = useSocial(subjectType, subjectId, opened)
   const toggleLike = useToggleSocialLike(subjectType, subjectId)
   const addComment = useAddSocialComment(subjectType, subjectId)
@@ -120,7 +114,12 @@ export function SocialDrawer({
                 </Text>
               ) : null}
               {s.comments.map((c) => (
-                <Stack key={c.id} gap={4} p="sm" style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 8 }}>
+                <Stack
+                  key={c.id}
+                  gap={4}
+                  p="sm"
+                  style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 8 }}
+                >
                   <Group justify="space-between" wrap="nowrap" gap="xs">
                     <Text size="xs" fw={600}>
                       {c.author_display_name}

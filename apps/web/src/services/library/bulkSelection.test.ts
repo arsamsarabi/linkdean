@@ -3,13 +3,7 @@ import { toggleId, unionIds, unionTags, writableIds } from './bulkSelection'
 
 describe('writableIds', () => {
   it('drops read-only and keeps default-writable', () => {
-    expect(
-      writableIds([
-        { id: 'a' },
-        { id: 'b', can_write: false },
-        { id: 'c', can_write: true },
-      ])
-    ).toEqual(['a', 'c'])
+    expect(writableIds([{ id: 'a' }, { id: 'b', can_write: false }, { id: 'c', can_write: true }])).toEqual(['a', 'c'])
   })
 })
 

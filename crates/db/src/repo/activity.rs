@@ -43,7 +43,11 @@ fn subject_kind(subject_type: ActivitySubjectType) -> &'static str {
     }
 }
 
-fn default_summary(action: ActivityAction, subject_type: ActivitySubjectType, title: &str) -> String {
+fn default_summary(
+    action: ActivityAction,
+    subject_type: ActivitySubjectType,
+    title: &str,
+) -> String {
     let kind = subject_kind(subject_type);
     let verb = match action {
         ActivityAction::Created => "Created",
@@ -60,7 +64,11 @@ fn default_summary(action: ActivityAction, subject_type: ActivitySubjectType, ti
 }
 
 /// Human summary for updates that list concrete field changes.
-pub fn update_summary(subject_type: ActivitySubjectType, title: &str, changes: &[String]) -> String {
+pub fn update_summary(
+    subject_type: ActivitySubjectType,
+    title: &str,
+    changes: &[String],
+) -> String {
     let kind = subject_kind(subject_type);
     let label = if title.trim().is_empty() {
         kind.to_string()

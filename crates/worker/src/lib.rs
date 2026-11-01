@@ -69,11 +69,7 @@ pub async fn enrich_bookmark(
                     .favicon
                     .map(|href| absolutize(&url, &href))
                     .filter(|u| is_fetchable(u))
-                    .or_else(|| {
-                        raw.favicon_url
-                            .clone()
-                            .filter(|u| is_http_url(u))
-                    });
+                    .or_else(|| raw.favicon_url.clone().filter(|u| is_http_url(u)));
                 let favicon = resolve_cached_asset(
                     &client,
                     &opts.preview_dir,
@@ -88,11 +84,7 @@ pub async fn enrich_bookmark(
                     .preview_image
                     .map(|href| absolutize(&url, &href))
                     .filter(|u| is_fetchable(u))
-                    .or_else(|| {
-                        raw.preview_image_url
-                            .clone()
-                            .filter(|u| is_http_url(u))
-                    });
+                    .or_else(|| raw.preview_image_url.clone().filter(|u| is_http_url(u)));
                 let preview = resolve_cached_asset(
                     &client,
                     &opts.preview_dir,
@@ -356,7 +348,11 @@ fn sniff_image_ct(bytes: &[u8]) -> Option<&'static str> {
     if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
         return Some("image/webp");
     }
-    if bytes.len() >= 4 && bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0x01 && bytes[3] == 0x00
+    if bytes.len() >= 4
+        && bytes[0] == 0x00
+        && bytes[1] == 0x00
+        && bytes[2] == 0x01
+        && bytes[3] == 0x00
     {
         return Some("image/x-icon");
     }
@@ -436,11 +432,7 @@ fn is_blocked_host(host: &str) -> bool {
     let h = host.trim().trim_end_matches('.').to_ascii_lowercase();
     matches!(
         h.as_str(),
-        "localhost"
-            | "localhost.localdomain"
-            | "metadata.google.internal"
-            | "metadata"
-            | "0.0.0.0"
+        "localhost" | "localhost.localdomain" | "metadata.google.internal" | "metadata" | "0.0.0.0"
     ) || h.ends_with(".localhost")
         || h.ends_with(".local")
         || h.parse::<std::net::IpAddr>()
@@ -459,7 +451,10 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
                 || v4.octets()[0] == 169 && v4.octets()[1] == 254
         }
         std::net::IpAddr::V6(v6) => {
-            v6.is_loopback() || v6.is_unique_local() || v6.is_unicast_link_local() || v6.is_unspecified()
+            v6.is_loopback()
+                || v6.is_unique_local()
+                || v6.is_unicast_link_local()
+                || v6.is_unspecified()
         }
     }
 }
@@ -826,7 +821,10 @@ mod tests {
             sniff_image_ct(&[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n']),
             Some("image/png")
         );
-        assert_eq!(sniff_image_ct(&[0xff, 0xd8, 0xff, 0xe0]), Some("image/jpeg"));
+        assert_eq!(
+            sniff_image_ct(&[0xff, 0xd8, 0xff, 0xe0]),
+            Some("image/jpeg")
+        );
         assert_eq!(
             sniff_image_ct(&[0x00, 0x00, 0x01, 0x00, 0x01]),
             Some("image/x-icon")

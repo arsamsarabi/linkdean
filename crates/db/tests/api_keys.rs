@@ -41,15 +41,9 @@ async fn create_auth_revoke_api_key() {
     .await
     .expect("create user");
 
-    let created = db::create_api_key(
-        &pool,
-        &user,
-        CreateApiKey {
-            name: "cli".into(),
-        },
-    )
-    .await
-    .expect("create key");
+    let created = db::create_api_key(&pool, &user, CreateApiKey { name: "cli".into() })
+        .await
+        .expect("create key");
     assert!(created.token.starts_with("ldk_"));
     assert!(created.key.prefix.starts_with("ldk_"));
 
@@ -88,15 +82,9 @@ async fn platform_and_user_gates_block_keys() {
     .await
     .expect("create user");
 
-    let created = db::create_api_key(
-        &pool,
-        &user,
-        CreateApiKey {
-            name: "tmp".into(),
-        },
-    )
-    .await
-    .expect("create");
+    let created = db::create_api_key(&pool, &user, CreateApiKey { name: "tmp".into() })
+        .await
+        .expect("create");
 
     let _ = db::set_api_keys_enabled(&pool, false)
         .await
