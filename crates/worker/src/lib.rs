@@ -720,6 +720,12 @@ async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Resul
         // Let late paint settle briefly.
         tokio::time::sleep(Duration::from_millis(800)).await;
 
+        let title = page.get_title().await?.unwrap_or_default();
+        let html = page.content().await?;
+        if is_challenge_page(&title, &html) {
+            anyhow::bail!("bot challenge page");
+        }
+
         let params = ScreenshotParams::builder()
             .format(CaptureScreenshotFormat::Jpeg)
             .quality(80)
@@ -737,6 +743,25 @@ async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Resul
     drop(browser);
     handle.abort();
     result
+}
+
+/// True for a Cloudflare interstitial. Saving one would show the challenge as the
+/// bookmark's preview, so callers skip it and the card uses the OG image or favicon.
+/// `cdn-cgi/challenge-platform` alone proves nothing: normal pages load that script too.
+fn is_challenge_page(title: &str, html: &str) -> bool {
+    const PAGE_MARKERS: [&str; 3] = ["_cf_chl_opt", "challenge-form", "cf-browser-verification"];
+    const TITLES: [&str; 4] = [
+        "just a moment",
+        "attention required",
+        "verify you are human",
+        "checking your browser",
+    ];
+
+    if PAGE_MARKERS.iter().any(|m| html.contains(m)) {
+        return true;
+    }
+    let title = title.to_lowercase();
+    TITLES.iter().any(|t| title.contains(t)) && html.contains("cdn-cgi/challenge-platform")
 }
 
 /// Fetch `/json/version` and rewrite 127.0.0.1/localhost to the HTTP host
@@ -840,6 +865,25 @@ fn parse_meta(body: &str) -> Meta {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn detects_cloudflare_challenge_pages() {
+        let script = r#"<script>window._cf_chl_opt = {};</script>"#;
+        assert!(super::is_challenge_page("Example", script));
+
+        let platform = r#"<script src="/cdn-cgi/challenge-platform/h/g/orchestrate"></script>"#;
+        assert!(super::is_challenge_page("Just a moment...", platform));
+    }
+
+    #[test]
+    fn keeps_normal_pages_behind_cloudflare() {
+        let beacon = r#"<script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>"#;
+        assert!(!super::is_challenge_page("Rust docs", beacon));
+        assert!(!super::is_challenge_page(
+            "Just a moment",
+            "<p>A blog post</p>"
+        ));
+    }
+
     #[tokio::test]
     async fn with_ip_host_replaces_hostnames_only() {
         let named = url::Url::parse("http://localhost:9222").unwrap();
