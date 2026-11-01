@@ -1,63 +1,29 @@
 import { useEffect, type ReactElement } from 'react'
-import {
-  Burger,
-  Button,
-  Code,
-  Drawer,
-  Group,
-  Indicator,
-  Loader,
-  AppShell as MantineAppShell,
-  Menu,
-  NavLink,
-  Skeleton,
-  Stack,
-  Title,
-  Tooltip,
-  UnstyledButton,
-} from '@mantine/core'
-import { useDisclosure, useHotkeys } from '@mantine/hooks'
-import {
-  IconBooks,
-  IconLayoutDashboard,
-  IconLogout,
-  IconSettings,
-  IconTrash,
-  IconUser,
-} from '@tabler/icons-react'
+import { Drawer, Group, Loader, AppShell as MantineAppShell, NavLink, Stack } from '@mantine/core'
+import { useHotkeys } from '@mantine/hooks'
+import { IconBooks, IconLayoutDashboard } from '@tabler/icons-react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
-  BrokenLinksButton,
   BrokenLinksDrawer,
   CommandPalette,
-  HistoryButton,
   HistoryDrawer,
-  LogoMark,
-  NotificationsBell,
   NotificationsDrawer,
   PageContainer,
   QueryErrorAlert,
-  ThemeMenuSwitch,
-  UserAvatar,
 } from '@/components'
 import { useLogout, usePrefsHydration, useUnreadNotificationCount } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
-import { useUi } from '@/stores'
-import classes from './AppShell.module.css'
+import { useShellUi, useUi } from '@/stores'
+import { AppShellHeader } from './AppShellHeader'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
-const iconSm = { size: 16, stroke: 1.5 } as const
 
 export function AppShell(): ReactElement {
   const nav = useNavigate()
   const me = usePrefsHydration(true)
   const logout = useLogout()
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
-  const [paletteOpen, { open: openPalette, close: closePalette, toggle: togglePalette }] = useDisclosure(false)
-  const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false)
-  const [historyOpen, { open: openHistory, close: closeHistory }] = useDisclosure(false)
-  const [brokenOpen, { open: openBroken, close: closeBroken }] = useDisclosure(false)
-  const [navOpen, { toggle: toggleNav, close: closeNav }] = useDisclosure(false)
+  const shell = useShellUi()
   const unread = useUnreadNotificationCount(!!me.data)
 
   useEffect(() => {
@@ -73,14 +39,14 @@ export function AppShell(): ReactElement {
         const t = e.target as HTMLElement | null
         if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
         e.preventDefault()
-        openPalette()
+        shell.openPalette()
       },
     ],
     [
       'mod+K',
       (e) => {
         e.preventDefault()
-        togglePalette()
+        shell.togglePalette()
       },
     ],
   ])
@@ -101,115 +67,29 @@ export function AppShell(): ReactElement {
   return (
     <MantineAppShell header={{ height: 64 }} padding="lg">
       <MantineAppShell.Header px={0}>
-        <PageContainer h="100%">
-          <Group h="100%" justify="space-between">
-            <Group gap="md" wrap="nowrap">
-              <Burger
-                opened={navOpen}
-                onClick={toggleNav}
-                hiddenFrom="sm"
-                size="sm"
-                aria-label="Open navigation"
-              />
-              <UnstyledButton
-                component={Link}
-                to={landing}
-                aria-label={landing === '/library' ? 'Go to library' : 'Go to dashboard'}
-              >
-                <Group gap="sm" wrap="nowrap">
-                  <LogoMark size={28} />
-                  <Title order={3} c="violet" visibleFrom="xs">
-                    Linkdean
-                  </Title>
-                </Group>
-              </UnstyledButton>
-              <Button
-                component={Link}
-                to="/"
-                variant={onDashboard ? 'light' : 'subtle'}
-                leftSection={<IconLayoutDashboard {...iconSm} />}
-                size="compact-sm"
-                visibleFrom="sm"
-              >
-                Dashboard
-              </Button>
-              <Button
-                component={Link}
-                to="/library"
-                variant={onLibrary ? 'light' : 'subtle'}
-                leftSection={<IconBooks {...iconSm} />}
-                size="compact-sm"
-                visibleFrom="sm"
-              >
-                Library
-              </Button>
-            </Group>
-
-            {loading ? (
-              <Skeleton circle height={36} width={36} />
-            ) : (
-              <Group gap="xs" wrap="nowrap">
-              <BrokenLinksButton onClick={openBroken} />
-              <HistoryButton onClick={openHistory} />
-              <Indicator
-                disabled={(unread.data?.count ?? 0) < 1}
-                label={(unread.data?.count ?? 0) > 9 ? '9+' : unread.data?.count}
-                size={16}
-                color="violet"
-                offset={4}
-              >
-                <NotificationsBell unread={unread.data?.count ?? 0} onClick={openNotif} />
-              </Indicator>
-              <Menu shadow="md" width={240} position="bottom-end">
-                <Menu.Target>
-                  <Tooltip label="Account" position="bottom">
-                    <UnstyledButton aria-label="Account menu">
-                      <Indicator disabled={!vaultUnlocked} color="green" size={10} offset={4} processing withBorder>
-                        <UserAvatar hasAvatar={!!user?.has_avatar} label={label} alt={label} />
-                      </Indicator>
-                    </UnstyledButton>
-                  </Tooltip>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Label>{user?.display_name || user?.email || 'User'}</Menu.Label>
-                  {vaultUnlocked ? <Menu.Label c="green">Vault unlocked</Menu.Label> : null}
-                  <Menu.Divider />
-                  <Menu.Label>
-                    <Group gap={6} align="center" justify="center">
-                      <Code classNames={{root: classes.codeRoot}}>
-                        ⌘K
-                      </Code>
-                        Command palette
-                    </Group>
-                  </Menu.Label>
-                  <Menu.Divider />
-                  <Menu.Item component={Link} to="/profile" leftSection={<IconUser {...iconProps} />}>
-                    Profile
-                  </Menu.Item>
-                  <Menu.Item component={Link} to="/settings" leftSection={<IconSettings {...iconProps} />}>
-                    Config options
-                  </Menu.Item>
-                  <Menu.Item component={Link} to="/trash" leftSection={<IconTrash {...iconProps} />}>
-                    Deleted items
-                  </Menu.Item>
-                  <Menu.Divider />
-                  <ThemeMenuSwitch />
-                  <Menu.Divider />
-                  <Menu.Item color="red" onClick={() => void onLogout()} leftSection={<IconLogout {...iconProps} />}>
-                    Logout
-                  </Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
-              </Group>
-            )}
-          </Group>
-        </PageContainer>
+        <AppShellHeader
+          loading={loading}
+          landing={landing}
+          onDashboard={onDashboard}
+          onLibrary={onLibrary}
+          label={label}
+          displayName={user?.display_name}
+          email={user?.email}
+          hasAvatar={!!user?.has_avatar}
+          vaultUnlocked={vaultUnlocked}
+          unreadCount={unread.data?.count ?? 0}
+          onLogout={() => void onLogout()}
+        />
       </MantineAppShell.Header>
 
       <MantineAppShell.Main>
         <PageContainer pb="xl" fadeIn>
           {me.isError ? (
-            <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} title="Failed to load account" />
+            <QueryErrorAlert
+              error={me.error}
+              onRetry={() => void me.refetch()}
+              title="Failed to load account"
+            />
           ) : null}
           {loading ? (
             <Group justify="center" py={80}>
@@ -220,9 +100,10 @@ export function AppShell(): ReactElement {
           )}
         </PageContainer>
       </MantineAppShell.Main>
+
       <Drawer
-        opened={navOpen}
-        onClose={closeNav}
+        opened={shell.navOpen}
+        onClose={shell.closeNav}
         size="xs"
         padding="md"
         title="Navigate"
@@ -235,7 +116,7 @@ export function AppShell(): ReactElement {
             label="Dashboard"
             leftSection={<IconLayoutDashboard {...iconProps} />}
             active={onDashboard}
-            onClick={closeNav}
+            onClick={shell.closeNav}
           />
           <NavLink
             component={Link}
@@ -243,14 +124,15 @@ export function AppShell(): ReactElement {
             label="Library"
             leftSection={<IconBooks {...iconProps} />}
             active={onLibrary}
-            onClick={closeNav}
+            onClick={shell.closeNav}
           />
         </Stack>
       </Drawer>
-      <CommandPalette opened={paletteOpen} onClose={closePalette} />
-      <BrokenLinksDrawer opened={brokenOpen} onClose={closeBroken} />
-      <HistoryDrawer opened={historyOpen} onClose={closeHistory} />
-      <NotificationsDrawer opened={notifOpen} onClose={closeNotif} />
+
+      <CommandPalette opened={shell.paletteOpen} onClose={shell.closePalette} />
+      <BrokenLinksDrawer opened={shell.brokenOpen} onClose={shell.closeBroken} />
+      <HistoryDrawer opened={shell.historyOpen} onClose={shell.closeHistory} />
+      <NotificationsDrawer opened={shell.notifOpen} onClose={shell.closeNotif} />
     </MantineAppShell>
   )
 }
