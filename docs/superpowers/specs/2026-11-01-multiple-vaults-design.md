@@ -15,6 +15,7 @@ This replaces the roadmap item "Per-category vault passphrases".
 | Blocked moves | Refuse the move and list every blocker with instructions to resolve it |
 | Lost passphrase | A recovery key sets a new passphrase. There is no email reset, because the server cannot unwrap a vault key |
 | Deleting a vault | Allowed with contents after explicit confirmation |
+| Global passphrase | Optional and off by default. Unlocks chosen vaults in one step and never replaces a vault's own passphrase |
 
 ## Data model
 
@@ -23,7 +24,9 @@ Migration `029_multiple_vaults.sql`:
 - `vaults` gains `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` and `name TEXT NOT NULL`. `user_id` stops being the primary key and stays `NOT NULL`.
 - A unique index covers `(user_id, lower(name))`.
 - `vaults` gains nullable `recovery_salt`, `recovery_wrapped_key` and `recovery_wrapped_nonce`.
+- `vaults` gains nullable `global_wrapped_key` and `global_wrapped_nonce`.
 - `categories` and `bookmarks` gain `vault_id UUID REFERENCES vaults(id)`.
+- A new table `vault_master_keys` has `user_id` as primary key, plus `kdf_salt`, `wrapped_key` and `wrapped_nonce`.
 - Each user's existing vault is named `Vault`, and their `is_vault` rows get its `vault_id`.
 - `is_vault` stays, so existing checks keep working. A check constraint on each table enforces `is_vault = (vault_id IS NOT NULL)`.
 
@@ -49,11 +52,25 @@ Auto-lock after inactivity locks every unlocked vault.
 - A vault that is unlocked can create or replace its recovery key from Settings. This covers vaults that existed before this feature. Replacing one invalidates the previous key.
 - Losing both the passphrase and the recovery key loses the contents. The creation form says so.
 
+## Global passphrase
+
+A convenience so a user need not type several passphrases. It adds a way in. Each vault keeps its own passphrase, which goes on working.
+
+- Enabling it in Settings sets a global passphrase. The server creates a random master key wrapped by that passphrase and stores it in `vault_master_keys`.
+- A user chooses which vaults join. Joining needs the vault unlocked and the global passphrase, because the vault's data key gets wrapped by the master key into `global_wrapped_*`. New vaults do not join automatically.
+- A vault can leave at any time, which clears its `global_wrapped_*` columns.
+- Unlock all takes the global passphrase and unlocks every joined vault. Vaults that have not joined stay locked.
+- Changing the global passphrase needs the current one and rewraps only the master key.
+- Disabling it deletes the master key row and clears every vault's `global_wrapped_*` columns. No vault contents or vault passphrases change.
+- A forgotten global passphrase costs nothing: disable it, then enable it again. Disabling needs no passphrase for that reason.
+- Recovery and passphrase changes on a vault do not affect its membership, because the data key stays the same.
+- Settings warns that anyone who learns the global passphrase can open every joined vault.
+
 ## API
 
 | Route | Purpose |
 | --- | --- |
-| `GET /vaults` | Each vault's id, name, unlocked state, whether it has a recovery key, and item counts for unlocked vaults only |
+| `GET /vaults` | Each vault's id, name, unlocked state, whether it has a recovery key, whether it joined the global passphrase, and item counts for unlocked vaults only |
 | `POST /vaults` | Create with name and passphrase; returns the recovery key and leaves the vault unlocked |
 | `PATCH /vaults/{id}` | Rename |
 | `DELETE /vaults/{id}` | Delete with contents after confirmation |
@@ -62,6 +79,13 @@ Auto-lock after inactivity locks every unlocked vault.
 | `POST /vaults/{id}/recover` | Set a new passphrase with the recovery key |
 | `POST /vaults/{id}/recovery-key` | Create or replace the recovery key; the vault must be unlocked |
 | `POST /vaults/move` | Move categories and bookmarks; see below |
+| `GET /vaults/global` | Whether the global passphrase is enabled |
+| `POST /vaults/global` | Enable with a new global passphrase |
+| `PUT /vaults/global` | Change it with the current and new passphrase |
+| `DELETE /vaults/global` | Disable it |
+| `POST /vaults/global/unlock` | Unlock every joined vault; returns the ids unlocked |
+| `POST /vaults/{id}/global` | Join, with the global passphrase; the vault must be unlocked |
+| `DELETE /vaults/{id}/global` | Leave |
 
 `/vault/setup`, `/vault/unlock`, `/vault/lock` and `/vault/status` are removed. There are no external API users before the first public release.
 
@@ -111,7 +135,8 @@ After commit, remove the bookmarks from Meilisearch and delete their preview, fa
 
 - Settings: `VaultPanel` becomes a vault list with create, rename, unlock, lock, recovery key and delete. Forgotten passphrase leads to the recovery form.
 - Creation shows the recovery key once, with copy and a required "I saved this" confirmation.
-- Header: the lock menu lists each vault and its state.
+- Settings: a global passphrase section enables, changes and disables it, and each vault has a switch to join or leave.
+- Header: the lock menu lists each vault and its state, plus "Unlock all" when a global passphrase is enabled.
 - Library: "Move to vault" appears on the bookmark menu, on bulk select and on the category menu. The dialog picks a destination, or "Out of vault".
 - Blocked moves show a checklist of every blocker, each linking to the place that resolves it.
 - Unlock prompts name the vault.
@@ -137,6 +162,6 @@ After commit, remove the bookmarks from Meilisearch and delete their preview, fa
 
 ## Testing
 
-- DB suite: vault isolation with two vaults, one locked; migration of an existing vault; every blocker; no partial move when blocked; plain columns, tags and subject titles cleared on move in; round trip back out; move between vaults; recovery with the right and wrong key; replaced recovery keys stop working; delete with contents; another user's vault returns not found.
+- DB suite: vault isolation with two vaults, one locked; migration of an existing vault; every blocker; no partial move when blocked; plain columns, tags and subject titles cleared on move in; round trip back out; move between vaults; recovery with the right and wrong key; replaced recovery keys stop working; delete with contents; global unlock opens only joined vaults; own passphrases keep working alongside it; leaving, changing and disabling the global passphrase; another user's vault returns not found.
 - Route smoke test on a throwaway database.
 - Browser run: create two vaults, move items in, hit a blocker, resolve it, lock one vault, recover a passphrase.
