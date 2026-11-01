@@ -78,6 +78,7 @@ export function useCategoryFolderActions(options: Options = {}): CategoryFolderA
         onClose={() => setShareCat(null)}
         categoryId={shareCat?.id ?? null}
         categoryName={shareCat?.name ?? ''}
+        isVault={!!shareCat?.is_vault}
       />
 
       {socialCat ? (

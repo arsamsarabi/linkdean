@@ -12,6 +12,12 @@ export {
   useDeleteCategoryShare,
 } from './useCategoryShares'
 export {
+  useCategoryPublicLink,
+  useEnableCategoryPublicLink,
+  useRotateCategoryPublicLink,
+  useDisableCategoryPublicLink,
+} from './useCategoryPublicLink'
+export {
   useCategoryFolderActions,
   type CategoryFolderActions,
 } from './useCategoryFolderActions'

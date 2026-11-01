@@ -47,3 +47,31 @@ export const categorySharesSchema = z.array(categoryShareSchema)
 
 export type ShareAccess = z.infer<typeof shareAccessSchema>
 export type CategoryShare = z.infer<typeof categoryShareSchema>
+
+export const categoryPublicLinkSchema = z.object({
+  enabled: z.boolean(),
+  slug: z.string().nullish(),
+  path: z.string().nullish(),
+})
+
+export const publicBookmarkSchema = z.object({
+  id: z.string(),
+  url: z.string(),
+  title: z.string(),
+  description: z.string().nullish(),
+  favicon_url: z.string().nullish(),
+  preview_image_url: z.string().nullish(),
+  has_preview: z.boolean(),
+  tags: z.array(z.string()),
+})
+
+export const publicListSchema = z.object({
+  name: z.string(),
+  icon: z.string().nullish(),
+  owner_display_name: z.string(),
+  bookmarks: z.array(publicBookmarkSchema),
+})
+
+export type CategoryPublicLink = z.infer<typeof categoryPublicLinkSchema>
+export type PublicBookmark = z.infer<typeof publicBookmarkSchema>
+export type PublicList = z.infer<typeof publicListSchema>

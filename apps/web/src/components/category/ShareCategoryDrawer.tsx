@@ -1,23 +1,32 @@
 import { useState, type ReactElement } from 'react'
 import {
   ActionIcon,
+  Alert,
   Button,
+  Code,
+  CopyButton,
+  Divider,
   Drawer,
   Group,
   Select,
   Skeleton,
   Stack,
+  Switch,
   Text,
   TextInput,
   Tooltip,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconTrash } from '@tabler/icons-react'
+import { IconCheck, IconCopy, IconRefresh, IconTrash } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import {
+  useCategoryPublicLink,
   useCategoryShares,
   useCreateCategoryShare,
   useDeleteCategoryShare,
+  useDisableCategoryPublicLink,
+  useEnableCategoryPublicLink,
+  useRotateCategoryPublicLink,
   useUpdateCategoryShare,
 } from '@/hooks'
 import type { ShareAccess } from '@/schemas'
@@ -25,6 +34,8 @@ import type { ShareAccess } from '@/schemas'
 type Props = {
   categoryId: string | null
   categoryName: string
+  /** Vault lists cannot publish a public URL. */
+  isVault?: boolean
   opened: boolean
   onClose: () => void
 }
@@ -34,9 +45,15 @@ const accessOptions = [
   { value: 'write', label: 'Read-write' },
 ]
 
+function absolutePublicUrl(path: string): string {
+  if (typeof window === 'undefined') return path
+  return `${window.location.origin}${path}`
+}
+
 export function ShareCategoryDrawer({
   categoryId,
   categoryName,
+  isVault = false,
   opened,
   onClose,
 }: Props): ReactElement {
@@ -47,6 +64,11 @@ export function ShareCategoryDrawer({
   const create = useCreateCategoryShare()
   const update = useUpdateCategoryShare()
   const remove = useDeleteCategoryShare()
+
+  const publicLink = useCategoryPublicLink(opened ? categoryId : null, !isVault)
+  const enablePublic = useEnableCategoryPublicLink()
+  const rotatePublic = useRotateCategoryPublicLink()
+  const disablePublic = useDisableCategoryPublicLink()
 
   async function onInvite(): Promise<void> {
     if (!categoryId || !email.trim()) return
@@ -62,6 +84,36 @@ export function ShareCategoryDrawer({
       notifications.show({ color: 'red', message: String(e) })
     }
   }
+
+  async function onTogglePublic(next: boolean): Promise<void> {
+    if (!categoryId) return
+    try {
+      if (next) {
+        await enablePublic.mutateAsync(categoryId)
+        notifications.show({ message: 'Public link enabled' })
+      } else {
+        await disablePublic.mutateAsync(categoryId)
+        notifications.show({ message: 'Public link revoked' })
+      }
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
+  async function onRotatePublic(): Promise<void> {
+    if (!categoryId) return
+    try {
+      await rotatePublic.mutateAsync(categoryId)
+      notifications.show({ message: 'Public link rotated — old URL no longer works' })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
+  const publicPath = publicLink.data?.path
+  const publicUrl = publicPath ? absolutePublicUrl(publicPath) : ''
+  const publicBusy =
+    enablePublic.isPending || rotatePublic.isPending || disablePublic.isPending
 
   return (
     <Drawer
@@ -166,6 +218,86 @@ export function ShareCategoryDrawer({
                 </Tooltip>
               </Group>
             ))}
+          </Stack>
+        )}
+
+        <Divider label="Public link" labelPosition="left" />
+
+        {isVault ? (
+          <Alert color="gray" variant="light">
+            Vault lists cannot be published. Public links never include vault bookmarks.
+          </Alert>
+        ) : (
+          <Stack gap="sm">
+            <Text size="sm" c="dimmed">
+              Anyone with the link can view this list (read-only). Unlisted — not searchable. Notes
+              stay private.
+            </Text>
+
+            {publicLink.isError ? (
+              <QueryErrorAlert
+                error={publicLink.error}
+                onRetry={() => void publicLink.refetch()}
+              />
+            ) : null}
+
+            {publicLink.isLoading ? (
+              <Skeleton height={36} />
+            ) : (
+              <Switch
+                label="Enable public URL"
+                checked={!!publicLink.data?.enabled}
+                disabled={publicBusy}
+                onChange={(e) => void onTogglePublic(e.currentTarget.checked)}
+              />
+            )}
+
+            {publicLink.data?.enabled && publicUrl ? (
+              <Stack gap="xs">
+                <Group gap="xs" wrap="nowrap" align="flex-end">
+                  <TextInput
+                    label="Link"
+                    value={publicUrl}
+                    readOnly
+                    style={{ flex: 1 }}
+                    styles={{ input: { fontFamily: 'var(--mantine-font-family-monospace)' } }}
+                  />
+                  <CopyButton value={publicUrl} timeout={1500}>
+                    {({ copied, copy }) => (
+                      <Tooltip label={copied ? 'Copied' : 'Copy'}>
+                        <ActionIcon
+                          variant="light"
+                          color={copied ? 'teal' : 'violet'}
+                          aria-label="Copy public link"
+                          onClick={copy}
+                          mb={2}
+                        >
+                          {copied ? (
+                            <IconCheck size={16} stroke={1.5} />
+                          ) : (
+                            <IconCopy size={16} stroke={1.5} />
+                          )}
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                  </CopyButton>
+                  <Tooltip label="Rotate link">
+                    <ActionIcon
+                      variant="subtle"
+                      aria-label="Rotate public link"
+                      loading={rotatePublic.isPending}
+                      onClick={() => void onRotatePublic()}
+                      mb={2}
+                    >
+                      <IconRefresh size={16} stroke={1.5} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+                <Text size="xs" c="dimmed">
+                  Path <Code>{publicPath}</Code>
+                </Text>
+              </Stack>
+            ) : null}
           </Stack>
         )}
       </Stack>

@@ -14,6 +14,8 @@ import {
   categorySchema,
   categorySharesSchema,
   categoryShareSchema,
+  categoryPublicLinkSchema,
+  publicListSchema,
   createApiKeyResponseSchema,
   forkCategoryResultSchema,
   dashboardSchema,
@@ -44,6 +46,8 @@ import {
   type Bookmark,
   type Category,
   type CategoryShare,
+  type CategoryPublicLink,
+  type PublicList,
   type CreateApiKeyResponse,
   type CreateRegistrationInviteResponse,
   type RegistrationInvite,
@@ -292,6 +296,25 @@ export const api = {
 
   deleteCategoryShare: (categoryId: string, userId: string): Promise<void> =>
     req(`/categories/${categoryId}/shares/${userId}`, { method: 'DELETE' }),
+
+  categoryPublicLink: (categoryId: string): Promise<CategoryPublicLink> =>
+    req(`/categories/${categoryId}/public-link`, {}, categoryPublicLinkSchema),
+
+  enableCategoryPublicLink: (categoryId: string): Promise<CategoryPublicLink> =>
+    req(`/categories/${categoryId}/public-link`, { method: 'POST' }, categoryPublicLinkSchema),
+
+  rotateCategoryPublicLink: (categoryId: string): Promise<CategoryPublicLink> =>
+    req(
+      `/categories/${categoryId}/public-link/rotate`,
+      { method: 'POST' },
+      categoryPublicLinkSchema
+    ),
+
+  disableCategoryPublicLink: (categoryId: string): Promise<CategoryPublicLink> =>
+    req(`/categories/${categoryId}/public-link`, { method: 'DELETE' }, categoryPublicLinkSchema),
+
+  publicList: (slug: string): Promise<PublicList> =>
+    req(`/public/lists/${encodeURIComponent(slug)}`, {}, publicListSchema),
 
   bookmarks: (category_id?: string | null, include_vault = false): Promise<Bookmark[]> => {
     const q = new URLSearchParams()
