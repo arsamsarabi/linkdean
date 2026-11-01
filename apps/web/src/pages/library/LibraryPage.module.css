@@ -3,6 +3,14 @@
   border-radius: var(--mantine-radius-md);
 }
 
+.countLine {
+  min-height: 1.25rem;
+}
+
+.resultsShell {
+  min-height: 18rem;
+}
+
 .searchInput {
   flex: 1;
   min-width: 200px;

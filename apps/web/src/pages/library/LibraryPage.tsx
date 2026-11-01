@@ -566,12 +566,12 @@ export function LibraryPage(): ReactElement {
       <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
         <Stack gap={4}>
           <Title order={2}>Library</Title>
-          {!loading && viewMode === 'grid' && list.length > 0 ? (
-            <Text size="sm" c="dimmed" aria-live="polite">
-              {list.length} bookmark{list.length === 1 ? '' : 's'}
-              {searching ? ' matched' : ''}
-            </Text>
-          ) : null}
+          {/* Always reserve subtitle height so toolbar does not jump when the list empties. */}
+          <Text size="sm" c="dimmed" aria-live="polite" className={styles.countLine}>
+            {!loading && viewMode === 'grid'
+              ? `${list.length} bookmark${list.length === 1 ? '' : 's'}${searching ? ' matched' : ''}`
+              : '\u00a0'}
+          </Text>
         </Stack>
         <Group gap="sm" wrap="wrap">
           <SegmentedControl
@@ -808,6 +808,7 @@ export function LibraryPage(): ReactElement {
         </Group>
       </Stack>
 
+      <div className={styles.resultsShell}>
       {viewMode === 'explorer' ? (
         <LibraryExplorerView
           categories={cats.data || []}
@@ -885,6 +886,7 @@ export function LibraryPage(): ReactElement {
           onToggleSelect={toggleSelect}
         />
       )}
+      </div>
 
       <BookmarkDrawer opened={drawerOpen} onClose={closeDrawer} categories={cats.data || []} initial={draft} />
 
