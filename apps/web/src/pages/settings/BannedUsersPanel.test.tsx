@@ -15,6 +15,7 @@ vi.mock('@/hooks', () => ({
   useLiftBans: () => ({ mutateAsync: hooks.lift, isPending: false }),
   useChangeBans: () => ({ mutateAsync: hooks.change, isPending: false }),
 }))
+vi.mock('./ModerationDrawer', () => ({ ModerationDrawer: () => null }))
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 
 const ban = (user_id: string, name: string) => ({
@@ -29,7 +30,7 @@ const ban = (user_id: string, name: string) => ({
 
 function renderPanel() {
   return render(
-    <MantineProvider>
+    <MantineProvider env="test">
       <BannedUsersPanel />
     </MantineProvider>
   )

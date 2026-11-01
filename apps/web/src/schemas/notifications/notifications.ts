@@ -9,6 +9,7 @@ export const notificationKindSchema = z.enum([
   'social_comment',
   'social_rating',
   'user_followed',
+  'moderation_changes',
 ])
 
 export const notificationSubjectTypeSchema = z.enum(['category', 'dashboard', 'bookmark', 'user'])

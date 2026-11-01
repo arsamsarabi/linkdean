@@ -824,11 +824,6 @@ pub async fn moderate_content(
         .await?;
     }
     if outcome.applied > 0 {
-        let noun = if outcome.applied == 1 {
-            "item"
-        } else {
-            "items"
-        };
         sqlx::query(
             r#"
             INSERT INTO notifications
@@ -839,7 +834,7 @@ pub async fn moderate_content(
         .bind(user_id)
         .bind(admin_id)
         .bind(format!(
-            "An admin changed {} of your {noun}: {reason}",
+            "An admin changed {} of your items: {reason}",
             outcome.applied
         ))
         .bind(json!({ "counts": counts }))

@@ -5,6 +5,7 @@ import { useBans, useLiftBans } from '@/hooks'
 import type { BanView } from '@/schemas'
 import { banEndLabel } from '@/services'
 import { BanEditModal } from './BanEditModal'
+import { ModerationDrawer } from './ModerationDrawer'
 
 function label(ban: BanView): string {
   return ban.display_name?.trim() || ban.email
@@ -16,6 +17,7 @@ export function BannedUsersPanel(): ReactElement | null {
   const lift = useLiftBans()
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [editing, setEditing] = useState<'reason' | 'duration' | null>(null)
+  const [reviewing, setReviewing] = useState<BanView | null>(null)
   const rows = bans.data?.bans ?? []
   const selectedIds = rows.filter((b) => selected.has(b.user_id)).map((b) => b.user_id)
 
@@ -66,6 +68,9 @@ export function BannedUsersPanel(): ReactElement | null {
                 </Text>
                 <Text size="sm">{ban.reason}</Text>
               </Stack>
+              <Button size="xs" variant="subtle" onClick={() => setReviewing(ban)}>
+                Content
+              </Button>
             </Group>
             {i < rows.length - 1 ? <Divider /> : null}
           </Stack>
@@ -84,6 +89,12 @@ export function BannedUsersPanel(): ReactElement | null {
           </Group>
         ) : null}
       </Stack>
+      {reviewing ? (
+        <ModerationDrawer
+          user={{ id: reviewing.user_id, label: label(reviewing) }}
+          onClose={() => setReviewing(null)}
+        />
+      ) : null}
       {editing ? (
         <BanEditModal
           mode={editing}

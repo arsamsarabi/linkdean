@@ -26,7 +26,7 @@ vi.mock('@/components', () => ({
 
 function renderHeader(vaultUnlocked: boolean) {
   return render(
-    <MantineProvider>
+    <MantineProvider env="test">
       <AppShellHeader
         loading={false}
         landing="/"

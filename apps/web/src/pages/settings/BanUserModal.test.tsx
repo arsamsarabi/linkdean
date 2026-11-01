@@ -12,7 +12,7 @@ vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 function renderModal() {
   const onClose = vi.fn()
   render(
-    <MantineProvider>
+    <MantineProvider env="test">
       <BanUserModal user={{ id: 'u1', label: 'Ana' }} onClose={onClose} />
     </MantineProvider>
   )

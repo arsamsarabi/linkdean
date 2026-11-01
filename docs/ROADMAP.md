@@ -16,13 +16,6 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - View team, members, bookmarks/lists, dashboards
 - Team activity, comments, and likes surfaces
 
-**Moderation**
-
-- Admin ban / unban user
-- Banned-users list + bulk edit
-- Ban reason shown to banned user
-- Ban duration: absolute date or N days
-
 **Vault & privacy**
 
 - Client-held vault key option (true E2E; harder search tradeoff)

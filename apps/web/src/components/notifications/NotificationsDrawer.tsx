@@ -25,6 +25,7 @@ function withoutOpenInvites(rows: Notification[], invites: ShareInvite[]): Notif
 }
 
 function hrefFor(n: Notification): string {
+  if (n.kind === 'moderation_changes') return '/trash'
   switch (n.subject_type) {
     case 'dashboard':
       return '/'
@@ -54,6 +55,8 @@ function kindLabel(kind: Notification['kind']): string {
       return 'Rating'
     case 'user_followed':
       return 'Follow'
+    case 'moderation_changes':
+      return 'Moderation'
   }
 }
 

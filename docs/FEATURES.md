@@ -116,6 +116,9 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Profile: display name, bio, avatar, password change
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
+- Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts
+- Banned users list with bulk unban and bulk change of reason or duration
+- Moderation of a banned user's exposed content: turn off public links, set items private, hide the profile, revoke shares, delete comments, move items to the owner's Trash; private and vault content stay out of reach, and every action is recorded
 
 ---
 
@@ -154,6 +157,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 | `/` | Dashboard (glance boards) |
 | `/library` | Bookmark library |
 | `/settings` | Preferences, categories, import, vault, API keys, admin |
+| `/vaults` | Open vaults, with Library filters and views |
+| `/banned` | Reason and end date for a banned account |
 | `/trash` | Soft-deleted items |
 | `/profile` | Account profile |
 | Command palette | Quick add / search / navigate |
