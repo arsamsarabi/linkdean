@@ -82,7 +82,11 @@ async fn search(
             Err(e) => tracing::warn!("meili search failed: {e}"),
         }
 
-        let mode = settings.vault_search_mode.as_str();
+        let mode = if settings.show_vault_in_library {
+            settings.vault_search_mode.as_str()
+        } else {
+            "never"
+        };
         let keyring = state.vault_keyring(user.id).await;
         match mode {
             "never" => {}

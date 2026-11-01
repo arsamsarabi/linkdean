@@ -98,7 +98,7 @@ async fn delete_one(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
-    db::delete_category(&state.pool, user.id, id).await?;
+    db::delete_category_by_mode(&state.pool, user.id, id).await?;
     Ok(Json(json!({ "ok": true })))
 }
 

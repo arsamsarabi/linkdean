@@ -323,6 +323,19 @@ pub async fn update_user_settings(
     if let Some(v) = patch.show_deleted_in_library {
         s.show_deleted_in_library = v;
     }
+    if let Some(v) = patch.show_vault_in_library {
+        s.show_vault_in_library = v;
+    }
+    if let Some(ref v) = patch.vault_delete_mode {
+        match v.as_str() {
+            "trash" | "permanent" => s.vault_delete_mode = v.clone(),
+            _ => {
+                return Err(Error::BadRequest(
+                    "vault_delete_mode must be trash|permanent".into(),
+                ))
+            }
+        }
+    }
     sqlx::query_as::<_, UserSettings>(
         r#"
         UPDATE user_settings SET
@@ -334,6 +347,8 @@ pub async fn update_user_settings(
             library_view = $7,
             trash_retention_days = $8,
             show_deleted_in_library = $9,
+            show_vault_in_library = $10,
+            vault_delete_mode = $11,
             updated_at = now()
         WHERE user_id = $1
         RETURNING *
@@ -348,6 +363,8 @@ pub async fn update_user_settings(
     .bind(&s.library_view)
     .bind(s.trash_retention_days)
     .bind(s.show_deleted_in_library)
+    .bind(s.show_vault_in_library)
+    .bind(&s.vault_delete_mode)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))

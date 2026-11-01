@@ -14,7 +14,11 @@ pub async fn list_trash(pool: &PgPool, user_id: Uuid) -> Result<Vec<TrashItem>> 
     let bookmarks = sqlx::query_as::<_, TrashRow>(
         r#"
         SELECT id,
-               CASE WHEN title <> '' THEN title ELSE url END AS title,
+               CASE
+                   WHEN is_vault THEN 'Vault item'
+                   WHEN title <> '' THEN title
+                   ELSE url
+               END AS title,
                deleted_at
         FROM bookmarks
         WHERE owner_user_id = $1 AND deleted_at IS NOT NULL

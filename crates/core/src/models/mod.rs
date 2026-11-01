@@ -48,6 +48,8 @@ pub struct UserSettings {
     pub library_view: String,
     pub trash_retention_days: i32,
     pub show_deleted_in_library: bool,
+    pub show_vault_in_library: bool,
+    pub vault_delete_mode: String,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -77,6 +79,8 @@ pub struct UpdateSettings {
     pub library_view: Option<String>,
     pub trash_retention_days: Option<i32>,
     pub show_deleted_in_library: Option<bool>,
+    pub show_vault_in_library: Option<bool>,
+    pub vault_delete_mode: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

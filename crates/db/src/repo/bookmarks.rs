@@ -1078,6 +1078,31 @@ pub async fn restore_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
     Ok(())
 }
 
+/// Delete a bookmark, honouring the owner's choice for vault items.
+pub async fn delete_bookmark_by_mode(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let live_vault_row: Option<(bool,)> = sqlx::query_as(
+        r#"
+        SELECT is_vault AND deleted_at IS NULL FROM bookmarks
+        WHERE id = $1 AND owner_user_id = $2
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    delete_bookmark(pool, user_id, id).await?;
+    if live_vault_row.is_some_and(|r| r.0)
+        && super::users::get_user_settings(pool, user_id)
+            .await?
+            .vault_delete_mode
+            == "permanent"
+    {
+        purge_bookmark(pool, user_id, id).await?;
+    }
+    Ok(())
+}
+
 pub async fn purge_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
     let title = soft_deleted_bookmark_title(pool, user_id, id).await?;
     let res = sqlx::query(

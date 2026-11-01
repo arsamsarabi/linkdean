@@ -123,7 +123,7 @@ async fn delete_one(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
     // Soft-delete — keep preview on disk until permanent purge.
-    db::delete_bookmark(&state.pool, user.id, id).await?;
+    db::delete_bookmark_by_mode(&state.pool, user.id, id).await?;
     if let Err(e) = state.search.delete_bookmark(id).await {
         tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
     }
