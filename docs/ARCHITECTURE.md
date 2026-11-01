@@ -53,7 +53,7 @@ Homelab: nova runs compose; ncc Traefik terminates TLS (`linkdean.arsam.app`). A
 - **Vault:** per-user wrapped data key (Argon2id + AES-GCM)
 - **ImportJob:** import run stats
 
-Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`/`write`) beside ownership; access covers the shared category and its non-vault descendants. Milestone 2 adds `dashboards` / `dashboard_sections` / `dashboard_items` for a per-user home layout (default dashboard auto-created).
+Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`/`write`) beside ownership; access covers the shared category and its non-vault descendants. Milestone 2 adds `dashboards` / `dashboard_sections` / `dashboard_items` for a per-user home layout (default dashboard auto-created). Categories may also carry an unlisted `public_slug` for anonymous read-only list URLs (`GET /api/public/lists/{slug}` → SPA `/l/{slug}`).
 
 ## Auth & sessions
 

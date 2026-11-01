@@ -8,11 +8,11 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 
 **Product**
 
-- Public bookmark list URLs (after sharing infra is solid)
 - Pending email invites for bookmark / list / dashboard shares (not public URLs): invite by address; if recipient has no account, they register and claim access
 - Broken-link checker (rate-limited worker)
 - Full-text notes and optional highlights
 - increase the number of icons offered to the user for the categories. paginate the icons so the user can scroll through them. add a search input to the icons page so the user can search for an icon.
+- Allow user to upload their own image for the bookmark items. replace the default image with the uploaded image.
 
 **Social**
 
@@ -58,6 +58,7 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - SMTP / outbound email config (for invites + notification delivery) ([react-email](https://www.npmjs.com/package/react-email) for templates)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
+- backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file..
 
 ---
 

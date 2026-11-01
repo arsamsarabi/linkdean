@@ -66,6 +66,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Meili visibility respects readable shared categories
 - Read-only library gates for invitees
 - Vault pins stay owner-only on shared dashboards
+- **Public bookmark list URLs:** owner enables unlisted `/l/{slug}` link (Share drawer); anyone with the URL can read the list; rotate/revoke; vault lists blocked; notes never exposed
 
 ---
 
