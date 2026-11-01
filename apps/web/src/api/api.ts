@@ -18,13 +18,17 @@ import {
   dashboardSummariesSchema,
   duplicatesSchema,
   importResultSchema,
+  markAllReadSchema,
   meResponseSchema,
+  notificationEnvelopeSchema,
+  notificationsEnvelopeSchema,
   okSchema,
   platformSettingsEnvelopeSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
   trashItemsSchema,
   trashPurgeResultSchema,
+  unreadCountSchema,
   userEnvelopeSchema,
   vaultStatusSchema,
   type AdminUserSummary,
@@ -39,6 +43,7 @@ import {
   type DashboardSummary,
   type DuplicateGroup,
   type ForkCategoryResult,
+  type Notification,
   type PatchDashboard,
   type PlatformSettings,
   type PutDashboardLayout,
@@ -85,6 +90,18 @@ export const api = {
 
   revokeApiKey: (id: string): Promise<{ ok: boolean }> =>
     req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),
+
+  listNotifications: (limit = 50): Promise<{ notifications: Notification[] }> =>
+    req(`/notifications?limit=${limit}`, {}, notificationsEnvelopeSchema),
+
+  unreadNotificationCount: (): Promise<{ count: number }> =>
+    req('/notifications/unread-count', {}, unreadCountSchema),
+
+  markNotificationRead: (id: string): Promise<{ notification: Notification }> =>
+    req(`/notifications/${id}/read`, { method: 'POST' }, notificationEnvelopeSchema),
+
+  markAllNotificationsRead: (): Promise<{ ok: boolean; updated?: number }> =>
+    req('/notifications/read-all', { method: 'POST' }, markAllReadSchema),
 
   register: (body: {
     email: string

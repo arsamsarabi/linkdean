@@ -25,12 +25,14 @@ import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-route
 import {
   CommandPalette,
   LogoMark,
+  NotificationsBell,
+  NotificationsDrawer,
   PageContainer,
   QueryErrorAlert,
   ThemeMenuSwitch,
   UserAvatar,
 } from '@/components'
-import { useLogout, usePrefsHydration } from '@/hooks'
+import { useLogout, usePrefsHydration, useUnreadNotificationCount } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useUi } from '@/stores'
 import classes from './AppShell.module.css'
@@ -44,6 +46,8 @@ export function AppShell(): ReactElement {
   const logout = useLogout()
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const [paletteOpen, { open: openPalette, close: closePalette, toggle: togglePalette }] = useDisclosure(false)
+  const [notifOpen, { open: openNotif, close: closeNotif }] = useDisclosure(false)
+  const unread = useUnreadNotificationCount(!!me.data)
 
   useEffect(() => {
     if (me.data && !me.data.user.onboarding_completed) {
@@ -124,6 +128,16 @@ export function AppShell(): ReactElement {
             {loading ? (
               <Skeleton circle height={36} width={36} />
             ) : (
+              <Group gap="xs" wrap="nowrap">
+              <Indicator
+                disabled={(unread.data?.count ?? 0) < 1}
+                label={(unread.data?.count ?? 0) > 9 ? '9+' : unread.data?.count}
+                size={16}
+                color="violet"
+                offset={4}
+              >
+                <NotificationsBell unread={unread.data?.count ?? 0} onClick={openNotif} />
+              </Indicator>
               <Menu shadow="md" width={240} position="bottom-end">
                 <Menu.Target>
                   <Tooltip label="Account" position="bottom">
@@ -164,6 +178,7 @@ export function AppShell(): ReactElement {
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
+              </Group>
             )}
           </Group>
         </PageContainer>
@@ -184,6 +199,7 @@ export function AppShell(): ReactElement {
         </PageContainer>
       </MantineAppShell.Main>
       <CommandPalette opened={paletteOpen} onClose={closePalette} />
+      <NotificationsDrawer opened={notifOpen} onClose={closeNotif} />
     </MantineAppShell>
   )
 }
