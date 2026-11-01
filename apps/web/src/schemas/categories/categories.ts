@@ -11,6 +11,8 @@ export const categorySchema = z.object({
   is_vault: z.boolean(),
   icon: z.string().nullish(),
   position: z.number(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
   access: categoryAccessSchema.default('owner'),
   shared_out: z.boolean().default(false),
   shared_with: z.array(z.string()).default([]),

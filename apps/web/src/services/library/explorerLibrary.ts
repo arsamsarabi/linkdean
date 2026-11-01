@@ -23,6 +23,8 @@ export type ExplorerFolder = {
   /** Invitee-only: owner's display name for share badge. */
   ownerDisplayName?: string | null
   deletedAt?: string | null
+  createdAt?: string | null
+  updatedAt?: string | null
 }
 
 export function isSharedFolder(folder: ExplorerFolder): boolean {
@@ -81,6 +83,8 @@ function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): Exp
     sharedWith: cat.shared_with,
     ownerDisplayName: cat.owner_display_name,
     deletedAt: cat.deleted_at,
+    createdAt: cat.created_at ?? null,
+    updatedAt: cat.updated_at ?? null,
   }
 }
 
@@ -173,12 +177,28 @@ export function normalizeFolderId(raw: unknown): ExplorerFolderId | undefined {
   return v
 }
 
-/** Sort folders by library sort key. Unsorted stays last. Date sorts → name (folders have no timestamps). */
+/** Sort folders by library sort key. Unsorted stays last. */
 export function sortExplorerFolders(folders: readonly ExplorerFolder[], sort: SortKey): ExplorerFolder[] {
   const uncategorized = folders.filter((f) => f.id === FOLDER_UNCATEGORIZED)
   const rest = folders.filter((f) => f.id !== FOLDER_UNCATEGORIZED)
   const byNameAsc = (a: ExplorerFolder, b: ExplorerFolder) => a.name.localeCompare(b.name)
   const byNameDesc = (a: ExplorerFolder, b: ExplorerFolder) => b.name.localeCompare(a.name)
-  const cmp = sort === 'title_desc' ? byNameDesc : byNameAsc
+  const updatedOf = (f: ExplorerFolder) => f.updatedAt || f.createdAt || ''
+  const createdOf = (f: ExplorerFolder) => f.createdAt || ''
+  const cmp = (a: ExplorerFolder, b: ExplorerFolder): number => {
+    switch (sort) {
+      case 'title_desc':
+        return byNameDesc(a, b)
+      case 'title_asc':
+        return byNameAsc(a, b)
+      case 'updated_asc':
+        return updatedOf(a).localeCompare(updatedOf(b)) || byNameAsc(a, b)
+      case 'created_desc':
+        return createdOf(b).localeCompare(createdOf(a)) || byNameAsc(a, b)
+      case 'updated_desc':
+      default:
+        return updatedOf(b).localeCompare(updatedOf(a)) || byNameAsc(a, b)
+    }
+  }
   return [...rest].sort(cmp).concat(uncategorized)
 }

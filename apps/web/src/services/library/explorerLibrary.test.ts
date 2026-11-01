@@ -181,10 +181,58 @@ describe('sortExplorerFolders', () => {
     ])
   })
 
-  it('date sorts fall back to name asc', () => {
+  it('date sorts fall back to name when timestamps missing', () => {
     expect(sortExplorerFolders(folders, 'updated_desc').map((f) => f.id)).toEqual([
       'a',
       'z',
+      FOLDER_UNCATEGORIZED,
+    ])
+  })
+
+  it('sorts by updated_at newest first', () => {
+    const dated: ExplorerFolder[] = [
+      {
+        id: 'old',
+        name: 'Old',
+        bookmarkCount: 0,
+        isVault: false,
+        isHidden: false,
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'new',
+        name: 'New',
+        bookmarkCount: 0,
+        isVault: false,
+        isHidden: false,
+        updatedAt: '2024-06-01T00:00:00Z',
+      },
+      {
+        id: 'mid',
+        name: 'Mid',
+        bookmarkCount: 0,
+        isVault: false,
+        isHidden: false,
+        updatedAt: '2024-03-01T00:00:00Z',
+      },
+      {
+        id: FOLDER_UNCATEGORIZED,
+        name: 'Unsorted',
+        bookmarkCount: 0,
+        isVault: false,
+        isHidden: false,
+      },
+    ]
+    expect(sortExplorerFolders(dated, 'updated_desc').map((f) => f.id)).toEqual([
+      'new',
+      'mid',
+      'old',
+      FOLDER_UNCATEGORIZED,
+    ])
+    expect(sortExplorerFolders(dated, 'updated_asc').map((f) => f.id)).toEqual([
+      'old',
+      'mid',
+      'new',
       FOLDER_UNCATEGORIZED,
     ])
   })
