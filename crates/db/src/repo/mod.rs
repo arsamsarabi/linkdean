@@ -1,3 +1,4 @@
+mod activity;
 mod api_keys;
 mod blocking;
 mod bookmarks;
@@ -16,6 +17,7 @@ mod trash;
 mod users;
 mod vault;
 
+pub use activity::*;
 pub use api_keys::*;
 pub use bookmarks::*;
 pub use categories::*;

@@ -551,10 +551,32 @@ pub async fn create_bookmark(
         .await?;
     }
     let bookmark = get_bookmark_raw(pool, user_id, bookmark.id).await?;
-
-    bookmark_to_view(pool, bookmark, vault_key, user_id)
+    let view = bookmark_to_view(pool, bookmark, vault_key, user_id)
         .await?
-        .ok_or(Error::VaultLocked)
+        .ok_or(Error::VaultLocked)?;
+    let title = activity_bookmark_title(&view);
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Created,
+        linkdean_core::ActivitySubjectType::Bookmark,
+        view.id,
+        &title,
+    )
+    .await;
+    Ok(view)
+}
+
+fn activity_bookmark_title(view: &BookmarkView) -> String {
+    if view.is_vault {
+        return "Vault bookmark".into();
+    }
+    let t = view.title.trim();
+    if t.is_empty() {
+        view.url.clone()
+    } else {
+        view.title.clone()
+    }
 }
 
 fn update_has_content(req: &UpdateBookmark) -> bool {
@@ -671,9 +693,20 @@ pub async fn update_bookmark(
             set_bookmark_categories(pool, user_id, id, &c.into_iter().collect::<Vec<_>>()).await?;
         }
         let b = get_bookmark_raw(pool, user_id, id).await?;
-        return bookmark_to_view(pool, b, vault_key, user_id)
+        let view = bookmark_to_view(pool, b, vault_key, user_id)
             .await?
-            .ok_or(Error::VaultLocked);
+            .ok_or(Error::VaultLocked)?;
+        let title = activity_bookmark_title(&view);
+        super::activity::record_activity(
+            pool,
+            user_id,
+            linkdean_core::ActivityAction::Updated,
+            linkdean_core::ActivitySubjectType::Bookmark,
+            view.id,
+            &title,
+        )
+        .await;
+        return Ok(view);
     }
 
     let url = req.url.unwrap_or(existing.url);
@@ -721,9 +754,20 @@ pub async fn update_bookmark(
         )
         .await;
     }
-    bookmark_to_view(pool, b, None, user_id)
+    let view = bookmark_to_view(pool, b, None, user_id)
         .await?
-        .ok_or(Error::NotFound)
+        .ok_or(Error::NotFound)?;
+    let title = activity_bookmark_title(&view);
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Updated,
+        linkdean_core::ActivitySubjectType::Bookmark,
+        view.id,
+        &title,
+    )
+    .await;
+    Ok(view)
 }
 
 /// Soft-delete: set `deleted_at`. Owner-only for vault; writers otherwise.
@@ -760,10 +804,27 @@ pub async fn delete_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    let title = if existing.is_vault {
+        "Vault bookmark".into()
+    } else if existing.title.trim().is_empty() {
+        existing.url.clone()
+    } else {
+        existing.title.clone()
+    };
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Deleted,
+        linkdean_core::ActivitySubjectType::Bookmark,
+        id,
+        &title,
+    )
+    .await;
     Ok(())
 }
 
 pub async fn restore_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let title = soft_deleted_bookmark_title(pool, user_id, id).await?;
     let res = sqlx::query(
         r#"
         UPDATE bookmarks
@@ -779,10 +840,20 @@ pub async fn restore_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Restored,
+        linkdean_core::ActivitySubjectType::Bookmark,
+        id,
+        &title,
+    )
+    .await;
     Ok(())
 }
 
 pub async fn purge_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let title = soft_deleted_bookmark_title(pool, user_id, id).await?;
     let res = sqlx::query(
         r#"
         DELETE FROM bookmarks
@@ -797,7 +868,46 @@ pub async fn purge_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::activity::record_activity_with(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Deleted,
+        linkdean_core::ActivitySubjectType::Bookmark,
+        id,
+        &title,
+        Some(&format!("Permanently deleted bookmark: {title}")),
+        serde_json::json!({ "purged": true }),
+    )
+    .await;
     Ok(())
+}
+
+async fn soft_deleted_bookmark_title(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<String> {
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        title: String,
+        url: String,
+        is_vault: bool,
+    }
+    let row = sqlx::query_as::<_, Row>(
+        r#"
+        SELECT title, url, is_vault FROM bookmarks
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+    if row.is_vault {
+        Ok("Vault bookmark".into())
+    } else if row.title.trim().is_empty() {
+        Ok(row.url)
+    } else {
+        Ok(row.title)
+    }
 }
 
 pub async fn update_bookmark_metadata(

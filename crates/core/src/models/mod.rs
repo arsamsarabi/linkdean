@@ -949,3 +949,80 @@ pub struct SocialSummary {
     pub my_rating: Option<i16>,
     pub comments: Vec<SocialCommentView>,
 }
+
+/// Personal activity history actions (create / edit / delete / restore).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ActivityAction {
+    Created,
+    Updated,
+    Deleted,
+    Restored,
+}
+
+impl ActivityAction {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Created => "created",
+            Self::Updated => "updated",
+            Self::Deleted => "deleted",
+            Self::Restored => "restored",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "created" => Ok(Self::Created),
+            "updated" => Ok(Self::Updated),
+            "deleted" => Ok(Self::Deleted),
+            "restored" => Ok(Self::Restored),
+            _ => Err(format!("unknown activity action: {s}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ActivitySubjectType {
+    Bookmark,
+    Category,
+    Dashboard,
+}
+
+impl ActivitySubjectType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Bookmark => "bookmark",
+            Self::Category => "category",
+            Self::Dashboard => "dashboard",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "bookmark" => Ok(Self::Bookmark),
+            "category" => Ok(Self::Category),
+            "dashboard" => Ok(Self::Dashboard),
+            _ => Err(format!("unknown activity subject_type: {s}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityEvent {
+    pub id: Uuid,
+    pub action: ActivityAction,
+    pub subject_type: ActivitySubjectType,
+    pub subject_id: Uuid,
+    pub subject_title: String,
+    pub summary: String,
+    pub payload: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ListActivityFilter {
+    pub subject_type: Option<ActivitySubjectType>,
+    pub action: Option<ActivityAction>,
+    pub limit: i64,
+}

@@ -201,7 +201,17 @@ pub async fn create_category(
     .map_err(|e| Error::msg(e.to_string()))?;
 
     let access = category_access(pool, user_id, cat.id).await?;
-    Ok(CategoryView::from_category(cat, access))
+    let view = CategoryView::from_category(cat, access);
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Created,
+        linkdean_core::ActivitySubjectType::Category,
+        view.id,
+        &view.name,
+    )
+    .await;
+    Ok(view)
 }
 
 pub async fn update_category(
@@ -275,7 +285,17 @@ pub async fn update_category(
     }
 
     let access = category_access(pool, user_id, updated.id).await?;
-    Ok(CategoryView::from_category(updated, access))
+    let view = CategoryView::from_category(updated, access);
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Updated,
+        linkdean_core::ActivitySubjectType::Category,
+        view.id,
+        &view.name,
+    )
+    .await;
+    Ok(view)
 }
 
 /// Soft-delete category subtree (descendants included). Owner-only.
@@ -285,6 +305,7 @@ pub async fn delete_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
     if cat.deleted_at.is_some() {
         return Ok(());
     }
+    let title = cat.name.clone();
     // Collect subtree ids (owned).
     let owned = list_owned_categories(pool, user_id, true, true).await?;
     let mut ids = vec![id];
@@ -315,6 +336,15 @@ pub async fn delete_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Deleted,
+        linkdean_core::ActivitySubjectType::Category,
+        id,
+        &title,
+    )
+    .await;
     Ok(())
 }
 
@@ -332,9 +362,11 @@ pub async fn restore_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
-    if !owned.iter().any(|c| c.id == id) {
-        return Err(Error::NotFound);
-    }
+    let title = owned
+        .iter()
+        .find(|c| c.id == id)
+        .map(|c| c.name.clone())
+        .ok_or(Error::NotFound)?;
     let mut ids = vec![id];
     let mut changed = true;
     while changed {
@@ -360,11 +392,32 @@ pub async fn restore_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
     .execute(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Restored,
+        linkdean_core::ActivitySubjectType::Category,
+        id,
+        &title,
+    )
+    .await;
     Ok(())
 }
 
 pub async fn purge_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
     require_category_owner(pool, user_id, id).await?;
+    let title = sqlx::query_scalar::<_, String>(
+        r#"
+        SELECT name FROM categories
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
     let res = sqlx::query(
         r#"
         DELETE FROM categories
@@ -379,6 +432,17 @@ pub async fn purge_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::activity::record_activity_with(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Deleted,
+        linkdean_core::ActivitySubjectType::Category,
+        id,
+        &title,
+        Some(&format!("Permanently deleted list: {title}")),
+        serde_json::json!({ "purged": true }),
+    )
+    .await;
     Ok(())
 }
 

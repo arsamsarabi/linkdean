@@ -285,7 +285,20 @@ pub async fn create_dashboard(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await
+    let title = dash.title.clone();
+    let id = dash.id;
+    let view =
+        load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, vault_key).await?;
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Created,
+        linkdean_core::ActivitySubjectType::Dashboard,
+        id,
+        &title,
+    )
+    .await;
+    Ok(view)
 }
 
 pub async fn put_default_dashboard(
@@ -403,6 +416,16 @@ pub async fn put_dashboard(
         .await;
     }
 
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Updated,
+        linkdean_core::ActivitySubjectType::Dashboard,
+        id,
+        title,
+    )
+    .await;
+
     get_dashboard(pool, user_id, id, vault_key).await
 }
 
@@ -469,6 +492,7 @@ pub async fn patch_dashboard(
         require_dashboard_write(pool, user_id, id).await?;
     }
 
+    let mut activity_title: Option<String> = None;
     if let Some(ref title_raw) = req.title {
         let title = title_raw.trim();
         if title.is_empty() {
@@ -486,6 +510,33 @@ pub async fn patch_dashboard(
         .execute(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
+        activity_title = Some(title.to_string());
+    }
+
+    if let Some(ref title) = activity_title {
+        super::activity::record_activity(
+            pool,
+            user_id,
+            linkdean_core::ActivityAction::Updated,
+            linkdean_core::ActivitySubjectType::Dashboard,
+            id,
+            title,
+        )
+        .await;
+    } else if req.is_default == Some(true) {
+        // Pin-only patch still counts as an update for history.
+        if let Ok(view) = get_dashboard(pool, user_id, id, vault_key).await {
+            super::activity::record_activity(
+                pool,
+                user_id,
+                linkdean_core::ActivityAction::Updated,
+                linkdean_core::ActivitySubjectType::Dashboard,
+                id,
+                &view.title,
+            )
+            .await;
+            return Ok(view);
+        }
     }
 
     get_dashboard(pool, user_id, id, vault_key).await
@@ -501,6 +552,7 @@ pub async fn delete_dashboard(
         return list_dashboards(pool, user_id).await;
     }
     let was_default = dash.is_default;
+    let title = dash.title.clone();
 
     sqlx::query(
         r#"
@@ -523,10 +575,32 @@ pub async fn delete_dashboard(
         let _ = pin_dashboard_row(pool, user_id, next).await?;
     }
 
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Deleted,
+        linkdean_core::ActivitySubjectType::Dashboard,
+        id,
+        &title,
+    )
+    .await;
+
     list_dashboards(pool, user_id).await
 }
 
 pub async fn restore_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let title = sqlx::query_scalar::<_, String>(
+        r#"
+        SELECT title FROM dashboards
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
     let res = sqlx::query(
         r#"
         UPDATE dashboards
@@ -542,10 +616,31 @@ pub async fn restore_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::activity::record_activity(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Restored,
+        linkdean_core::ActivitySubjectType::Dashboard,
+        id,
+        &title,
+    )
+    .await;
     Ok(())
 }
 
 pub async fn purge_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
+    let title = sqlx::query_scalar::<_, String>(
+        r#"
+        SELECT title FROM dashboards
+        WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
     let res = sqlx::query(
         r#"
         DELETE FROM dashboards
@@ -560,5 +655,16 @@ pub async fn purge_dashboard(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
     if res.rows_affected() == 0 {
         return Err(Error::NotFound);
     }
+    super::activity::record_activity_with(
+        pool,
+        user_id,
+        linkdean_core::ActivityAction::Deleted,
+        linkdean_core::ActivitySubjectType::Dashboard,
+        id,
+        &title,
+        Some(&format!("Permanently deleted dashboard: {title}")),
+        serde_json::json!({ "purged": true }),
+    )
+    .await;
     Ok(())
 }
