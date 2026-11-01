@@ -1,4 +1,8 @@
 use chromiumoxide::browser::Browser;
+use chromiumoxide::cdp::browser_protocol::fetch::{
+    ContinueRequestParams, EnableParams as FetchEnableParams, EventRequestPaused, FailRequestParams,
+};
+use chromiumoxide::cdp::browser_protocol::network::ErrorReason;
 use chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat;
 use chromiumoxide::page::ScreenshotParams;
 use futures::StreamExt;
@@ -14,6 +18,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::{info, warn};
 use uuid::Uuid;
+
+mod net_guard;
 
 #[derive(Clone, Debug)]
 pub struct EnrichOpts {
@@ -34,12 +40,19 @@ pub async fn enrich_bookmark(
     if raw.is_vault || raw.url.is_empty() {
         return;
     }
+    // Private addresses and other schemes are never fetched, here or by Chrome.
+    match url::Url::parse(&raw.url) {
+        Ok(url) if net_guard::resolves_public(&url).await => {}
+        _ => {
+            info!(%bookmark_id, "skipped enrichment: url is not a public web address");
+            return;
+        }
+    }
 
-    let client = match reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .user_agent("Linkdean/0.1 (+https://github.com/arsamsarabi/linkdean)")
-        .build()
-    {
+    let client = match net_guard::public_client(
+        Duration::from_secs(10),
+        "Linkdean/0.1 (+https://github.com/arsamsarabi/linkdean)",
+    ) {
         Ok(c) => c,
         Err(e) => {
             warn!("http client: {e}");
@@ -228,13 +241,6 @@ impl AssetKind {
             Self::Og => cached_og_url(id),
         }
     }
-
-    fn default_ct(self) -> &'static str {
-        match self {
-            Self::Favicon => "image/png",
-            Self::Og => "image/jpeg",
-        }
-    }
 }
 
 /// Cache remote image on disk; return local API URL (or remote fallback / None = no DB change).
@@ -283,32 +289,23 @@ async fn fetch_and_store(
     ct_path: &Path,
     kind: AssetKind,
 ) -> anyhow::Result<()> {
-    let (bytes, ct) = if let Some(data) = parse_data_url(url) {
+    let bytes = if let Some(data) = parse_data_url(url) {
         data
     } else {
         let resp = client.get(url).send().await?;
         if !resp.status().is_success() {
             anyhow::bail!("HTTP {}", resp.status());
         }
-        let header_ct = resp
-            .headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .map(|s| s.split(';').next().unwrap_or(s).trim().to_string())
-            .filter(|s| !s.is_empty());
-        let bytes = resp.bytes().await?;
-        if bytes.len() > kind.max_bytes() {
-            anyhow::bail!("asset too large ({} bytes)", bytes.len());
-        }
-        let ct = header_ct
-            .or_else(|| sniff_image_ct(&bytes).map(str::to_string))
-            .unwrap_or_else(|| kind.default_ct().to_string());
-        (bytes.to_vec(), ct)
+        resp.bytes().await?.to_vec()
     };
 
     if bytes.len() > kind.max_bytes() {
         anyhow::bail!("asset too large ({} bytes)", bytes.len());
     }
+    // These files are served back from our origin, so the bytes decide the type.
+    let Some(ct) = sniff_image_ct(&bytes) else {
+        anyhow::bail!("asset is not an image");
+    };
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
@@ -317,15 +314,9 @@ async fn fetch_and_store(
     Ok(())
 }
 
-fn parse_data_url(url: &str) -> Option<(Vec<u8>, String)> {
+fn parse_data_url(url: &str) -> Option<Vec<u8>> {
     let rest = url.strip_prefix("data:")?;
     let (meta, data) = rest.split_once(',')?;
-    let ct = meta
-        .split(';')
-        .next()
-        .unwrap_or("application/octet-stream")
-        .trim()
-        .to_string();
     let bytes = if meta.contains(";base64") {
         use base64::Engine as _;
         base64::engine::general_purpose::STANDARD
@@ -335,7 +326,7 @@ fn parse_data_url(url: &str) -> Option<(Vec<u8>, String)> {
         // Percent-decoded plain data URLs are rare for images; skip if not base64.
         return None;
     };
-    Some((bytes, ct))
+    Some(bytes)
 }
 
 fn sniff_image_ct(bytes: &[u8]) -> Option<&'static str> {
@@ -359,9 +350,9 @@ fn sniff_image_ct(bytes: &[u8]) -> Option<&'static str> {
     {
         return Some("image/x-icon");
     }
-    let head = std::str::from_utf8(&bytes[..bytes.len().min(256)]).ok()?;
-    let trimmed = head.trim_start();
-    if trimmed.starts_with("<svg") || trimmed.contains("<svg") {
+    let head = String::from_utf8_lossy(&bytes[..bytes.len().min(256)]);
+    let trimmed = head.trim_start_matches('\u{feff}').trim_start();
+    if trimmed.starts_with("<svg") || (trimmed.starts_with("<?xml") && trimmed.contains("<svg")) {
         return Some("image/svg+xml");
     }
     None
@@ -431,37 +422,6 @@ fn head_needs_get_fallback(code: u16) -> bool {
     matches!(code, 403 | 404 | 405 | 501)
 }
 
-fn is_blocked_host(host: &str) -> bool {
-    let h = host.trim().trim_end_matches('.').to_ascii_lowercase();
-    matches!(
-        h.as_str(),
-        "localhost" | "localhost.localdomain" | "metadata.google.internal" | "metadata" | "0.0.0.0"
-    ) || h.ends_with(".localhost")
-        || h.ends_with(".local")
-        || h.parse::<std::net::IpAddr>()
-            .map(is_blocked_ip)
-            .unwrap_or(false)
-}
-
-fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
-    match ip {
-        std::net::IpAddr::V4(v4) => {
-            v4.is_loopback()
-                || v4.is_private()
-                || v4.is_link_local()
-                || v4.is_broadcast()
-                || v4.is_unspecified()
-                || v4.octets()[0] == 169 && v4.octets()[1] == 254
-        }
-        std::net::IpAddr::V6(v6) => {
-            v6.is_loopback()
-                || v6.is_unique_local()
-                || v6.is_unicast_link_local()
-                || v6.is_unspecified()
-        }
-    }
-}
-
 async fn probe_url(client: &reqwest::Client, url: &str) -> ProbeResult {
     let Ok(parsed) = url::Url::parse(url) else {
         return ProbeResult {
@@ -477,14 +437,14 @@ async fn probe_url(client: &reqwest::Client, url: &str) -> ProbeResult {
             error: Some("non-http scheme".into()),
         };
     }
-    let Some(host) = parsed.host_str() else {
+    if parsed.host_str().is_none() {
         return ProbeResult {
             status: LinkCheckStatus::Broken,
             status_code: None,
             error: Some("missing host".into()),
         };
-    };
-    if is_blocked_host(host) {
+    }
+    if !net_guard::resolves_public(&parsed).await {
         return ProbeResult {
             status: LinkCheckStatus::Unverifiable,
             status_code: None,
@@ -577,12 +537,10 @@ async fn wait_per_host(
 }
 
 pub async fn check_bookmark_link(pool: &PgPool, bookmark_id: Uuid, url: &str) {
-    let client = match reqwest::Client::builder()
-        .timeout(Duration::from_secs(12))
-        .redirect(reqwest::redirect::Policy::limited(8))
-        .user_agent("LinkdeanLinkCheck/0.1 (+https://github.com/arsamsarabi/linkdean)")
-        .build()
-    {
+    let client = match net_guard::public_client(
+        Duration::from_secs(12),
+        "LinkdeanLinkCheck/0.1 (+https://github.com/arsamsarabi/linkdean)",
+    ) {
         Ok(c) => c,
         Err(e) => {
             warn!("link-check http client: {e}");
@@ -738,9 +696,13 @@ async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Resul
         )
         .await?;
 
-        tokio::time::timeout(Duration::from_secs(20), page.goto(page_url))
-            .await
-            .map_err(|_| anyhow::anyhow!("navigation timeout"))??;
+        let guard = guard_page_requests(page).await?;
+        let navigation = tokio::time::timeout(Duration::from_secs(20), page.goto(page_url)).await;
+        let navigation = navigation.map_err(|_| anyhow::anyhow!("navigation timeout"));
+        if navigation.is_err() {
+            guard.abort();
+        }
+        navigation??;
 
         // Let late paint settle briefly.
         tokio::time::sleep(Duration::from_millis(800)).await;
@@ -758,6 +720,7 @@ async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Resul
         let jpeg = tokio::time::timeout(Duration::from_secs(10), page.screenshot(params))
             .await
             .map_err(|_| anyhow::anyhow!("screenshot timeout"))??;
+        guard.abort();
         Ok::<Vec<u8>, anyhow::Error>(jpeg)
     }
     .await;
@@ -768,6 +731,53 @@ async fn capture_screenshot(browser_http: &str, page_url: &str) -> anyhow::Resul
     drop(browser);
     handle.abort();
     result
+}
+
+/// Pauses every request the page makes, including redirects, subframes and scripts,
+/// and fails the ones aimed at a private address. Chrome does its own DNS, so a name
+/// that changes between this check and the connection is out of reach here: the
+/// compose file keeps Chrome on a network without the database or search.
+async fn guard_page_requests(
+    page: &chromiumoxide::Page,
+) -> anyhow::Result<tokio::task::JoinHandle<()>> {
+    let mut paused = page.event_listener::<EventRequestPaused>().await?;
+    page.execute(FetchEnableParams::default()).await?;
+    let page = page.clone();
+    Ok(tokio::spawn(async move {
+        let mut verdicts: HashMap<String, bool> = HashMap::new();
+        while let Some(event) = paused.next().await {
+            let allowed = page_request_allowed(&event.request.url, &mut verdicts).await;
+            let id = event.request_id.clone();
+            let sent = if allowed {
+                page.execute(ContinueRequestParams::new(id)).await.is_ok()
+            } else {
+                warn!("blocked page request to a private address");
+                let reason = ErrorReason::BlockedByClient;
+                page.execute(FailRequestParams::new(id, reason))
+                    .await
+                    .is_ok()
+            };
+            if !sent {
+                break;
+            }
+        }
+    }))
+}
+
+async fn page_request_allowed(raw: &str, verdicts: &mut HashMap<String, bool>) -> bool {
+    let Ok(url) = url::Url::parse(raw) else {
+        return false;
+    };
+    if matches!(url.scheme(), "data" | "blob" | "about") {
+        return true;
+    }
+    let key = format!("{}:{}", url.scheme(), url.host_str().unwrap_or_default());
+    if let Some(verdict) = verdicts.get(&key) {
+        return *verdict;
+    }
+    let verdict = net_guard::resolves_public(&url).await;
+    verdicts.insert(key, verdict);
+    verdict
 }
 
 /// True for a Cloudflare interstitial. Saving one would show the challenge as the
@@ -891,6 +901,49 @@ fn parse_meta(body: &str) -> Meta {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn sniffing_accepts_images_only() {
+        let png = [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n'];
+        assert_eq!(super::sniff_image_ct(&png), Some("image/png"));
+        assert_eq!(
+            super::sniff_image_ct(b"<svg xmlns='x'/>"),
+            Some("image/svg+xml")
+        );
+        assert_eq!(super::sniff_image_ct(b"<html><script>1</script>"), None);
+        assert_eq!(super::sniff_image_ct(b"<!doctype html><svg></svg>"), None);
+        assert_eq!(super::sniff_image_ct(br#"{"AccessKeyId":"x"}"#), None);
+    }
+
+    #[tokio::test]
+    async fn page_requests_to_private_addresses_are_refused() {
+        let mut verdicts = std::collections::HashMap::new();
+        for url in [
+            "http://169.254.169.254/latest/meta-data/",
+            "http://meilisearch:7700/indexes",
+            "file:///etc/passwd",
+        ] {
+            assert!(
+                !super::page_request_allowed(url, &mut verdicts).await,
+                "{url}"
+            );
+        }
+        assert!(super::page_request_allowed("data:image/png;base64,AA==", &mut verdicts).await);
+        assert!(super::page_request_allowed("about:blank", &mut verdicts).await);
+    }
+
+    /// Real Chrome: a public page still captures, and a private subrequest fails.
+    #[tokio::test]
+    #[ignore = "needs the dev stack's Chrome and network access"]
+    async fn capture_keeps_working_with_the_request_guard() {
+        let chrome = "http://127.0.0.1:9222";
+        let jpeg = super::capture_screenshot(chrome, "https://example.com").await;
+        assert!(jpeg.expect("public capture").len() > 1000);
+        let page = "data:text/html,<img src='http://169.254.169.254/x'>";
+        super::capture_screenshot(chrome, page)
+            .await
+            .expect("data page");
+    }
+
+    #[test]
     fn detects_cloudflare_challenge_pages() {
         let script = r#"<script>window._cf_chl_opt = {};</script>"#;
         assert!(super::is_challenge_page("Example", script));
@@ -964,15 +1017,5 @@ mod tests {
         assert_eq!(classify_http(410), LinkCheckStatus::Broken);
         assert_eq!(classify_http(429), LinkCheckStatus::Unverifiable);
         assert_eq!(classify_http(503), LinkCheckStatus::Unverifiable);
-    }
-
-    #[test]
-    fn blocks_private_hosts() {
-        assert!(is_blocked_host("localhost"));
-        assert!(is_blocked_host("127.0.0.1"));
-        assert!(is_blocked_host("10.0.0.5"));
-        assert!(is_blocked_host("192.168.1.1"));
-        assert!(is_blocked_host("169.254.169.254"));
-        assert!(!is_blocked_host("example.com"));
     }
 }

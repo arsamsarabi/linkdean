@@ -10,6 +10,7 @@ services:
       POSTGRES_DB: linkdean
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks: [data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U linkdean -d linkdean"]
       interval: 5s
@@ -21,6 +22,7 @@ services:
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev_master_key_change_me}
       MEILI_ENV: production
+    networks: [data]
     volumes:
       - meili:/meili_data
     healthcheck:
@@ -33,6 +35,8 @@ services:
     image: zenika/alpine-chrome:124
     restart: unless-stopped
     shm_size: 256mb
+    # Chrome renders untrusted pages, so it gets no route to the database or search.
+    networks: [browser]
     command:
       - --no-sandbox
       - --disable-gpu
@@ -46,6 +50,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
+    networks: [data, browser]
     environment:
       DATABASE_URL: postgres://linkdean:linkdean@db:5432/linkdean
       MEILI_URL: http://meilisearch:7700
@@ -79,6 +84,10 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+
+networks:
+  data:
+  browser:
 
 volumes:
   pgdata:

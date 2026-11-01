@@ -147,6 +147,15 @@ async fn get_preview(
         header::CACHE_CONTROL,
         HeaderValue::from_static("private, max-age=86400"),
     );
+    // Remote content on our origin: it may be an image, but it never gets to run.
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static("sandbox; default-src 'none'; style-src 'unsafe-inline'"),
+    );
     Ok((StatusCode::OK, headers, bytes))
 }
 
