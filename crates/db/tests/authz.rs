@@ -457,6 +457,9 @@ async fn cannot_share_vault_category() {
     .await
     .expect("user b");
 
+    db::setup_vault(&pool, user_a.id, "vault-passphrase")
+        .await
+        .expect("vault");
     let vault_cat = db::create_category(
         &pool,
         user_a.id,

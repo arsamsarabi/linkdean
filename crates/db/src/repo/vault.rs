@@ -48,8 +48,8 @@ pub async fn setup_vault(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Resu
     let keys = super::blocking::run_blocking(move || crypto::setup_vault(&passphrase)).await?;
     sqlx::query(
         r#"
-        INSERT INTO vaults (user_id, kdf_salt, wrapped_key, wrapped_nonce)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO vaults (user_id, name, kdf_salt, wrapped_key, wrapped_nonce)
+        VALUES ($1, 'Vault', $2, $3, $4)
         "#,
     )
     .bind(user_id)
@@ -63,12 +63,14 @@ pub async fn setup_vault(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Resu
 }
 
 pub async fn get_vault(pool: &PgPool, user_id: Uuid) -> Result<Vault> {
-    sqlx::query_as::<_, Vault>("SELECT * FROM vaults WHERE user_id = $1")
-        .bind(user_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?
-        .ok_or(Error::NotFound)
+    sqlx::query_as::<_, Vault>(
+        "SELECT * FROM vaults WHERE user_id = $1 ORDER BY created_at LIMIT 1",
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
 }
 
 pub async fn unlock_vault_key(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Result<[u8; 32]> {

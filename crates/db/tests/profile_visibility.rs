@@ -31,6 +31,30 @@ async fn pool_or_skip() -> Option<PgPool> {
     Some(pool)
 }
 
+/// Put a row into its owner's vault, creating the vault when needed.
+async fn mark_vault(pool: &PgPool, table: &str, id: Uuid) {
+    let (owner,): (Uuid,) =
+        sqlx::query_as(&format!("SELECT owner_user_id FROM {table} WHERE id = $1"))
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .expect("owner");
+    if !db::user_has_vault(pool, owner).await.expect("has vault") {
+        db::setup_vault(pool, owner, "vault-passphrase")
+            .await
+            .expect("vault");
+    }
+    let vault = db::get_vault(pool, owner).await.expect("get vault");
+    sqlx::query(&format!(
+        "UPDATE {table} SET is_vault = TRUE, vault_id = $2 WHERE id = $1"
+    ))
+    .bind(id)
+    .bind(vault.id)
+    .execute(pool)
+    .await
+    .expect("mark vault");
+}
+
 async fn user(pool: &PgPool, prefix: &str) -> User {
     db::create_user(
         pool,
@@ -110,11 +134,7 @@ async fn vault_category_cannot_leave_private_at_db_level() {
     };
     let owner = user(&pool, "vault").await;
     let cat = category(&pool, &owner).await;
-    sqlx::query("UPDATE categories SET is_vault = TRUE WHERE id = $1")
-        .bind(cat)
-        .execute(&pool)
-        .await
-        .expect("mark vault");
+    mark_vault(&pool, "categories", cat).await;
     let denied = sqlx::query("UPDATE categories SET visibility = 'members' WHERE id = $1")
         .bind(cat)
         .execute(&pool)
@@ -306,11 +326,7 @@ async fn excluded_bookmarks_stay_excluded() {
         .await
         .expect("mark private");
     let vault = bookmark(&pool, &target, vec![cat]).await;
-    sqlx::query("UPDATE bookmarks SET is_vault = TRUE WHERE id = $1")
-        .bind(vault)
-        .execute(&pool)
-        .await
-        .expect("mark vault");
+    mark_vault(&pool, "bookmarks", vault).await;
     let trashed = bookmark(&pool, &target, vec![cat]).await;
     db::delete_bookmark(&pool, target.id, trashed)
         .await
@@ -503,11 +519,7 @@ async fn vault_category_rejects_wider_visibility() {
     };
     let owner = user(&pool, "vault").await;
     let cat = category(&pool, &owner).await;
-    sqlx::query("UPDATE categories SET is_vault = TRUE WHERE id = $1")
-        .bind(cat)
-        .execute(&pool)
-        .await
-        .expect("mark vault");
+    mark_vault(&pool, "categories", cat).await;
     let denied = db::update_category(
         &pool,
         owner.id,
@@ -574,11 +586,7 @@ async fn is_private_round_trips_and_is_rejected_on_vault() {
         .expect("set private");
     assert!(view.is_private);
 
-    sqlx::query("UPDATE bookmarks SET is_vault = TRUE WHERE id = $1")
-        .bind(bm)
-        .execute(&pool)
-        .await
-        .expect("mark vault");
+    mark_vault(&pool, "bookmarks", bm).await;
     let denied = db::update_bookmark(&pool, owner.id, bm, patch, None).await;
     assert!(matches!(denied, Err(Error::BadRequest(_))));
 }

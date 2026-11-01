@@ -205,6 +205,7 @@ pub struct Category {
     pub name: String,
     pub is_hidden: bool,
     pub is_vault: bool,
+    pub vault_id: Option<Uuid>,
     /// Optional icon key (e.g. `star`, `code`). `None` = default folder.
     pub icon: Option<String>,
     /// Unlisted public list slug (`ldl_…`). `None` = not published.
@@ -320,6 +321,7 @@ pub struct CategoryView {
     pub name: String,
     pub is_hidden: bool,
     pub is_vault: bool,
+    pub vault_id: Option<Uuid>,
     pub visibility: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
@@ -349,6 +351,7 @@ impl CategoryView {
             name: cat.name,
             is_hidden: cat.is_hidden,
             is_vault: cat.is_vault,
+            vault_id: cat.vault_id,
             visibility: cat.visibility,
             icon: cat.icon,
             position: cat.position,
@@ -626,6 +629,7 @@ pub struct Bookmark {
     pub preview_image_url: Option<String>,
     pub has_preview: bool,
     pub is_vault: bool,
+    pub vault_id: Option<Uuid>,
     pub is_private: bool,
     pub vault_ciphertext: Option<Vec<u8>>,
     pub vault_nonce: Option<Vec<u8>>,
@@ -663,6 +667,7 @@ pub struct BookmarkView {
     pub has_preview: bool,
     pub is_private: bool,
     pub is_vault: bool,
+    pub vault_id: Option<Uuid>,
     pub tags: Vec<String>,
     /// Whether the requesting user may mutate this bookmark.
     pub can_write: bool,
@@ -699,10 +704,17 @@ pub struct BookmarkView {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Vault {
+    pub id: Uuid,
     pub user_id: Uuid,
+    pub name: String,
     pub kdf_salt: Vec<u8>,
     pub wrapped_key: Vec<u8>,
     pub wrapped_nonce: Vec<u8>,
+    pub recovery_salt: Option<Vec<u8>>,
+    pub recovery_wrapped_key: Option<Vec<u8>>,
+    pub recovery_wrapped_nonce: Option<Vec<u8>>,
+    pub global_wrapped_key: Option<Vec<u8>>,
+    pub global_wrapped_nonce: Option<Vec<u8>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -728,6 +740,112 @@ pub struct VaultPayload {
     pub description: Option<String>,
     pub notes: Option<String>,
     pub tags: Vec<String>,
+}
+
+/// Keys of the vaults a user has unlocked right now.
+#[derive(Debug, Clone, Default)]
+pub struct VaultKeyring(std::collections::HashMap<Uuid, [u8; 32]>);
+
+impl VaultKeyring {
+    pub fn insert(&mut self, vault_id: Uuid, key: [u8; 32]) {
+        self.0.insert(vault_id, key);
+    }
+
+    pub fn get(&self, vault_id: Uuid) -> Option<&[u8; 32]> {
+        self.0.get(&vault_id)
+    }
+
+    pub fn contains(&self, vault_id: Uuid) -> bool {
+        self.0.contains_key(&vault_id)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn vault_ids(&self) -> Vec<Uuid> {
+        self.0.keys().copied().collect()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultView {
+    pub id: Uuid,
+    pub name: String,
+    pub unlocked: bool,
+    pub has_recovery_key: bool,
+    pub in_global: bool,
+    /// Only for unlocked vaults.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bookmark_count: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateVaultRequest {
+    pub name: String,
+    pub passphrase: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RenameVaultRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecoverVaultRequest {
+    pub recovery_key: String,
+    pub new_passphrase: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteVaultRequest {
+    pub name: String,
+    #[serde(default)]
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangeGlobalPassphraseRequest {
+    pub current_passphrase: String,
+    pub new_passphrase: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveToVaultRequest {
+    #[serde(default)]
+    pub category_ids: Vec<Uuid>,
+    #[serde(default)]
+    pub bookmark_ids: Vec<Uuid>,
+    pub destination_vault_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VaultMoveBlockerKind {
+    Shared,
+    PublicLink,
+    OtherCategory,
+    Dashboard,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultMoveBlocker {
+    pub kind: VaultMoveBlockerKind,
+    pub subject_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub related_id: Option<Uuid>,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum VaultMoveOutcome {
+    Moved {
+        left_search: Vec<Uuid>,
+        joined_search: Vec<Uuid>,
+    },
+    Blocked(Vec<VaultMoveBlocker>),
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

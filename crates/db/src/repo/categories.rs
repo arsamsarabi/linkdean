@@ -218,11 +218,16 @@ pub async fn create_category(
         return Err(Error::Forbidden);
     }
 
+    let vault_id = if req.is_vault {
+        Some(super::vault::get_vault(pool, user_id).await?.id)
+    } else {
+        None
+    };
     let icon = normalize_category_icon(req.icon);
     let cat = sqlx::query_as::<_, Category>(
         r#"
-        INSERT INTO categories (owner_user_id, parent_id, name, is_hidden, is_vault, icon)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO categories (owner_user_id, parent_id, name, is_hidden, is_vault, icon, vault_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
         "#,
     )
@@ -232,6 +237,7 @@ pub async fn create_category(
     .bind(req.is_hidden)
     .bind(req.is_vault)
     .bind(icon)
+    .bind(vault_id)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
