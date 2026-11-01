@@ -88,6 +88,36 @@ describe('OnboardingPage', () => {
     expect(screen.getByLabelText(/^vault passphrase/i)).toBeInTheDocument()
   })
 
+  it('shows the setup steps for the first account', async (): Promise<void> => {
+    render(wrap(<OnboardingPage />))
+
+    expect(await screen.findByRole('button', { name: /get started/i })).toBeInTheDocument()
+    expect(screen.getByText('Admin')).toBeInTheDocument()
+    expect(screen.getByText(/first account becomes/i)).toBeInTheDocument()
+  })
+
+  it('shows members only the optional steps', async (): Promise<void> => {
+    setToken('tok')
+    mocked.bootstrap.mockResolvedValue({
+      needs_bootstrap: false,
+      oidc_enabled: false,
+      registration_open: true,
+    })
+    mocked.me.mockResolvedValue({
+      user: { is_admin: false, onboarding_completed: false },
+      settings: {},
+    } as unknown as MeResponse)
+    const person = userEvent.setup()
+    render(wrap(<OnboardingPage />))
+
+    expect(await screen.findByLabelText(/^vault passphrase/i)).toBeInTheDocument()
+    expect(screen.queryByText(/admin/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Welcome')).not.toBeInTheDocument()
+
+    await person.click(screen.getByRole('button', { name: /skip for now/i }))
+    expect(await screen.findByRole('button', { name: /skip & finish/i })).toBeInTheDocument()
+  })
+
   it('stays on import after enabling the vault refreshes the user', async (): Promise<void> => {
     mocked.vaultSetup.mockResolvedValue({})
     const person = userEvent.setup()

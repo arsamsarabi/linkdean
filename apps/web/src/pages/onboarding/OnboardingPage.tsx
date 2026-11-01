@@ -27,6 +27,7 @@ export function OnboardingPage(): ReactElement {
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
   const [ready, setReady] = useState(false)
+  const [firstAccount, setFirstAccount] = useState(false)
 
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
@@ -64,6 +65,7 @@ export function OnboardingPage(): ReactElement {
     if (bootstrap.data.needs_bootstrap) {
       // oxlint-disable-next-line react/set-state-in-effect -- picks the starting step once async data lands
       setStep(0)
+      setFirstAccount(true)
       setReady(true)
       return
     }
@@ -172,12 +174,17 @@ export function OnboardingPage(): ReactElement {
         <Title order={1} c="violet">
           Welcome to Linkdean
         </Title>
-        <Text c="dimmed">
-          First account becomes <strong>admin</strong>. Nested cats, Meilisearch, vault for sensitive links.
-        </Text>
+        {firstAccount ? (
+          <Text c="dimmed">
+            First account becomes <strong>admin</strong>. Nested cats, Meilisearch, vault for sensitive links.
+          </Text>
+        ) : (
+          <Text c="dimmed">Two optional steps and you're in.</Text>
+        )}
       </Stack>
 
       <OnboardingSteps
+        firstAccount={firstAccount}
         step={step}
         busy={busy}
         displayName={displayName}
