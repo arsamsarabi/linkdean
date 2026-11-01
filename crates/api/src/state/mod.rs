@@ -84,6 +84,22 @@ impl AppState {
             .insert(vault_id, key);
     }
 
+    pub async fn clear_vault_key(&self, user_id: Uuid, vault_id: Uuid) {
+        let mut keys = self.vault_keys.write().await;
+        let Some(ring) = keys.get(&user_id) else {
+            return;
+        };
+        let mut next = VaultKeyring::default();
+        for id in ring.vault_ids() {
+            if id != vault_id {
+                if let Some(key) = ring.get(id) {
+                    next.insert(id, *key);
+                }
+            }
+        }
+        keys.insert(user_id, next);
+    }
+
     pub async fn clear_vault_keys(&self, user_id: Uuid) {
         self.vault_keys.write().await.remove(&user_id);
     }

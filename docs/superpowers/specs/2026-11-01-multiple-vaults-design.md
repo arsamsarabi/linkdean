@@ -76,6 +76,7 @@ A convenience so a user need not type several passphrases. It adds a way in. Eac
 | `DELETE /vaults/{id}` | Delete with contents after confirmation |
 | `POST /vaults/{id}/unlock` | Unlock with passphrase |
 | `POST /vaults/{id}/lock` | Lock |
+| `POST /vaults/lock-all` | Lock every vault, used by auto-lock |
 | `POST /vaults/{id}/recover` | Set a new passphrase with the recovery key |
 | `POST /vaults/{id}/recovery-key` | Create or replace the recovery key; the vault must be unlocked |
 | `POST /vaults/move` | Move categories and bookmarks; see below |
