@@ -65,3 +65,70 @@ pub struct ModerationActionView {
     pub reason: String,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ExposedCategory {
+    pub id: Uuid,
+    pub name: String,
+    pub visibility: String,
+    pub public_slug: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ExposedBookmark {
+    pub id: Uuid,
+    pub title: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ExposedShare {
+    /// `category_share`, `dashboard_share` or `pending_share`.
+    pub kind: String,
+    pub id: Uuid,
+    pub title: String,
+    pub invitee: String,
+    pub access: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ExposedComment {
+    pub id: Uuid,
+    pub body: String,
+    pub subject_type: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Everything a user shows to other people. Never private items or vault content.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExposedContent {
+    pub public_links: Vec<ExposedCategory>,
+    pub categories: Vec<ExposedCategory>,
+    pub bookmarks: Vec<ExposedBookmark>,
+    /// `None` when the profile is hidden.
+    pub profile_visibility: Option<String>,
+    pub shares: Vec<ExposedShare>,
+    pub comments: Vec<ExposedComment>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModerateAction {
+    pub action: String,
+    /// Needed for `removed_to_trash` and `share_revoked`.
+    pub subject_type: Option<String>,
+    pub subject_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModerateRequest {
+    pub reason: String,
+    pub actions: Vec<ModerateAction>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ModerateOutcome {
+    pub applied: usize,
+    pub skipped: usize,
+    /// For the caller to drop from the search index.
+    pub trashed_bookmark_ids: Vec<Uuid>,
+}

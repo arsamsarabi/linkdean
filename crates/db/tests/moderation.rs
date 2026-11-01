@@ -4,7 +4,8 @@
 
 use chrono::{Duration, Utc};
 use linkdean_core::{
-    ChangeBans, CreateBan, CreateBookmark, Error, LiftBans, UpdateAdminUser, User, VaultKeyring,
+    ChangeBans, CreateBan, CreateBookmark, CreateCategory, Error, LiftBans, ModerateAction,
+    ModerateRequest, UpdateAdminUser, User, VaultKeyring,
 };
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -309,4 +310,314 @@ async fn account_list_reports_ban_state() {
         .expect("bans")
         .iter()
         .any(|b| b.user_id == target.id));
+}
+
+struct Exposed {
+    pool: PgPool,
+    admin: User,
+    owner: User,
+    other: User,
+    root: Uuid,
+    child: Uuid,
+    bookmark: Uuid,
+    secret: Uuid,
+    share: Uuid,
+    comment: Uuid,
+}
+
+async fn category(pool: &PgPool, owner: Uuid, name: &str, parent_id: Option<Uuid>) -> Uuid {
+    db::create_category(
+        pool,
+        owner,
+        CreateCategory {
+            name: name.into(),
+            parent_id,
+            is_hidden: false,
+            vault_id: None,
+            icon: None,
+        },
+    )
+    .await
+    .expect("category")
+    .id
+}
+
+async fn bookmark_in(pool: &PgPool, owner: Uuid, url: &str, category: Uuid) -> Uuid {
+    db::create_bookmark(
+        pool,
+        owner,
+        CreateBookmark {
+            url: url.into(),
+            category_ids: vec![category],
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("bookmark")
+    .id
+}
+
+async fn exec(pool: &PgPool, sql: &str, id: Uuid) {
+    sqlx::query(sql).bind(id).execute(pool).await.expect("exec");
+}
+
+/// A banned owner with a public, shared folder, a subfolder, and one comment.
+async fn exposed() -> Option<Exposed> {
+    let pool = pool_or_skip().await?;
+    let admin = user(&pool, "actor").await;
+    let owner = user(&pool, "owner").await;
+    let other = user(&pool, "other").await;
+    let root = category(&pool, owner.id, "Root", None).await;
+    let child = category(&pool, owner.id, "Child", Some(root)).await;
+    let bookmark = bookmark_in(&pool, owner.id, "https://seen.example/", child).await;
+    let secret = bookmark_in(&pool, owner.id, "https://secret.example/", child).await;
+    exec(
+        &pool,
+        "UPDATE bookmarks SET is_private = TRUE WHERE id = $1",
+        secret,
+    )
+    .await;
+    exec(
+        &pool,
+        "UPDATE categories SET visibility = 'members', public_slug = 'ldl_' || $1::text WHERE id = $1",
+        root,
+    )
+    .await;
+    exec(
+        &pool,
+        "UPDATE users SET profile_visibility = 'members' WHERE id = $1",
+        owner.id,
+    )
+    .await;
+    let share: Uuid = sqlx::query_scalar(
+        r#"
+        INSERT INTO category_shares (category_id, invitee_user_id, access, invited_by_user_id)
+        VALUES ($1, $2, 'read', $3)
+        RETURNING id
+        "#,
+    )
+    .bind(root)
+    .bind(other.id)
+    .bind(owner.id)
+    .fetch_one(&pool)
+    .await
+    .expect("share");
+    let comment: Uuid = sqlx::query_scalar(
+        r#"
+        INSERT INTO social_comments (user_id, subject_type, subject_id, body)
+        VALUES ($1, 'category', $2, 'rude words')
+        RETURNING id
+        "#,
+    )
+    .bind(owner.id)
+    .bind(root)
+    .fetch_one(&pool)
+    .await
+    .expect("comment");
+    db::ban_user(&pool, admin.id, owner.id, &ban(None))
+        .await
+        .expect("ban");
+    Some(Exposed {
+        pool,
+        admin,
+        owner,
+        other,
+        root,
+        child,
+        bookmark,
+        secret,
+        share,
+        comment,
+    })
+}
+
+fn action(action: &str, subject_type: Option<&str>, subject_id: Uuid) -> ModerateAction {
+    ModerateAction {
+        action: action.into(),
+        subject_type: subject_type.map(String::from),
+        subject_id,
+    }
+}
+
+async fn moderate(
+    s: &Exposed,
+    actions: Vec<ModerateAction>,
+) -> linkdean_core::Result<linkdean_core::ModerateOutcome> {
+    let req = ModerateRequest {
+        reason: "Policy breach".into(),
+        actions,
+    };
+    db::moderate_content(&s.pool, s.admin.id, s.owner.id, &req).await
+}
+
+#[tokio::test]
+async fn exposed_content_lists_only_what_others_can_see() {
+    let Some(s) = exposed().await else {
+        return;
+    };
+    let c = db::exposed_content(&s.pool, s.owner.id)
+        .await
+        .expect("content");
+    assert_eq!(c.public_links.len(), 1);
+    assert_eq!(c.categories.len(), 1);
+    assert_eq!(c.profile_visibility.as_deref(), Some("members"));
+    assert_eq!(c.shares.len(), 1);
+    assert_eq!(c.comments.len(), 1);
+    let ids: Vec<Uuid> = c.bookmarks.iter().map(|b| b.id).collect();
+    assert_eq!(ids, [s.bookmark], "subfolder included, private left out");
+    assert!(!ids.contains(&s.secret));
+}
+
+#[tokio::test]
+async fn exposed_content_excludes_vault_rows_and_trash() {
+    let Some(s) = exposed().await else {
+        return;
+    };
+    exec(
+        &s.pool,
+        "UPDATE bookmarks SET deleted_at = now() WHERE id = $1",
+        s.bookmark,
+    )
+    .await;
+    let (vault, key, _) = db::create_vault(&s.pool, s.owner.id, "Vault", "vault-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    let hidden = db::create_bookmark(
+        &s.pool,
+        s.owner.id,
+        CreateBookmark {
+            url: "https://vault.example/".into(),
+            vault_id: Some(vault.id),
+            ..Default::default()
+        },
+        &keyring,
+    )
+    .await
+    .expect("vault bookmark");
+    let c = db::exposed_content(&s.pool, s.owner.id)
+        .await
+        .expect("content");
+    assert!(c.bookmarks.is_empty());
+
+    let refused = moderate(&s, vec![action("bookmark_private", None, hidden.id)]).await;
+    assert!(matches!(refused, Err(Error::BadRequest(_))));
+}
+
+#[tokio::test]
+async fn the_tools_need_an_active_ban() {
+    let Some(s) = exposed().await else {
+        return;
+    };
+    let lift = LiftBans {
+        user_ids: vec![s.owner.id],
+    };
+    db::lift_bans(&s.pool, s.admin.id, &lift)
+        .await
+        .expect("lift");
+    let read = db::exposed_content(&s.pool, s.owner.id).await;
+    assert!(matches!(read, Err(Error::Conflict(_))));
+    let write = moderate(&s, vec![action("category_private", None, s.root)]).await;
+    assert!(matches!(write, Err(Error::Conflict(_))));
+}
+
+#[tokio::test]
+async fn every_action_applies_is_audited_and_notifies_once() {
+    let Some(s) = exposed().await else {
+        return;
+    };
+    let actions = vec![
+        action("public_link_disabled", None, s.root),
+        action("category_private", None, s.root),
+        action("profile_hidden", None, s.owner.id),
+        action("share_revoked", Some("category_share"), s.share),
+        action("comment_deleted", None, s.comment),
+        action("bookmark_private", None, s.bookmark),
+        action("removed_to_trash", Some("category"), s.root),
+    ];
+    let done = moderate(&s, actions.clone()).await.expect("moderate");
+    assert_eq!((done.applied, done.skipped), (7, 0));
+
+    let c = db::exposed_content(&s.pool, s.owner.id)
+        .await
+        .expect("content");
+    assert!(c.public_links.is_empty() && c.categories.is_empty() && c.bookmarks.is_empty());
+    assert!(c.shares.is_empty() && c.comments.is_empty());
+    assert!(c.profile_visibility.is_none());
+
+    let child_gone: bool =
+        sqlx::query_scalar("SELECT deleted_at IS NOT NULL FROM categories WHERE id = $1")
+            .bind(s.child)
+            .fetch_one(&s.pool)
+            .await
+            .expect("child");
+    assert!(child_gone, "removing a category takes its subcategories");
+
+    let audit = db::list_moderation_actions(&s.pool, s.owner.id)
+        .await
+        .expect("audit");
+    assert_eq!(audit.iter().filter(|a| a.action != "ban").count(), 7);
+    let comment = audit
+        .iter()
+        .find(|a| a.action == "comment_deleted")
+        .expect("row");
+    assert_eq!(comment.subject_title, "rude words");
+
+    let again = moderate(&s, actions).await.expect("repeat");
+    assert_eq!((again.applied, again.skipped), (0, 7));
+
+    let told: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM notifications WHERE recipient_user_id = $1 AND kind = 'moderation_changes'",
+    )
+    .bind(s.owner.id)
+    .fetch_one(&s.pool)
+    .await
+    .expect("count");
+    assert_eq!(told, 1, "a repeat with nothing to do tells nobody");
+
+    let invitee: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM notifications WHERE recipient_user_id = $1 AND kind = 'share_revoked'",
+    )
+    .bind(s.other.id)
+    .fetch_one(&s.pool)
+    .await
+    .expect("count");
+    assert_eq!(invitee, 1);
+}
+
+#[tokio::test]
+async fn removing_a_bookmark_reports_it_for_the_search_index() {
+    let Some(s) = exposed().await else {
+        return;
+    };
+    let done = moderate(
+        &s,
+        vec![action("removed_to_trash", Some("bookmark"), s.bookmark)],
+    )
+    .await
+    .expect("moderate");
+    assert_eq!(done.trashed_bookmark_ids, [s.bookmark]);
+}
+
+#[tokio::test]
+async fn a_subject_owned_by_someone_else_undoes_the_whole_request() {
+    let Some(s) = exposed().await else {
+        return;
+    };
+    let foreign = category(&s.pool, s.other.id, "Other", None).await;
+    let res = moderate(
+        &s,
+        vec![
+            action("category_private", None, s.root),
+            action("category_private", None, foreign),
+        ],
+    )
+    .await;
+    assert!(matches!(res, Err(Error::NotFound)));
+    let c = db::exposed_content(&s.pool, s.owner.id)
+        .await
+        .expect("content");
+    assert_eq!(c.categories.len(), 1, "the first action rolled back");
 }
