@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { MeResponse, PlatformSettings, UserPublic, UserSettings } from '@/schemas'
+import type {
+  AdminUserSummary,
+  ApiKey,
+  CreateApiKeyResponse,
+  MeResponse,
+  PlatformSettings,
+  UserPublic,
+  UserSettings,
+} from '@/schemas'
 import { useUi } from '@/stores'
 
 type SettingsEnvelope = { settings: UserSettings }
@@ -17,7 +25,7 @@ export function usePlatformSettings(enabled = true): UseQueryResult<PlatformEnve
 export function useUpdatePlatformSettings(): UseMutationResult<
   PlatformEnvelope,
   Error,
-  { registration_open?: boolean }
+  { registration_open?: boolean; api_keys_enabled?: boolean }
 > {
   const qc = useQueryClient()
   return useMutation({
@@ -25,6 +33,58 @@ export function useUpdatePlatformSettings(): UseMutationResult<
     onSuccess: (res) => {
       qc.setQueryData(['admin', 'platform-settings'], res)
       void qc.invalidateQueries({ queryKey: ['bootstrap'] })
+      void qc.invalidateQueries({ queryKey: ['me'] })
+    },
+  })
+}
+
+export function useAdminUsers(enabled = true): UseQueryResult<{ users: AdminUserSummary[] }> {
+  return useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: () => api.listAdminUsers(),
+    enabled,
+  })
+}
+
+export function useUpdateAdminUser(): UseMutationResult<
+  { user: AdminUserSummary },
+  Error,
+  { id: string; api_keys_enabled: boolean }
+> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, api_keys_enabled }) => api.updateAdminUser(id, { api_keys_enabled }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
+      void qc.invalidateQueries({ queryKey: ['me'] })
+    },
+  })
+}
+
+export function useApiKeys(enabled = true): UseQueryResult<{ keys: ApiKey[] }> {
+  return useQuery({
+    queryKey: ['api-keys'],
+    queryFn: () => api.listApiKeys(),
+    enabled,
+  })
+}
+
+export function useCreateApiKey(): UseMutationResult<CreateApiKeyResponse, Error, { name: string }> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body) => api.createApiKey(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
+}
+
+export function useRevokeApiKey(): UseMutationResult<{ ok: boolean }, Error, string> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => api.revokeApiKey(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['api-keys'] })
     },
   })
 }

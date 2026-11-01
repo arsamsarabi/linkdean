@@ -11,6 +11,7 @@ export const userPublicSchema = z.object({
   has_vault: z.boolean(),
   is_admin: z.boolean(),
   onboarding_completed: z.boolean(),
+  api_keys_enabled: z.boolean().default(true),
 })
 
 export const userSettingsSchema = z.object({
@@ -30,6 +31,7 @@ export const meResponseSchema = z.object({
   user: userPublicSchema,
   settings: userSettingsSchema,
   vault_unlocked: z.boolean(),
+  api_keys_allowed: z.boolean().default(true),
 })
 
 export const bootstrapStatusSchema = z.object({
@@ -40,11 +42,47 @@ export const bootstrapStatusSchema = z.object({
 
 export const platformSettingsSchema = z.object({
   registration_open: z.boolean(),
+  api_keys_enabled: z.boolean().default(true),
   updated_at: z.string(),
 })
 
 export const platformSettingsEnvelopeSchema = z.object({
   settings: platformSettingsSchema,
+})
+
+export const apiKeySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  prefix: z.string(),
+  last_used_at: z.string().nullish(),
+  revoked_at: z.string().nullish(),
+  created_at: z.string(),
+})
+
+export const apiKeysEnvelopeSchema = z.object({
+  keys: z.array(apiKeySchema),
+})
+
+export const createApiKeyResponseSchema = z.object({
+  key: apiKeySchema,
+  token: z.string(),
+})
+
+export const adminUserSummarySchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  display_name: z.string().nullish(),
+  is_admin: z.boolean(),
+  api_keys_enabled: z.boolean(),
+  created_at: z.string(),
+})
+
+export const adminUsersEnvelopeSchema = z.object({
+  users: z.array(adminUserSummarySchema),
+})
+
+export const adminUserEnvelopeSchema = z.object({
+  user: adminUserSummarySchema,
 })
 
 export const authTokenResponseSchema = z.object({
@@ -70,3 +108,6 @@ export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
 export type PlatformSettings = z.infer<typeof platformSettingsSchema>
+export type ApiKey = z.infer<typeof apiKeySchema>
+export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>
+export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>

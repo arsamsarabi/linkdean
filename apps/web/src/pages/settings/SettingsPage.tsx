@@ -16,21 +16,36 @@ import {
   useMantineColorScheme,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconArrowsExchange, IconFolder, IconLock, IconSettings, IconShield } from '@tabler/icons-react'
+import {
+  IconArrowsExchange,
+  IconFolder,
+  IconKey,
+  IconLock,
+  IconSettings,
+  IconShield,
+} from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { CategoryManager, ImportExportPanel, QueryErrorAlert, VaultPanel } from '@/components'
+import {
+  ApiKeysPanel,
+  CategoryManager,
+  ImportExportPanel,
+  QueryErrorAlert,
+  VaultPanel,
+} from '@/components'
 import {
   applyTheme,
+  useAdminUsers,
   useDashboards,
   useMe,
   usePatchDashboard,
   usePlatformSettings,
+  useUpdateAdminUser,
   useUpdatePlatformSettings,
   useUpdateSettings,
 } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 
-const SETTINGS_TABS = ['general', 'categories', 'import', 'vault', 'admin'] as const
+const SETTINGS_TABS = ['general', 'categories', 'import', 'vault', 'api-keys', 'admin'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 const DEFAULT_AUTO_LOCK_MINUTES = 15
@@ -103,6 +118,8 @@ function VaultAutoLockSettings({
 function AdminPlatformSettings(): ReactElement {
   const platform = usePlatformSettings(true)
   const save = useUpdatePlatformSettings()
+  const users = useAdminUsers(true)
+  const patchUser = useUpdateAdminUser()
 
   if (platform.isError) {
     return <QueryErrorAlert error={platform.error} onRetry={() => void platform.refetch()} title="Platform settings failed" />
@@ -113,33 +130,84 @@ function AdminPlatformSettings(): ReactElement {
   }
 
   const open = platform.data.settings.registration_open
+  const apiKeysOn = platform.data.settings.api_keys_enabled
 
   return (
-    <Paper p="xl" withBorder maw={560}>
-      <Stack gap="lg">
-        <Switch
-          label="Open registration"
-          description="When off, only existing users can sign in. First-install bootstrap still works."
-          checked={open}
-          disabled={save.isPending}
-          onChange={(e) => {
-            const registration_open = e.currentTarget.checked
-            save.mutate(
-              { registration_open },
-              {
-                onSuccess: () => notifications.show({ message: 'Platform settings saved' }),
-                onError: (err) => notifications.show({ color: 'red', message: String(err) }),
-              }
-            )
-          }}
-        />
-        {save.isPending ? (
-          <Text size="xs" c="dimmed">
-            Saving…
+    <Stack gap="lg" maw={640}>
+      <Paper p="xl" withBorder>
+        <Stack gap="lg">
+          <Switch
+            label="Open registration"
+            description="When off, only existing users can sign in. First-install bootstrap still works."
+            checked={open}
+            disabled={save.isPending}
+            onChange={(e) => {
+              const registration_open = e.currentTarget.checked
+              save.mutate(
+                { registration_open },
+                {
+                  onSuccess: () => notifications.show({ message: 'Platform settings saved' }),
+                  onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+                }
+              )
+            }}
+          />
+          <Switch
+            label="API keys enabled"
+            description="When off, no user can create or authenticate with API keys."
+            checked={apiKeysOn}
+            disabled={save.isPending}
+            onChange={(e) => {
+              const api_keys_enabled = e.currentTarget.checked
+              save.mutate(
+                { api_keys_enabled },
+                {
+                  onSuccess: () => notifications.show({ message: 'Platform settings saved' }),
+                  onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+                }
+              )
+            }}
+          />
+          {save.isPending ? (
+            <Text size="xs" c="dimmed">
+              Saving…
+            </Text>
+          ) : null}
+        </Stack>
+      </Paper>
+
+      <Paper p="xl" withBorder>
+        <Stack gap="md">
+          <Text fw={500}>Per-user API keys</Text>
+          <Text size="sm" c="dimmed">
+            Disable for an account without turning keys off for everyone.
           </Text>
-        ) : null}
-      </Stack>
-    </Paper>
+          {users.isError ? (
+            <QueryErrorAlert error={users.error} onRetry={() => void users.refetch()} />
+          ) : null}
+          {users.isLoading ? <SettingsSkeleton /> : null}
+          {(users.data?.users ?? []).map((u) => (
+            <Switch
+              key={u.id}
+              label={u.display_name?.trim() || u.email}
+              description={u.email + (u.is_admin ? ' · admin' : '')}
+              checked={u.api_keys_enabled}
+              disabled={patchUser.isPending}
+              onChange={(e) => {
+                const api_keys_enabled = e.currentTarget.checked
+                patchUser.mutate(
+                  { id: u.id, api_keys_enabled },
+                  {
+                    onSuccess: () => notifications.show({ message: 'User updated' }),
+                    onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+                  }
+                )
+              }}
+            />
+          ))}
+        </Stack>
+      </Paper>
+    </Stack>
   )
 }
 
@@ -200,6 +268,9 @@ export function SettingsPage(): ReactElement {
           </Tabs.Tab>
           <Tabs.Tab value="vault" leftSection={<IconLock size={16} stroke={1.5} />}>
             Vault
+          </Tabs.Tab>
+          <Tabs.Tab value="api-keys" leftSection={<IconKey size={16} stroke={1.5} />}>
+            API keys
           </Tabs.Tab>
           {isAdmin ? (
             <Tabs.Tab value="admin" leftSection={<IconShield size={16} stroke={1.5} />}>
@@ -355,6 +426,10 @@ export function SettingsPage(): ReactElement {
               </Text>
             ) : null}
           </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="api-keys" pt="xl">
+          <ApiKeysPanel />
         </Tabs.Panel>
 
         {isAdmin ? (

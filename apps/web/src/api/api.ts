@@ -1,5 +1,8 @@
 import { z } from 'zod'
 import {
+  adminUserEnvelopeSchema,
+  adminUsersEnvelopeSchema,
+  apiKeysEnvelopeSchema,
   authTokenResponseSchema,
   bookmarkSchema,
   bootstrapStatusSchema,
@@ -7,6 +10,7 @@ import {
   categorySchema,
   categorySharesSchema,
   categoryShareSchema,
+  createApiKeyResponseSchema,
   forkCategoryResultSchema,
   dashboardSchema,
   dashboardShareSchema,
@@ -23,9 +27,12 @@ import {
   trashPurgeResultSchema,
   userEnvelopeSchema,
   vaultStatusSchema,
+  type AdminUserSummary,
+  type ApiKey,
   type Bookmark,
   type Category,
   type CategoryShare,
+  type CreateApiKeyResponse,
   type CreateDashboard,
   type Dashboard,
   type DashboardShare,
@@ -52,12 +59,32 @@ export const api = {
   getPlatformSettings: (): Promise<{ settings: PlatformSettings }> =>
     req('/admin/platform-settings', {}, platformSettingsEnvelopeSchema),
 
-  updatePlatformSettings: (body: { registration_open?: boolean }): Promise<{ settings: PlatformSettings }> =>
+  updatePlatformSettings: (body: {
+    registration_open?: boolean
+    api_keys_enabled?: boolean
+  }): Promise<{ settings: PlatformSettings }> =>
     req(
       '/admin/platform-settings',
       { method: 'PATCH', body: JSON.stringify(body) },
       platformSettingsEnvelopeSchema
     ),
+
+  listAdminUsers: (): Promise<{ users: AdminUserSummary[] }> =>
+    req('/admin/users', {}, adminUsersEnvelopeSchema),
+
+  updateAdminUser: (
+    id: string,
+    body: { api_keys_enabled?: boolean }
+  ): Promise<{ user: AdminUserSummary }> =>
+    req(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, adminUserEnvelopeSchema),
+
+  listApiKeys: (): Promise<{ keys: ApiKey[] }> => req('/api-keys', {}, apiKeysEnvelopeSchema),
+
+  createApiKey: (body: { name: string }): Promise<CreateApiKeyResponse> =>
+    req('/api-keys', { method: 'POST', body: JSON.stringify(body) }, createApiKeyResponseSchema),
+
+  revokeApiKey: (id: string): Promise<{ ok: boolean }> =>
+    req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),
 
   register: (body: {
     email: string
@@ -71,8 +98,12 @@ export const api = {
 
   logout: (): Promise<{ ok: boolean }> => req('/auth/logout', { method: 'POST' }, okSchema),
 
-  me: (): Promise<{ user: UserPublic; settings: UserSettings; vault_unlocked: boolean }> =>
-    req('/auth/me', {}, meResponseSchema),
+  me: (): Promise<{
+    user: UserPublic
+    settings: UserSettings
+    vault_unlocked: boolean
+    api_keys_allowed: boolean
+  }> => req('/auth/me', {}, meResponseSchema),
 
   completeOnboarding: (): Promise<{ user: UserPublic }> =>
     req('/auth/onboarding/complete', { method: 'POST' }, userEnvelopeSchema),

@@ -1,6 +1,11 @@
 export {
   usePlatformSettings,
   useUpdatePlatformSettings,
+  useAdminUsers,
+  useUpdateAdminUser,
+  useApiKeys,
+  useCreateApiKey,
+  useRevokeApiKey,
   useUpdateSettings,
   useUpdateProfile,
   useChangePassword,
