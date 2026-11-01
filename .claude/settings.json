@@ -6,8 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/sudoq/.local/bin/graphify hook-guard search",
-            "timeout": 10
+            "command": "/Users/asarabi/.local/bin/graphify hook-guard search"
           }
         ]
       },
@@ -16,8 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/sudoq/.local/bin/graphify hook-guard read",
-            "timeout": 10
+            "command": "/Users/asarabi/.local/bin/graphify hook-guard read"
           }
         ]
       }
