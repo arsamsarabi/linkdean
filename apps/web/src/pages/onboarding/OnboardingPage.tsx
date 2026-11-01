@@ -1,30 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
-import {
-  Button,
-  Center,
-  FileButton,
-  FileInput,
-  Group,
-  Loader,
-  Paper,
-  PasswordInput,
-  Select,
-  Stack,
-  Stepper,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { Center, Loader, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconLockPlus,
-  IconPhoto,
-  IconPlayerSkipForward,
-  IconRocket,
-  IconTrash,
-  IconUpload,
-  IconUserPlus,
-} from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { AvatarCropModal } from '@/components'
 import {
@@ -39,8 +15,7 @@ import {
 import { getToken, resolveDefaultLanding } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
-
-const iconSm = { size: 16, stroke: 1.5 } as const
+import { OnboardingSteps } from './OnboardingSteps'
 
 const VAULT_PW_MESSAGES = {
   tooShort: 'Vault passphrase min 8 chars',
@@ -199,151 +174,42 @@ export function OnboardingPage(): ReactElement {
         </Text>
       </Stack>
 
-      <Stepper active={step} allowNextStepsSelect={false}>
-        <Stepper.Step label="Welcome" description="What this is">
-          <Paper p="xl" mt="md" withBorder>
-            <Stack>
-              <Text>Self-hosted bookmarks. You own the data. Import from browser / Pocket / Raindrop next.</Text>
-              <Text size="sm" c="dimmed">
-                Next: create your admin account.
-              </Text>
-              <Button leftSection={<IconRocket {...iconSm} />} onClick={() => setStep(1)}>
-                Get started
-              </Button>
-            </Stack>
-          </Paper>
-        </Stepper.Step>
-
-        <Stepper.Step label="Admin" description="Your account">
-          <Paper p="xl" mt="md" withBorder>
-            <Stack>
-              <TextInput
-                label="Display name"
-                placeholder="Ada"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.currentTarget.value)}
-              />
-              <TextInput label="Email" required value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
-              <PasswordInput
-                label="Password"
-                required
-                description="Min 8 characters"
-                value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
-              />
-              <PasswordInput
-                label="Confirm password"
-                required
-                value={password2}
-                onChange={(e) => setPassword2(e.currentTarget.value)}
-              />
-              <Group>
-                <FileButton
-                  resetRef={resetRef}
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={(f) => {
-                    if (f) {
-                      setCropFile(f)
-                      setCropOpen(true)
-                    }
-                  }}
-                >
-                  {(props) => (
-                    <Button {...props} variant="light" leftSection={<IconPhoto {...iconSm} />}>
-                      {pendingAvatar ? 'Avatar ready — change' : 'Optional avatar'}
-                    </Button>
-                  )}
-                </FileButton>
-                {pendingAvatar ? (
-                  <Button
-                    variant="subtle"
-                    color="red"
-                    leftSection={<IconTrash {...iconSm} />}
-                    onClick={() => {
-                      setPendingAvatar(null)
-                      resetRef.current?.()
-                    }}
-                  >
-                    Clear
-                  </Button>
-                ) : null}
-              </Group>
-              <Button
-                leftSection={<IconUserPlus {...iconSm} />}
-                loading={busy}
-                onClick={() => void createAdmin()}
-                disabled={!email || !password}
-              >
-                Create admin account
-              </Button>
-            </Stack>
-          </Paper>
-        </Stepper.Step>
-
-        <Stepper.Step label="Vault" description="Optional">
-          <Paper p="xl" mt="md" withBorder>
-            <Stack>
-              <Text>Vault categories encrypt titles/URLs at rest. Skip now — set up later under Vault.</Text>
-              <PasswordInput
-                label="Vault passphrase"
-                value={vaultPass}
-                onChange={(e) => setVaultPass(e.currentTarget.value)}
-              />
-              <PasswordInput
-                label="Confirm passphrase"
-                value={vaultPass2}
-                onChange={(e) => setVaultPass2(e.currentTarget.value)}
-              />
-              <Group>
-                <Button leftSection={<IconLockPlus {...iconSm} />} loading={busy} onClick={() => void setupVault()}>
-                  Enable vault
-                </Button>
-                <Button variant="subtle" leftSection={<IconPlayerSkipForward {...iconSm} />} onClick={() => setStep(3)}>
-                  Skip for now
-                </Button>
-              </Group>
-            </Stack>
-          </Paper>
-        </Stepper.Step>
-
-        <Stepper.Step label="Import" description="Optional">
-          <Paper p="xl" mt="md" withBorder>
-            <Stack>
-              <Text>Bring bookmarks from elsewhere, or start empty.</Text>
-              <Select
-                label="Format"
-                value={format}
-                onChange={setFormat}
-                data={[
-                  { value: 'netscape', label: 'Netscape HTML (Chrome/Firefox)' },
-                  { value: 'json', label: 'Linkdean JSON' },
-                  { value: 'pocket', label: 'Pocket CSV' },
-                  { value: 'raindrop', label: 'Raindrop CSV' },
-                ]}
-              />
-              <FileInput label="File" value={file} onChange={setFile} clearable />
-              <Group>
-                <Button
-                  leftSection={<IconUpload {...iconSm} />}
-                  loading={busy}
-                  disabled={!file}
-                  onClick={() => void doImportOrSkip(false)}
-                >
-                  Import & finish
-                </Button>
-                <Button
-                  variant="light"
-                  leftSection={<IconPlayerSkipForward {...iconSm} />}
-                  loading={busy}
-                  onClick={() => void doImportOrSkip(true)}
-                >
-                  Skip & finish
-                </Button>
-              </Group>
-            </Stack>
-          </Paper>
-        </Stepper.Step>
-      </Stepper>
+      <OnboardingSteps
+        step={step}
+        busy={busy}
+        displayName={displayName}
+        email={email}
+        password={password}
+        password2={password2}
+        pendingAvatar={pendingAvatar}
+        resetRef={resetRef}
+        vaultPass={vaultPass}
+        vaultPass2={vaultPass2}
+        format={format}
+        file={file}
+        onStep={setStep}
+        onDisplayName={setDisplayName}
+        onEmail={setEmail}
+        onPassword={setPassword}
+        onPassword2={setPassword2}
+        onPickAvatar={(f) => {
+          if (f) {
+            setCropFile(f)
+            setCropOpen(true)
+          }
+        }}
+        onClearAvatar={() => {
+          setPendingAvatar(null)
+          resetRef.current?.()
+        }}
+        onCreateAdmin={() => void createAdmin()}
+        onVaultPass={setVaultPass}
+        onVaultPass2={setVaultPass2}
+        onSetupVault={() => void setupVault()}
+        onFormat={setFormat}
+        onFile={setFile}
+        onImportOrSkip={(skip) => void doImportOrSkip(skip)}
+      />
 
       <AvatarCropModal
         opened={cropOpen}
