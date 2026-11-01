@@ -9,7 +9,7 @@ type Props = {
 
 export function VaultPreferencesCard({ settings, onPatch }: Props): ReactElement {
   return (
-    <Paper p="lg" withBorder maw={560}>
+    <Paper p="lg" withBorder>
       <Stack>
         <Title order={4}>Vault items</Title>
         <Switch

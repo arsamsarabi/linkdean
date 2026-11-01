@@ -106,26 +106,29 @@ export function SettingsPage(): ReactElement {
         </Tabs.Panel>
 
         <Tabs.Panel value="vault" pt="xl">
-          <Stack gap="lg">
-            <VaultPanel />
-            {!settings ? (
-              <SettingsSkeleton />
-            ) : (
+          <VaultPanel
+            settings={
               <>
-                <VaultPreferencesCard settings={settings} onPatch={patch} />
-                <VaultAutoLockSettings
-                  minutes={settings.vault_auto_lock_minutes}
-                  saving={save.isPending}
-                  onChange={(vault_auto_lock_minutes) => patch({ vault_auto_lock_minutes })}
-                />
+                {!settings ? (
+                  <SettingsSkeleton />
+                ) : (
+                  <>
+                    <VaultPreferencesCard settings={settings} onPatch={patch} />
+                    <VaultAutoLockSettings
+                      minutes={settings.vault_auto_lock_minutes}
+                      saving={save.isPending}
+                      onChange={(vault_auto_lock_minutes) => patch({ vault_auto_lock_minutes })}
+                    />
+                  </>
+                )}
+                {save.isPending ? (
+                  <Text size="xs" c="dimmed">
+                    Saving…
+                  </Text>
+                ) : null}
               </>
-            )}
-            {save.isPending ? (
-              <Text size="xs" c="dimmed">
-                Saving…
-              </Text>
-            ) : null}
-          </Stack>
+            }
+          />
         </Tabs.Panel>
 
         <Tabs.Panel value="api-keys" pt="xl">

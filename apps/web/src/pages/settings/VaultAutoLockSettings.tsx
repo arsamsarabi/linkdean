@@ -14,7 +14,7 @@ export function VaultAutoLockSettings({ minutes, saving, onChange }: Props): Rea
   const [draftMinutes, setDraftMinutes] = useState(minutes > 0 ? minutes : DEFAULT_AUTO_LOCK_MINUTES)
 
   return (
-    <Paper p="xl" withBorder maw={480}>
+    <Paper p="lg" withBorder>
       <Stack gap="md">
         <Checkbox
           label="Auto-lock vault after inactivity"

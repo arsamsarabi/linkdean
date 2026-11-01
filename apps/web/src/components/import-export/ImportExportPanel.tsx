@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import { Alert, Button, FileInput, Group, Paper, Select, Stack, ThemeIcon, Title } from '@mantine/core'
+import { Alert, Button, FileInput, Group, Paper, Select, SimpleGrid, Stack, ThemeIcon, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconDownload, IconFileExport, IconInfoCircle, IconUpload } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
@@ -35,7 +35,7 @@ export function ImportExportPanel(): ReactElement {
   }
 
   return (
-    <Stack gap="lg" maw={720}>
+    <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
       <Paper p="xl" withBorder>
         <Stack gap="lg">
           <Group gap="sm">
@@ -113,6 +113,6 @@ export function ImportExportPanel(): ReactElement {
           </Group>
         </Stack>
       </Paper>
-    </Stack>
+    </SimpleGrid>
   )
 }
