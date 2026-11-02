@@ -683,6 +683,7 @@ fn update_has_flags(req: &UpdateBookmark) -> bool {
     req.is_favorite.is_some() || req.is_unread.is_some() || req.is_pinned.is_some()
 }
 
+/// `before_title` is `None` for vault rows, whose titles must never reach the activity log.
 fn bookmark_content_changes(
     req: &UpdateBookmark,
     before_title: Option<&str>,
@@ -694,11 +695,12 @@ fn bookmark_content_changes(
         keys.push("url");
     }
     if let Some(ref title) = req.title {
-        match before_title.map(str::trim).filter(|s| !s.is_empty()) {
-            Some(prev) if prev != title.trim() => {
+        match before_title.map(str::trim) {
+            None => changes.push("title".into()),
+            Some(prev) if !prev.is_empty() && prev != title.trim() => {
                 changes.push(format!("renamed “{prev}” → “{}”", title.trim()));
             }
-            _ => changes.push(format!("title set to “{}”", title.trim())),
+            Some(_) => changes.push(format!("title set to “{}”", title.trim())),
         }
         keys.push("title");
     }
@@ -873,7 +875,7 @@ pub async fn update_bookmark(
         let mut payload =
             super::blocking::run_blocking(move || crypto::decrypt_payload(&key, &ct0, &nonce0))
                 .await?;
-        let (changes, change_keys) = bookmark_content_changes(&req, Some(payload.title.as_str()));
+        let (changes, change_keys) = bookmark_content_changes(&req, None);
         if let Some(url) = req.url {
             payload.url = url;
         }

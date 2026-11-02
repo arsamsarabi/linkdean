@@ -2,7 +2,9 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
-use linkdean_core::{CreateBookmark, CreateCategory, Error, User, VaultKeyring};
+use linkdean_core::{
+    CreateBookmark, CreateCategory, Error, ListActivityFilter, UpdateBookmark, User, VaultKeyring,
+};
 use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -368,4 +370,64 @@ async fn a_subcategory_stays_in_its_parents_vault() {
     )
     .await;
     assert!(matches!(got, Err(Error::BadRequest(_))));
+}
+
+#[tokio::test]
+async fn renaming_a_vault_bookmark_keeps_its_titles_out_of_activity() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "Work", "work-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    let bookmark = db::create_bookmark(
+        &pool,
+        owner.id,
+        CreateBookmark {
+            url: "https://secret.example/".into(),
+            title: Some("Old secret".into()),
+            vault_id: Some(vault.id),
+            ..Default::default()
+        },
+        &keyring,
+    )
+    .await
+    .expect("bookmark");
+
+    let rename = |title: &str| UpdateBookmark {
+        url: None,
+        title: Some(title.into()),
+        description: None,
+        notes: None,
+        category_id: None,
+        category_ids: None,
+        tags: None,
+        is_favorite: None,
+        is_unread: None,
+        is_pinned: None,
+        is_private: None,
+    };
+    db::update_bookmark(&pool, owner.id, bookmark.id, rename("New secret"), &keyring)
+        .await
+        .expect("rename");
+
+    let events = db::list_activity(
+        &pool,
+        owner.id,
+        ListActivityFilter {
+            subject_type: None,
+            action: None,
+            limit: 50,
+        },
+    )
+    .await
+    .expect("activity");
+    assert!(!events.is_empty());
+    for event in events {
+        let text = format!("{} {}", event.summary, event.subject_title);
+        assert!(!text.contains("secret"), "plaintext in activity: {text}");
+    }
 }
