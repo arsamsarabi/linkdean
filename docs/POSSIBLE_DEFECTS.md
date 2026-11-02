@@ -61,10 +61,11 @@ Registration is open by default (`migrations/008_platform_settings.sql`), so "an
 | M39 | **The permanent-delete warning read the filtered list, so an irreversible delete said it could be restored.** | `33aac2f`. The single-delete warning finds the bookmark wherever it was opened from, and the bulk warning reads the selected items. Selection drops what leaves the screen on a new search, folder or filter, so bulk actions only reach what is shown. |
 | M41 | **Search input lost a trailing space.** | `bcb6698`. The box is no longer reset to the trimmed URL query. |
 | M42 | **Search in Explorer on the Vaults page showed nothing.** | `820c6de`. Explorer reads the same matches as the grid. |
-| M50 | **No confirmation on Replace tags (even when empty), Rotate public link, Replace recovery key and comment delete.** | `HASH`. Each now asks first and says what is lost. Replace tags needs at least one tag. The drawers behind these dialogs ignore Esc while the dialog is open. |
+| M50 | **No confirmation on Replace tags (even when empty), Rotate public link, Replace recovery key and comment delete.** | `e3d0fc5`. Each now asks first and says what is lost. Replace tags needs at least one tag. The drawers behind these dialogs ignore Esc while the dialog is open. |
 | L3 | **Expired sessions were never purged.** | `de15ca7`. The hourly maintenance task purges them. |
 | L17 | **Public list previews returned 401 for anonymous visitors.** | `8bfb03d`. `/api/public/lists/{slug}/bookmarks/{id}/preview`, `/favicon` and `/og` serve the images of bookmarks on that list to anyone, and the public list points at them. |
 | L20 | **Held Enter submitted repeatedly.** | `a340eab`. Login and Create key return early while a request is pending. |
+| L24 | **SPA deep links returned a 404 status with the app's HTML.** | `HASH`. Client routes such as `/library` get the app shell with 200. Unknown `/api/` paths now return a JSON 404 instead of the app shell. Checked against a throwaway API. |
 | L26 | **A button was nested in a button.** | `10bc9e1`. The folder menu is outside the folder tile button. |
 
 Also closed by these fixes: stored XSS through cached favicons and OG images. Assets must now be images by content, and `/favicon` and `/og` send `nosniff` and a sandbox policy, which also covers files cached before the fix.
@@ -99,70 +100,69 @@ All fixed. See the Fixed table.
 | Rank | ID | Defect | Impact | Probability | Score | Trigger | Code read |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | L14 | Worker failures are silent | 1 | 90% | 0.90 | U | No |
-| 2 | L24 | SPA deep links return a 404 status with the app's HTML | 1 | 90% | 0.90 | U | No |
-| 3 | M20 | Likes and comments fail below a share root, because only direct shares count | 2 | 40% | 0.80 | U | No |
-| 4 | M44 | The vault unlock modal reopens on every search, taking focus mid-typing | 2 | 40% | 0.80 | U | No |
-| 5 | M49 | The invite gate is replaced after the first typed character, losing focus | 2 | 40% | 0.80 | U | No |
-| 6 | L15 | Link checks churn `updated_at`, `put_dashboard` uses the pool inside a transaction | 1 | 80% | 0.80 | U | No |
-| 7 | H22 | Purging a parent deletes live children | 4 | 15% | 0.60 | U | No |
-| 8 | M26 | JSON import flattens nesting when a child sorts before its parent | 3 | 20% | 0.60 | U | No |
-| 9 | M28 | Import is partial on failure | 3 | 20% | 0.60 | U | No |
-| 10 | M27 | Path-keyed import turns `AC/DC` into `DC` and merges same-name siblings | 2 | 30% | 0.60 | U | No |
-| 11 | M37 | A section with a blank title is silently dropped with its pins | 2 | 30% | 0.60 | U | No |
-| 12 | M43 | Grid view ignores `folder`, so a palette jump changes nothing and can disable Add | 2 | 30% | 0.60 | U | No |
-| 13 | M45 | Esc closes the modal and the parent drawer together, losing drafts | 2 | 30% | 0.60 | U | No |
-| 14 | M9 | Moving a followers or members category into a vault returns 500 | 2 | 30% | 0.60 | U | No |
-| 15 | L12 | A deleted preview comes back at the next backfill | 1 | 60% | 0.60 | U | No |
-| 16 | M14 | Fork copies trashed content and is not transactional | 2 | 25% | 0.50 | U | No |
-| 17 | M21 | Response bodies are read fully before any size check | 2 | 25% | 0.50 | A | No |
-| 18 | H1 | Email addresses are never verified | 3 | 15% | 0.45 | A | Yes |
-| 19 | M23 | No dimension limit on image decode | 3 | 15% | 0.45 | A | No |
-| 20 | M29 | Multi-step bookmark writes have no transaction | 3 | 15% | 0.45 | U | No |
-| 21 | M36 | Bulk add overwrites from a client snapshot | 3 | 15% | 0.45 | U | No |
-| 22 | M6 | Sensitive vault actions need no passphrase, some while locked | 3 | 15% | 0.45 | A | No |
-| 23 | L1 | Login timing reveals which emails exist | 1 | 40% | 0.40 | A | No |
-| 24 | L19 | Esc in any overlay wipes the selection | 1 | 40% | 0.40 | U | No |
-| 25 | H10 | Vault move leaves plaintext in search | 3 | 10% | 0.30 | U | Yes |
-| 26 | M10 | Move crosses vault and owner boundaries, so deleting the other tree cascades into this one | 3 | 10% | 0.30 | U | No |
-| 27 | M4 | Session token in localStorage undoes `HttpOnly` | 3 | 10% | 0.30 | A | No |
-| 28 | M5 | Argon2 at the OWASP floor with an 8-byte minimum | 3 | 10% | 0.30 | A | No |
-| 29 | L13 | The dev stack publishes known-credential services on all interfaces, sharing volumes with production | 2 | 15% | 0.30 | C | No |
-| 30 | L16 | Spinner forever on a 5xx or network failure, with no Sign out | 2 | 15% | 0.30 | U | No |
-| 31 | L6 | Nested shares show write where read is enforced | 2 | 15% | 0.30 | U | No |
-| 32 | M11 | In-flight enrichment leaves assets for a row just moved to a vault | 2 | 15% | 0.30 | U | No |
-| 33 | M13 | Dashboard blocker is not owner-scoped | 2 | 15% | 0.30 | U | No |
-| 34 | M15 | Invitees can view and edit trashed dashboards | 2 | 15% | 0.30 | U | No |
-| 35 | M17 | Owners cannot see or revoke a rejected invite | 2 | 15% | 0.30 | U | No |
-| 36 | M47 | Finishing onboarding can bounce back, depending on timing | 2 | 15% | 0.30 | U | No |
-| 37 | L18 | After cancelling a crop, the same file cannot be picked again | 1 | 30% | 0.30 | U | No |
-| 38 | L28 | The test "loads API images with the page token" failed once under load and passed on rerun | 1 | 30% | 0.30 | U | No |
-| 39 | L5 | Authors cannot delete comments after losing access | 1 | 30% | 0.30 | U | No |
-| 40 | M46 | Bulk Move to vault is offered for shared items the API refuses, failing the whole batch | 1 | 30% | 0.30 | U | No |
+| 2 | M20 | Likes and comments fail below a share root, because only direct shares count | 2 | 40% | 0.80 | U | No |
+| 3 | M44 | The vault unlock modal reopens on every search, taking focus mid-typing | 2 | 40% | 0.80 | U | No |
+| 4 | M49 | The invite gate is replaced after the first typed character, losing focus | 2 | 40% | 0.80 | U | No |
+| 5 | L15 | Link checks churn `updated_at`, `put_dashboard` uses the pool inside a transaction | 1 | 80% | 0.80 | U | No |
+| 6 | H22 | Purging a parent deletes live children | 4 | 15% | 0.60 | U | No |
+| 7 | M26 | JSON import flattens nesting when a child sorts before its parent | 3 | 20% | 0.60 | U | No |
+| 8 | M28 | Import is partial on failure | 3 | 20% | 0.60 | U | No |
+| 9 | M27 | Path-keyed import turns `AC/DC` into `DC` and merges same-name siblings | 2 | 30% | 0.60 | U | No |
+| 10 | M37 | A section with a blank title is silently dropped with its pins | 2 | 30% | 0.60 | U | No |
+| 11 | M43 | Grid view ignores `folder`, so a palette jump changes nothing and can disable Add | 2 | 30% | 0.60 | U | No |
+| 12 | M45 | Esc closes the modal and the parent drawer together, losing drafts | 2 | 30% | 0.60 | U | No |
+| 13 | M9 | Moving a followers or members category into a vault returns 500 | 2 | 30% | 0.60 | U | No |
+| 14 | L12 | A deleted preview comes back at the next backfill | 1 | 60% | 0.60 | U | No |
+| 15 | M14 | Fork copies trashed content and is not transactional | 2 | 25% | 0.50 | U | No |
+| 16 | M21 | Response bodies are read fully before any size check | 2 | 25% | 0.50 | A | No |
+| 17 | H1 | Email addresses are never verified | 3 | 15% | 0.45 | A | Yes |
+| 18 | M23 | No dimension limit on image decode | 3 | 15% | 0.45 | A | No |
+| 19 | M29 | Multi-step bookmark writes have no transaction | 3 | 15% | 0.45 | U | No |
+| 20 | M36 | Bulk add overwrites from a client snapshot | 3 | 15% | 0.45 | U | No |
+| 21 | M6 | Sensitive vault actions need no passphrase, some while locked | 3 | 15% | 0.45 | A | No |
+| 22 | L1 | Login timing reveals which emails exist | 1 | 40% | 0.40 | A | No |
+| 23 | L19 | Esc in any overlay wipes the selection | 1 | 40% | 0.40 | U | No |
+| 24 | H10 | Vault move leaves plaintext in search | 3 | 10% | 0.30 | U | Yes |
+| 25 | M10 | Move crosses vault and owner boundaries, so deleting the other tree cascades into this one | 3 | 10% | 0.30 | U | No |
+| 26 | M4 | Session token in localStorage undoes `HttpOnly` | 3 | 10% | 0.30 | A | No |
+| 27 | M5 | Argon2 at the OWASP floor with an 8-byte minimum | 3 | 10% | 0.30 | A | No |
+| 28 | L13 | The dev stack publishes known-credential services on all interfaces, sharing volumes with production | 2 | 15% | 0.30 | C | No |
+| 29 | L16 | Spinner forever on a 5xx or network failure, with no Sign out | 2 | 15% | 0.30 | U | No |
+| 30 | L6 | Nested shares show write where read is enforced | 2 | 15% | 0.30 | U | No |
+| 31 | M11 | In-flight enrichment leaves assets for a row just moved to a vault | 2 | 15% | 0.30 | U | No |
+| 32 | M13 | Dashboard blocker is not owner-scoped | 2 | 15% | 0.30 | U | No |
+| 33 | M15 | Invitees can view and edit trashed dashboards | 2 | 15% | 0.30 | U | No |
+| 34 | M17 | Owners cannot see or revoke a rejected invite | 2 | 15% | 0.30 | U | No |
+| 35 | M47 | Finishing onboarding can bounce back, depending on timing | 2 | 15% | 0.30 | U | No |
+| 36 | L18 | After cancelling a crop, the same file cannot be picked again | 1 | 30% | 0.30 | U | No |
+| 37 | L28 | The test "loads API images with the page token" failed once under load and passed on rerun | 1 | 30% | 0.30 | U | No |
+| 38 | L5 | Authors cannot delete comments after losing access | 1 | 30% | 0.30 | U | No |
+| 39 | M46 | Bulk Move to vault is offered for shared items the API refuses, failing the whole batch | 1 | 30% | 0.30 | U | No |
 
 ### Tier 4: leave unless it comes up
 
 | Rank | ID | Defect | Impact | Probability | Score | Trigger | Code read |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 41 | L11 | Trashed vault items appear in vault search | 1 | 25% | 0.25 | U | No |
-| 42 | H26 | Chrome 124 runs with `--no-sandbox` | 4 | 5% | 0.20 | A | Yes |
-| 43 | M3 | Bootstrap admin is racy | 4 | 5% | 0.20 | A | No |
-| 44 | H14 | One registration invite creates many accounts | 2 | 10% | 0.20 | A | Yes |
-| 45 | M40 | Failed auto-lock reports locked | 2 | 10% | 0.20 | U | No |
-| 46 | L22 | Bulk failures carry no detail | 1 | 20% | 0.20 | U | No |
-| 47 | L25 | No `.dockerignore`, so local `node_modules` can overwrite the image's | 1 | 20% | 0.20 | C | No |
-| 48 | L7 | A write invitee's tag edit moves tags out of the owner's namespace | 1 | 15% | 0.15 | U | No |
-| 49 | M48 | Trash retention saves per keystroke, so typing 365 can store 3 and a later purge deletes items older than 3 days | 4 | 3% | 0.12 | U | Yes |
-| 50 | L2 | A local account can block a victim's first OIDC login | 2 | 5% | 0.10 | C | No |
-| 51 | L10 | An invitee-created bookmark blocks a move with a bare 404 | 1 | 10% | 0.10 | U | No |
-| 52 | L21 | The previous user's avatar is served from HTTP cache for up to an hour | 1 | 10% | 0.10 | U | No |
-| 53 | L23 | Tags containing a comma cannot be filtered | 1 | 10% | 0.10 | U | No |
-| 54 | L4 | Hidden users and blocks can be detected through counts and status codes | 1 | 10% | 0.10 | A | No |
-| 55 | M12 | Vault moves take no row lock, so a concurrent PATCH can write plaintext into a vault row | 3 | 3% | 0.09 | U | No |
-| 56 | M2 | Last-admin check is racy | 3 | 2% | 0.06 | U | No |
-| 57 | M38 | An edit draft can be saved onto a different dashboard after losing access | 2 | 3% | 0.06 | U | No |
-| 58 | L8 | Keys are not zeroized | 2 | 2% | 0.04 | A | No |
-| 59 | L9 | No AAD on ciphertext | 2 | 1% | 0.02 | A | No |
-| 60 | L27 | URLs have no scheme check | 1 | 2% | 0.02 | A | No |
+| 40 | L11 | Trashed vault items appear in vault search | 1 | 25% | 0.25 | U | No |
+| 41 | H26 | Chrome 124 runs with `--no-sandbox` | 4 | 5% | 0.20 | A | Yes |
+| 42 | M3 | Bootstrap admin is racy | 4 | 5% | 0.20 | A | No |
+| 43 | H14 | One registration invite creates many accounts | 2 | 10% | 0.20 | A | Yes |
+| 44 | M40 | Failed auto-lock reports locked | 2 | 10% | 0.20 | U | No |
+| 45 | L22 | Bulk failures carry no detail | 1 | 20% | 0.20 | U | No |
+| 46 | L25 | No `.dockerignore`, so local `node_modules` can overwrite the image's | 1 | 20% | 0.20 | C | No |
+| 47 | L7 | A write invitee's tag edit moves tags out of the owner's namespace | 1 | 15% | 0.15 | U | No |
+| 48 | M48 | Trash retention saves per keystroke, so typing 365 can store 3 and a later purge deletes items older than 3 days | 4 | 3% | 0.12 | U | Yes |
+| 49 | L2 | A local account can block a victim's first OIDC login | 2 | 5% | 0.10 | C | No |
+| 50 | L10 | An invitee-created bookmark blocks a move with a bare 404 | 1 | 10% | 0.10 | U | No |
+| 51 | L21 | The previous user's avatar is served from HTTP cache for up to an hour | 1 | 10% | 0.10 | U | No |
+| 52 | L23 | Tags containing a comma cannot be filtered | 1 | 10% | 0.10 | U | No |
+| 53 | L4 | Hidden users and blocks can be detected through counts and status codes | 1 | 10% | 0.10 | A | No |
+| 54 | M12 | Vault moves take no row lock, so a concurrent PATCH can write plaintext into a vault row | 3 | 3% | 0.09 | U | No |
+| 55 | M2 | Last-admin check is racy | 3 | 2% | 0.06 | U | No |
+| 56 | M38 | An edit draft can be saved onto a different dashboard after losing access | 2 | 3% | 0.06 | U | No |
+| 57 | L8 | Keys are not zeroized | 2 | 2% | 0.04 | A | No |
+| 58 | L9 | No AAD on ciphertext | 2 | 1% | 0.02 | A | No |
+| 59 | L27 | URLs have no scheme check | 1 | 2% | 0.02 | A | No |
 
 ## High
 
@@ -234,7 +234,6 @@ All fixed. See the Fixed table.
 | L21 | `apps/web/src/hooks/avatar/useAvatarImage.ts:18`, `crates/api/src/routes/users/mod.rs:171` | The previous user's avatar is served from HTTP cache for up to an hour. | Use `/users/{id}/avatar`, or `no-store`. |
 | L22 | `apps/web/src/hooks/library/useLibrarySelection.ts:13,79` | Bulk failures carry no detail, and selection clears on partial failure. | Keep failed ids selected, with the reason. |
 | L23 | `apps/web/src/lib/library/librarySearch.ts:37` | Tags containing a comma cannot be filtered. | Repeat the param. |
-| L24 | `crates/api/src/main.rs:76` | SPA deep links return a 404 status with the app's HTML. | Use `fallback` rather than `not_found_service`. |
 | L25 | Repository root | No `.dockerignore`, so local `node_modules` can overwrite the image's. | Add one. |
 | L27 | `crates/db/src/repo/bookmarks.rs` (`create_bookmark`) | URLs have no scheme check. React 19 blocks `javascript:` links, and the worker refuses non-web URLs, so this is defence in depth. | Reject non-http(s) at create, update and import. |
 | L28 | `apps/web/src/hooks/images/useApiImage.test.ts` | The test "loads API images with the page token" failed once under load and passed on rerun. | Check for a timing dependency. |

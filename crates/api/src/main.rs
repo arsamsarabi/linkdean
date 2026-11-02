@@ -54,6 +54,8 @@ async fn main() -> anyhow::Result<()> {
     let api = Router::new()
         .merge(routes::router())
         .merge(metrics::router())
+        // Without its own fallback, /api would inherit the app shell below.
+        .fallback(api_not_found)
         .layer(axum::middleware::from_fn(metrics::track_http))
         .with_state(state);
 
@@ -62,7 +64,8 @@ async fn main() -> anyhow::Result<()> {
     let cors = build_cors(&cfg.cors_origins)?;
     let app = Router::new()
         .nest("/api", api)
-        .fallback_service(ServeDir::new(&static_dir).not_found_service(ServeFile::new(index)))
+        // Client routes such as /library are the app shell, with 200 like any page.
+        .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)))
         .layer(cors)
         .layer(TraceLayer::new_for_http());
 
@@ -72,6 +75,10 @@ async fn main() -> anyhow::Result<()> {
     let app = app.into_make_service_with_connect_info::<SocketAddr>();
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+async fn api_not_found() -> error::ApiError {
+    linkdean_core::Error::NotFound.into()
 }
 
 fn build_cors(origins: &[String]) -> anyhow::Result<CorsLayer> {
