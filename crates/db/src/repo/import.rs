@@ -1,4 +1,4 @@
-use linkdean_core::import_export::{leaf_name, path_key, ParsedImport};
+use linkdean_core::import_export::ParsedImport;
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
     BookmarkExport, CategoryExport, CreateCategory, CreateDashboard, DashboardExport,
@@ -55,20 +55,40 @@ pub async fn finish_import_job(
     .map_err(|e| Error::msg(e.to_string()))
 }
 
+/// How far an import got. Filled in as it goes, so a failed import still reports it.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ImportCounts {
+    pub total: i32,
+    pub imported: i32,
+    pub failed: i32,
+}
+
 pub async fn apply_parsed_import(
     pool: &PgPool,
     user_id: Uuid,
     parsed: ParsedImport,
 ) -> Result<(i32, i32, i32)> {
-    let mut path_to_id: HashMap<String, Uuid> = HashMap::new();
-    for (cat, path_entry) in parsed.categories.into_iter().zip(parsed.category_paths) {
-        let (path, parent_path) = path_key(&path_entry);
-        let parent_id = parent_path.and_then(|p| path_to_id.get(p).copied());
+    let mut counts = ImportCounts::default();
+    apply_parsed_import_counted(pool, user_id, parsed, &mut counts).await?;
+    Ok((counts.total, counts.imported, counts.failed))
+}
+
+/// Applies an import, keeping `counts` current, so a caller can record a partial import.
+pub async fn apply_parsed_import_counted(
+    pool: &PgPool,
+    user_id: Uuid,
+    parsed: ParsedImport,
+    counts: &mut ImportCounts,
+) -> Result<()> {
+    // Parsers list each parent before its children, so its id is known by then.
+    let mut folder_ids: Vec<Uuid> = Vec::with_capacity(parsed.categories.len());
+    for (cat, parent) in parsed.categories.into_iter().zip(parsed.category_parents) {
+        let parent_id = parent.and_then(|i| folder_ids.get(i).copied());
         let created = create_category(
             pool,
             user_id,
             CreateCategory {
-                name: leaf_name(path).to_string(),
+                name: cat.name,
                 parent_id,
                 is_hidden: cat.is_hidden,
                 vault_id: None,
@@ -76,30 +96,28 @@ pub async fn apply_parsed_import(
             },
         )
         .await?;
-        path_to_id.insert(path.to_string(), created.id);
+        folder_ids.push(created.id);
     }
 
-    let total = parsed.bookmarks.len() as i32;
-    let mut imported = 0i32;
-    let mut failed = 0i32;
+    counts.total = parsed.bookmarks.len() as i32;
     let mut new_ids: HashMap<Uuid, Uuid> = HashMap::new();
     for item in parsed.bookmarks {
         let mut bm = item.bookmark;
         bm.category_id = None;
         bm.category_ids = item
-            .category_paths
+            .categories
             .iter()
-            .filter_map(|p| path_to_id.get(p).copied())
+            .filter_map(|&i| folder_ids.get(i).copied())
             .collect();
         let created = match create_bookmark(pool, user_id, bm, &VaultKeyring::default()).await {
             Ok(view) => view,
             Err(e) => {
                 tracing::warn!(?e, "import bookmark failed");
-                failed += 1;
+                counts.failed += 1;
                 continue;
             }
         };
-        imported += 1;
+        counts.imported += 1;
         if let Some(source) = item.source_id {
             new_ids.insert(source, created.id);
         }
@@ -158,7 +176,7 @@ pub async fn apply_parsed_import(
         )
         .await?;
     }
-    Ok((total, imported, failed))
+    Ok(())
 }
 
 pub async fn export_data(

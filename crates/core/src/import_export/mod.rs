@@ -12,9 +12,11 @@ pub const EXPORT_VERSION: u32 = 2;
 
 #[derive(Debug, Default)]
 pub struct ParsedImport {
+    /// Folders, each parent before its children. `parent_id` is unused; see `category_parents`.
     pub categories: Vec<CreateCategory>,
-    /// Parallel to categories: temporary path key for nesting ("Folder/Sub")
-    pub category_paths: Vec<String>,
+    /// Parallel to `categories`: index of the parent folder, always lower than the child's.
+    /// Folders are nodes, not paths, so a name may hold `/` and siblings may share a name.
+    pub category_parents: Vec<Option<usize>>,
     pub bookmarks: Vec<ParsedBookmark>,
     /// Dashboards from a Linkdean export. Pins name `ParsedBookmark::source_id` values.
     pub dashboards: Vec<DashboardExport>,
@@ -23,8 +25,8 @@ pub struct ParsedImport {
 #[derive(Debug, Default)]
 pub struct ParsedBookmark {
     pub bookmark: CreateBookmark,
-    /// Folder paths (as in `category_paths`, without the parent part). Empty = unsorted.
-    pub category_paths: Vec<String>,
+    /// Indexes into `ParsedImport::categories`. Empty = unsorted.
+    pub categories: Vec<usize>,
     /// Id in the exported file, so its dashboards can point at this bookmark.
     pub source_id: Option<Uuid>,
     pub is_private: bool,
@@ -33,12 +35,26 @@ pub struct ParsedBookmark {
 }
 
 impl ParsedBookmark {
-    pub fn new(bookmark: CreateBookmark, category_path: Option<String>) -> Self {
+    pub fn new(bookmark: CreateBookmark, category: Option<usize>) -> Self {
         Self {
             bookmark,
-            category_paths: category_path.into_iter().collect(),
+            categories: category.into_iter().collect(),
             ..Default::default()
         }
+    }
+}
+
+impl ParsedImport {
+    fn push_category(&mut self, name: String, parent: Option<usize>) -> usize {
+        self.categories.push(CreateCategory {
+            name,
+            parent_id: None,
+            is_hidden: false,
+            vault_id: None,
+            icon: None,
+        });
+        self.category_parents.push(parent);
+        self.categories.len() - 1
     }
 }
 
@@ -152,7 +168,7 @@ fn check_category_tree(cats: &[CategoryExport]) -> Result<()> {
 
 pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
     let mut parsed = ParsedImport::default();
-    let mut stack: Vec<String> = Vec::new();
+    let mut stack: Vec<usize> = Vec::new();
     let mut pending_folder: Option<String> = None;
     // `<DD>` describes the item just before it. Only a bookmark's is kept.
     let mut last_was_bookmark = false;
@@ -186,29 +202,8 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                 if parsed.categories.len() >= MAX_IMPORT_CATEGORIES {
                     return Err(too_many_folders());
                 }
-                let path = if stack.is_empty() {
-                    name.clone()
-                } else {
-                    let parent = stack
-                        .last()
-                        .expect("stack non-empty when nesting folder path");
-                    format!("{parent}/{name}")
-                };
-                let parent_path = stack.last().cloned();
-                parsed.categories.push(CreateCategory {
-                    name,
-                    parent_id: None, // resolved later by path
-                    is_hidden: false,
-                    vault_id: None,
-                    icon: None,
-                });
-                // stash parent path in category_paths as "path\0parent"
-                let key = match parent_path {
-                    Some(p) => format!("{path}\0{p}"),
-                    None => path.clone(),
-                };
-                parsed.category_paths.push(key);
-                stack.push(path);
+                let index = parsed.push_category(name, stack.last().copied());
+                stack.push(index);
             }
             continue;
         }
@@ -240,7 +235,7 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                         .collect()
                 })
                 .unwrap_or_default();
-            let cat_path = stack.last().cloned();
+            let folder = stack.last().copied();
             parsed.bookmarks.push(ParsedBookmark::new(
                 CreateBookmark {
                     url,
@@ -252,7 +247,7 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                     tags,
                     ..Default::default()
                 },
-                cat_path,
+                folder,
             ));
         }
     }
@@ -272,36 +267,43 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
     check_category_tree(&export.categories)?;
     let mut parsed = ParsedImport::default();
 
-    // Sort so parents tend to come first
-    let mut cats = export.categories;
-    cats.sort_by_key(|c| c.parent_id.is_some());
-
-    for c in &cats {
-        let path = category_path_name(c, &cats);
-        let parent_path = c
-            .parent_id
-            .and_then(|pid| cats.iter().find(|x| x.id == pid))
-            .map(|p| category_path_name(p, &cats));
-        let key = match &parent_path {
-            Some(p) => format!("{path}\0{p}"),
-            None => path.clone(),
-        };
-        parsed.categories.push(CreateCategory {
-            name: c.name.clone(),
-            parent_id: None,
-            is_hidden: c.is_hidden,
-            vault_id: None, // vault contents not exported plaintext
-            icon: c.icon.clone(),
-        });
-        parsed.category_paths.push(key);
+    // Parents before children, whatever order the file lists them in. A parent missing
+    // from the file leaves its child at the top level.
+    let cats = export.categories;
+    let index_of: std::collections::HashMap<Uuid, usize> =
+        cats.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
+    let mut children: std::collections::HashMap<Option<usize>, Vec<usize>> =
+        std::collections::HashMap::new();
+    for (i, c) in cats.iter().enumerate() {
+        let parent = c.parent_id.and_then(|pid| index_of.get(&pid).copied());
+        children.entry(parent).or_default().push(i);
+    }
+    // Source index -> parsed index. Breadth-first from the roots; the tree was checked for
+    // cycles above, so every folder is reached once.
+    let mut new_index: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
+    let mut queue: std::collections::VecDeque<(usize, Option<usize>)> = children
+        .get(&None)
+        .into_iter()
+        .flatten()
+        .map(|&i| (i, None))
+        .collect();
+    while let Some((i, parent)) = queue.pop_front() {
+        let c = &cats[i];
+        let index = parsed.push_category(c.name.clone(), parent);
+        parsed.categories[index].is_hidden = c.is_hidden;
+        parsed.categories[index].icon = c.icon.clone();
+        new_index.insert(i, index);
+        for &child in children.get(&Some(i)).into_iter().flatten() {
+            queue.push_back((child, Some(index)));
+        }
     }
 
     for b in export.bookmarks.into_iter().filter(|b| !b.is_vault) {
-        let category_paths = b
+        let categories = b
             .all_category_ids()
             .iter()
-            .filter_map(|cid| cats.iter().find(|c| c.id == *cid))
-            .map(|c| category_path_name(c, &cats))
+            .filter_map(|cid| index_of.get(cid))
+            .filter_map(|i| new_index.get(i).copied())
             .collect();
         parsed.bookmarks.push(ParsedBookmark {
             bookmark: CreateBookmark {
@@ -317,7 +319,7 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
                 is_pinned: b.is_pinned,
                 ..Default::default()
             },
-            category_paths,
+            categories,
             source_id: b.id,
             is_private: b.is_private,
             created_at: b.created_at,
@@ -379,6 +381,7 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
         .collect();
 
     let idx = |name: &str| headers.iter().position(|h| h == name);
+    let mut folders: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
 
     for row in rdr.records() {
         let row = row.map_err(|e| Error::BadRequest(e.to_string()))?;
@@ -399,22 +402,15 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
             .and_then(|i| row.get(i))
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string());
-        if let Some(ref f) = folder {
-            if !parsed
-                .category_paths
-                .iter()
-                .any(|p| p == f || p.starts_with(&format!("{f}\0")))
-            {
-                parsed.categories.push(CreateCategory {
-                    name: f.clone(),
-                    parent_id: None,
-                    is_hidden: false,
-                    vault_id: None,
-                    icon: None,
-                });
-                parsed.category_paths.push(f.clone());
+        // A CSV names one folder per row; the same name means the same top-level folder.
+        let folder = folder.map(|f| match folders.get(&f) {
+            Some(&i) => i,
+            None => {
+                let i = parsed.push_category(f.clone(), None);
+                folders.insert(f, i);
+                i
             }
-        }
+        });
         let tags = idx("tags")
             .and_then(|i| row.get(i))
             .unwrap_or("")
@@ -455,21 +451,6 @@ pub fn build_linkdean_export(
         bookmarks,
         dashboards,
     }
-}
-
-fn category_path_name(c: &CategoryExport, all: &[CategoryExport]) -> String {
-    let mut parts = vec![c.name.clone()];
-    let mut parent = c.parent_id;
-    while let Some(pid) = parent {
-        if let Some(p) = all.iter().find(|x| x.id == pid) {
-            parts.push(p.name.clone());
-            parent = p.parent_id;
-        } else {
-            break;
-        }
-    }
-    parts.reverse();
-    parts.join("/")
 }
 
 fn attr_value(line: &str, name: &str) -> Option<String> {
@@ -513,18 +494,6 @@ fn html_unescape(s: &str) -> String {
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
         .replace("&amp;", "&")
-}
-
-/// Resolve import category paths → created UUIDs (caller inserts cats in order).
-pub fn path_key(path_entry: &str) -> (&str, Option<&str>) {
-    match path_entry.split_once('\0') {
-        Some((path, parent)) => (path, Some(parent)),
-        None => (path_entry, None),
-    }
-}
-
-pub fn leaf_name(path: &str) -> &str {
-    path.rsplit('/').next().unwrap_or(path)
 }
 
 pub fn new_id() -> Uuid {
@@ -734,10 +703,13 @@ mod tests {
         assert_eq!(export.version, EXPORT_VERSION);
         let parsed = parse_linkdean_json(&serde_json::to_string(&export).unwrap()).unwrap();
         let b = &parsed.bookmarks[0];
-        assert_eq!(
-            b.category_paths,
-            vec!["Work".to_string(), "Work/Sub".to_string()]
-        );
+        let names: Vec<&str> = b
+            .categories
+            .iter()
+            .map(|&i| parsed.categories[i].name.as_str())
+            .collect();
+        assert_eq!(names, vec!["Work", "Sub"]);
+        assert_eq!(parsed.category_parents, vec![None, Some(0)]);
         assert!(b.bookmark.is_favorite && b.is_private);
         assert_eq!(b.created_at, Some(created));
         assert_eq!(b.source_id, Some(id));
@@ -754,9 +726,34 @@ mod tests {
     }
 
     #[test]
-    fn path_key_and_leaf() {
-        assert_eq!(path_key("a/b\0a"), ("a/b", Some("a")));
-        assert_eq!(leaf_name("a/b/c"), "c");
+    fn linkdean_json_nests_a_child_listed_before_its_parent() {
+        let export = build_linkdean_export(
+            vec![
+                cat(3, Some(2), "Leaf"),
+                cat(2, Some(1), "Mid"),
+                cat(1, None, "Top"),
+            ],
+            vec![],
+            vec![],
+        );
+        let parsed = parse_linkdean_json(&serde_json::to_string(&export).unwrap()).unwrap();
+        let names: Vec<&str> = parsed.categories.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["Top", "Mid", "Leaf"]);
+        assert_eq!(parsed.category_parents, vec![None, Some(0), Some(1)]);
+    }
+
+    #[test]
+    fn folders_are_nodes_not_paths() {
+        let html = "<DL><p>\n<DT><H3>AC/DC</H3>\n<DL><p>\n<DT><A HREF=\"https://a.example\">A</A>\n</DL><p>\n<DT><H3>Music</H3>\n<DL><p>\n<DT><A HREF=\"https://b.example\">B</A>\n</DL><p>\n<DT><H3>Music</H3>\n<DL><p>\n<DT><A HREF=\"https://c.example\">C</A>\n</DL><p>\n</DL><p>\n";
+        let parsed = parse_netscape(html).unwrap();
+        let names: Vec<&str> = parsed.categories.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["AC/DC", "Music", "Music"]);
+        let folders: Vec<Vec<usize>> = parsed
+            .bookmarks
+            .iter()
+            .map(|b| b.categories.clone())
+            .collect();
+        assert_eq!(folders, vec![vec![0], vec![1], vec![2]]);
     }
 
     fn nested_html(depth: usize) -> String {

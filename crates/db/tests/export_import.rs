@@ -148,3 +148,58 @@ async fn json_export_restores_folders_flags_times_and_dashboards() {
     .expect("pins");
     assert_eq!(pinned, vec![id]);
 }
+
+async fn folder_tree(pool: &PgPool, owner: &User) -> Vec<(String, Option<String>)> {
+    let mut rows: Vec<(String, Option<String>)> = sqlx::query_as(
+        r#"
+        SELECT c.name, p.name FROM categories c
+        LEFT JOIN categories p ON p.id = c.parent_id
+        WHERE c.owner_user_id = $1
+        "#,
+    )
+    .bind(owner.id)
+    .fetch_all(pool)
+    .await
+    .expect("tree");
+    rows.sort();
+    rows
+}
+
+#[tokio::test]
+async fn html_import_keeps_slashes_and_same_name_folders_apart() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let to = person(&pool, "slash").await;
+    let html = "<DL><p>\n<DT><H3>AC/DC</H3>\n<DL><p>\n<DT><H3>Live</H3>\n<DL><p>\n<DT><A HREF=\"https://a.example\">A</A>\n</DL><p>\n</DL><p>\n<DT><H3>Rock</H3>\n<DL><p>\n<DT><H3>Live</H3>\n<DL><p>\n<DT><A HREF=\"https://b.example\">B</A>\n</DL><p>\n</DL><p>\n</DL><p>\n";
+    let parsed = linkdean_core::import_export::parse_netscape(html).expect("parse");
+    db::apply_parsed_import(&pool, to.id, parsed)
+        .await
+        .expect("import");
+    assert_eq!(
+        folder_tree(&pool, &to).await,
+        vec![
+            ("AC/DC".to_string(), None),
+            ("Live".to_string(), Some("AC/DC".to_string())),
+            ("Live".to_string(), Some("Rock".to_string())),
+            ("Rock".to_string(), None),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn a_failed_import_reports_what_it_got_through() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let to = person(&pool, "partial").await;
+    // The dashboard's blank section title fails after the bookmark is in.
+    let raw = r#"{"version": 2, "exported_at": "2026-01-01T00:00:00Z", "categories": [],
+        "bookmarks": [{"id": "00000000-0000-0000-0000-000000000001", "url": "https://p.example", "title": "P", "tags": [], "is_vault": false}],
+        "dashboards": [{"title": "D", "is_default": false, "sections": [{"title": " ", "bookmark_ids": []}]}]}"#;
+    let parsed = parse_linkdean_json(raw).expect("parse");
+    let mut counts = db::ImportCounts::default();
+    let result = db::apply_parsed_import_counted(&pool, to.id, parsed, &mut counts).await;
+    assert!(result.is_err());
+    assert_eq!((counts.total, counts.imported, counts.failed), (1, 1, 0));
+}

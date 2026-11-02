@@ -69,11 +69,11 @@ async fn import(
         .map_err(|e| Error::msg(format!("import parse: {e}")))??;
 
     let job = db::create_import_job(&state.pool, user.id, &format).await?;
-    let (total, imported, failed) = db::apply_parsed_import(&state.pool, user.id, parsed).await?;
-    let job = db::finish_import_job(&state.pool, job.id, total, imported, failed, None).await?;
+    let mut counts = db::ImportCounts::default();
+    let applied = db::apply_parsed_import_counted(&state.pool, user.id, parsed, &mut counts).await;
 
-    // reindex non-vault
-    if let Ok(items) = db::list_bookmarks(
+    // Whatever landed is searchable, even when the import stopped part way.
+    match db::list_bookmarks(
         &state.pool,
         user.id,
         None,
@@ -83,12 +83,39 @@ async fn import(
     )
     .await
     {
-        for v in items {
-            if let Err(e) = state.search.upsert_bookmark(&v).await {
-                tracing::warn!(bookmark_id = %v.id, error = %e, "meili reindex failed");
+        Ok(items) => {
+            if let Err(e) = state.search.upsert_bookmarks(&items).await {
+                tracing::warn!(user_id = %user.id, error = %e, "meili reindex after import failed");
             }
         }
+        Err(e) => {
+            tracing::warn!(user_id = %user.id, error = %e, "list bookmarks to reindex failed")
+        }
     }
+
+    if let Err(e) = applied {
+        tracing::warn!(user_id = %user.id, error = %e, imported = counts.imported, "import stopped part way");
+        db::finish_import_job(
+            &state.pool,
+            job.id,
+            counts.total,
+            counts.imported,
+            counts.failed,
+            Some(&e.to_string()),
+        )
+        .await?;
+        return Err(e.into());
+    }
+    let job = db::finish_import_job(
+        &state.pool,
+        job.id,
+        counts.total,
+        counts.imported,
+        counts.failed,
+        None,
+    )
+    .await?;
+    let (total, imported, failed) = (counts.total, counts.imported, counts.failed);
 
     // Imports can be large, so fetch metadata and previews after responding.
     tokio::spawn(linkdean_worker::enrich_user_bookmarks(

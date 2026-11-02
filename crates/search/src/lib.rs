@@ -31,6 +31,25 @@ pub struct BookmarkDoc {
     pub has_preview: bool,
 }
 
+impl BookmarkDoc {
+    fn from_view(view: &BookmarkView) -> Self {
+        Self {
+            id: view.id.to_string(),
+            owner_user_id: view.owner_user_id.to_string(),
+            title: view.title.clone(),
+            url: view.url.clone(),
+            description: view.description.clone().unwrap_or_default(),
+            notes: view.notes.clone().unwrap_or_default(),
+            tags: view.tags.clone(),
+            category_id: view.category_id.map(|c| c.to_string()),
+            category_ids: view.categories.iter().map(|c| c.id.to_string()).collect(),
+            favicon_url: view.favicon_url.clone(),
+            preview_image_url: view.preview_image_url.clone(),
+            has_preview: view.has_preview,
+        }
+    }
+}
+
 impl SearchClient {
     pub fn new(url: &str, key: &str) -> anyhow::Result<Self> {
         let client = Client::new(url, Some(key)).context("meilisearch client")?;
@@ -64,21 +83,7 @@ impl SearchClient {
         if view.deleted_at.is_some() {
             return self.delete_bookmark(view.id).await;
         }
-        let category_ids: Vec<String> = view.categories.iter().map(|c| c.id.to_string()).collect();
-        let doc = BookmarkDoc {
-            id: view.id.to_string(),
-            owner_user_id: view.owner_user_id.to_string(),
-            title: view.title.clone(),
-            url: view.url.clone(),
-            description: view.description.clone().unwrap_or_default(),
-            notes: view.notes.clone().unwrap_or_default(),
-            tags: view.tags.clone(),
-            category_id: view.category_id.map(|c| c.to_string()),
-            category_ids,
-            favicon_url: view.favicon_url.clone(),
-            preview_image_url: view.preview_image_url.clone(),
-            has_preview: view.has_preview,
-        };
+        let doc = BookmarkDoc::from_view(view);
         let task = self
             .client
             .index(&self.index_name)
@@ -87,6 +92,28 @@ impl SearchClient {
             .context("meili upsert")?;
         if let Err(e) = task.wait_for_completion(&self.client, None, None).await {
             tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert wait failed");
+        }
+        Ok(())
+    }
+
+    /// Index many bookmarks with one task per thousand, as after an import. Vault and
+    /// trashed bookmarks are skipped.
+    pub async fn upsert_bookmarks(&self, views: &[BookmarkView]) -> anyhow::Result<()> {
+        let docs: Vec<BookmarkDoc> = views
+            .iter()
+            .filter(|v| !v.is_vault && v.deleted_at.is_none())
+            .map(BookmarkDoc::from_view)
+            .collect();
+        for chunk in docs.chunks(1000) {
+            let task = self
+                .client
+                .index(&self.index_name)
+                .add_or_replace(chunk, None)
+                .await
+                .context("meili batch upsert")?;
+            if let Err(e) = task.wait_for_completion(&self.client, None, None).await {
+                tracing::warn!(count = chunk.len(), error = %e, "meili batch upsert wait failed");
+            }
         }
         Ok(())
     }
