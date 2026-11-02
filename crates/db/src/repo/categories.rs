@@ -14,7 +14,7 @@ use super::shares::{
     bookmark_can_read, category_access, list_shared_categories, owned_shared_out_invitees,
     require_category_owner, require_category_read, require_category_write,
 };
-use super::users::{find_user_by_id, user_share_label};
+use super::users::find_user_by_id;
 
 const PUBLIC_SLUG_PREFIX: &str = "ldl_";
 
@@ -980,7 +980,7 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
     let owner = find_user_by_id(pool, cat.owner_user_id)
         .await?
         .ok_or(Error::NotFound)?;
-    let owner_display_name = user_share_label(&owner);
+    let owner_display_name = super::users::public_user_label(&owner, "Owner");
 
     let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(
         r#"

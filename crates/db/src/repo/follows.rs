@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::notifications::{try_notify, NotificationSubject};
-use super::users::{find_user_by_id, user_share_label};
+use super::users::find_user_by_id;
 
 pub async fn is_following(pool: &PgPool, follower_id: Uuid, following_id: Uuid) -> Result<bool> {
     let row: Option<(i32,)> = sqlx::query_as(
@@ -89,7 +89,7 @@ pub async fn follow_user(
         let actor = find_user_by_id(pool, follower_id)
             .await?
             .ok_or(Error::NotFound)?;
-        let actor_label = user_share_label(&actor);
+        let actor_label = super::users::public_user_label(&actor, "Someone");
         try_notify(
             pool,
             following_id,
@@ -141,7 +141,7 @@ async fn map_follow_rows(
     let mut out = Vec::with_capacity(rows.len());
     for (id, created_at) in rows {
         let label = match find_user_by_id(pool, id).await? {
-            Some(u) => user_share_label(&u),
+            Some(u) => super::users::public_user_label(&u, "User"),
             None => "User".into(),
         };
         out.push(FollowUserView {

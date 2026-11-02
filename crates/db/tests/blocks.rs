@@ -598,8 +598,8 @@ async fn lists_show_only_my_targets_newest_first_with_labels() {
     let ids: Vec<Uuid> = blocked.iter().map(|u| u.id).collect();
     assert_eq!(ids, vec![unnamed.id, named.id]);
     assert_eq!(blocked[1].display_name, "Named");
-    let local_part = unnamed.email.split('@').next().expect("local part");
-    assert_eq!(blocked[0].display_name, local_part);
+    // No display name: a generic label, never part of the email.
+    assert_eq!(blocked[0].display_name, "User");
 
     assert!(db::list_muted(&pool, me.id)
         .await

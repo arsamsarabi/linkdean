@@ -2,7 +2,7 @@ use linkdean_core::{BlockRelation, Error, FollowUserView, MuteRelation, Result};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::users::{find_user_by_id, share_invitee_label};
+use super::users::find_user_by_id;
 
 pub async fn is_blocked(pool: &PgPool, blocker_id: Uuid, blocked_id: Uuid) -> Result<bool> {
     let row: Option<(i32,)> = sqlx::query_as(
@@ -294,9 +294,13 @@ type TargetRow = (Uuid, Option<String>, String, chrono::DateTime<chrono::Utc>);
 
 fn to_user_views(rows: Vec<TargetRow>) -> Vec<FollowUserView> {
     rows.into_iter()
-        .map(|(id, display_name, email, created_at)| FollowUserView {
+        .map(|(id, display_name, _email, created_at)| FollowUserView {
             id,
-            display_name: share_invitee_label(display_name.as_deref(), &email, "Owner"),
+            // Blocked and muted people may never have shared an email with the viewer.
+            display_name: display_name
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "User".into()),
             created_at,
         })
         .collect()

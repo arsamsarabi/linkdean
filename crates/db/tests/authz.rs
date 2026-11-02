@@ -761,3 +761,44 @@ async fn pending_share_invite_claims_on_register() {
 
     let _ = db::delete_category(&pool, user_a.id, cat.id).await;
 }
+
+#[tokio::test]
+async fn public_list_owner_without_a_name_shows_no_email() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = db::create_user(
+        &pool,
+        &format!("leaky-{}@authz.test", Uuid::new_v4()),
+        Some("password-long"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("user");
+    let cat = db::create_category(
+        &pool,
+        owner.id,
+        CreateCategory {
+            name: format!("Pub-{}", Uuid::new_v4()),
+            parent_id: None,
+            is_hidden: false,
+            vault_id: None,
+            icon: None,
+        },
+    )
+    .await
+    .expect("category");
+    let slug = db::enable_category_public_link(&pool, owner.id, cat.id)
+        .await
+        .expect("enable")
+        .slug
+        .expect("slug");
+
+    let list = db::get_public_list_by_slug(&pool, &slug)
+        .await
+        .expect("resolve");
+    assert_eq!(list.owner_display_name, "Owner");
+    assert!(!list.owner_display_name.contains("leaky"));
+}

@@ -9,7 +9,7 @@ use uuid::Uuid;
 use super::dashboard_shares::require_dashboard_read;
 use super::notifications::{try_notify, NotificationSubject};
 use super::shares::{bookmark_can_read, require_category_read};
-use super::users::{find_user_by_id, share_invitee_label, user_share_label};
+use super::users::{find_user_by_id, user_share_label};
 
 async fn actor_label(pool: &PgPool, user_id: Uuid) -> String {
     match find_user_by_id(pool, user_id).await {
@@ -144,7 +144,7 @@ async fn require_shared_context(
 
 async fn comment_author_label(pool: &PgPool, user_id: Uuid) -> String {
     match find_user_by_id(pool, user_id).await {
-        Ok(Some(u)) => share_invitee_label(u.display_name.as_deref(), &u.email, "User"),
+        Ok(Some(u)) => super::users::public_user_label(&u, "User"),
         _ => "User".into(),
     }
 }

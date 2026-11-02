@@ -91,6 +91,17 @@ pub fn share_invitee_label(display_name: Option<&str>, email: &str, fallback: &s
         .to_string()
 }
 
+/// Label for people who were never given this user's email: anonymous visitors, followers,
+/// other commenters. The display name, else `fallback`. Never any part of the email.
+pub fn public_user_label(user: &User, fallback: &str) -> String {
+    user.display_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(fallback)
+        .to_string()
+}
+
 /// Label for share badges: display_name, else email local-part, else `"Owner"`.
 pub fn user_share_label(user: &User) -> String {
     share_invitee_label(user.display_name.as_deref(), &user.email, "Owner")
