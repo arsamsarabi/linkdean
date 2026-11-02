@@ -26,7 +26,7 @@ async fn master_row(pool: &PgPool, user_id: Uuid) -> Result<Option<MasterKeyRow>
 async fn open_master(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Result<[u8; 32]> {
     let row = master_row(pool, user_id).await?.ok_or(Error::NotFound)?;
     let passphrase = passphrase.to_string();
-    super::blocking::run_blocking(move || {
+    super::blocking::run_kdf(move || {
         crypto::unlock_vault(
             &passphrase,
             &row.kdf_salt,
@@ -53,7 +53,7 @@ pub async fn enable_global_passphrase(
     let master = crypto::new_data_key();
     let public_key = crypto::master_public_key(&master);
     let wrapped =
-        super::blocking::run_blocking(move || crypto::wrap_data_key(&passphrase, &master)).await?;
+        super::blocking::run_kdf(move || crypto::wrap_data_key(&passphrase, &master)).await?;
     sqlx::query(
         r#"
         INSERT INTO vault_master_keys (user_id, kdf_salt, wrapped_key, wrapped_nonce, public_key)
@@ -81,8 +81,7 @@ pub async fn change_global_passphrase(
     let master = open_master(pool, user_id, current).await?;
     let new_passphrase = new_passphrase.to_string();
     let wrapped =
-        super::blocking::run_blocking(move || crypto::wrap_data_key(&new_passphrase, &master))
-            .await?;
+        super::blocking::run_kdf(move || crypto::wrap_data_key(&new_passphrase, &master)).await?;
     sqlx::query(
         r#"
         UPDATE vault_master_keys

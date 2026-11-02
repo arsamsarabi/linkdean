@@ -18,6 +18,8 @@ pub struct Config {
     pub oidc_client_secret: Option<String>,
     /// Empty = reflect `APP_URL` only. Use `*` for any-origin (dev/homelab convenience).
     pub cors_origins: Vec<String>,
+    /// Behind a reverse proxy, read the client address from `X-Forwarded-For`.
+    pub trust_forwarded_for: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
@@ -65,6 +67,7 @@ impl Config {
                 .ok()
                 .filter(|s| !s.is_empty()),
             cors_origins,
+            trust_forwarded_for: env_bool("TRUST_FORWARDED_FOR", false),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),

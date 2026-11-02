@@ -1,8 +1,9 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
+use crate::rate_limit::{client_ip, login_limits, register_limit};
 use crate::state::AppState;
-use axum::extract::{Query, State};
-use axum::http::HeaderValue;
+use axum::extract::{ConnectInfo, Query, State};
+use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -10,6 +11,7 @@ use linkdean_core::{AuthResponse, Error, LoginRequest, RegisterRequest};
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::net::SocketAddr;
 use std::time::Duration;
 
 pub fn router() -> Router<AppState> {
@@ -46,11 +48,17 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
 
 async fn register(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(req): Json<RegisterRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if req.email.trim().is_empty() || req.password.len() < 8 {
         return Err(Error::BadRequest("email required; password min 8 chars".into()).into());
     }
+    let ip = client_ip(&headers, peer.ip(), state.cfg.trust_forwarded_for);
+    let limits = register_limit(ip);
+    state.limiter.check(&limits)?;
+    state.limiter.record(&limits);
     let count = db::count_users(&state.pool).await?;
     let invite_code = req
         .invite_code
@@ -114,9 +122,15 @@ async fn register(
 
 async fn login(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let user = db::authenticate_local(&state.pool, &req.email, &req.password).await?;
+    let ip = client_ip(&headers, peer.ip(), state.cfg.trust_forwarded_for);
+    let limits = login_limits(ip, &req.email);
+    state.limiter.check(&limits)?;
+    let result = db::authenticate_local(&state.pool, &req.email, &req.password).await;
+    let user = state.limiter.settle(&limits, result)?;
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let public = db::to_public(&state.pool, &user).await?;
     Ok(session_response(

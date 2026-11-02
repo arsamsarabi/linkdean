@@ -26,6 +26,8 @@ pub enum Error {
     VaultLocked,
     #[error("vault unlock failed")]
     VaultUnlockFailed,
+    #[error("too many attempts, try again later")]
+    TooManyRequests,
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

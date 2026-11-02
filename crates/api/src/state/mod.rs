@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::rate_limit::{Limiter, WINDOW};
 use linkdean_core::VaultKeyring;
 use linkdean_db::{self as db};
 use linkdean_search::SearchClient;
@@ -15,6 +16,7 @@ pub struct AppState {
     pub cfg: Config,
     /// user_id → unlocked vaults (session memory; lost on restart)
     pub vault_keys: Arc<RwLock<HashMap<Uuid, VaultKeyring>>>,
+    pub limiter: Arc<Limiter>,
 }
 
 impl AppState {
@@ -32,6 +34,7 @@ impl AppState {
             search,
             cfg,
             vault_keys: Arc::new(RwLock::new(HashMap::new())),
+            limiter: Arc::new(Limiter::new(WINDOW)),
         })
     }
 

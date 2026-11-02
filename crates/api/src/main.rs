@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod error;
 mod metrics;
+mod rate_limit;
 mod routes;
 mod state;
 
@@ -80,6 +81,7 @@ async fn main() -> anyhow::Result<()> {
     let addr: SocketAddr = cfg.bind.parse()?;
     tracing::info!("linkdean listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
+    let app = app.into_make_service_with_connect_info::<SocketAddr>();
     axum::serve(listener, app).await?;
     Ok(())
 }

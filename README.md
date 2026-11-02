@@ -115,6 +115,7 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 | `AVATAR_DIR` / `PREVIEW_DIR` | | Avatar uploads; screenshots + favicon/OG cache |
 | `SESSION_DAYS` | | Session lifetime (default `30`) |
 | `CORS_ORIGINS` | | Comma-separated origins; default = `APP_URL` |
+| `TRUST_FORWARDED_FOR` | | Set `true` behind a reverse proxy, so login limits see client addresses |
 | `BROWSER_WS_URL` | | Chrome CDP URL for screenshots |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | | Optional OIDC |
 

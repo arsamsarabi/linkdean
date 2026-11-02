@@ -1,5 +1,6 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
+use crate::rate_limit::vault_limit;
 use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -116,7 +117,10 @@ async fn unlock_one(
     Path(id): Path<Uuid>,
     Json(req): Json<VaultUnlockRequest>,
 ) -> ApiResult<Json<Value>> {
-    let key = db::unlock_vault(&state.pool, user.id, id, &req.passphrase).await?;
+    let limits = vault_limit(user.id);
+    state.limiter.check(&limits)?;
+    let result = db::unlock_vault(&state.pool, user.id, id, &req.passphrase).await;
+    let key = state.limiter.settle(&limits, result)?;
     state.set_vault_key(user.id, id, key).await;
     Ok(Json(json!({ "ok": true })))
 }
@@ -146,14 +150,17 @@ async fn recover(
     Json(req): Json<RecoverVaultRequest>,
 ) -> ApiResult<Json<Value>> {
     check_passphrase(&req.new_passphrase)?;
-    let key = db::recover_vault(
+    let limits = vault_limit(user.id);
+    state.limiter.check(&limits)?;
+    let result = db::recover_vault(
         &state.pool,
         user.id,
         id,
         &req.recovery_key,
         &req.new_passphrase,
     )
-    .await?;
+    .await;
+    let key = state.limiter.settle(&limits, result)?;
     state.set_vault_key(user.id, id, key).await;
     Ok(Json(json!({ "ok": true })))
 }
@@ -216,7 +223,10 @@ async fn global_unlock(
     AuthUser(user): AuthUser,
     Json(req): Json<VaultUnlockRequest>,
 ) -> ApiResult<Json<Value>> {
-    let opened = db::unlock_with_global(&state.pool, user.id, &req.passphrase).await?;
+    let limits = vault_limit(user.id);
+    state.limiter.check(&limits)?;
+    let result = db::unlock_with_global(&state.pool, user.id, &req.passphrase).await;
+    let opened = state.limiter.settle(&limits, result)?;
     let mut ids = Vec::with_capacity(opened.len());
     for (id, key) in opened {
         state.set_vault_key(user.id, id, key).await;

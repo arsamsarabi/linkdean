@@ -37,6 +37,7 @@ impl IntoResponse for ApiError {
             CoreError::BadRequest(m) => (StatusCode::BAD_REQUEST, m.clone()),
             CoreError::VaultLocked => (StatusCode::LOCKED, self.0.to_string()),
             CoreError::VaultUnlockFailed => (StatusCode::UNAUTHORIZED, self.0.to_string()),
+            CoreError::TooManyRequests => (StatusCode::TOO_MANY_REQUESTS, self.0.to_string()),
             CoreError::Msg(m) => {
                 tracing::error!(error = %m, "internal error");
                 (

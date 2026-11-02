@@ -27,7 +27,7 @@ pub async fn create_user(
     let password_hash = match password {
         Some(p) => {
             let p = p.to_string();
-            Some(super::blocking::run_blocking(move || hash_password(&p)).await?)
+            Some(super::blocking::run_kdf(move || hash_password(&p)).await?)
         }
         None => None,
     };
@@ -449,12 +449,12 @@ pub async fn change_password(
         .ok_or_else(|| Error::BadRequest("account has no local password".into()))?;
     let hash = hash.to_string();
     let current = current_password.to_string();
-    let ok = super::blocking::run_blocking(move || verify_password(&current, &hash)).await?;
+    let ok = super::blocking::run_kdf(move || verify_password(&current, &hash)).await?;
     if !ok {
         return Err(Error::Unauthorized);
     }
     let new_password = new_password.to_string();
-    let new_hash = super::blocking::run_blocking(move || hash_password(&new_password)).await?;
+    let new_hash = super::blocking::run_kdf(move || hash_password(&new_password)).await?;
     sqlx::query("UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1")
         .bind(user_id)
         .bind(new_hash)
@@ -500,7 +500,7 @@ pub async fn authenticate_local(pool: &PgPool, email: &str, password: &str) -> R
         .ok_or(Error::Unauthorized)?;
     let hash = user.password_hash.clone().ok_or(Error::Unauthorized)?;
     let password = password.to_string();
-    let ok = super::blocking::run_blocking(move || verify_password(&password, &hash)).await?;
+    let ok = super::blocking::run_kdf(move || verify_password(&password, &hash)).await?;
     if !ok {
         return Err(Error::Unauthorized);
     }

@@ -68,7 +68,7 @@ pub async fn create_vault(
 ) -> Result<(Vault, [u8; 32], String)> {
     let name = clean_name(name)?;
     let passphrase = passphrase.to_string();
-    let (key, by_passphrase, recovery, by_recovery) = super::blocking::run_blocking(move || {
+    let (key, by_passphrase, recovery, by_recovery) = super::blocking::run_kdf(move || {
         let key = crypto::new_data_key();
         let by_passphrase = crypto::wrap_data_key(&passphrase, &key)?;
         let recovery = crypto::new_recovery_key();
@@ -155,7 +155,7 @@ pub async fn unlock_vault(
 ) -> Result<[u8; 32]> {
     let vault = get_user_vault(pool, user_id, id).await?;
     let passphrase = passphrase.to_string();
-    super::blocking::run_blocking(move || {
+    super::blocking::run_kdf(move || {
         crypto::unlock_vault(
             &passphrase,
             &vault.kdf_salt,
@@ -184,7 +184,7 @@ pub async fn recover_vault(
     };
     let recovery = crypto::normalize_recovery_key(recovery_key);
     let new_passphrase = new_passphrase.to_string();
-    let (key, by_passphrase) = super::blocking::run_blocking(move || {
+    let (key, by_passphrase) = super::blocking::run_kdf(move || {
         let key = crypto::unlock_vault(&recovery, &salt, &wrapped, &nonce)?;
         let by_passphrase = crypto::wrap_data_key(&new_passphrase, &key)?;
         Ok((key, by_passphrase))
@@ -217,7 +217,7 @@ pub async fn replace_recovery_key(
 ) -> Result<String> {
     get_user_vault(pool, user_id, id).await?;
     let key = *data_key;
-    let (recovery, wrapped) = super::blocking::run_blocking(move || {
+    let (recovery, wrapped) = super::blocking::run_kdf(move || {
         let recovery = crypto::new_recovery_key();
         let wrapped = crypto::wrap_data_key(&crypto::normalize_recovery_key(&recovery), &key)?;
         Ok((recovery, wrapped))
@@ -255,8 +255,8 @@ pub async fn delete_vault(
     }
     if let Some(hash) = user.password_hash.clone() {
         let password = password.unwrap_or_default().to_string();
-        let ok = super::blocking::run_blocking(move || crypto::verify_password(&password, &hash))
-            .await?;
+        let ok =
+            super::blocking::run_kdf(move || crypto::verify_password(&password, &hash)).await?;
         if !ok {
             return Err(Error::BadRequest(
                 "The account password is incorrect.".into(),
