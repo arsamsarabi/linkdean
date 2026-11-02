@@ -1,6 +1,6 @@
 import type { SortKey } from '@/lib'
 import type { Bookmark, SearchHit } from '@/schemas'
-import { FOLDER_UNCATEGORIZED, isUncategorized } from './explorerLibrary'
+import { FOLDER_ALL, FOLDER_UNCATEGORIZED, isUncategorized } from './explorerLibrary'
 
 export type LibraryListItem = Bookmark | (SearchHit & { categories?: Bookmark['categories'] })
 
@@ -115,4 +115,16 @@ export function collectTagOptions(
     for (const t of b.tags || []) set.add(t)
   }
   return [...set].sort().map((t) => ({ value: t, label: t }))
+}
+
+/** The folder the URL names, or null for All and Unsorted, which have their own handling. */
+export function namedFolder(folderId: string | null | undefined): string | null {
+  return folderId && folderId !== FOLDER_ALL && folderId !== FOLDER_UNCATEGORIZED ? folderId : null
+}
+
+/** Items filed directly in `folderId`, or all items when no folder is named. */
+export function scopeToFolder<T extends LibraryListItem>(items: T[], folderId: string | null | undefined): T[] {
+  const folder = namedFolder(folderId)
+  if (!folder) return items
+  return items.filter((b) => b.category_id === folder || (b.categories || []).some((c) => c.id === folder))
 }

@@ -8,8 +8,10 @@ import {
   FOLDER_UNCATEGORIZED,
   matchesVaultQuery,
   mergeSearchWithLocalCatchUp,
+  namedFolder,
   scopeBookmarks,
   scopeCategories,
+  scopeToFolder,
   sinceFilterToIso,
   type ExplorerFolderId,
   type FlagFilter,
@@ -119,9 +121,11 @@ export function useLibraryList({
       folderId === FOLDER_UNCATEGORIZED && !filterCats.includes(FOLDER_UNCATEGORIZED)
         ? [...filterCats, FOLDER_UNCATEGORIZED]
         : filterCats
+    // A folder from the palette or a link narrows the grid too, as Explorer shows it.
+    const scoped = scopeToFolder(items, folderId)
     return {
       list: filterAndSortLibraryItems({
-        items,
+        items: scoped,
         filterCats: catsForFilter,
         filterTags,
         filterFlags,
@@ -148,8 +152,9 @@ export function useLibraryList({
   ])
 
   const loading = bookmarks.isLoading || (searching && search.isFetching && !search.data)
-  const emptyLibrary = !loading && !searching && !filterActive && list.length === 0
-  const emptyFiltered = !loading && list.length === 0 && (searching || filterActive)
+  const inFolder = !!namedFolder(folderId)
+  const emptyLibrary = !loading && !searching && !filterActive && !inFolder && list.length === 0
+  const emptyFiltered = !loading && list.length === 0 && (searching || filterActive || inFolder)
   const explorerLoading = bookmarks.isLoading || cats.isLoading
 
   return {

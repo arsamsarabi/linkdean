@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { FOLDER_UNCATEGORIZED } from './explorerLibrary'
-import { collectTagOptions, filterAndSortLibraryItems, sinceFilterToIso } from './libraryList'
+import type { Bookmark } from '@/schemas'
+import { FOLDER_ALL, FOLDER_UNCATEGORIZED } from './explorerLibrary'
+import { collectTagOptions, filterAndSortLibraryItems, scopeToFolder, sinceFilterToIso } from './libraryList'
 import { mergeSearchWithLocalCatchUp } from './searchCatchUp'
 
 const base = {
@@ -249,5 +250,21 @@ describe('mergeSearchWithLocalCatchUp', () => {
     const { items, catchUpCount } = mergeSearchWithLocalCatchUp(hits, bookmarks, 'alpha')
     expect(catchUpCount).toBe(1)
     expect(items.map((i) => i.id)).toEqual(['1', '2'])
+  })
+})
+
+describe('scopeToFolder', () => {
+  const inWork = { id: 'a', categories: [{ id: 'work' }] } as unknown as Bookmark
+  const legacy = { id: 'b', category_id: 'work', categories: [] } as unknown as Bookmark
+  const elsewhere = { id: 'c', categories: [{ id: 'home' }] } as unknown as Bookmark
+
+  it('keeps only bookmarks filed in the named folder', () => {
+    expect(scopeToFolder([inWork, legacy, elsewhere], 'work').map((b) => b.id)).toEqual(['a', 'b'])
+  })
+
+  it('leaves All and Unsorted to their own handling', () => {
+    expect(scopeToFolder([inWork, elsewhere], FOLDER_ALL)).toHaveLength(2)
+    expect(scopeToFolder([inWork, elsewhere], FOLDER_UNCATEGORIZED)).toHaveLength(2)
+    expect(scopeToFolder([inWork, elsewhere], null)).toHaveLength(2)
   })
 })

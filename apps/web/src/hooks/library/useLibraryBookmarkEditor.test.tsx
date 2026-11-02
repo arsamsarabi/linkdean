@@ -11,7 +11,7 @@ vi.mock('@/hooks/vault', () => ({
   useVaults: () => ({ data: { vaults: [] } }),
 }))
 
-function editor(vaultPrompt: boolean) {
+function useEditor(vaultPrompt: boolean) {
   return useLibraryBookmarkEditor({
     bookmarks: [],
     searchHits: [],
@@ -26,7 +26,7 @@ describe('vault unlock prompt', () => {
   afterEach(() => sessionStorage.clear())
 
   it('stays closed after a dismissal, through later searches', () => {
-    const { result, rerender } = renderHook(({ prompt }) => editor(prompt), { initialProps: { prompt: true } })
+    const { result, rerender } = renderHook(({ prompt }) => useEditor(prompt), { initialProps: { prompt: true } })
     expect(result.current.unlockOpen).toBe(true)
     act(() => result.current.dismissUnlock())
     expect(result.current.unlockOpen).toBe(false)

@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react'
-import { SimpleGrid, Stack } from '@mantine/core'
-import { IconBookmark, IconBookmarkPlus, IconSearch } from '@tabler/icons-react'
+import { Button, Group, SimpleGrid, Stack, Text } from '@mantine/core'
+import { IconBookmark, IconBookmarkPlus, IconFolder, IconSearch, IconX } from '@tabler/icons-react'
 import { BookmarkCard, BookmarkGridSkeleton, EmptyState, type BookmarkCardItem } from '@/components'
+import { FOLDER_ALL } from '@/services'
 import { LibraryFilterPanel } from './LibraryFilterPanel'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
@@ -13,6 +14,23 @@ export function LibraryGridView(): ReactElement {
   return (
     <Stack gap="md">
       <LibraryFilterPanel />
+
+      {lib.folderCat ? (
+        <Group gap="xs">
+          <IconFolder {...iconSm} />
+          <Text size="sm">
+            In <strong>{lib.folderCat.name}</strong>
+          </Text>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            leftSection={<IconX size={12} stroke={1.5} />}
+            onClick={() => lib.setLibrarySearch({ folder: FOLDER_ALL })}
+          >
+            Show all
+          </Button>
+        </Group>
+      ) : null}
 
       {lib.loading ? (
         <BookmarkGridSkeleton />
@@ -55,6 +73,7 @@ export function LibraryGridView(): ReactElement {
                       flag: [],
                       since: null,
                       vault: false,
+                      folder: FOLDER_ALL,
                     })
                   },
                 }
