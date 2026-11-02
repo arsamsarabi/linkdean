@@ -320,10 +320,10 @@ pub async fn update_user_settings(
     }
     if let Some(ref v) = patch.library_view {
         match v.as_str() {
-            "grid" | "explorer" => s.library_view = v.clone(),
+            "grid" | "list" | "explorer" => s.library_view = v.clone(),
             _ => {
                 return Err(Error::BadRequest(
-                    "library_view must be grid|explorer".into(),
+                    "library_view must be grid|list|explorer".into(),
                 ))
             }
         }

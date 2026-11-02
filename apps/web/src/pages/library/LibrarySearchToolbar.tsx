@@ -44,7 +44,7 @@ export function LibrarySearchToolbar(): ReactElement {
           className={styles.searchInput}
         />
         <Group gap="xs" wrap="nowrap" align="stretch" className={styles.sortGroup}>
-          {lib.viewMode === 'grid' ? (
+          {lib.viewMode !== 'explorer' ? (
             <Tooltip label="Filter by category or tag">
               <Button
                 variant={lib.filterOpen || lib.panelFilterActive ? 'light' : 'default'}

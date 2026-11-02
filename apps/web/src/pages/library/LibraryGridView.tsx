@@ -80,6 +80,25 @@ export function LibraryGridView(): ReactElement {
               : undefined
           }
         />
+      ) : lib.viewMode === 'list' ? (
+        <Stack gap={6}>
+          {lib.list.map((b) => (
+            <BookmarkCard
+              key={b.id}
+              layout="row"
+              bookmark={b as BookmarkCardItem}
+              highlightQuery={lib.searching ? lib.debouncedQ : undefined}
+              viewerUserId={lib.me.data?.user.id}
+              onEdit={lib.openEdit}
+              onDelete={lib.setDeleteId}
+              onMoveToVault={(id) => lib.setMoveTarget({ categoryIds: [], bookmarkIds: [id] })}
+              onFlags={lib.onFlags}
+              selectMode={lib.selectMode}
+              selected={lib.selectedIds.has(b.id)}
+              onToggleSelect={lib.toggleSelect}
+            />
+          ))}
+        </Stack>
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing="lg">
           {lib.list.map((b) => (

@@ -22,7 +22,7 @@ export const userSettingsSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']),
   vault_auto_lock_minutes: z.number(),
   default_landing: z.enum(['/', '/library']),
-  library_view: z.enum(['grid', 'explorer']).default('grid'),
+  library_view: z.enum(['grid', 'list', 'explorer']).default('grid'),
   trash_retention_days: z.number().default(30),
   show_deleted_in_library: z.boolean().default(false),
   show_vault_in_library: z.boolean().default(true),

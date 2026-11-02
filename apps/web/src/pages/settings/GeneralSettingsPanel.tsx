@@ -123,6 +123,7 @@ export function GeneralSettingsPanel({ settings, saving, onPatch }: Props): Reac
             onChange={(v) => v && onPatch({ library_view: v as UserSettings['library_view'] })}
             data={[
               { value: 'grid', label: 'Grid' },
+              { value: 'list', label: 'List (compact)' },
               { value: 'explorer', label: 'Explorer (folders)' },
             ]}
           />

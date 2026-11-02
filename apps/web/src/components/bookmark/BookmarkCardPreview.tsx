@@ -29,6 +29,22 @@ function PreviewFallback({ url, faviconUrl, isVault = false }: FallbackProps): R
   )
 }
 
+/** A site icon for compact rows: the cached favicon, else Google's (never for vault items). */
+export function BookmarkFavicon({
+  url,
+  faviconUrl,
+  isVault = false,
+  size = 20,
+}: FallbackProps & { size?: number }): ReactElement {
+  const [iconFailed, setIconFailed] = useState(false)
+  const iconSrc = !iconFailed ? faviconUrl || (isVault ? undefined : googleFavicon(url)) : undefined
+  return iconSrc ? (
+    <ApiImage src={iconSrc} alt="" w={size} h={size} fit="contain" onError={() => setIconFailed(true)} />
+  ) : (
+    <IconWorld size={size} stroke={1.5} color="var(--mantine-color-dimmed)" />
+  )
+}
+
 type Props = {
   url: string
   title: string

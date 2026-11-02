@@ -7,6 +7,7 @@ import {
   IconCheck,
   IconFolders,
   IconLayoutGrid,
+  IconList,
   IconPin,
   IconStar,
 } from '@tabler/icons-react'
@@ -25,6 +26,7 @@ const FLAG_FILTERS: { flag: FlagFilter; label: string; Icon: typeof IconStar }[]
 
 const VIEW_MODES: { mode: LibraryViewMode; label: string; Icon: typeof IconStar }[] = [
   { mode: 'grid', label: 'Grid', Icon: IconLayoutGrid },
+  { mode: 'list', label: 'List', Icon: IconList },
   { mode: 'explorer', label: 'Explorer', Icon: IconFolders },
 ]
 
@@ -71,7 +73,7 @@ export function LibraryPageHeader(): ReactElement {
       <Stack gap={4}>
         <Title order={2}>{lib.scope === 'vault' ? 'Vaults' : 'Library'}</Title>
         <Text size="sm" c="dimmed" aria-live="polite" className={styles.countLine}>
-          {!loading && viewMode === 'grid'
+          {!loading && viewMode !== 'explorer'
             ? `${listCount} bookmark${listCount === 1 ? '' : 's'}${searching ? ' matched' : ''}`
             : '\u00a0'}
         </Text>

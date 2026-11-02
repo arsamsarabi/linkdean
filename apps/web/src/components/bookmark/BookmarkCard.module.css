@@ -115,3 +115,56 @@
   white-space: nowrap;
   min-width: 0;
 }
+
+/* Compact list row: icon, title and site, folders and badges, menu. */
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: 'lead main meta menu';
+  align-items: center;
+  column-gap: var(--mantine-spacing-sm);
+  row-gap: 4px;
+  overflow: visible;
+}
+
+.row .selectCheck {
+  position: static;
+}
+
+.rowLead {
+  grid-area: lead;
+}
+
+.rowMain {
+  grid-area: main;
+  min-width: 0;
+}
+
+.rowMeta {
+  grid-area: meta;
+  justify-content: flex-end;
+  max-width: 28rem;
+}
+
+.rowMenu {
+  grid-area: menu;
+}
+
+.row .categoryRow {
+  width: auto;
+}
+
+/* Narrow screens: folders and badges drop under the title. */
+@media (max-width: 62em) {
+  .row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'lead main menu'
+      '. meta meta';
+  }
+
+  .rowMeta {
+    justify-content: flex-start;
+    max-width: none;
+  }
+}

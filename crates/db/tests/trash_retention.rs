@@ -150,3 +150,29 @@ async fn expired_sessions_are_purged() {
         .expect("lookup")
         .is_some());
 }
+
+#[tokio::test]
+async fn the_library_view_accepts_list_and_refuses_unknown_layouts() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let email = format!("view-{}@limits.test", Uuid::new_v4());
+    let user = db::create_user(&pool, &email, Some("password-long"), None, None, None)
+        .await
+        .expect("user");
+    let view = |v: &str| UpdateSettings {
+        library_view: Some(v.into()),
+        trash_retention_days: None,
+        ..retention(30)
+    };
+    for v in ["list", "explorer", "grid"] {
+        let saved = db::update_user_settings(&pool, user.id, &view(v))
+            .await
+            .expect(v);
+        assert_eq!(saved.library_view, v);
+    }
+    let err = db::update_user_settings(&pool, user.id, &view("table"))
+        .await
+        .expect_err("unknown layout");
+    assert!(matches!(err, Error::BadRequest(_)));
+}

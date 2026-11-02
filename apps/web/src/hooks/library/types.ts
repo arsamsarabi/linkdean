@@ -1,7 +1,7 @@
 import type { SinceKey, SortKey } from '@/lib'
 import type { FlagFilter, SinceFilter } from '@/services'
 
-export type LibraryViewMode = 'grid' | 'explorer'
+export type LibraryViewMode = 'grid' | 'list' | 'explorer'
 
 export type LibraryScope = 'library' | 'vault'
 

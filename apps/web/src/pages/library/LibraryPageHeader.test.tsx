@@ -39,7 +39,7 @@ describe('LibraryPageHeader', () => {
       .getAllByRole('button')
       .map((b) => b.textContent)
       .filter(Boolean)
-    expect(names.slice(0, 5)).toEqual(['Reading list', 'Favorites', 'Pinned', 'Grid', 'Explorer'])
+    expect(names.slice(0, 6)).toEqual(['Reading list', 'Favorites', 'Pinned', 'Grid', 'List', 'Explorer'])
     expect(screen.queryByRole('button', { name: /duplicate/i })).toBeNull()
   })
 
