@@ -10,8 +10,8 @@ use uuid::Uuid;
 
 use super::categories::{get_category_by_id, list_owned_categories};
 use super::shares::{
-    bookmark_can_read, bookmark_can_write, bookmark_shared_with, require_category_read,
-    require_category_write,
+    bookmark_can_read, bookmark_can_write, bookmark_shared_with, category_access,
+    require_category_read, require_category_write,
 };
 use super::tags::ensure_tags;
 
@@ -165,7 +165,49 @@ fn category_path(cat: &Category, by_id: &HashMap<Uuid, Category>) -> String {
     parts.join(" / ")
 }
 
+/// The categories on a bookmark that `viewer_id` may see. The owner sees all of them with
+/// full paths. Anyone else sees only lists they can read, with each path starting at the
+/// highest list they can read, so the owner's other folder names never show.
 async fn categories_for_bookmark(
+    pool: &PgPool,
+    owner_user_id: Uuid,
+    bookmark_id: Uuid,
+    viewer_id: Uuid,
+) -> Result<Vec<CategoryRef>> {
+    let all = categories_for_bookmark_owner(pool, owner_user_id, bookmark_id).await?;
+    if viewer_id == owner_user_id {
+        return Ok(all);
+    }
+    let mut out = Vec::new();
+    for cat_ref in all {
+        if category_access(pool, viewer_id, cat_ref.id).await.is_err() {
+            continue;
+        }
+        let path = readable_path(pool, viewer_id, cat_ref.id).await?;
+        out.push(CategoryRef { path, ..cat_ref });
+    }
+    Ok(out)
+}
+
+/// Path from the highest ancestor `viewer_id` can read down to `category_id`.
+async fn readable_path(pool: &PgPool, viewer_id: Uuid, category_id: Uuid) -> Result<String> {
+    let mut parts = Vec::new();
+    let mut next = Some(category_id);
+    while let Some(id) = next {
+        if parts.len() >= 64 || category_access(pool, viewer_id, id).await.is_err() {
+            break;
+        }
+        let Ok(cat) = get_category_by_id(pool, id).await else {
+            break;
+        };
+        parts.push(cat.name);
+        next = cat.parent_id;
+    }
+    parts.reverse();
+    Ok(parts.join(" / "))
+}
+
+async fn categories_for_bookmark_owner(
     pool: &PgPool,
     owner_user_id: Uuid,
     bookmark_id: Uuid,
@@ -224,18 +266,58 @@ async fn set_bookmark_categories(
         }
     }
 
-    let (bookmark_vault,): (Option<Uuid>,) =
-        sqlx::query_as("SELECT vault_id FROM bookmarks WHERE id = $1")
+    let (owner_id, bookmark_vault, current_primary): (Uuid, Option<Uuid>, Option<Uuid>) =
+        sqlx::query_as("SELECT owner_user_id, vault_id, category_id FROM bookmarks WHERE id = $1")
             .bind(bookmark_id)
             .fetch_one(pool)
             .await
             .map_err(|e| Error::msg(e.to_string()))?;
+    let is_owner = owner_id == user_id;
+    // Whose lists the bookmark already sits in. The owner of a list that holds someone
+    // else's bookmark may move it within their own lists.
+    let tree_owners: Vec<Uuid> = sqlx::query_scalar(
+        r#"
+        SELECT DISTINCT c.owner_user_id FROM bookmark_categories bc
+        JOIN categories c ON c.id = bc.category_id
+        WHERE bc.bookmark_id = $1
+        "#,
+    )
+    .bind(bookmark_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
     for id in &unique {
         let (cat, _) = require_category_write(pool, user_id, *id).await?;
         if cat.vault_id != bookmark_vault {
             return Err(Error::BadRequest(
                 "a bookmark can only sit in categories of its own vault".into(),
             ));
+        }
+        // A list grants access to what it holds, so someone else's bookmark may only be
+        // filed in lists of whoever already holds it. Otherwise an invitee could file it in
+        // their own list and keep it after losing access.
+        if !is_owner && cat.owner_user_id != owner_id && !tree_owners.contains(&cat.owner_user_id) {
+            return Err(Error::Forbidden);
+        }
+    }
+
+    // Someone else only changes the links they can write. The owner's other lists,
+    // including private ones, stay.
+    let mut links = unique.clone();
+    if !is_owner {
+        let existing: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT category_id FROM bookmark_categories WHERE bookmark_id = $1",
+        )
+        .bind(bookmark_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+        for id in existing {
+            let writable =
+                matches!(category_access(pool, user_id, id).await, Ok(a) if a.can_write());
+            if !writable && !links.contains(&id) {
+                links.push(id);
+            }
         }
     }
 
@@ -245,7 +327,7 @@ async fn set_bookmark_categories(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
 
-    for id in &unique {
+    for id in &links {
         sqlx::query(
             "INSERT INTO bookmark_categories (bookmark_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         )
@@ -256,7 +338,10 @@ async fn set_bookmark_categories(
         .map_err(|e| Error::msg(e.to_string()))?;
     }
 
-    let primary = unique.first().copied();
+    let primary = match current_primary {
+        Some(p) if !is_owner && links.contains(&p) => Some(p),
+        _ => links.first().copied(),
+    };
     sqlx::query("UPDATE bookmarks SET category_id = $2 WHERE id = $1")
         .bind(bookmark_id)
         .bind(primary)
@@ -279,8 +364,11 @@ pub async fn bookmark_to_view(
     keyring: &VaultKeyring,
     viewer_id: Uuid,
 ) -> Result<Option<BookmarkView>> {
-    let categories = categories_for_bookmark(pool, b.owner_user_id, b.id).await?;
-    let category_id = categories.first().map(|c| c.id).or(b.category_id);
+    let categories = categories_for_bookmark(pool, b.owner_user_id, b.id, viewer_id).await?;
+    let category_id = categories
+        .first()
+        .map(|c| c.id)
+        .or(b.category_id.filter(|_| b.owner_user_id == viewer_id));
     let can_write = if b.owner_user_id == viewer_id {
         true
     } else {
