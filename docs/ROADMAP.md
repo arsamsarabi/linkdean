@@ -39,28 +39,28 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 5. **Structured logs** (S–M). Write activity and errors as structured JSON (`LOG_FORMAT=json`), to stdout and optionally to a file, with a request ID on every line and in an `X-Request-Id` response header. Today logs are plain text on stdout only, which makes self-hosted problems hard to report and debug.
 
-6. **Documentation site** (M). A [Docusaurus](https://docusaurus.io/) site for people who find the project after release, built from the existing docs:
-   - Self-hosting, with every environment variable and what it does.
-   - Development setup.
-   - Features list.
-   - API reference (from item 8 once it exists).
-   - FAQ and code examples.
-
 ---
 
 ## Next: high value after release
 
-7. **Fast capture** (M). Saving a page is the core action of a bookmark manager, and today it means opening Linkdean and pasting a URL.
+6. **Fast capture** (M). Saving a page is the core action of a bookmark manager, and today it means opening Linkdean and pasting a URL.
    - Browser extension: save the current tab, and file it to a folder from the popup. Uses an API key.
    - PWA share target, so "Share → Linkdean" works on phones once the app is installed.
    - Bookmarklet as a zero-install fallback.
 
-8. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
+7. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
    - An OpenAPI spec generated from the routes, published as the API reference.
    - One error body shape (`code`, `message`, details) across every route.
    - `ETag` / `Cache-Control` on read endpoints that are safe to cache.
    - Optional OpenTelemetry tracing, tied to the request ID from item 5.
    - API tests per route for auth, authorization and error responses.
+
+8. **Documentation site** (M). A [Docusaurus](https://docusaurus.io/) site for people who find the project after release, built from the existing docs. Not needed until the app is closer to production:
+   - Self-hosting, with every environment variable and what it does.
+   - Development setup.
+   - Features list.
+   - API reference, from the OpenAPI spec in item 7.
+   - FAQ and code examples.
 
 9. **More sign-in options** (M).
    - Passkeys / WebAuthn.
