@@ -110,7 +110,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Auth & accounts
 
 - Local email / password accounts
-- Optional OIDC (e.g. Authentik-shaped issuers)
+- Optional OIDC sign-in with any standard issuer (discovery, PKCE, nonce and ID token checks)
 - First registered user becomes admin (bootstrap)
 - Open registration toggle (Admin)
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed

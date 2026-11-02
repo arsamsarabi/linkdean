@@ -23,12 +23,13 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 **Auth & multi-user**
 
 - Passkeys / WebAuthn
-- Hardened OIDC (PKCE + discovery) for all providers, not just Authentik-shaped URLs
 - Configurable SSO providers: Authentik, Google, Microsoft, GitHub, etc.
 
 **Platform**
 
 - SMTP / outbound email config (for invites + notification delivery) ([react-email](https://www.npmjs.com/package/react-email) for templates)
+  - Verify email addresses at registration and on email change, before the address can receive share invites. H1 in [POSSIBLE_DEFECTS.md](./POSSIBLE_DEFECTS.md).
+  - Until an address is verified, invites to it wait as pending invites for the address rather than going to the unverified account.
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
 - backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file.
