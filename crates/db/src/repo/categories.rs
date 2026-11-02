@@ -334,12 +334,14 @@ pub async fn update_category(
             if new_parent.deleted_at.is_some() {
                 return Err(Error::BadRequest("that folder is in Trash".into()));
             }
-            if new_parent.owner_user_id != cat.owner_user_id && !access.is_owner() {
+            // A folder stays in its owner's tree and its own vault (or outside vaults).
+            // Crossing either would let deleting the other tree delete this one with it.
+            if new_parent.owner_user_id != cat.owner_user_id {
                 return Err(Error::Forbidden);
             }
-            if new_parent.is_vault && !cat.is_vault {
+            if new_parent.vault_id != cat.vault_id {
                 return Err(Error::BadRequest(
-                    "non-vault category cannot nest under vault".into(),
+                    "a folder can only move within its own vault, or outside vaults".into(),
                 ));
             }
         } else if !access.is_owner() {

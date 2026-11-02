@@ -158,3 +158,46 @@ async fn no_new_or_moved_folders_under_a_trashed_parent() {
     .await;
     assert!(matches!(moved, Err(Error::BadRequest(_))), "{moved:?}");
 }
+
+#[tokio::test]
+async fn a_folder_cannot_move_into_or_out_of_a_vault_by_reparenting() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "vaultmove").await;
+    let (vault, _, _) = db::create_vault(&pool, owner.id, "V", "vault-passphrase")
+        .await
+        .expect("vault");
+    let plain = folder(&pool, &owner, None).await;
+    let in_vault = db::create_category(
+        &pool,
+        owner.id,
+        CreateCategory {
+            name: "Secret".into(),
+            parent_id: None,
+            is_hidden: false,
+            vault_id: Some(vault.id),
+            icon: None,
+        },
+    )
+    .await
+    .expect("vault folder")
+    .id;
+
+    for (moving, parent) in [(plain, in_vault), (in_vault, plain)] {
+        let res = db::update_category(
+            &pool,
+            owner.id,
+            moving,
+            UpdateCategory {
+                parent_id: Some(Some(parent)),
+                ..Default::default()
+            },
+        )
+        .await;
+        assert!(
+            matches!(res, Err(Error::BadRequest(_))),
+            "{moving} under {parent}"
+        );
+    }
+}
