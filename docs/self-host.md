@@ -70,6 +70,7 @@ Only enable it when the proxy is the sole route to the API, and make sure the pr
 | Import | Request body up to 20 MiB; file content up to 10 MiB; folders nested at most 64 deep; at most 10,000 folders per import. Folder loops are refused |
 | Avatar upload | Request body up to 6 MiB (larger uploads currently fail with `400`, not `413`) |
 | Preview upload | Request body up to 9 MiB |
+| Image decode (avatar, preview) | At most 40 megapixels and 160 MiB of decode memory per image; two decodes run at once and the rest wait |
 | Trash retention | User setting from 1 to 3,650 days, enforced by a database `CHECK` |
 
 ### API clients

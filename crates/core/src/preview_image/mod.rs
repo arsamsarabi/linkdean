@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
-use image::{ColorType, DynamicImage, GenericImageView, ImageFormat};
+use image::{ColorType, DynamicImage, GenericImageView};
 
 /// Card-friendly 16:9 cover size (matches OG-ish ratio).
 const PREVIEW_W: u32 = 1200;
@@ -18,17 +18,7 @@ pub fn process_bookmark_preview(bytes: &[u8]) -> Result<Vec<u8>> {
         return Err(Error::BadRequest("image too large (max 8 MiB)".into()));
     }
 
-    let format = image::guess_format(bytes).map_err(|e| Error::BadRequest(e.to_string()))?;
-    match format {
-        ImageFormat::Jpeg | ImageFormat::Png | ImageFormat::Gif | ImageFormat::WebP => {}
-        _ => {
-            return Err(Error::BadRequest(
-                "unsupported image type; use jpeg, png, webp, or gif".into(),
-            ))
-        }
-    }
-
-    let img = image::load_from_memory(bytes).map_err(|e| Error::BadRequest(e.to_string()))?;
+    let img = crate::avatar::decode_upload(bytes)?;
     let rgb = cover_crop_rgb(img, PREVIEW_W, PREVIEW_H);
 
     let mut out = Vec::new();
@@ -71,6 +61,7 @@ pub fn accept_content_type(ct: Option<&str>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use image::ImageFormat;
     use image::{ImageBuffer, Rgb};
 
     fn tiny_png() -> Vec<u8> {
