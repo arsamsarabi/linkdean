@@ -11,6 +11,7 @@ type Input = {
   canCreate: boolean
   selectMode: boolean
   openCreate: () => void
+  openCreateWithUrl: (url: string) => void
   exitSelectMode: () => void
   searchParams: LibrarySearchParams
   urlQ: string
@@ -30,6 +31,7 @@ export function useLibraryPageChrome({
   canCreate,
   selectMode,
   openCreate,
+  openCreateWithUrl,
   exitSelectMode,
   searchParams,
   urlQ,
@@ -66,10 +68,11 @@ export function useLibraryPageChrome({
     ],
   ])
 
-  /** Consume one-shot command-palette flags (`create` / `focus`) then strip from URL. */
+  /** Consume one-shot flags (`create`, `addUrl` from paste to add, `focus`) then strip from URL. */
   useEffect(() => {
-    if (!searchParams.create && searchParams.focus !== 'search') return
-    if (searchParams.create) openCreate()
+    if (!searchParams.create && !searchParams.addUrl && searchParams.focus !== 'search') return
+    if (searchParams.addUrl) openCreateWithUrl(searchParams.addUrl)
+    else if (searchParams.create) openCreate()
     if (searchParams.focus === 'search') {
       window.requestAnimationFrame(() => searchRef.current?.focus())
     }
@@ -89,7 +92,7 @@ export function useLibraryPageChrome({
       replace: true,
     })
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- one-shot URL flags only
-  }, [searchParams.create, searchParams.focus])
+  }, [searchParams.create, searchParams.addUrl, searchParams.focus])
 
   return {
     searchRef,

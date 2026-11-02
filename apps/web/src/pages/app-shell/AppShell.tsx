@@ -12,7 +12,14 @@ import {
   PageContainer,
   QueryErrorAlert,
 } from '@/components'
-import { useLogout, usePrefsHydration, useSessionSync, useShareInvites, useUnreadNotificationCount } from '@/hooks'
+import {
+  useLogout,
+  usePasteToAdd,
+  usePrefsHydration,
+  useSessionSync,
+  useShareInvites,
+  useUnreadNotificationCount,
+} from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
@@ -23,6 +30,7 @@ export function AppShell(): ReactElement {
   const me = usePrefsHydration(true)
   const logout = useLogout()
   useSessionSync()
+  usePasteToAdd(!!me.data)
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const shell = useShellUi()
   const unread = useUnreadNotificationCount(!!me.data)

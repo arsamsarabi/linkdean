@@ -151,6 +151,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in
 - An open folder titles the library page, with a breadcrumb back to the whole library; an empty folder offers Add bookmark here
 - Header search field opens the command palette; header Add opens the new-bookmark form
+- Paste a web address anywhere outside a text field to open the new-bookmark form with it filled in (in the open folder when on the library)
 - PWA install: web manifest + service worker (standalone / “Add to Home Screen”)
 
 ---

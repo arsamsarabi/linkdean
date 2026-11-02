@@ -178,6 +178,10 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
     Modal: {
       defaultProps: { centered: true },
     },
+    Drawer: {
+      // Side panels keep the page behind them readable, so you can see what you are editing.
+      defaultProps: { overlayProps: { backgroundOpacity: 0.2, blur: 0 } },
+    },
     Tooltip: {
       defaultProps: { withArrow: true, openDelay: 400 },
     },

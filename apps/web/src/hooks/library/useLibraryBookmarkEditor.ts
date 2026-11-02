@@ -80,13 +80,18 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
   }
 
   function openCreate(): void {
+    openCreateWithUrl('')
+  }
+
+  /** Paste to add: the new-bookmark drawer with the URL already filled in. */
+  function openCreateWithUrl(url: string): void {
     if (!canCreateInContext) return
     if (folderCat && canWriteCategory(folderCat)) {
-      setDraft({ ...emptyDraft(), category_ids: [folderCat.id] })
+      setDraft({ ...emptyDraft(), url, category_ids: [folderCat.id] })
     } else if (scope === 'vault') {
-      setDraft({ ...emptyDraft(), vault_id: vaultId ?? (openVaults.length === 1 ? openVaults[0].id : null) })
+      setDraft({ ...emptyDraft(), url, vault_id: vaultId ?? (openVaults.length === 1 ? openVaults[0].id : null) })
     } else {
-      setDraft(null)
+      setDraft(url ? { ...emptyDraft(), url } : null)
     }
     openDrawer()
   }
@@ -163,6 +168,7 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
     vaultUnlock,
     canCreateInContext,
     openCreate,
+    openCreateWithUrl,
     openEdit,
     onFlags,
     unlockForSearch,

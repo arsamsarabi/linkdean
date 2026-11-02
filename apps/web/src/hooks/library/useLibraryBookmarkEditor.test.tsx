@@ -37,3 +37,13 @@ describe('vault unlock prompt', () => {
     expect(result.current.unlockOpen).toBe(false)
   })
 })
+
+describe('paste to add', () => {
+  it('opens the new-bookmark form with the pasted address', () => {
+    const { result } = renderHook(() => useEditor(false))
+    act(() => result.current.openCreateWithUrl('https://react.dev'))
+    expect(result.current.drawerOpen).toBe(true)
+    expect(result.current.draft?.url).toBe('https://react.dev')
+    expect(result.current.draft?.id).toBeUndefined()
+  })
+})

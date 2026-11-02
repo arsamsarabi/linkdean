@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { asStringList, buildLibrarySearch, listToSearchParam, validateLibrarySearch } from './librarySearch'
+import { asStringList, asWebUrl, buildLibrarySearch, listToSearchParam, validateLibrarySearch } from './librarySearch'
 
 describe('asStringList', () => {
   it('normalizes string, array, empty', () => {
@@ -60,6 +60,28 @@ describe('buildLibrarySearch', () => {
     expect(buildLibrarySearch({ create: true, focus: 'search' })).toMatchObject({
       create: true,
       focus: 'search',
+    })
+  })
+})
+
+describe('asWebUrl', () => {
+  it('accepts one http(s) address and refuses anything else', () => {
+    expect(asWebUrl('  https://mantine.dev/core  ')).toBe('https://mantine.dev/core')
+    expect(asWebUrl('http://localhost:3000/x?y=1')).toBe('http://localhost:3000/x?y=1')
+    expect(asWebUrl('javascript:alert(1)')).toBeUndefined()
+    expect(asWebUrl('ftp://example.com')).toBeUndefined()
+    expect(asWebUrl('see https://example.com')).toBeUndefined()
+    expect(asWebUrl('https://a.com https://b.com')).toBeUndefined()
+    expect(asWebUrl('hello')).toBeUndefined()
+    expect(asWebUrl(undefined)).toBeUndefined()
+  })
+
+  it('carries a pasted address through the library search, and drops a bad one', () => {
+    expect(validateLibrarySearch({ addUrl: 'https://react.dev' }).addUrl).toBe('https://react.dev')
+    expect(validateLibrarySearch({ addUrl: 'javascript:void 0' }).addUrl).toBeUndefined()
+    expect(buildLibrarySearch({ addUrl: 'https://react.dev', folder: 'f1' })).toMatchObject({
+      addUrl: 'https://react.dev',
+      folder: 'f1',
     })
   })
 })

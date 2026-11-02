@@ -29,6 +29,20 @@ export type LibrarySearch = {
   create?: true
   /** One-shot: focus library search input. Consumed then stripped. */
   focus?: 'search'
+  /** One-shot: open the create drawer with this URL filled in (paste to add). */
+  addUrl?: string
+}
+
+/** A pasted or shared string that is a single web address. */
+export function asWebUrl(text: string | null | undefined): string | undefined {
+  const t = text?.trim()
+  if (!t || /\s/.test(t) || !/^https?:\/\//i.test(t)) return undefined
+  try {
+    new URL(t)
+    return t
+  } catch {
+    return undefined
+  }
 }
 
 // Known issue: A tag containing a comma cannot be filtered, since lists are comma-joined in
@@ -70,6 +84,7 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
   const createRaw = search.create
   const create = createRaw === true || createRaw === 1 || createRaw === '1' || createRaw === 'true' ? true : undefined
   const focus = search.focus === 'search' ? ('search' as const) : undefined
+  const addUrl = typeof search.addUrl === 'string' ? asWebUrl(search.addUrl) : undefined
 
   return {
     q,
@@ -83,6 +98,7 @@ export function validateLibrarySearch(search: Record<string, unknown>): LibraryS
     folder,
     create,
     focus,
+    addUrl,
   }
 }
 
@@ -99,6 +115,7 @@ export function buildLibrarySearch(input: {
   folder?: string
   create?: boolean
   focus?: 'search'
+  addUrl?: string
 }): LibrarySearch {
   const q = input.q?.trim() || undefined
   const sort = input.sort && input.sort !== 'updated_desc' ? input.sort : undefined
@@ -118,5 +135,6 @@ export function buildLibrarySearch(input: {
     folder,
     create: input.create ? true : undefined,
     focus: input.focus === 'search' ? 'search' : undefined,
+    addUrl: asWebUrl(input.addUrl),
   }
 }

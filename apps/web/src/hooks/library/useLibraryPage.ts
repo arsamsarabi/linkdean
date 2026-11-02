@@ -94,6 +94,7 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
     canCreate: editor.canCreateInContext,
     selectMode: selection.selectMode,
     openCreate: editor.openCreate,
+    openCreateWithUrl: editor.openCreateWithUrl,
     exitSelectMode: selection.exitSelectMode,
     searchParams: url.searchParams,
     urlQ: url.urlQ,

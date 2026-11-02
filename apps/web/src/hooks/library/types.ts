@@ -19,6 +19,7 @@ export type LibrarySearchParams = {
   folder?: string
   create?: true
   focus?: 'search'
+  addUrl?: string
 }
 
 export type LibrarySearchPatch = {
