@@ -67,3 +67,24 @@ async fn lists_only_this_users_active_bookmarks_without_previews() {
         .expect("list");
     assert_eq!(rows, vec![(owner.id, waiting)]);
 }
+
+#[tokio::test]
+async fn the_boot_backfill_skips_trash() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "backfill").await;
+    let live = bookmark(&pool, &owner).await;
+    let trashed = bookmark(&pool, &owner).await;
+    sqlx::query("UPDATE bookmarks SET deleted_at = now() WHERE id = $1")
+        .bind(trashed)
+        .execute(&pool)
+        .await
+        .expect("trash");
+
+    let rows = db::list_bookmarks_needing_preview(&pool)
+        .await
+        .expect("list");
+    assert!(rows.contains(&(owner.id, live)));
+    assert!(!rows.contains(&(owner.id, trashed)));
+}

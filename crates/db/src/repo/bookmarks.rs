@@ -1216,7 +1216,7 @@ pub async fn list_bookmarks_needing_preview(pool: &PgPool) -> Result<Vec<(Uuid, 
     let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(
         r#"
         SELECT owner_user_id, id FROM bookmarks
-        WHERE is_vault = FALSE AND has_preview = FALSE AND url <> ''
+        WHERE is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
         ORDER BY created_at ASC
         "#,
     )

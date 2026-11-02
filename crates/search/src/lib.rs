@@ -60,6 +60,10 @@ impl SearchClient {
         if view.is_vault {
             return Ok(());
         }
+        // Trash stays out of search. Restoring the bookmark adds it back.
+        if view.deleted_at.is_some() {
+            return self.delete_bookmark(view.id).await;
+        }
         let category_ids: Vec<String> = view.categories.iter().map(|c| c.id.to_string()).collect();
         let doc = BookmarkDoc {
             id: view.id.to_string(),
