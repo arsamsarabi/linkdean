@@ -107,7 +107,11 @@ pub async fn purge_expired_trash(pool: &PgPool) -> Result<(u64, u64, u64)> {
     let mut dashboards = 0u64;
 
     for (user_id, days) in settings {
-        let cutoff = Utc::now() - Duration::days(i64::from(days.max(1)));
+        // A cutoff before the calendar's range means nothing is old enough to purge.
+        let Some(cutoff) = Utc::now().checked_sub_signed(Duration::days(i64::from(days.max(1))))
+        else {
+            continue;
+        };
         let b = sqlx::query(
             r#"
             DELETE FROM bookmarks

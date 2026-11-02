@@ -229,6 +229,9 @@ pub async fn update_admin_user(
     Ok(admin_summary(user, ban))
 }
 
+/// Matches the `CHECK` on `user_settings.trash_retention_days`.
+const MAX_TRASH_RETENTION_DAYS: i32 = 3650;
+
 pub async fn ensure_user_settings(pool: &PgPool, user_id: Uuid) -> Result<UserSettings> {
     sqlx::query_as::<_, UserSettings>(
         r#"
@@ -311,8 +314,10 @@ pub async fn update_user_settings(
         }
     }
     if let Some(v) = patch.trash_retention_days {
-        if v <= 0 {
-            return Err(Error::BadRequest("trash_retention_days must be > 0".into()));
+        if !(1..=MAX_TRASH_RETENTION_DAYS).contains(&v) {
+            return Err(Error::BadRequest(format!(
+                "trash_retention_days must be 1 to {MAX_TRASH_RETENTION_DAYS}"
+            )));
         }
         s.trash_retention_days = v;
     }
