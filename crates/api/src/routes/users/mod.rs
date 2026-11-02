@@ -75,6 +75,8 @@ async fn change_password(
         &body.new_password,
     )
     .await?;
+    // A new password locks every vault, in every session.
+    state.clear_vault_keys(user.id).await;
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -92,6 +94,10 @@ async fn patch_settings(
     Json(body): Json<UpdateSettings>,
 ) -> ApiResult<Json<Value>> {
     let settings = db::update_user_settings(&state.pool, user.id, &body).await?;
+    state.vault_keys.set_idle(
+        user.id,
+        crate::vault_keys::idle_limit(settings.vault_auto_lock_minutes),
+    );
     Ok(Json(json!({ "settings": settings })))
 }
 

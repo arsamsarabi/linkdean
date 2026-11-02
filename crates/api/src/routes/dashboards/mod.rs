@@ -1,6 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{Path, State};
 use axum::routing::{get, patch};
 use axum::{Json, Router};
@@ -52,9 +53,10 @@ async fn list(
 async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Json(req): Json<CreateDashboard>,
 ) -> ApiResult<Json<DashboardView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::create_dashboard(&state.pool, user.id, req, &keyring).await?;
     Ok(Json(view))
 }
@@ -62,8 +64,9 @@ async fn create(
 async fn get_default(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
 ) -> ApiResult<Json<DashboardView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::get_default_dashboard(&state.pool, user.id, &keyring).await?;
     Ok(Json(view))
 }
@@ -71,9 +74,10 @@ async fn get_default(
 async fn put_default(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Json(req): Json<PutDashboardLayout>,
 ) -> ApiResult<Json<DashboardView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::put_default_dashboard(&state.pool, user.id, req, &keyring).await?;
     Ok(Json(view))
 }
@@ -81,9 +85,10 @@ async fn put_default(
 async fn get_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<DashboardView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::get_dashboard(&state.pool, user.id, id, &keyring).await?;
     Ok(Json(view))
 }
@@ -91,10 +96,11 @@ async fn get_one(
 async fn put_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     Json(req): Json<PutDashboardLayout>,
 ) -> ApiResult<Json<DashboardView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::put_dashboard(&state.pool, user.id, id, req, &keyring).await?;
     Ok(Json(view))
 }
@@ -102,10 +108,11 @@ async fn put_one(
 async fn patch_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     Json(req): Json<PatchDashboard>,
 ) -> ApiResult<Json<DashboardView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::patch_dashboard(&state.pool, user.id, id, req, &keyring).await?;
     Ok(Json(view))
 }

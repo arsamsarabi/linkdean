@@ -51,7 +51,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Unlock from Settings or the command palette's Unlock vault command; locking clears decrypted data from the browser cache
 - Vault content never indexed in Meilisearch
 - Export never dumps vault bookmarks as plaintext
-- Vault unlock in session; optional auto-lock after inactivity (Settings)
+- Unlocking a vault opens it for that login session only. Other devices, other sessions and API keys stay locked
+- Optional auto-lock after inactivity (Settings). The server enforces it too: unlocked keys it has not used for that long are dropped. Logging out, a password change or a ban locks them
 
 ---
 

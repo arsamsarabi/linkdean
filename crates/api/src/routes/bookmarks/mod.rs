@@ -2,6 +2,7 @@ use super::assets::{self, Asset, PRIVATE_CACHE};
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::response::Response;
 use axum::routing::{get, post};
@@ -52,9 +53,10 @@ pub struct ListQuery {
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<BookmarkView>>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let include_vault = q.include_vault && !keyring.is_empty();
     let settings = db::get_user_settings(&state.pool, user.id).await?;
     let items = db::list_bookmarks(
@@ -72,10 +74,11 @@ async fn list(
 async fn get_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<BookmarkView>> {
     let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::bookmark_to_view(&state.pool, raw, &keyring, user.id)
         .await?
         .ok_or(linkdean_core::Error::VaultLocked)?;
@@ -85,9 +88,10 @@ async fn get_one(
 async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Json(req): Json<CreateBookmark>,
 ) -> ApiResult<Json<BookmarkView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::create_bookmark(&state.pool, user.id, req, &keyring).await?;
     if !view.is_vault {
         if let Err(e) = state.search.upsert_bookmark(&view).await {
@@ -108,10 +112,11 @@ async fn create(
 async fn update(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateBookmark>,
 ) -> ApiResult<Json<BookmarkView>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::update_bookmark(&state.pool, user.id, id, req, &keyring).await?;
     if view.is_vault {
         if let Err(e) = state.search.delete_bookmark(id).await {
@@ -151,6 +156,7 @@ async fn get_preview(
 async fn upload_preview(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     mut multipart: Multipart,
 ) -> ApiResult<Json<BookmarkView>> {
@@ -200,7 +206,7 @@ async fn upload_preview(
     db::set_bookmark_has_preview(&state.pool, id, true).await?;
 
     let updated = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::bookmark_to_view(&state.pool, updated, &keyring, user.id)
         .await?
         .ok_or(Error::NotFound)?;
@@ -215,6 +221,7 @@ async fn upload_preview(
 async fn delete_preview(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<BookmarkView>> {
     if !db::bookmark_can_write(&state.pool, user.id, id).await? {
@@ -234,7 +241,7 @@ async fn delete_preview(
     db::set_bookmark_has_preview(&state.pool, id, false).await?;
 
     let updated = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::bookmark_to_view(&state.pool, updated, &keyring, user.id)
         .await?
         .ok_or(Error::NotFound)?;

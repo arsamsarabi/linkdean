@@ -52,6 +52,24 @@ pub async fn delete_session(pool: &PgPool, token: &str) -> Result<()> {
     Ok(())
 }
 
+/// Which of `token_hashes` belong to sessions that have not ended.
+pub async fn live_session_hashes(
+    pool: &PgPool,
+    token_hashes: &[String],
+) -> Result<std::collections::HashSet<String>> {
+    if token_hashes.is_empty() {
+        return Ok(Default::default());
+    }
+    let rows: Vec<(String,)> = sqlx::query_as(
+        "SELECT token_hash FROM sessions WHERE token_hash = ANY($1) AND expires_at > now()",
+    )
+    .bind(token_hashes)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(rows.into_iter().map(|(h,)| h).collect())
+}
+
 /// Remove sessions past their expiry. Returns how many were removed.
 pub async fn purge_expired_sessions(pool: &PgPool) -> Result<u64> {
     let res = sqlx::query("DELETE FROM sessions WHERE expires_at <= now()")

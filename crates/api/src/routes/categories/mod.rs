@@ -1,6 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{Path, Query, State};
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};
@@ -55,10 +56,14 @@ pub struct ListQuery {
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<CategoryView>>> {
     let unlocked = if q.include_vault {
-        state.vault_keyring(user.id).await.vault_ids()
+        state
+            .vault_keyring(&vault_session, user.id)
+            .await
+            .vault_ids()
     } else {
         Vec::new()
     };
@@ -86,10 +91,14 @@ async fn create(
 async fn update(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateCategory>,
 ) -> ApiResult<Json<CategoryView>> {
-    let unlocked = state.vault_keyring(user.id).await.vault_ids();
+    let unlocked = state
+        .vault_keyring(&vault_session, user.id)
+        .await
+        .vault_ids();
     db::require_category_unlocked(&state.pool, user.id, id, &unlocked).await?;
     let cat = db::update_category(&state.pool, user.id, id, req).await?;
     Ok(Json(cat))

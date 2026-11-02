@@ -2,6 +2,7 @@ use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::rate_limit::vault_limit;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -65,8 +66,12 @@ async fn to_view(state: &AppState, keyring: &VaultKeyring, vault: Vault) -> ApiR
     })
 }
 
-async fn list(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Value>> {
-    let keyring = state.vault_keyring(user.id).await;
+async fn list(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    vault_session: VaultSession,
+) -> ApiResult<Json<Value>> {
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let mut vaults = Vec::new();
     for vault in db::list_vaults(&state.pool, user.id).await? {
         vaults.push(to_view(&state, &keyring, vault).await?);
@@ -77,13 +82,17 @@ async fn list(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiRes
 async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Json(req): Json<CreateVaultRequest>,
 ) -> ApiResult<Json<Value>> {
+    require_session(&vault_session)?;
     check_passphrase(&req.passphrase)?;
     let (vault, key, recovery_key) =
         db::create_vault(&state.pool, user.id, &req.name, &req.passphrase).await?;
-    state.set_vault_key(user.id, vault.id, key).await;
-    let keyring = state.vault_keyring(user.id).await;
+    state
+        .set_vault_key(&vault_session, user.id, vault.id, key)
+        .await?;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = to_view(&state, &keyring, vault).await?;
     Ok(Json(json!({ "vault": view, "recovery_key": recovery_key })))
 }
@@ -91,11 +100,12 @@ async fn create(
 async fn rename(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     Json(req): Json<RenameVaultRequest>,
 ) -> ApiResult<Json<Value>> {
     let vault = db::rename_vault(&state.pool, user.id, id, &req.name).await?;
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = to_view(&state, &keyring, vault).await?;
     Ok(Json(json!({ "vault": view })))
 }
@@ -114,14 +124,18 @@ async fn delete_one(
 async fn unlock_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     Json(req): Json<VaultUnlockRequest>,
 ) -> ApiResult<Json<Value>> {
+    require_session(&vault_session)?;
     let limits = vault_limit(user.id);
     state.limiter.check(&limits)?;
     let result = db::unlock_vault(&state.pool, user.id, id, &req.passphrase).await;
     let key = state.limiter.settle(&limits, result)?;
-    state.set_vault_key(user.id, id, key).await;
+    state
+        .set_vault_key(&vault_session, user.id, id, key)
+        .await?;
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -146,9 +160,11 @@ async fn lock_all(
 async fn recover(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
     Json(req): Json<RecoverVaultRequest>,
 ) -> ApiResult<Json<Value>> {
+    require_session(&vault_session)?;
     check_passphrase(&req.new_passphrase)?;
     let limits = vault_limit(user.id);
     state.limiter.check(&limits)?;
@@ -161,16 +177,19 @@ async fn recover(
     )
     .await;
     let key = state.limiter.settle(&limits, result)?;
-    state.set_vault_key(user.id, id, key).await;
+    state
+        .set_vault_key(&vault_session, user.id, id, key)
+        .await?;
     Ok(Json(json!({ "ok": true })))
 }
 
 async fn new_recovery_key(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let key = keyring.get(id).ok_or(Error::VaultLocked)?;
     let recovery_key = db::replace_recovery_key(&state.pool, user.id, id, key).await?;
     Ok(Json(json!({ "recovery_key": recovery_key })))
@@ -221,15 +240,19 @@ async fn global_disable(
 async fn global_unlock(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Json(req): Json<VaultUnlockRequest>,
 ) -> ApiResult<Json<Value>> {
+    require_session(&vault_session)?;
     let limits = vault_limit(user.id);
     state.limiter.check(&limits)?;
     let result = db::unlock_with_global(&state.pool, user.id, &req.passphrase).await;
     let opened = state.limiter.settle(&limits, result)?;
     let mut ids = Vec::with_capacity(opened.len());
     for (id, key) in opened {
-        state.set_vault_key(user.id, id, key).await;
+        state
+            .set_vault_key(&vault_session, user.id, id, key)
+            .await?;
         ids.push(id);
     }
     Ok(Json(json!({ "unlocked": ids })))
@@ -238,9 +261,10 @@ async fn global_unlock(
 async fn global_join(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let key = keyring.get(id).ok_or(Error::VaultLocked)?;
     db::join_global(&state.pool, user.id, id, key).await?;
     Ok(Json(json!({ "ok": true })))
@@ -258,9 +282,10 @@ async fn global_leave(
 async fn move_items(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Json(req): Json<MoveToVaultRequest>,
 ) -> ApiResult<Response> {
-    let keyring = state.vault_keyring(user.id).await;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let outcome = db::move_to_vault(&state.pool, user.id, req, &keyring).await?;
     let (left_search, joined_search) = match outcome {
         VaultMoveOutcome::Blocked(blockers) => {
@@ -296,4 +321,13 @@ async fn move_items(
         });
     }
     Ok(Json(json!({ "ok": true })).into_response())
+}
+
+/// Unlocking needs a signed-in session. API keys never hold vault keys.
+fn require_session(session: &VaultSession) -> Result<(), Error> {
+    if session.is_session() {
+        Ok(())
+    } else {
+        Err(Error::Forbidden)
+    }
 }

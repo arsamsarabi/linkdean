@@ -1,6 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{Query, State};
 use axum::routing::get;
 use axum::{Json, Router};
@@ -32,6 +33,7 @@ fn clamp_limit(limit: usize) -> usize {
 async fn search(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Query(q): Query<SearchQuery>,
 ) -> ApiResult<Json<Value>> {
     let settings = db::get_user_settings(&state.pool, user.id).await?;
@@ -87,7 +89,7 @@ async fn search(
         } else {
             "never"
         };
-        let keyring = state.vault_keyring(user.id).await;
+        let keyring = state.vault_keyring(&vault_session, user.id).await;
         match mode {
             "never" => {}
             "when_unlocked" => {

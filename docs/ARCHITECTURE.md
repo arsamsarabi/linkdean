@@ -47,7 +47,7 @@ Browser ──► Vite (dev) or static SPA
 - **Category:** tree (`parent_id`); flags `is_hidden`, `is_vault`; `vault_id` when inside a vault
 - **Tag:** per-user; M2M with bookmarks
 - **Bookmark:** url/title/notes/tags; vault rows store ciphertext instead of plaintext fields
-- **Vault:** named, many per user; data key wrapped by its passphrase, by its recovery key, and optionally by the user's master key for the global passphrase (Argon2id + AES-GCM). Unlocked keys live in API memory, per user and vault
+- **Vault:** named, many per user; data key wrapped by its passphrase, by its recovery key, and optionally by the user's master key for the global passphrase (Argon2id + AES-GCM). Unlocked keys live in API memory per login session (`crates/api/src/vault_keys.rs`), keyed by the session token hash. API keys never get vault keys. Keys are dropped after the user's auto-lock time with no request using them, on logout or password change, and when the hourly maintenance task finds the session gone
 - **ImportJob:** import run stats
 
 Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`/`write`) beside ownership; access covers the shared category and its non-vault descendants. Milestone 2 adds `dashboards` / `dashboard_sections` / `dashboard_items` for a per-user home layout (default dashboard auto-created). Categories may also carry an unlisted `public_slug` for anonymous read-only list URLs (`GET /api/public/lists/{slug}` → SPA `/l/{slug}`).

@@ -4,7 +4,7 @@ use crate::state::AppState;
 use std::path::Path;
 use std::time::Duration;
 
-/// How often trash retention and the session purge run.
+/// How often trash retention, the session purge and the vault key sweep run.
 const INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 /// Run housekeeping now, then every [`INTERVAL`], for the life of the process.
@@ -44,5 +44,20 @@ async fn run_once(state: &AppState) {
         Ok(0) => {}
         Ok(n) => tracing::info!(sessions = n, "purged expired sessions"),
         Err(e) => tracing::warn!(error = %e, "session purge failed"),
+    }
+
+    // Vault keys of sessions that ended or sat idle past the owner's auto-lock time.
+    let hashes = state.vault_keys.session_hashes();
+    match linkdean_db::live_session_hashes(&state.pool, &hashes).await {
+        Ok(live) => {
+            let dropped = state.vault_keys.sweep(&live);
+            if dropped > 0 {
+                tracing::info!(
+                    sessions = dropped,
+                    "locked vaults of ended or idle sessions"
+                );
+            }
+        }
+        Err(e) => tracing::warn!(error = %e, "vault key sweep failed"),
     }
 }

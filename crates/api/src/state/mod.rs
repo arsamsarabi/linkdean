@@ -1,12 +1,11 @@
 use crate::config::Config;
 use crate::rate_limit::{Limiter, WINDOW};
+use crate::vault_keys::{idle_limit, VaultKeyStore, VaultSession};
 use linkdean_core::VaultKeyring;
 use linkdean_db::{self as db};
 use linkdean_search::SearchClient;
 use sqlx::PgPool;
-use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -14,8 +13,8 @@ pub struct AppState {
     pub pool: PgPool,
     pub search: SearchClient,
     pub cfg: Config,
-    /// user_id → unlocked vaults (session memory; lost on restart)
-    pub vault_keys: Arc<RwLock<HashMap<Uuid, VaultKeyring>>>,
+    /// Unlocked vaults per login session (memory only; lost on restart).
+    pub vault_keys: Arc<VaultKeyStore>,
     pub limiter: Arc<Limiter>,
 }
 
@@ -33,7 +32,7 @@ impl AppState {
             pool,
             search,
             cfg,
-            vault_keys: Arc::new(RwLock::new(HashMap::new())),
+            vault_keys: Arc::new(VaultKeyStore::default()),
             limiter: Arc::new(Limiter::new(WINDOW)),
         })
     }
@@ -69,41 +68,32 @@ impl AppState {
         }
     }
 
-    pub async fn vault_keyring(&self, user_id: Uuid) -> VaultKeyring {
-        self.vault_keys
-            .read()
-            .await
-            .get(&user_id)
-            .cloned()
-            .unwrap_or_default()
+    /// The vaults this session has unlocked. Empty for API keys.
+    pub async fn vault_keyring(&self, session: &VaultSession, user_id: Uuid) -> VaultKeyring {
+        self.vault_keys.keyring(session, user_id)
     }
 
-    pub async fn set_vault_key(&self, user_id: Uuid, vault_id: Uuid, key: [u8; 32]) {
+    /// Unlock a vault for this session, until the user's auto-lock time passes unused.
+    pub async fn set_vault_key(
+        &self,
+        session: &VaultSession,
+        user_id: Uuid,
+        vault_id: Uuid,
+        key: [u8; 32],
+    ) -> linkdean_core::Result<()> {
+        let settings = db::get_user_settings(&self.pool, user_id).await?;
+        let idle = idle_limit(settings.vault_auto_lock_minutes);
         self.vault_keys
-            .write()
-            .await
-            .entry(user_id)
-            .or_default()
-            .insert(vault_id, key);
+            .insert(session, user_id, vault_id, key, idle)
     }
 
+    /// Lock one vault in every session of the user.
     pub async fn clear_vault_key(&self, user_id: Uuid, vault_id: Uuid) {
-        let mut keys = self.vault_keys.write().await;
-        let Some(ring) = keys.get(&user_id) else {
-            return;
-        };
-        let mut next = VaultKeyring::default();
-        for id in ring.vault_ids() {
-            if id != vault_id {
-                if let Some(key) = ring.get(id) {
-                    next.insert(id, *key);
-                }
-            }
-        }
-        keys.insert(user_id, next);
+        self.vault_keys.remove_vault(user_id, vault_id);
     }
 
+    /// Lock every vault in every session of the user.
     pub async fn clear_vault_keys(&self, user_id: Uuid) {
-        self.vault_keys.write().await.remove(&user_id);
+        self.vault_keys.clear_user(user_id);
     }
 }

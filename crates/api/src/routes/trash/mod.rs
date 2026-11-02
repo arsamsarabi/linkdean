@@ -1,6 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{Path, State};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
@@ -39,6 +40,7 @@ fn parse_kind(kind: &str) -> Result<TrashKind, linkdean_core::Error> {
 async fn restore(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path((kind, id)): Path<(String, Uuid)>,
 ) -> ApiResult<Json<Value>> {
     let kind = parse_kind(&kind)?;
@@ -46,7 +48,7 @@ async fn restore(
         TrashKind::Bookmark => {
             db::restore_bookmark(&state.pool, user.id, id).await?;
             let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-            let keyring = state.vault_keyring(user.id).await;
+            let keyring = state.vault_keyring(&vault_session, user.id).await;
             if let Some(view) = db::bookmark_to_view(&state.pool, raw, &keyring, user.id).await? {
                 if !view.is_vault {
                     if let Err(e) = state.search.upsert_bookmark(&view).await {

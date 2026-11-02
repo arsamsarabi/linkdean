@@ -2,6 +2,7 @@ use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::rate_limit::{client_ip, login_limits, register_limit};
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{ConnectInfo, Query, State};
 use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
@@ -149,18 +150,25 @@ async fn logout(
     headers: axum::http::HeaderMap,
 ) -> ApiResult<Json<Value>> {
     if let Some(token) = bearer_or_cookie(&headers) {
-        if let Ok(Some(user)) = db::user_from_token(&state.pool, &token).await {
-            state.clear_vault_keys(user.id).await;
-        }
+        state
+            .vault_keys
+            .clear_session(&VaultSession::from_token(&token));
         db::delete_session(&state.pool, &token).await?;
     }
     Ok(Json(json!({ "ok": true })))
 }
 
-async fn me(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Value>> {
+async fn me(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    vault_session: VaultSession,
+) -> ApiResult<Json<Value>> {
     let public = db::to_public(&state.pool, &user).await?;
     let settings = db::get_user_settings(&state.pool, user.id).await?;
-    let vault_unlocked = !state.vault_keyring(user.id).await.is_empty();
+    let vault_unlocked = !state
+        .vault_keyring(&vault_session, user.id)
+        .await
+        .is_empty();
     let platform = db::get_platform_settings(&state.pool).await?;
     let api_keys_allowed = platform.api_keys_enabled && user.api_keys_enabled;
     Ok(Json(json!({

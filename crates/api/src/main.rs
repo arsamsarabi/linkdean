@@ -6,6 +6,7 @@ mod metrics;
 mod rate_limit;
 mod routes;
 mod state;
+mod vault_keys;
 
 use axum::http::{HeaderValue, Method};
 use axum::Router;
