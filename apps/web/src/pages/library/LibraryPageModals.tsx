@@ -2,6 +2,7 @@ import { type ReactElement } from 'react'
 import { Button, Group, Modal, PasswordInput, Select, Stack, Text } from '@mantine/core'
 import { IconLockOpen } from '@tabler/icons-react'
 import { BookmarkDrawer, BulkEditDrawer, ConfirmModal, MoveToVaultModal } from '@/components'
+import { inviteeShareAccess } from '@/lib'
 import { categoriesForSelection } from '@/services'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
@@ -14,6 +15,15 @@ export function LibraryPageModals(): ReactElement {
   // Look the item up everywhere it can come from: the grid, Explorer and search all open this.
   const deleting = [...lib.list, ...(lib.bookmarks.data ?? []), ...lib.searchItems].find((b) => b.id === lib.deleteId)
   const deletesVaultItem = permanent && !!deleting?.is_vault
+  // A shared bookmark's panel also holds its discussion, as the card menu's Likes & comments does.
+  const editingItem = lib.draft?.id
+    ? [...lib.list, ...(lib.bookmarks.data ?? []), ...lib.searchItems].find((b) => b.id === lib.draft?.id)
+    : undefined
+  const viewerId = lib.me.data?.user.id
+  const discussion =
+    !!editingItem &&
+    (('shared_out' in editingItem && !!editingItem.shared_out) ||
+      !!inviteeShareAccess(editingItem.owner_user_id, editingItem.can_write, viewerId))
   const bulkDeletesVaultItem = permanent && lib.selectedItems.some((b) => b.is_vault)
 
   return (
@@ -24,6 +34,7 @@ export function LibraryPageModals(): ReactElement {
         onClose={lib.closeDrawer}
         categories={categories}
         initial={lib.draft}
+        discussion={discussion}
       />
 
       <BulkEditDrawer

@@ -154,6 +154,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Phone tab bar: Home, Library, Add (into the open folder), Search (command palette) and Me; the burger keeps the full sidebar
 - An open folder titles the library page, with a breadcrumb back to the whole library; an empty folder offers Add bookmark here
 - Header search field opens the command palette; header Add opens the new-bookmark form
+- Editing a shared bookmark: the side panel has Details and Discussion tabs, so likes, rating and comments sit next to the edit form (the card menu's Likes & comments still opens them on their own)
 - Paste a web address anywhere outside a text field to open the new-bookmark form with it filled in (in the open folder when on the library)
 - PWA install: web manifest + service worker (standalone / “Add to Home Screen”)
 
