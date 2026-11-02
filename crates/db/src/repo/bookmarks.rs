@@ -1414,7 +1414,7 @@ pub async fn find_duplicate_urls(pool: &PgPool, user_id: Uuid) -> Result<Vec<Str
     let rows: Vec<(String,)> = sqlx::query_as(
         r#"
         SELECT url FROM bookmarks
-        WHERE owner_user_id = $1 AND is_vault = FALSE AND url <> ''
+        WHERE owner_user_id = $1 AND is_vault = FALSE AND deleted_at IS NULL AND url <> ''
         GROUP BY url HAVING COUNT(*) > 1
         ORDER BY url
         "#,
@@ -1437,7 +1437,7 @@ pub async fn find_duplicate_groups(
         let rows = sqlx::query_as::<_, Bookmark>(
             r#"
             SELECT * FROM bookmarks
-            WHERE owner_user_id = $1 AND is_vault = FALSE AND url = $2
+            WHERE owner_user_id = $1 AND is_vault = FALSE AND deleted_at IS NULL AND url = $2
             ORDER BY updated_at DESC, created_at DESC
             "#,
         )
