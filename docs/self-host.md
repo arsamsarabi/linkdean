@@ -118,6 +118,11 @@ Running the API and web on the host is covered in the README under Development.
 | --- | --- | --- |
 | Liveness | `GET /api/health` | Process up |
 | Readiness | `GET /api/ready` | Postgres + Meilisearch reachable |
+| Metrics | `GET /api/metrics` | Prometheus scrape. Off unless `METRICS_TOKEN` is set; then send `Authorization: Bearer <token>` |
+
+`/api/ready` returns `true` or `false` per check. Failure details go to the API log, not the response.
+
+Metrics are labelled by route template (such as `/api/l/{slug}`), never by raw path.
 
 Compose marks `db`, `meilisearch`, and `api` healthy before dependents start. Example:
 

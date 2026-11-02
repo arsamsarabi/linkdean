@@ -19,14 +19,13 @@ async fn health() -> Json<Value> {
 async fn ready(State(state): State<AppState>) -> impl IntoResponse {
     let mut db_ok = false;
     let mut meili_ok = false;
-    let mut errors: Vec<String> = Vec::new();
 
     match sqlx::query_scalar::<_, i32>("SELECT 1")
         .fetch_one(&state.pool)
         .await
     {
         Ok(_) => db_ok = true,
-        Err(e) => errors.push(format!("db: {e}")),
+        Err(e) => tracing::warn!(error = %e, "ready: database check failed"),
     }
 
     let meili_url = state.cfg.meili_url.trim_end_matches('/');
@@ -37,8 +36,8 @@ async fn ready(State(state): State<AppState>) -> impl IntoResponse {
         .await
     {
         Ok(res) if res.status().is_success() => meili_ok = true,
-        Ok(res) => errors.push(format!("meili: HTTP {}", res.status())),
-        Err(e) => errors.push(format!("meili: {e}")),
+        Ok(res) => tracing::warn!(status = %res.status(), "ready: meilisearch check failed"),
+        Err(e) => tracing::warn!(error = %e, "ready: meilisearch check failed"),
     }
 
     let body = json!({
@@ -48,7 +47,6 @@ async fn ready(State(state): State<AppState>) -> impl IntoResponse {
             "db": db_ok,
             "meilisearch": meili_ok,
         },
-        "errors": errors,
     });
 
     if db_ok && meili_ok {

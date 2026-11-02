@@ -20,6 +20,8 @@ pub struct Config {
     pub cors_origins: Vec<String>,
     /// Behind a reverse proxy, read the client address from `X-Forwarded-For`.
     pub trust_forwarded_for: bool,
+    /// Bearer token for `GET /api/metrics`. Unset turns the route off.
+    pub metrics_token: Option<String>,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
@@ -102,6 +104,10 @@ impl Config {
                 .filter(|s| !s.is_empty()),
             cors_origins,
             trust_forwarded_for: env_bool("TRUST_FORWARDED_FOR", false),
+            metrics_token: std::env::var("METRICS_TOKEN")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),

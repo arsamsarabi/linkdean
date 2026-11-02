@@ -2,8 +2,9 @@
 
 use crate::state::AppState;
 use axum::body::Body;
-use axum::extract::Request;
-use axum::http::StatusCode;
+use axum::extract::{MatchedPath, Request, State};
+use axum::http::header::AUTHORIZATION;
+use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
@@ -73,40 +74,18 @@ pub fn init() {
     let _ = http_duration();
 }
 
-/// Collapse dynamic path segments so cardinality stays bounded.
-fn normalize_path(path: &str) -> String {
-    let trimmed = path.trim_end_matches('/');
-    if trimmed.is_empty() {
-        return "/".into();
-    }
-    trimmed
-        .split('/')
-        .map(|seg| {
-            if seg.is_empty() {
-                ""
-            } else if looks_like_id(seg) {
-                ":id"
-            } else {
-                seg
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("/")
-}
-
-fn looks_like_id(seg: &str) -> bool {
-    if seg.len() == 36 && seg.chars().filter(|c| *c == '-').count() == 4 {
-        return true;
-    }
-    if seg.chars().all(|c| c.is_ascii_digit()) && seg.len() > 3 {
-        return true;
-    }
-    false
+/// The route template, such as `/api/l/{slug}`, never the raw path. Raw paths would put
+/// public-list slugs in the labels and let random paths grow memory without limit.
+fn route_label(req: &Request) -> String {
+    req.extensions()
+        .get::<MatchedPath>()
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_else(|| "unmatched".into())
 }
 
 pub async fn track_http(req: Request, next: Next) -> Response {
     let method = req.method().as_str().to_string();
-    let path = normalize_path(req.uri().path());
+    let path = route_label(&req);
     let start = Instant::now();
     let res = next.run(req).await;
     let status = res.status().as_u16().to_string();
@@ -120,7 +99,27 @@ pub async fn track_http(req: Request, next: Next) -> Response {
     res
 }
 
-async fn metrics_handler() -> impl IntoResponse {
+/// Constant-time check of `Authorization: Bearer <token>`.
+fn bearer_matches(headers: &HeaderMap, token: &str) -> bool {
+    let Some(given) = headers
+        .get(AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+    else {
+        return false;
+    };
+    let (a, b) = (given.as_bytes(), token.as_bytes());
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+async fn metrics_handler(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    match state.cfg.metrics_token.as_deref() {
+        None => return StatusCode::NOT_FOUND.into_response(),
+        Some(token) if !bearer_matches(&headers, token) => {
+            return StatusCode::UNAUTHORIZED.into_response()
+        }
+        Some(_) => {}
+    }
     let encoder = TextEncoder::new();
     let metric_families = registry().gather();
     let mut buffer = Vec::new();
@@ -149,14 +148,44 @@ pub fn router() -> Router<AppState> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::HeaderValue;
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn labels_use_the_route_template() {
+        let app: Router = Router::new()
+            .route("/l/{slug}", get(|| async { "ok" }))
+            .layer(axum::middleware::from_fn(track_http));
+        let req = Request::builder()
+            .uri("/l/secret-list-slug-label-test")
+            .body(Body::empty())
+            .expect("request");
+        app.clone().oneshot(req).await.expect("response");
+        let req = Request::builder()
+            .uri("/random-path-label-test")
+            .body(Body::empty())
+            .expect("request");
+        app.oneshot(req).await.expect("response");
+
+        let mut out = Vec::new();
+        TextEncoder::new()
+            .encode(&registry().gather(), &mut out)
+            .expect("encode");
+        let text = String::from_utf8(out).expect("utf8");
+        assert!(text.contains(r#"path="/l/{slug}""#));
+        assert!(!text.contains("secret-list-slug-label-test"));
+        assert!(!text.contains("random-path-label-test"));
+    }
 
     #[test]
-    fn normalize_uuid_segments() {
-        assert_eq!(
-            normalize_path("/bookmarks/550e8400-e29b-41d4-a716-446655440000"),
-            "/bookmarks/:id"
-        );
-        assert_eq!(normalize_path("/health"), "/health");
-        assert_eq!(normalize_path("/"), "/");
+    fn bearer_must_match_exactly() {
+        let mut headers = HeaderMap::new();
+        assert!(!bearer_matches(&headers, "token-abc"));
+        headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer token-abd"));
+        assert!(!bearer_matches(&headers, "token-abc"));
+        headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer token-ab"));
+        assert!(!bearer_matches(&headers, "token-abc"));
+        headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer token-abc"));
+        assert!(bearer_matches(&headers, "token-abc"));
     }
 }

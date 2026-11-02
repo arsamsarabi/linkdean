@@ -70,6 +70,8 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - `PATCH` bodies: an omitted field stays unchanged; `null` clears it (profile name/bio/timezone, bookmark description/notes/category, category parent/icon)
 - Per-route body limits: import 20 MiB (10 MiB file content), avatar 6 MiB, preview 9 MiB
 - Each Postgres statement times out after 30 s; migrations run on a separate connection without the limit
+- `GET /api/metrics` needs `Authorization: Bearer $METRICS_TOKEN` and is off when the token is unset. Labels use the route template, not the raw path. `GET /api/ready` returns booleans only
+- Hourly maintenance (`crates/api/src/maintenance.rs`): trash retention, with search and preview cleanup for purged bookmarks, and the expired-session purge
 
 Operator-facing limits and behaviour: [self-host.md](./self-host.md#limits-and-behaviour-operators-should-know).
 
