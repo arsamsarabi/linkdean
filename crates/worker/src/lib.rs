@@ -74,13 +74,16 @@ pub async fn enrich_bookmark(
 
     let mut metadata_ok = false;
     let page = match client.get(&raw.url).send().await {
-        Ok(resp) if resp.status().is_success() => match resp.text().await {
-            Ok(body) => Some(body),
-            Err(e) => {
-                warn!(%bookmark_id, "enrichment: read page body: {e}");
-                None
+        // Metadata sits in the head, so a long page is cut short rather than refused.
+        Ok(resp) if resp.status().is_success() => {
+            match read_capped(resp, MAX_PAGE_BYTES, true).await {
+                Ok(body) => Some(String::from_utf8_lossy(&body).into_owned()),
+                Err(e) => {
+                    warn!(%bookmark_id, "enrichment: read page body: {e}");
+                    None
+                }
             }
-        },
+        }
         Ok(resp) => {
             warn!(%bookmark_id, status = %resp.status(), "enrichment: page fetch refused");
             None
@@ -349,7 +352,7 @@ async fn fetch_and_store(
         if !resp.status().is_success() {
             anyhow::bail!("HTTP {}", resp.status());
         }
-        resp.bytes().await?.to_vec()
+        read_capped(resp, kind.max_bytes(), false).await?
     };
 
     if bytes.len() > kind.max_bytes() {
@@ -908,6 +911,47 @@ async fn with_ip_host(mut url: url::Url) -> anyhow::Result<url::Url> {
     Ok(url)
 }
 
+/// The most of a page read for its metadata.
+const MAX_PAGE_BYTES: usize = 2 * 1024 * 1024;
+/// Longest title or description taken from a page, in characters.
+const MAX_TITLE_CHARS: usize = 500;
+const MAX_DESCRIPTION_CHARS: usize = 2_000;
+
+/// Reads a body without holding more than `max` bytes. Past the cap, `truncate` keeps
+/// what fits; otherwise the read fails.
+async fn read_capped(
+    mut resp: reqwest::Response,
+    max: usize,
+    truncate: bool,
+) -> anyhow::Result<Vec<u8>> {
+    if !truncate && resp.content_length().is_some_and(|len| len > max as u64) {
+        anyhow::bail!(
+            "body too large ({} bytes)",
+            resp.content_length().unwrap_or(0)
+        );
+    }
+    let mut out = Vec::new();
+    while let Some(chunk) = resp.chunk().await? {
+        let room = max - out.len();
+        if chunk.len() > room {
+            if !truncate {
+                anyhow::bail!("body larger than {max} bytes");
+            }
+            out.extend_from_slice(&chunk[..room]);
+            break;
+        }
+        out.extend_from_slice(&chunk);
+    }
+    Ok(out)
+}
+
+fn truncate_chars(s: String, max: usize) -> String {
+    match s.char_indices().nth(max) {
+        Some((end, _)) => s[..end].trim_end().to_string(),
+        None => s,
+    }
+}
+
 #[derive(Default)]
 struct Meta {
     title: Option<String>,
@@ -935,7 +979,9 @@ fn parse_meta(body: &str) -> Meta {
             .filter(|s| !s.is_empty())
     };
 
-    let description = meta_content(desc_sel).or_else(|| meta_content(og_desc_sel));
+    let description = meta_content(desc_sel)
+        .or_else(|| meta_content(og_desc_sel))
+        .map(|d| truncate_chars(d, MAX_DESCRIPTION_CHARS));
     let preview_image = meta_content(og_image_sel)
         .or_else(|| meta_content(og_image_secure_sel))
         .or_else(|| meta_content(twitter_image_sel))
@@ -945,7 +991,8 @@ fn parse_meta(body: &str) -> Meta {
         title: title_sel
             .and_then(|s| doc.select(&s).next())
             .map(|el| el.text().collect::<String>().trim().to_string())
-            .filter(|s| !s.is_empty()),
+            .filter(|s| !s.is_empty())
+            .map(|t| truncate_chars(t, MAX_TITLE_CHARS)),
         description,
         favicon: icon_sel
             .and_then(|s| doc.select(&s).next())
@@ -968,6 +1015,71 @@ mod tests {
         assert_eq!(super::sniff_image_ct(b"<html><script>1</script>"), None);
         assert_eq!(super::sniff_image_ct(b"<!doctype html><svg></svg>"), None);
         assert_eq!(super::sniff_image_ct(br#"{"AccessKeyId":"x"}"#), None);
+    }
+
+    #[test]
+    fn page_titles_and_descriptions_are_capped() {
+        let long = "é".repeat(super::MAX_TITLE_CHARS + 50);
+        let html = format!(
+            "<html><head><title>{long}</title><meta name=\"description\" content=\"{}\"></head></html>",
+            "d".repeat(super::MAX_DESCRIPTION_CHARS + 1)
+        );
+        let meta = super::parse_meta(&html);
+        assert_eq!(meta.title.unwrap().chars().count(), super::MAX_TITLE_CHARS);
+        assert_eq!(
+            meta.description.unwrap().chars().count(),
+            super::MAX_DESCRIPTION_CHARS
+        );
+    }
+
+    /// Serves `len` bytes once, chunked, with no Content-Length.
+    async fn serve_bytes(len: usize) -> String {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = [0u8; 1024];
+            let _ = tokio::io::AsyncReadExt::read(&mut sock, &mut buf).await;
+            let _ = sock
+                .write_all(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n")
+                .await;
+            let piece = vec![b'a'; 64 * 1024];
+            let mut sent = 0;
+            while sent < len {
+                let n = piece.len().min(len - sent);
+                let head = format!("{n:x}\r\n");
+                if sock.write_all(head.as_bytes()).await.is_err()
+                    || sock.write_all(&piece[..n]).await.is_err()
+                    || sock.write_all(b"\r\n").await.is_err()
+                {
+                    return;
+                }
+                sent += n;
+            }
+            let _ = sock.write_all(b"0\r\n\r\n").await;
+        });
+        format!("http://{addr}/")
+    }
+
+    #[tokio::test]
+    async fn bodies_are_read_up_to_a_cap() {
+        let client = reqwest::Client::new();
+        let url = serve_bytes(3 * 1024 * 1024).await;
+        let resp = client.get(&url).send().await.unwrap();
+        let page = super::read_capped(resp, 1024 * 1024, true).await.unwrap();
+        assert_eq!(page.len(), 1024 * 1024);
+
+        let url = serve_bytes(3 * 1024 * 1024).await;
+        let resp = client.get(&url).send().await.unwrap();
+        assert!(super::read_capped(resp, 1024 * 1024, false).await.is_err());
+
+        let url = serve_bytes(1000).await;
+        let resp = client.get(&url).send().await.unwrap();
+        assert_eq!(
+            super::read_capped(resp, 1024, false).await.unwrap().len(),
+            1000
+        );
     }
 
     #[tokio::test]
