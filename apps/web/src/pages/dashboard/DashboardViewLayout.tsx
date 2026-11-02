@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { SimpleGrid, Stack, Text, Title } from '@mantine/core'
-import { IconLayoutDashboard, IconPencil } from '@tabler/icons-react'
+import { IconLayoutDashboard, IconPinned } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { BookmarkCard, EmptyState } from '@/components'
 import type { Dashboard } from '@/schemas'
@@ -29,9 +29,10 @@ export function DashboardViewLayout({ view, empty, canEditLayout, viewerUserId, 
         action={
           canEditLayout
             ? {
-                label: 'Edit layout',
+                // Names the outcome; the header's Edit layout stays the general entry point.
+                label: 'Pin your first links',
                 onClick: onStartEdit,
-                leftSection: <IconPencil {...iconSm} />,
+                leftSection: <IconPinned {...iconSm} />,
               }
             : undefined
         }
