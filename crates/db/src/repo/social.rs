@@ -93,45 +93,49 @@ async fn require_shared_context(
     subject_id: Uuid,
     owner_user_id: Uuid,
 ) -> Result<()> {
-    let shared = match subject_type {
-        SocialSubjectType::Category => {
-            let n: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*)::bigint FROM category_shares WHERE category_id = $1",
+    // A share on any ancestor folder counts: invitees reach subfolders and their bookmarks
+    // through the share root.
+    let shared: bool = match subject_type {
+        SocialSubjectType::Category => sqlx::query_scalar(
+            r#"
+            WITH RECURSIVE up AS (
+                SELECT id, parent_id FROM categories WHERE id = $1
+                UNION
+                SELECT c.id, c.parent_id FROM categories c JOIN up ON c.id = up.parent_id
             )
-            .bind(subject_id)
-            .fetch_one(pool)
-            .await
-            .map_err(|e| Error::msg(e.to_string()))?;
-            n.0 > 0
-        }
-        SocialSubjectType::Dashboard => {
-            let n: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*)::bigint FROM dashboard_shares WHERE dashboard_id = $1",
-            )
-            .bind(subject_id)
-            .fetch_one(pool)
-            .await
-            .map_err(|e| Error::msg(e.to_string()))?;
-            n.0 > 0
-        }
-        SocialSubjectType::Bookmark => {
-            let n: (i64,) = sqlx::query_as(
-                r#"
-                SELECT COUNT(*)::bigint
-                FROM category_shares cs
-                WHERE cs.category_id IN (
+            SELECT EXISTS (SELECT 1 FROM category_shares cs JOIN up ON cs.category_id = up.id)
+            "#,
+        )
+        .bind(subject_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?,
+        SocialSubjectType::Dashboard => sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM dashboard_shares WHERE dashboard_id = $1)",
+        )
+        .bind(subject_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?,
+        SocialSubjectType::Bookmark => sqlx::query_scalar(
+            r#"
+            WITH RECURSIVE up AS (
+                SELECT c.id, c.parent_id FROM categories c
+                WHERE c.id IN (
                     SELECT category_id FROM bookmark_categories WHERE bookmark_id = $1
                     UNION
                     SELECT category_id FROM bookmarks WHERE id = $1 AND category_id IS NOT NULL
                 )
-                "#,
+                UNION
+                SELECT c.id, c.parent_id FROM categories c JOIN up ON c.id = up.parent_id
             )
-            .bind(subject_id)
-            .fetch_one(pool)
-            .await
-            .map_err(|e| Error::msg(e.to_string()))?;
-            n.0 > 0
-        }
+            SELECT EXISTS (SELECT 1 FROM category_shares cs JOIN up ON cs.category_id = up.id)
+            "#,
+        )
+        .bind(subject_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?,
     };
     if !shared {
         return Err(Error::BadRequest(
@@ -149,7 +153,13 @@ async fn comment_author_label(pool: &PgPool, user_id: Uuid) -> String {
     }
 }
 
-fn to_comment_view(row: SocialComment, viewer_id: Uuid, author_label: String) -> SocialCommentView {
+/// Authors may delete their comments, and owners may delete any comment on their items.
+fn to_comment_view(
+    row: SocialComment,
+    viewer_id: Uuid,
+    viewer_owns_subject: bool,
+    author_label: String,
+) -> SocialCommentView {
     SocialCommentView {
         id: row.id,
         user_id: row.user_id,
@@ -157,7 +167,7 @@ fn to_comment_view(row: SocialComment, viewer_id: Uuid, author_label: String) ->
         body: row.body,
         created_at: row.created_at,
         updated_at: row.updated_at,
-        can_delete: row.user_id == viewer_id,
+        can_delete: row.user_id == viewer_id || viewer_owns_subject,
     }
 }
 
@@ -167,7 +177,8 @@ pub async fn get_social_summary(
     subject_type: SocialSubjectType,
     subject_id: Uuid,
 ) -> Result<SocialSummary> {
-    let _meta = resolve_subject(pool, user_id, subject_type, subject_id).await?;
+    let meta = resolve_subject(pool, user_id, subject_type, subject_id).await?;
+    let is_subject_owner = meta.owner_user_id == user_id;
     let st = subject_type.as_str();
 
     let likes_count: (i64,) = sqlx::query_as(
@@ -268,7 +279,7 @@ pub async fn get_social_summary(
     let mut comments = Vec::with_capacity(comment_rows.len());
     for row in comment_rows {
         let label = comment_author_label(pool, row.user_id).await;
-        comments.push(to_comment_view(row, user_id, label));
+        comments.push(to_comment_view(row, user_id, is_subject_owner, label));
     }
 
     Ok(SocialSummary {
@@ -388,6 +399,23 @@ pub async fn add_comment(
     get_social_summary(pool, user_id, subject_type, subject_id).await
 }
 
+async fn subject_owner(
+    pool: &PgPool,
+    subject_type: SocialSubjectType,
+    subject_id: Uuid,
+) -> Result<Option<Uuid>> {
+    let sql = match subject_type {
+        SocialSubjectType::Bookmark => "SELECT owner_user_id FROM bookmarks WHERE id = $1",
+        SocialSubjectType::Category => "SELECT owner_user_id FROM categories WHERE id = $1",
+        SocialSubjectType::Dashboard => "SELECT owner_user_id FROM dashboards WHERE id = $1",
+    };
+    sqlx::query_scalar(sql)
+        .bind(subject_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))
+}
+
 pub async fn delete_comment(pool: &PgPool, user_id: Uuid, comment_id: Uuid) -> Result<()> {
     let row = sqlx::query_as::<_, SocialComment>("SELECT * FROM social_comments WHERE id = $1")
         .bind(comment_id)
@@ -397,12 +425,15 @@ pub async fn delete_comment(pool: &PgPool, user_id: Uuid, comment_id: Uuid) -> R
     let Some(row) = row else {
         return Err(Error::NotFound);
     };
+    // The author may always take back their own words, even after losing access. The
+    // subject's owner may remove any comment on it.
     if row.user_id != user_id {
-        return Err(Error::Forbidden);
+        let subject_type =
+            SocialSubjectType::parse(&row.subject_type).map_err(Error::BadRequest)?;
+        if subject_owner(pool, subject_type, row.subject_id).await? != Some(user_id) {
+            return Err(Error::Forbidden);
+        }
     }
-    let subject_type = SocialSubjectType::parse(&row.subject_type).map_err(Error::BadRequest)?;
-    // Ensure still readable / shared before delete (soft check).
-    let _ = resolve_subject(pool, user_id, subject_type, row.subject_id).await?;
     sqlx::query("DELETE FROM social_comments WHERE id = $1")
         .bind(comment_id)
         .execute(pool)
