@@ -28,12 +28,12 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 **Platform**
 
 - SMTP / outbound email config (for invites + notification delivery) ([react-email](https://www.npmjs.com/package/react-email) for templates)
-  - Verify email addresses at registration and on email change, before the address can receive share invites. H1 in [POSSIBLE_DEFECTS.md](./POSSIBLE_DEFECTS.md).
+  - Verify email addresses at registration and on email change, before the address can receive share invites. See the known-issue note on `create_share` in `crates/db/src/repo/shares.rs`.
   - Until an address is verified, invites to it wait as pending invites for the address rather than going to the unverified account.
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
 - backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file.
-- Page the library list. `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load. The rest of M31 in [POSSIBLE_DEFECTS.md](./POSSIBLE_DEFECTS.md).
+- Page the library list. `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load.
   - Use infinite scrolling, not numbered pages. The library is browsed and filtered rather than jumped through by page, and filters change the result set often.
   - Keyset pagination in the API (`cursor` + `limit`, ordered by the active sort key and `id`), so new or edited bookmarks do not shift or repeat rows the way `OFFSET` would.
   - Move folder, tag, flag, "since" and sort filters into the query, and return the total match count for headers and "select all".
