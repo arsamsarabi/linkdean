@@ -78,6 +78,40 @@ fn normalize_category_icon(icon: Option<String>) -> Option<String> {
         .map(|s| (*s).to_string())
 }
 
+/// Refuse to put `id` under `new_parent` when `new_parent` is `id` or inside it.
+/// The lock lasts until commit, so two opposite moves cannot each pass the check.
+async fn refuse_cycle(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    id: Uuid,
+    new_parent: Uuid,
+) -> Result<()> {
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtext('category_tree'))")
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    let (inside,): (bool,) = sqlx::query_as(
+        r#"
+        WITH RECURSIVE up AS (
+            SELECT id, parent_id FROM categories WHERE id = $1
+            UNION
+            SELECT c.id, c.parent_id FROM categories c JOIN up ON c.id = up.parent_id
+        )
+        SELECT EXISTS (SELECT 1 FROM up WHERE id = $2)
+        "#,
+    )
+    .bind(new_parent)
+    .bind(id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if inside {
+        return Err(Error::BadRequest(
+            "a list cannot move under itself or one of its sublists".into(),
+        ));
+    }
+    Ok(())
+}
+
 pub async fn get_category_by_id(pool: &PgPool, id: Uuid) -> Result<Category> {
     sqlx::query_as::<_, Category>("SELECT * FROM categories WHERE id = $1")
         .bind(id)
@@ -356,6 +390,12 @@ pub async fn update_category(
         change_keys.push("icon");
     }
 
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    if cat.parent_id != before_parent {
+        if let Some(parent_id) = cat.parent_id {
+            refuse_cycle(&mut tx, id, parent_id).await?;
+        }
+    }
     let updated = sqlx::query_as::<_, Category>(
         r#"
         UPDATE categories
@@ -371,9 +411,10 @@ pub async fn update_category(
     .bind(&cat.icon)
     .bind(id)
     .bind(&cat.visibility)
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
 
     if !access.is_owner() {
         super::notifications::notify_shared_edit(
@@ -604,7 +645,7 @@ pub async fn fork_category(
         r#"
         WITH RECURSIVE tree AS (
             SELECT * FROM categories WHERE id = $1 AND is_vault = FALSE
-            UNION ALL
+            UNION
             SELECT c.* FROM categories c
             JOIN tree ON c.parent_id = tree.id
             WHERE c.is_vault = FALSE

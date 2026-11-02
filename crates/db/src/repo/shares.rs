@@ -137,7 +137,7 @@ pub async fn list_shared_categories(
               AND c.is_vault = FALSE
               AND c.deleted_at IS NULL
               AND ($2 OR c.is_hidden = FALSE)
-            UNION ALL
+            UNION
             SELECT
                 child.id, child.owner_user_id, child.parent_id, child.name, child.is_hidden,
                 child.is_vault, child.icon, child.position, child.deleted_at, child.created_at,
