@@ -1,6 +1,5 @@
 import { type ReactElement } from 'react'
 import {
-  ActionIcon,
   Box,
   Burger,
   Button,
@@ -83,18 +82,6 @@ export function AppShellHeader({
         <Skeleton circle height={36} width={36} />
       ) : (
         <Group gap="xs" wrap="nowrap">
-          <Tooltip label="Search" position="bottom">
-            <ActionIcon
-              variant="subtle"
-              size="lg"
-              radius="md"
-              aria-label="Search"
-              onClick={openPalette}
-              hiddenFrom="sm"
-            >
-              <IconSearch size={20} stroke={1.5} />
-            </ActionIcon>
-          </Tooltip>
           <Box visibleFrom="sm">
             <Tooltip label="New bookmark (N in the library)" position="bottom">
               <Button

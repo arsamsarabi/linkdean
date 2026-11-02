@@ -24,6 +24,7 @@ import { resolveDefaultLanding } from '@/lib'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
 import { AppSidebar } from './AppSidebar'
+import { MobileTabBar } from './MobileTabBar'
 
 export function AppShell(): ReactElement {
   const nav = useNavigate()
@@ -83,6 +84,7 @@ export function AppShell(): ReactElement {
     <MantineAppShell
       header={{ height: 64 }}
       navbar={{ width: 248, breakpoint: 'sm', collapsed: { mobile: !shell.navOpen } }}
+      footer={{ height: { base: 64, sm: 0 } }}
       padding="lg"
     >
       <MantineAppShell.Header px={0}>
@@ -118,6 +120,13 @@ export function AppShell(): ReactElement {
           )}
         </PageContainer>
       </MantineAppShell.Main>
+
+      <MantineAppShell.Footer hiddenFrom="sm">
+        <MobileTabBar
+          pathname={pathname}
+          folder={pathname.startsWith('/library') && typeof search.folder === 'string' ? search.folder : undefined}
+        />
+      </MantineAppShell.Footer>
 
       <CommandPalette opened={shell.paletteOpen} onClose={shell.closePalette} />
       <BrokenLinksDrawer opened={shell.brokenOpen} onClose={shell.closeBroken} />

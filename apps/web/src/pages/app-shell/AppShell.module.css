@@ -40,3 +40,25 @@
 .footer {
   border-top: 1px solid var(--mantine-color-default-border);
 }
+
+.tabBar {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+  color: var(--mantine-color-dimmed);
+}
+
+.tab[data-active] {
+  color: var(--mantine-color-violet-filled);
+}
+
+.tabAdd {
+  color: var(--mantine-color-violet-filled);
+}

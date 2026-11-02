@@ -135,7 +135,7 @@ export function LibraryPageHeader(): ReactElement {
             disabled={loading || listCount === 0}
           />
         )}
-        {/* On phones the floating button in LibraryFab adds bookmarks. */}
+        {/* On phones the tab bar's Add adds bookmarks, into the open folder. */}
         <Box visibleFrom="sm">
           {canCreate ? (
             <Tooltip label="New bookmark (N)">

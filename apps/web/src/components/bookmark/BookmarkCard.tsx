@@ -208,7 +208,9 @@ export function BookmarkCard({
     <Card withBorder padding="xs" radius="md" className={`${cardClass} ${styles.row}`}>
       <Group gap="xs" wrap="nowrap" className={styles.rowLead}>
         {selectBox}
-        <BookmarkFavicon url={b.url} faviconUrl={b.favicon_url} isVault={b.is_vault} />
+        <span className={styles.rowIcon}>
+          <BookmarkFavicon url={b.url} faviconUrl={b.favicon_url} isVault={b.is_vault} />
+        </span>
       </Group>
       <Stack gap={0} className={styles.rowMain}>
         {titleLink(1)}

@@ -185,3 +185,24 @@
     display: none;
   }
 }
+
+/* In a row the waiting box sits over the site icon and takes its place on hover. */
+.rowLead {
+  position: relative;
+}
+
+.rowIcon {
+  display: flex;
+}
+
+.row .selectOnHover {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.row:hover .selectOnHover ~ .rowIcon,
+.row:focus-within .selectOnHover ~ .rowIcon {
+  visibility: hidden;
+}

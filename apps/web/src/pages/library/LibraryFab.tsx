@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { ActionIcon, Affix, Group, Tooltip, Transition } from '@mantine/core'
-import { IconArrowUp, IconBookmarkPlus } from '@tabler/icons-react'
+import { IconArrowUp } from '@tabler/icons-react'
 import { useShellUi } from '@/stores'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
@@ -10,8 +10,9 @@ export function LibraryFab(): ReactElement {
   const navOpen = useShellUi((s) => s.navOpen)
   if (navOpen) return <></>
 
+  // On phones the tab bar sits at the bottom; stay above it.
   return (
-    <Affix position={{ bottom: 24, right: 24 }}>
+    <Affix position={{ bottom: 'calc(24px + var(--app-shell-footer-offset, 0px))', right: 24 }}>
       <Group gap="sm">
         <Transition transition="slide-up" mounted={lib.scroll.y > 320}>
           {(transitionStyles) => (
@@ -30,21 +31,6 @@ export function LibraryFab(): ReactElement {
             </Tooltip>
           )}
         </Transition>
-        {lib.canCreateInContext ? (
-          <Tooltip label="Add bookmark" position="left">
-            <ActionIcon
-              size="xl"
-              radius="xl"
-              variant="filled"
-              color="violet"
-              aria-label="Add bookmark"
-              onClick={lib.openCreate}
-              hiddenFrom="sm"
-            >
-              <IconBookmarkPlus size={22} stroke={1.5} />
-            </ActionIcon>
-          </Tooltip>
-        ) : null}
       </Group>
     </Affix>
   )
