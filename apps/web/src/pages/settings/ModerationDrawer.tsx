@@ -3,6 +3,7 @@ import { Button, Checkbox, Divider, Drawer, Group, Stack, Text, Textarea, Title 
 import { notifications } from '@mantine/notifications'
 import { ConfirmModal, QueryErrorAlert } from '@/components'
 import { useExposedContent, useModerate, useModerationActions } from '@/hooks'
+import { useDrawerClosesOnEscape } from '@/hooks/render'
 import {
   exposedGroups,
   MAX_BAN_REASON,
@@ -23,6 +24,7 @@ type Pending = { group: ExposedGroup; action: GroupAction }
 
 /** What a banned user exposes to others, and the admin actions on it. */
 export function ModerationDrawer({ user, onClose }: Props): ReactElement {
+  const closeOnEscape = useDrawerClosesOnEscape()
   const content = useExposedContent(user.id)
   const history = useModerationActions(user.id)
   const moderate = useModerate(user.id)
@@ -60,7 +62,14 @@ export function ModerationDrawer({ user, onClose }: Props): ReactElement {
   }
 
   return (
-    <Drawer opened onClose={onClose} position="right" size="lg" title={`Exposed content: ${user.label}`}>
+    <Drawer
+      closeOnEscape={closeOnEscape}
+      opened
+      onClose={onClose}
+      position="right"
+      size="lg"
+      title={`Exposed content: ${user.label}`}
+    >
       <Stack gap="lg">
         <Textarea
           label="Note"

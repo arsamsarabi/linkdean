@@ -23,6 +23,7 @@ import {
   useUploadBookmarkPreview,
   useVaults,
 } from '@/hooks'
+import { useDrawerClosesOnEscape } from '@/hooks/render'
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
@@ -40,6 +41,7 @@ type Props = {
 }
 
 export function BookmarkDrawer({ opened, onClose, categories, initial, vaultRequired }: Props): ReactElement {
+  const closeOnEscape = useDrawerClosesOnEscape()
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
   const [pendingPreview, setPendingPreview] = useState<Blob | null>(null)
   const editing = !!draft.id
@@ -124,6 +126,7 @@ export function BookmarkDrawer({ opened, onClose, categories, initial, vaultRequ
 
   return (
     <Drawer
+      closeOnEscape={closeOnEscape}
       opened={opened}
       onClose={onClose}
       title={editing ? 'Edit bookmark' : 'Add bookmark'}

@@ -4,6 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { ConfirmModal } from '@/components/confirm-modal/ConfirmModal'
 import { ShareInvitePanel } from '@/components/share-invite'
 import { useShareCategoryDrawer } from '@/hooks/categories'
+import { useDrawerClosesOnEscape } from '@/hooks/render'
 import { CategoryPublicLinkSection } from './CategoryPublicLinkSection'
 
 type Props = {
@@ -22,6 +23,7 @@ export function ShareCategoryDrawer({
   opened,
   onClose,
 }: Props): ReactElement {
+  const closeOnEscape = useDrawerClosesOnEscape()
   const s = useShareCategoryDrawer({ categoryId, opened, isVault })
   const [confirmRotate, setConfirmRotate] = useState(false)
 
@@ -29,7 +31,7 @@ export function ShareCategoryDrawer({
     <Drawer
       opened={opened}
       onClose={onClose}
-      closeOnEscape={!confirmRotate}
+      closeOnEscape={closeOnEscape}
       title={`Share “${categoryName}”`}
       position="right"
       size="md"

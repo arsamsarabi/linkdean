@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from 'react'
 import { Button, Drawer, Group, Select, Stack } from '@mantine/core'
+import { useDrawerClosesOnEscape } from '@/hooks/render'
 import type { ProfileVisibility } from '@/schemas'
 
 const OPTIONS = [
@@ -17,8 +18,16 @@ type Props = {
 }
 
 export function ProfileEditDrawer({ opened, visibility, onVisibility, onClose, children }: Props): ReactElement {
+  const closeOnEscape = useDrawerClosesOnEscape()
   return (
-    <Drawer opened={opened} onClose={onClose} position="right" size="lg" title="Edit profile">
+    <Drawer
+      closeOnEscape={closeOnEscape}
+      opened={opened}
+      onClose={onClose}
+      position="right"
+      size="lg"
+      title="Edit profile"
+    >
       <Stack gap="xl">
         <Select
           label="Who can see my profile"

@@ -3,7 +3,7 @@ import { Button, Group, Modal, Slider, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconCheck, IconX } from '@tabler/icons-react'
 import Cropper, { type Area } from 'react-easy-crop'
-import { useSyncDuringRender } from '@/hooks'
+import { useChildDialog, useSyncDuringRender } from '@/hooks/render'
 import { getCroppedBlob } from '@/services'
 import styles from './AvatarCropModal.module.css'
 
@@ -73,6 +73,7 @@ export function AvatarCropModal({
     }
   }
 
+  useChildDialog(opened)
   return (
     <Modal opened={opened} onClose={onClose} title={title} size="lg">
       <Stack>

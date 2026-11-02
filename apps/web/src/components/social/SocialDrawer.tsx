@@ -22,6 +22,7 @@ import {
   useSocial,
   useToggleSocialLike,
 } from '@/hooks'
+import { useDrawerClosesOnEscape } from '@/hooks/render'
 import type { SocialSubjectType } from '@/schemas'
 
 type Props = {
@@ -33,6 +34,7 @@ type Props = {
 }
 
 export function SocialDrawer({ opened, onClose, subjectType, subjectId, title }: Props): ReactElement {
+  const closeOnEscape = useDrawerClosesOnEscape()
   const social = useSocial(subjectType, subjectId, opened)
   const toggleLike = useToggleSocialLike(subjectType, subjectId)
   const addComment = useAddSocialComment(subjectType, subjectId)
@@ -48,7 +50,7 @@ export function SocialDrawer({ opened, onClose, subjectType, subjectId, title }:
     <Drawer
       opened={opened}
       onClose={onClose}
-      closeOnEscape={!deletingId}
+      closeOnEscape={closeOnEscape}
       position="right"
       size="md"
       title={heading}

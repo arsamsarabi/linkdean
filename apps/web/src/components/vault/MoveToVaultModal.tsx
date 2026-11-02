@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router'
 import { z } from 'zod'
 import { ApiError } from '@/api/client'
 import { useMoveToVault, useVaults } from '@/hooks'
+import { useChildDialog } from '@/hooks/render'
 import { vaultMoveBlockerSchema, type VaultMoveBlocker } from '@/schemas'
 
 const OUT_OF_VAULT = 'out'
@@ -51,6 +52,7 @@ export function MoveToVaultModal({ categoryIds, bookmarkIds, onClose }: Props): 
     }
   }
 
+  useChildDialog(true)
   return (
     <Modal opened onClose={onClose} title="Move to vault">
       <Stack>

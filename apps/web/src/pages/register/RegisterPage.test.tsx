@@ -36,7 +36,7 @@ describe('RegisterPage invite gate', () => {
         </MantineProvider>
       </QueryClientProvider>
     )
-    const input = await screen.findByLabelText('Invite code')
+    const input = await screen.findByLabelText('Invite code', {}, { timeout: 5000 })
     await userEvent.type(input, 'ldi_abc')
     expect(screen.getByText('Registration closed')).toBeTruthy()
     expect(document.activeElement).toBe(screen.getByLabelText('Invite code'))

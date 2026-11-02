@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { Button, Group, Modal, Stack, Text } from '@mantine/core'
+import { useChildDialog } from '@/hooks/render'
 
 type Props = {
   opened: boolean
@@ -22,6 +23,7 @@ export function ConfirmModal({
   confirmColor = 'red',
   loading,
 }: Props): ReactElement {
+  useChildDialog(opened)
   return (
     <Modal opened={opened} onClose={onClose} title={title} centered>
       <Stack gap="lg">
