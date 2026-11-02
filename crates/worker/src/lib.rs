@@ -27,6 +27,11 @@ pub struct EnrichOpts {
     pub browser_ws_url: Option<String>,
 }
 
+/// Enrichments running at once across the whole process. Each may open a Chrome tab,
+/// so a burst of creates, an import and the boot backfill all share these slots.
+const ENRICH_CONCURRENCY: usize = 4;
+static ENRICH_SLOTS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(ENRICH_CONCURRENCY);
+
 pub async fn enrich_bookmark(
     pool: &PgPool,
     search: &SearchClient,
@@ -34,10 +39,13 @@ pub async fn enrich_bookmark(
     bookmark_id: Uuid,
     opts: &EnrichOpts,
 ) {
+    let Ok(_slot) = ENRICH_SLOTS.acquire().await else {
+        return;
+    };
     let Ok(raw) = db::get_bookmark_raw(pool, user_id, bookmark_id).await else {
         return;
     };
-    if raw.is_vault || raw.url.is_empty() {
+    if raw.is_vault || raw.deleted_at.is_some() || raw.url.is_empty() {
         return;
     }
     // Private addresses and other schemes are never fetched, here or by Chrome.
