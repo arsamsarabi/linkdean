@@ -91,7 +91,8 @@ export function RegisterPage(): ReactElement {
   const closed = !bootstrap.data?.needs_bootstrap && bootstrap.data?.registration_open === false
   const hasInvite = inviteCode.trim().length > 0
 
-  if (closed && !hasInvite) {
+  // Gate on the URL, not the field: typing in the gate must not swap it for the form.
+  if (closed && !search.invite) {
     return (
       <RegisterInviteGate
         inviteCode={inviteCode}
