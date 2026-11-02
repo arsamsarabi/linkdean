@@ -60,6 +60,7 @@ export function ProfilePage(): ReactElement {
   const [timezone, setTimezone] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [currentPw, setCurrentPw] = useState('')
+  const [revokeKeys, setRevokeKeys] = useState(false)
   const [newPw, setNewPw] = useState('')
   const [newPw2, setNewPw2] = useState('')
   const [cropFile, setCropFile] = useState<File | null>(null)
@@ -199,6 +200,8 @@ export function ProfilePage(): ReactElement {
               currentPw={currentPw}
               newPw={newPw}
               newPw2={newPw2}
+              revokeKeys={revokeKeys}
+              onRevokeKeys={setRevokeKeys}
               saving={changePw.isPending}
               onCurrentPw={setCurrentPw}
               onNewPw={setNewPw}
@@ -210,12 +213,13 @@ export function ProfilePage(): ReactElement {
                   return
                 }
                 changePw.mutate(
-                  { current_password: currentPw, new_password: newPw },
+                  { current_password: currentPw, new_password: newPw, revoke_api_keys: revokeKeys },
                   {
                     onSuccess: () => {
                       setCurrentPw('')
                       setNewPw('')
                       setNewPw2('')
+                      setRevokeKeys(false)
                       notifications.show({ message: 'Password updated' })
                     },
                     onError: (e) => notifications.show({ color: 'red', message: String(e) }),

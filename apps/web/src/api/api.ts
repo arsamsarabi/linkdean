@@ -273,8 +273,11 @@ export const api = {
   }): Promise<{ user: UserPublic }> =>
     req('/users/me', { method: 'PATCH', body: JSON.stringify(body) }, userEnvelopeSchema),
 
-  changePassword: (body: { current_password: string; new_password: string }): Promise<{ ok: boolean }> =>
-    req('/users/me/password', { method: 'POST', body: JSON.stringify(body) }, okSchema),
+  changePassword: (body: {
+    current_password: string
+    new_password: string
+    revoke_api_keys?: boolean
+  }): Promise<{ ok: boolean }> => req('/users/me/password', { method: 'POST', body: JSON.stringify(body) }, okSchema),
 
   getSettings: (): Promise<{ settings: UserSettings }> => req('/users/me/settings', {}, settingsEnvelopeSchema),
 

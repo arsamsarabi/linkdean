@@ -95,6 +95,9 @@ pub struct UpdateProfile {
 pub struct ChangePassword {
     pub current_password: String,
     pub new_password: String,
+    /// Also revoke every API key. Other login sessions always end.
+    #[serde(default)]
+    pub revoke_api_keys: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

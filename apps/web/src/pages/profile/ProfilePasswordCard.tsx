@@ -1,5 +1,5 @@
 import { type ReactElement } from 'react'
-import { Alert, Button, Group, Paper, PasswordInput, Stack, ThemeIcon, Title } from '@mantine/core'
+import { Alert, Button, Checkbox, Group, Paper, PasswordInput, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { IconInfoCircle, IconKey } from '@tabler/icons-react'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -9,7 +9,9 @@ type Props = {
   currentPw: string
   newPw: string
   newPw2: string
+  revokeKeys: boolean
   saving: boolean
+  onRevokeKeys: (v: boolean) => void
   onCurrentPw: (v: string) => void
   onNewPw: (v: string) => void
   onNewPw2: (v: string) => void
@@ -21,7 +23,9 @@ export function ProfilePasswordCard({
   currentPw,
   newPw,
   newPw2,
+  revokeKeys,
   saving,
+  onRevokeKeys,
   onCurrentPw,
   onNewPw,
   onNewPw2,
@@ -56,6 +60,14 @@ export function ProfilePasswordCard({
           onChange={(e) => onNewPw(e.currentTarget.value)}
         />
         <PasswordInput label="Confirm new password" value={newPw2} onChange={(e) => onNewPw2(e.currentTarget.value)} />
+        <Text size="sm" c="dimmed">
+          Every other device and browser is signed out. This one stays signed in.
+        </Text>
+        <Checkbox
+          label="Also revoke all API keys"
+          checked={revokeKeys}
+          onChange={(e) => onRevokeKeys(e.currentTarget.checked)}
+        />
         <Button
           leftSection={<IconKey {...iconSm} />}
           loading={saving}

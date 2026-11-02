@@ -442,12 +442,17 @@ pub async fn update_profile(pool: &PgPool, user_id: Uuid, patch: &UpdateProfile)
     .map_err(|e| Error::msg(e.to_string()))
 }
 
+/// Sets a new password and ends every other login session, keeping the one whose token hash
+/// is `keep_session_hash`. With `revoke_api_keys`, every API key is revoked too.
+/// Returns how many sessions ended and how many keys were revoked.
 pub async fn change_password(
     pool: &PgPool,
     user_id: Uuid,
     current_password: &str,
     new_password: &str,
-) -> Result<()> {
+    keep_session_hash: Option<&str>,
+    revoke_api_keys: bool,
+) -> Result<(u64, u64)> {
     if new_password.len() < 8 {
         return Err(Error::BadRequest("password min 8 chars".into()));
     }
@@ -466,13 +471,35 @@ pub async fn change_password(
     }
     let new_password = new_password.to_string();
     let new_hash = super::blocking::run_kdf(move || hash_password(&new_password)).await?;
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
     sqlx::query("UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1")
         .bind(user_id)
         .bind(new_hash)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(())
+    let sessions =
+        sqlx::query("DELETE FROM sessions WHERE user_id = $1 AND token_hash IS DISTINCT FROM $2")
+            .bind(user_id)
+            .bind(keep_session_hash)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?
+            .rows_affected();
+    let keys = if revoke_api_keys {
+        sqlx::query(
+            "UPDATE api_keys SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL",
+        )
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?
+        .rows_affected()
+    } else {
+        0
+    };
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    Ok((sessions, keys))
 }
 
 pub async fn set_has_avatar(pool: &PgPool, user_id: Uuid, has_avatar: bool) -> Result<User> {

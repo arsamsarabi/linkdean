@@ -114,7 +114,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - First registered user becomes admin (bootstrap)
 - Open registration toggle (Admin)
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
-- Profile: display name, bio, avatar, password change
+- Profile: display name, bio, avatar, password change. A new password signs out every other session, and can revoke all API keys too
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts

@@ -1,6 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
@@ -66,18 +67,26 @@ async fn update_me(
 async fn change_password(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    session: VaultSession,
     Json(body): Json<ChangePassword>,
 ) -> ApiResult<Json<Value>> {
-    db::change_password(
+    // Every other login session ends; the one making the change stays signed in.
+    let (signed_out, revoked_keys) = db::change_password(
         &state.pool,
         user.id,
         &body.current_password,
         &body.new_password,
+        session.token_hash(),
+        body.revoke_api_keys,
     )
     .await?;
     // A new password locks every vault, in every session.
     state.clear_vault_keys(user.id).await;
-    Ok(Json(json!({ "ok": true })))
+    Ok(Json(json!({
+        "ok": true,
+        "signed_out_sessions": signed_out,
+        "revoked_api_keys": revoked_keys,
+    })))
 }
 
 async fn get_settings(

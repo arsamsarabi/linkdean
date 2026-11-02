@@ -77,7 +77,7 @@ export function useUpdateProfile(): UseMutationResult<{ user: UserPublic }, Erro
   })
 }
 
-type ChangePasswordBody = { current_password: string; new_password: string }
+type ChangePasswordBody = { current_password: string; new_password: string; revoke_api_keys?: boolean }
 
 export function useChangePassword(): UseMutationResult<{ ok: boolean }, Error, ChangePasswordBody> {
   return useMutation({

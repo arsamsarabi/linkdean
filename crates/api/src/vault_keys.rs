@@ -33,6 +33,11 @@ impl VaultSession {
     pub fn is_session(&self) -> bool {
         self.0.is_some()
     }
+
+    /// The login session's token hash; `None` for API keys and anonymous requests.
+    pub fn token_hash(&self) -> Option<&str> {
+        self.0.as_deref()
+    }
 }
 
 impl FromRequestParts<AppState> for VaultSession {

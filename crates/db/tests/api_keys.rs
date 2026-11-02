@@ -139,3 +139,71 @@ async fn platform_and_user_gates_block_keys() {
     )
     .await;
 }
+
+#[tokio::test]
+async fn password_change_ends_other_sessions_and_can_revoke_keys() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = PLATFORM_GATE.lock().await;
+    let user = db::create_user(
+        &pool,
+        &unique_email("pw"),
+        Some("password-long-enough"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("create user");
+    let current = db::create_session(&pool, user.id, 1)
+        .await
+        .expect("current");
+    let other = db::create_session(&pool, user.id, 1).await.expect("other");
+    let key = db::create_api_key(&pool, &user, CreateApiKey { name: "cli".into() })
+        .await
+        .expect("key");
+    let current_hash = linkdean_core::crypto::hash_token(&current);
+    let signed_in = |token: String| {
+        let pool = pool.clone();
+        async move {
+            db::user_from_token(&pool, &token)
+                .await
+                .expect("auth")
+                .is_some()
+        }
+    };
+
+    let (ended, revoked) = db::change_password(
+        &pool,
+        user.id,
+        "password-long-enough",
+        "another-long-password",
+        Some(&current_hash),
+        false,
+    )
+    .await
+    .expect("change");
+    assert_eq!((ended, revoked), (1, 0));
+    assert!(signed_in(current.clone()).await);
+    assert!(!signed_in(other).await);
+    assert!(signed_in(key.token.clone()).await, "keys stay unless asked");
+
+    let (_, revoked) = db::change_password(
+        &pool,
+        user.id,
+        "another-long-password",
+        "third-long-password",
+        Some(&current_hash),
+        true,
+    )
+    .await
+    .expect("change again");
+    assert_eq!(revoked, 1);
+    assert!(signed_in(current).await);
+    assert!(!signed_in(key.token).await);
+
+    let wrong =
+        db::change_password(&pool, user.id, "nope", "fourth-long-password", None, true).await;
+    assert!(matches!(wrong, Err(Error::Unauthorized)));
+}
