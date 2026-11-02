@@ -28,7 +28,7 @@ export function UnlockAllVaultsModal({ onClose }: { onClose: () => void }): Reac
           value={passphrase}
           onChange={(e) => setPassphrase(e.currentTarget.value)}
         />
-        <Button disabled={passphrase.length < 8} loading={unlock.isPending} onClick={() => void onUnlock()}>
+        <Button disabled={!passphrase} loading={unlock.isPending} onClick={() => void onUnlock()}>
           Unlock
         </Button>
       </Stack>

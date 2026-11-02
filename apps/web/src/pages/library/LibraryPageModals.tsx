@@ -90,7 +90,7 @@ export function LibraryPageModals(): ReactElement {
             <Button
               leftSection={<IconLockOpen {...iconSm} />}
               onClick={() => void lib.unlockForSearch()}
-              disabled={!lib.unlockVaultId || lib.vaultPass.length < 8}
+              disabled={!lib.unlockVaultId || !lib.vaultPass}
               loading={lib.vaultUnlock.isPending}
             >
               Unlock

@@ -21,6 +21,7 @@ import {
   IconUpload,
   IconUserPlus,
 } from '@tabler/icons-react'
+import { MIN_SECRET_LENGTH } from '@/services'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -118,7 +119,7 @@ export function OnboardingSteps({
               <PasswordInput
                 label="Password"
                 required
-                description="Min 8 characters"
+                description={`Min ${MIN_SECRET_LENGTH} characters`}
                 value={password}
                 onChange={(e) => onPassword(e.currentTarget.value)}
               />

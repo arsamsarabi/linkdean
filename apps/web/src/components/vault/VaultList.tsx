@@ -135,7 +135,7 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
             />
             <Button
               leftSection={<IconLockOpen {...iconSm} />}
-              disabled={passphrase.length < 8}
+              disabled={!passphrase}
               loading={unlock.isPending}
               onClick={() => void onUnlock()}
             >

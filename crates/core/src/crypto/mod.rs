@@ -2,7 +2,7 @@ use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Argon2,
+    Algorithm, Argon2, Params, Version,
 };
 use crypto_box::{PublicKey, SecretKey};
 use rand::rngs::OsRng;
@@ -14,20 +14,66 @@ const NONCE_LEN: usize = 12;
 const KEY_LEN: usize = 32;
 const SALT_LEN: usize = 16;
 
+/// Shortest new password or vault passphrase. Existing shorter ones still work.
+pub const MIN_SECRET_LEN: usize = 12;
+
+/// Argon2id cost for new password hashes and key wraps: 64 MiB, 3 passes, 1 lane.
+/// Each hash and wrap records the cost it used, so raising these later keeps old ones working.
+const KDF_MEMORY_KIB: u32 = 64 * 1024;
+const KDF_PASSES: u32 = 3;
+const KDF_LANES: u32 = 1;
+
+/// Key-wrap salts written since KDF costs were recorded: this tag, memory, passes and lanes
+/// as big-endian u32s, then the random salt. Older salts are the bare 16 random bytes and
+/// used the Argon2 crate defaults (19 MiB, 2 passes, 1 lane).
+const KDF_SALT_TAG: &[u8; 4] = b"LDk1";
+const KDF_SALT_HEADER: usize = 4 + 12;
+
+fn argon2_with(params: Params) -> Argon2<'static> {
+    Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
+}
+
+fn current_params(output_len: Option<usize>) -> Params {
+    Params::new(KDF_MEMORY_KIB, KDF_PASSES, KDF_LANES, output_len).expect("valid Argon2 parameters")
+}
+
 pub fn hash_password(password: &str) -> Result<String> {
     let salt = SaltString::generate(&mut rand::thread_rng());
-    let hash = Argon2::default()
+    let hash = argon2_with(current_params(None))
         .hash_password(password.as_bytes(), &salt)
         .map_err(|e| Error::msg(e.to_string()))?
         .to_string();
     Ok(hash)
 }
 
+/// Checks a password against a stored hash, using the cost recorded in that hash.
 pub fn verify_password(password: &str, hash: &str) -> Result<bool> {
     let parsed = PasswordHash::new(hash).map_err(|e| Error::msg(e.to_string()))?;
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed)
         .is_ok())
+}
+
+/// Whether a stored hash used a weaker cost than new hashes do, so login should replace it.
+pub fn password_needs_rehash(hash: &str) -> bool {
+    let Ok(parsed) = PasswordHash::new(hash) else {
+        return false;
+    };
+    let Ok(params) = Params::try_from(&parsed) else {
+        return true;
+    };
+    parsed.algorithm != Algorithm::Argon2id.ident()
+        || params.m_cost() < KDF_MEMORY_KIB
+        || params.t_cost() < KDF_PASSES
+}
+
+/// Spends the same time as checking a real password, for logins with no account to
+/// check against, so response time does not reveal which emails exist.
+pub fn verify_dummy_password(password: &str) {
+    static DUMMY: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    let hash = DUMMY
+        .get_or_init(|| hash_password("linkdean-dummy-password").expect("hash dummy password"));
+    let _ = verify_password(password, hash);
 }
 
 pub fn random_bytes(len: usize) -> Vec<u8> {
@@ -75,7 +121,12 @@ pub fn new_data_key() -> [u8; KEY_LEN] {
 
 /// Wrap `data_key` under `secret`. `unlock_vault` reverses it.
 pub fn wrap_data_key(secret: &str, data_key: &[u8; KEY_LEN]) -> Result<WrappedKey> {
-    let kdf_salt = random_bytes(SALT_LEN);
+    let mut kdf_salt = Vec::with_capacity(KDF_SALT_HEADER + SALT_LEN);
+    kdf_salt.extend_from_slice(KDF_SALT_TAG);
+    for n in [KDF_MEMORY_KIB, KDF_PASSES, KDF_LANES] {
+        kdf_salt.extend_from_slice(&n.to_be_bytes());
+    }
+    kdf_salt.extend_from_slice(&random_bytes(SALT_LEN));
     let wrapping_key = derive_key(secret, &kdf_salt)?;
     let (wrapped_key, wrapped_nonce) = encrypt(&wrapping_key, data_key)?;
     Ok(WrappedKey {
@@ -150,9 +201,20 @@ pub fn decrypt_payload(
     serde_json::from_slice(&plain).map_err(|e| Error::msg(e.to_string()))
 }
 
+/// Derives a wrapping key with the cost recorded in `salt` (see `KDF_SALT_TAG`).
 fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
+    let (argon, salt) = match salt.strip_prefix(KDF_SALT_TAG.as_slice()) {
+        Some(rest) if rest.len() > 12 => {
+            let num =
+                |i: usize| u32::from_be_bytes([rest[i], rest[i + 1], rest[i + 2], rest[i + 3]]);
+            let params = Params::new(num(0), num(4), num(8), Some(KEY_LEN))
+                .map_err(|_| Error::VaultUnlockFailed)?;
+            (argon2_with(params), &rest[12..])
+        }
+        _ => (Argon2::default(), salt),
+    };
     let mut key = [0u8; KEY_LEN];
-    Argon2::default()
+    argon
         .hash_password_into(passphrase.as_bytes(), salt, &mut key)
         .map_err(|e| Error::msg(e.to_string()))?;
     Ok(key)
@@ -241,6 +303,40 @@ mod key_wrap_tests {
         )
         .unwrap();
         assert_eq!(got, key);
+    }
+
+    #[test]
+    fn wraps_record_their_cost_and_old_wraps_still_open() {
+        let data_key = new_data_key();
+        let wrapped = wrap_data_key("passphrase-long", &data_key).unwrap();
+        assert!(wrapped.kdf_salt.starts_with(KDF_SALT_TAG));
+        assert_eq!(&wrapped.kdf_salt[4..8], &KDF_MEMORY_KIB.to_be_bytes());
+
+        // A wrap from before costs were recorded: bare salt, crate-default cost.
+        let salt = random_bytes(SALT_LEN);
+        let mut legacy_key = [0u8; KEY_LEN];
+        Argon2::default()
+            .hash_password_into(b"old-passphrase", &salt, &mut legacy_key)
+            .unwrap();
+        let (ct, nonce) = encrypt(&legacy_key, &data_key).unwrap();
+        assert_eq!(
+            unlock_vault("old-passphrase", &salt, &ct, &nonce).unwrap(),
+            data_key
+        );
+    }
+
+    #[test]
+    fn old_password_hashes_verify_and_ask_to_be_replaced() {
+        let salt = SaltString::generate(&mut rand::thread_rng());
+        let old = Argon2::default()
+            .hash_password(b"password-long", &salt)
+            .unwrap()
+            .to_string();
+        assert!(verify_password("password-long", &old).unwrap());
+        assert!(password_needs_rehash(&old));
+        let new = hash_password("password-long").unwrap();
+        assert!(verify_password("password-long", &new).unwrap());
+        assert!(!password_needs_rehash(&new));
     }
 
     #[test]

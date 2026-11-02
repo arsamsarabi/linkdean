@@ -42,8 +42,9 @@ pub fn router() -> Router<AppState> {
 }
 
 fn check_passphrase(passphrase: &str) -> Result<(), crate::error::ApiError> {
-    if passphrase.len() < 8 {
-        return Err(Error::BadRequest("vault passphrase min 8 chars".into()).into());
+    let min = linkdean_core::crypto::MIN_SECRET_LEN;
+    if passphrase.len() < min {
+        return Err(Error::BadRequest(format!("vault passphrase min {min} chars")).into());
     }
     Ok(())
 }

@@ -1896,9 +1896,11 @@ name = "linkdean-db"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "argon2",
  "chrono",
  "hex",
  "linkdean-core",
+ "rand 0.8.8",
  "serde",
  "serde_json",
  "sqlx",

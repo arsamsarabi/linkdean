@@ -64,7 +64,8 @@ Only enable it when the proxy is the sole route to the API, and make sure the pr
 | Vault unlock, recovery, global unlock, recovery key replacement, global passphrase off | 10 failed attempts per user per 15 minutes, shared across all of these |
 | Limit storage | Counters live in API memory. Restarting the API resets them, and several API replicas would each keep their own |
 | Not limited yet | Password change and global vault passphrase change |
-| Password hashing | At most 4 Argon2 hashes run at once; extra logins queue |
+| Password hashing | Argon2id at 64 MiB and 3 passes per hash or vault key unwrap. At most 4 run at once (up to 256 MiB); extra logins queue. Older, cheaper password hashes are upgraded at the next sign-in |
+| Passwords and vault passphrases | New ones need at least 12 characters. Existing shorter ones still work |
 | Expired session | The API returns `401` with `{"code":"session_expired"}`, and the web app signs the user out and opens `/login`. A wrong password stays a plain `401` |
 | Database queries | Each statement times out after 30 seconds. Migrations run without this limit |
 | Import | Request body up to 20 MiB; file content up to 10 MiB; folders nested at most 64 deep; at most 10,000 folders per import. Folder loops are refused |

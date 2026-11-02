@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { Alert, Button, Checkbox, Group, Paper, PasswordInput, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { IconInfoCircle, IconKey } from '@tabler/icons-react'
+import { MIN_SECRET_LENGTH } from '@/services'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -55,7 +56,7 @@ export function ProfilePasswordCard({
         />
         <PasswordInput
           label="New password"
-          description="Min 8 characters"
+          description={`Min ${MIN_SECRET_LENGTH} characters`}
           value={newPw}
           onChange={(e) => onNewPw(e.currentTarget.value)}
         />
@@ -71,7 +72,7 @@ export function ProfilePasswordCard({
         <Button
           leftSection={<IconKey {...iconSm} />}
           loading={saving}
-          disabled={newPw.length < 8 || newPw !== newPw2 || !currentPw}
+          disabled={newPw.length < MIN_SECRET_LENGTH || newPw !== newPw2 || !currentPw}
           onClick={onSubmit}
         >
           Update password

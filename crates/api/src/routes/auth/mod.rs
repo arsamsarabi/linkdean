@@ -53,8 +53,9 @@ async fn register(
     headers: HeaderMap,
     Json(req): Json<RegisterRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    if req.email.trim().is_empty() || req.password.len() < 8 {
-        return Err(Error::BadRequest("email required; password min 8 chars".into()).into());
+    let min = linkdean_core::crypto::MIN_SECRET_LEN;
+    if req.email.trim().is_empty() || req.password.len() < min {
+        return Err(Error::BadRequest(format!("email required; password min {min} chars")).into());
     }
     let ip = client_ip(&headers, peer.ip(), state.cfg.trust_forwarded_for);
     let limits = register_limit(ip);

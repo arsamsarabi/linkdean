@@ -1,4 +1,6 @@
-use linkdean_core::crypto::{hash_password, verify_password};
+use linkdean_core::crypto::{
+    hash_password, password_needs_rehash, verify_dummy_password, verify_password, MIN_SECRET_LEN,
+};
 use linkdean_core::{
     AdminUserSummary, Error, Result, UpdateAdminUser, UpdateProfile, UpdateSettings, User,
     UserPublic, UserSettings,
@@ -453,8 +455,10 @@ pub async fn change_password(
     keep_session_hash: Option<&str>,
     revoke_api_keys: bool,
 ) -> Result<(u64, u64)> {
-    if new_password.len() < 8 {
-        return Err(Error::BadRequest("password min 8 chars".into()));
+    if new_password.len() < MIN_SECRET_LEN {
+        return Err(Error::BadRequest(format!(
+            "password min {MIN_SECRET_LEN} chars"
+        )));
     }
     let user = find_user_by_id(pool, user_id)
         .await?
@@ -533,14 +537,42 @@ pub async fn complete_onboarding(pool: &PgPool, user_id: Uuid) -> Result<User> {
 }
 
 pub async fn authenticate_local(pool: &PgPool, email: &str, password: &str) -> Result<User> {
-    let user = find_user_by_email(pool, email)
-        .await?
-        .ok_or(Error::Unauthorized)?;
-    let hash = user.password_hash.clone().ok_or(Error::Unauthorized)?;
-    let password = password.to_string();
-    let ok = super::blocking::run_kdf(move || verify_password(&password, &hash)).await?;
+    let user = find_user_by_email(pool, email).await?;
+    let Some((user, hash)) = user.and_then(|u| u.password_hash.clone().map(|h| (u, h))) else {
+        // No account, or no local password: spend the same time a real check takes.
+        let password = password.to_string();
+        super::blocking::run_kdf(move || {
+            verify_dummy_password(&password);
+            Ok(())
+        })
+        .await?;
+        return Err(Error::Unauthorized);
+    };
+    let pw = password.to_string();
+    let stored = hash.clone();
+    let ok = super::blocking::run_kdf(move || verify_password(&pw, &stored)).await?;
     if !ok {
         return Err(Error::Unauthorized);
+    }
+    // Hashes from before the cost was raised are replaced at the next sign-in.
+    if password_needs_rehash(&hash) {
+        let pw = password.to_string();
+        match super::blocking::run_kdf(move || hash_password(&pw)).await {
+            Ok(new_hash) => {
+                if let Err(e) = sqlx::query(
+                    "UPDATE users SET password_hash = $2 WHERE id = $1 AND password_hash = $3",
+                )
+                .bind(user.id)
+                .bind(&new_hash)
+                .bind(&hash)
+                .execute(pool)
+                .await
+                {
+                    tracing::warn!(user_id = %user.id, error = %e, "password rehash failed");
+                }
+            }
+            Err(e) => tracing::warn!(user_id = %user.id, error = %e, "password rehash failed"),
+        }
     }
     Ok(user)
 }

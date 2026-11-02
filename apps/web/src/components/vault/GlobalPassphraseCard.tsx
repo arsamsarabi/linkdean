@@ -7,6 +7,7 @@ import {
   useEnableGlobalPassphrase,
   useGlobalPassphrase,
 } from '@/hooks'
+import { MIN_SECRET_LENGTH } from '@/services'
 import { UnlockAllVaultsModal } from './UnlockAllVaultsModal'
 
 export function GlobalPassphraseCard(): ReactElement {
@@ -59,7 +60,7 @@ export function GlobalPassphraseCard(): ReactElement {
                 Unlock all
               </Button>
               <Button
-                disabled={next.length < 8 || !current}
+                disabled={next.length < MIN_SECRET_LENGTH || !current}
                 loading={change.isPending}
                 onClick={() =>
                   void run(
@@ -82,7 +83,7 @@ export function GlobalPassphraseCard(): ReactElement {
             </>
           ) : (
             <Button
-              disabled={next.length < 8}
+              disabled={next.length < MIN_SECRET_LENGTH}
               loading={enable.isPending}
               onClick={() => void run(enable.mutateAsync(next), 'Global passphrase turned on')}
             >

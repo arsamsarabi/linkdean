@@ -13,12 +13,12 @@ import {
   useUploadAvatar,
 } from '@/hooks'
 import { getToken, resolveDefaultLanding } from '@/lib'
-import { validatePasswordPair } from '@/services'
+import { MIN_SECRET_LENGTH, validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
 import { OnboardingSteps } from './OnboardingSteps'
 
 const VAULT_PW_MESSAGES = {
-  tooShort: 'Vault passphrase min 8 chars',
+  tooShort: `Vault passphrase min ${MIN_SECRET_LENGTH} chars`,
   mismatch: 'Passphrases mismatch',
 } as const
 

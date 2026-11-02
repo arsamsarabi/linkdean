@@ -3,6 +3,7 @@ import { Button, Modal, PasswordInput, Stack, Textarea } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useRecoverVault } from '@/hooks'
 import type { Vault } from '@/schemas'
+import { MIN_SECRET_LENGTH } from '@/services'
 
 export function RecoverVaultModal({ vault, onClose }: { vault: Vault; onClose: () => void }): ReactElement {
   const [recoveryKey, setRecoveryKey] = useState('')
@@ -29,7 +30,7 @@ export function RecoverVaultModal({ vault, onClose }: { vault: Vault; onClose: (
           onChange={(e) => setPassphrase(e.currentTarget.value)}
         />
         <Button
-          disabled={!recoveryKey.trim() || passphrase.length < 8}
+          disabled={!recoveryKey.trim() || passphrase.length < MIN_SECRET_LENGTH}
           loading={recover.isPending}
           onClick={() => void onRecover()}
         >

@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { Alert, Button, Paper, PasswordInput, Stack, TextInput, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useCreateVault } from '@/hooks'
+import { MIN_SECRET_LENGTH } from '@/services'
 import { RecoveryKeyModal } from './RecoveryKeyModal'
 
 export function CreateVaultForm(): ReactElement {
@@ -10,7 +11,7 @@ export function CreateVaultForm(): ReactElement {
   const [confirm, setConfirm] = useState('')
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null)
   const create = useCreateVault()
-  const ready = !!name.trim() && passphrase.length >= 8 && passphrase === confirm
+  const ready = !!name.trim() && passphrase.length >= MIN_SECRET_LENGTH && passphrase === confirm
 
   async function onCreate(): Promise<void> {
     try {
