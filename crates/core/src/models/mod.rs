@@ -56,10 +56,35 @@ pub struct UserSettings {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Tells a field set to `null` from a missing one in a patch: a missing field stays `None`
+/// through `serde(default)`, and `null` becomes `Some(None)`, which clears the value.
+fn present_or_null<'de, T, D>(deserializer: D) -> std::result::Result<Option<Option<T>>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: serde::Deserializer<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateProfile {
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub display_name: Option<Option<String>>,
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub bio: Option<Option<String>>,
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub timezone: Option<Option<String>>,
     pub email: Option<String>,
     #[serde(default)]
@@ -888,8 +913,23 @@ pub struct CreateBookmark {
 pub struct UpdateBookmark {
     pub url: Option<String>,
     pub title: Option<String>,
-    pub description: Option<String>,
-    pub notes: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub description: Option<Option<String>>,
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub notes: Option<Option<String>>,
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub category_id: Option<Option<Uuid>>,
     pub category_ids: Option<Vec<Uuid>>,
     pub tags: Option<Vec<String>>,
@@ -921,11 +961,20 @@ pub struct ForkCategory {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateCategory {
     pub name: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub parent_id: Option<Option<Uuid>>,
     pub is_hidden: Option<bool>,
     pub position: Option<i32>,
     /// `Some(None)` clears the icon; `Some(Some(key))` sets it.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "present_or_null",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub icon: Option<Option<String>>,
     #[serde(default)]
     pub visibility: Option<CategoryVisibility>,
@@ -1465,4 +1514,39 @@ pub struct ListActivityFilter {
     pub subject_type: Option<ActivitySubjectType>,
     pub action: Option<ActivityAction>,
     pub limit: i64,
+}
+
+#[cfg(test)]
+mod patch_tests {
+    use super::*;
+
+    #[test]
+    fn null_clears_and_a_missing_field_stays_unchanged() {
+        let clear: UpdateCategory =
+            serde_json::from_str(r#"{"parent_id":null,"icon":null}"#).unwrap();
+        assert_eq!(clear.parent_id, Some(None));
+        assert_eq!(clear.icon, Some(None));
+
+        let keep: UpdateCategory = serde_json::from_str(r#"{"name":"x"}"#).unwrap();
+        assert_eq!(keep.parent_id, None);
+        assert_eq!(keep.icon, None);
+
+        let profile: UpdateProfile = serde_json::from_str(r#"{"bio":null}"#).unwrap();
+        assert_eq!(profile.bio, Some(None));
+        assert_eq!(profile.display_name, None);
+
+        let bookmark: UpdateBookmark =
+            serde_json::from_str(r#"{"description":null,"title":"x"}"#).unwrap();
+        assert_eq!(bookmark.description, Some(None));
+        assert_eq!(bookmark.notes, None);
+    }
+
+    #[test]
+    fn a_patch_survives_a_round_trip() {
+        let patch: UpdateCategory = serde_json::from_str(r#"{"icon":null}"#).unwrap();
+        let again: UpdateCategory =
+            serde_json::from_str(&serde_json::to_string(&patch).unwrap()).unwrap();
+        assert_eq!(again.icon, Some(None));
+        assert_eq!(again.parent_id, None);
+    }
 }

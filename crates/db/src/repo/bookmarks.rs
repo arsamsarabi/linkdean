@@ -883,10 +883,10 @@ pub async fn update_bookmark(
             payload.title = title;
         }
         if let Some(description) = req.description {
-            payload.description = Some(description);
+            payload.description = description;
         }
         if let Some(notes) = req.notes {
-            payload.notes = Some(notes);
+            payload.notes = notes;
         }
         if let Some(tags) = req.tags {
             payload.tags = tags;
@@ -925,8 +925,8 @@ pub async fn update_bookmark(
     let url_changed = req.url.as_ref().is_some_and(|u| u != &existing.url);
     let url = req.url.unwrap_or(existing.url);
     let title = req.title.unwrap_or(existing.title);
-    let description = req.description.or(existing.description);
-    let notes = req.notes.or(existing.notes);
+    let description = req.description.unwrap_or(existing.description);
+    let notes = req.notes.unwrap_or(existing.notes);
     if url_changed {
         sqlx::query(
             r#"
