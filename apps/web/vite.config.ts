@@ -32,6 +32,8 @@ export default defineConfig({
       manifest: false,
       workbox: {
         navigateFallback: '/index.html',
+        // OIDC start and callback are server redirects, never the app shell.
+        navigateFallbackDenylist: [/^\/api\//],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
         runtimeCaching: [
           {

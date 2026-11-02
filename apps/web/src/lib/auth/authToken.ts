@@ -1,10 +1,10 @@
-const tokenKey = 'linkdean_token'
+export const tokenStorageKey = 'linkdean_token'
 
 export function getToken(): string | null {
-  return localStorage.getItem(tokenKey)
+  return localStorage.getItem(tokenStorageKey)
 }
 
 export function setToken(token: string | null): void {
-  if (token) localStorage.setItem(tokenKey, token)
-  else localStorage.removeItem(tokenKey)
+  if (token) localStorage.setItem(tokenStorageKey, token)
+  else localStorage.removeItem(tokenStorageKey)
 }

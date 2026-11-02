@@ -1,19 +1,19 @@
+mod oidc;
+
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::rate_limit::{client_ip, login_limits, register_limit};
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
-use axum::extract::{ConnectInfo, Query, State};
+use axum::extract::{ConnectInfo, State};
 use axum::http::{HeaderMap, HeaderValue};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::{AuthResponse, Error, LoginRequest, RegisterRequest};
 use linkdean_db::{self as db};
-use serde::Deserialize;
 use serde_json::{json, Value};
 use std::net::SocketAddr;
-use std::time::Duration;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -23,8 +23,8 @@ pub fn router() -> Router<AppState> {
         .route("/auth/me", get(me))
         .route("/auth/bootstrap-status", get(bootstrap_status))
         .route("/auth/onboarding/complete", post(complete_onboarding))
-        .route("/auth/oidc/start", get(oidc_start))
-        .route("/auth/oidc/callback", get(oidc_callback))
+        .route("/auth/oidc/start", get(oidc::start))
+        .route("/auth/oidc/callback", get(oidc::callback))
         .route("/auth/config", get(auth_config))
 }
 
@@ -148,14 +148,21 @@ async fn login(
 async fn logout(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
-) -> ApiResult<Json<Value>> {
+) -> ApiResult<Response> {
     if let Some(token) = bearer_or_cookie(&headers) {
         state
             .vault_keys
             .clear_session(&VaultSession::from_token(&token));
         db::delete_session(&state.pool, &token).await?;
     }
-    Ok(Json(json!({ "ok": true })))
+    // Expire the cookie too, so a cookie-only (OIDC) browser is signed out.
+    let mut res = Json(json!({ "ok": true })).into_response();
+    let cookie = session_cookie("", 0, state.cfg.cookie_secure());
+    res.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_str(&cookie).map_err(|e| Error::msg(e.to_string()))?,
+    );
+    Ok(res)
 }
 
 async fn me(
@@ -188,175 +195,6 @@ async fn complete_onboarding(
     Ok(Json(json!({ "user": public })))
 }
 
-async fn oidc_start(State(state): State<AppState>) -> ApiResult<Redirect> {
-    if !state.cfg.oidc_enabled() {
-        return Err(Error::BadRequest("OIDC not configured".into()).into());
-    }
-    let issuer = state
-        .cfg
-        .oidc_issuer
-        .as_deref()
-        .ok_or_else(|| Error::BadRequest("OIDC not configured".into()))?;
-    let client_id = state
-        .cfg
-        .oidc_client_id
-        .as_deref()
-        .ok_or_else(|| Error::BadRequest("OIDC not configured".into()))?;
-    let redirect = format!(
-        "{}/api/auth/oidc/callback",
-        state.cfg.app_url.trim_end_matches('/')
-    );
-    // Authentik-style authorize path when issuer is .../application/o/<slug>/
-    let authorize = format!(
-        "{}/application/o/authorize/?client_id={}&response_type=code&scope=openid%20profile%20email&redirect_uri={}",
-        issuer
-            .trim_end_matches('/')
-            .trim_end_matches("/.well-known/openid-configuration"),
-        urlencoding_encode(client_id),
-        urlencoding_encode(&redirect),
-    );
-    Ok(Redirect::temporary(&authorize))
-}
-
-#[derive(Deserialize)]
-struct OidcCb {
-    code: Option<String>,
-    error: Option<String>,
-}
-
-async fn oidc_callback(
-    State(state): State<AppState>,
-    Query(q): Query<OidcCb>,
-) -> ApiResult<Response> {
-    if let Some(err) = q.error {
-        return Err(Error::BadRequest(err).into());
-    }
-    let code = q.code.ok_or(Error::BadRequest("missing code".into()))?;
-    if !state.cfg.oidc_enabled() {
-        return Err(Error::BadRequest("OIDC not configured".into()).into());
-    }
-
-    let issuer = state
-        .cfg
-        .oidc_issuer
-        .clone()
-        .ok_or_else(|| Error::BadRequest("OIDC not configured".into()))?;
-    let client_id = state
-        .cfg
-        .oidc_client_id
-        .clone()
-        .ok_or_else(|| Error::BadRequest("OIDC not configured".into()))?;
-    let client_secret = state
-        .cfg
-        .oidc_client_secret
-        .clone()
-        .ok_or_else(|| Error::BadRequest("OIDC not configured".into()))?;
-    let redirect = format!(
-        "{}/api/auth/oidc/callback",
-        state.cfg.app_url.trim_end_matches('/')
-    );
-
-    let token_url = format!("{}/token/", issuer.trim_end_matches('/'));
-    let http = reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()
-        .map_err(|e| Error::msg(e.to_string()))?;
-    let resp = http
-        .post(&token_url)
-        .form(&[
-            ("grant_type", "authorization_code"),
-            ("code", code.as_str()),
-            ("redirect_uri", redirect.as_str()),
-            ("client_id", client_id.as_str()),
-            ("client_secret", client_secret.as_str()),
-        ])
-        .send()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-    if !resp.status().is_success() {
-        let body = resp.text().await.unwrap_or_default();
-        tracing::error!(%body, "OIDC token exchange failed");
-        return Err(Error::BadRequest("OIDC token exchange failed".into()).into());
-    }
-    let token_json: Value = resp.json().await.map_err(|e| Error::msg(e.to_string()))?;
-    let access = token_json
-        .get("access_token")
-        .and_then(|v| v.as_str())
-        .ok_or(Error::BadRequest("no access_token".into()))?;
-
-    let userinfo_url = format!("{}/userinfo/", issuer.trim_end_matches('/'));
-    let info: Value = http
-        .get(&userinfo_url)
-        .bearer_auth(access)
-        .send()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-
-    let sub = info
-        .get("sub")
-        .and_then(|v| v.as_str())
-        .ok_or(Error::BadRequest("no sub".into()))?;
-    let email = info.get("email").and_then(|v| v.as_str()).unwrap_or(sub);
-    let name = info
-        .get("name")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    // Never auto-login by email alone (account takeover). Match OIDC subject or create.
-    let user = match db::find_user_by_oidc(&state.pool, &issuer, sub).await? {
-        Some(u) => u,
-        None => {
-            if db::find_user_by_email(&state.pool, email).await?.is_some() {
-                return Err(Error::Conflict(
-                    "email already registered; sign in with password (OIDC auto-link disabled)"
-                        .into(),
-                )
-                .into());
-            }
-            let created = db::create_user(
-                &state.pool,
-                email,
-                None,
-                name.as_deref(),
-                Some(sub),
-                Some(&issuer),
-            )
-            .await?;
-            let email_verified = info.get("email_verified").and_then(Value::as_bool);
-            if email_verified == Some(true) {
-                match db::link_pending_share_invites(&state.pool, email, created.id).await {
-                    Ok(n) if n > 0 => {
-                        tracing::info!(user_id = %created.id, linked = n, "linked pending share invites")
-                    }
-                    Ok(_) => {}
-                    Err(e) => {
-                        tracing::warn!(user_id = %created.id, error = %e, "pending share link failed")
-                    }
-                }
-            }
-            created
-        }
-    };
-
-    let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
-    let cookie = session_cookie(&token, state.cfg.session_days, state.cfg.cookie_secure());
-    let settings = db::get_user_settings(&state.pool, user.id).await?;
-    let dest = if settings.default_landing.as_str() == "/library" {
-        "/library"
-    } else {
-        "/"
-    };
-    let mut res = Redirect::temporary(dest).into_response();
-    res.headers_mut().insert(
-        axum::http::header::SET_COOKIE,
-        HeaderValue::from_str(&cookie).map_err(|e| Error::msg(e.to_string()))?,
-    );
-    Ok(res)
-}
-
 fn session_response(body: AuthResponse, token: &str, days: i64, secure: bool) -> Response {
     let cookie = session_cookie(token, days, secure);
     let mut res = Json(body).into_response();
@@ -368,7 +206,7 @@ fn session_response(body: AuthResponse, token: &str, days: i64, secure: bool) ->
     res
 }
 
-fn session_cookie(token: &str, days: i64, secure: bool) -> String {
+pub(super) fn session_cookie(token: &str, days: i64, secure: bool) -> String {
     let secure_flag = if secure { "; Secure" } else { "" };
     format!(
         "linkdean_session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}{secure_flag}",
@@ -394,8 +232,4 @@ fn bearer_or_cookie(headers: &axum::http::HeaderMap) -> Option<String> {
                     .map(|v| v.to_string())
             })
         })
-}
-
-fn urlencoding_encode(s: &str) -> String {
-    url::form_urlencoded::byte_serialize(s.as_bytes()).collect()
 }

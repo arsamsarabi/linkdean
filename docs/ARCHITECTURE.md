@@ -60,7 +60,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - Argon2 work runs on a blocking pool, at most 4 at once (`crates/db/src/repo/blocking.rs`)
 - Startup refuses published secrets unless `ALLOW_DEFAULT_SECRETS=true` (dev only)
 - First install uses `/onboarding` (admin account, optional vault, optional import)
-- OIDC: Authorization Code against `OIDC_*` env; callback `/api/auth/oidc/callback`
+- OIDC: Authorization Code with discovery, PKCE, state and nonce against `OIDC_*` env; callback `/api/auth/oidc/callback`. State, nonce and verifier ride in a 10 minute HttpOnly `linkdean_oidc` cookie scoped to `/api/auth/oidc`. The ID token is validated (signature, issuer, audience, expiry, nonce); userinfo fills in a missing email. Users are keyed by issuer and subject, never by email. New identities obey closed registration. The callback always redirects: home with a session cookie, or `/login?oidc_error=…`
 - Profile (`/profile`) and settings (`/settings`); header avatar menu
 - Avatars: client crop, server resize to 256×256 WebP under `AVATAR_DIR`
 - Prefs in `user_settings` (show hidden, vault search mode, theme, auto-lock, landing `/`|`/library`)

@@ -18,7 +18,7 @@ Open `http://localhost:8080`. The first registered user becomes admin.
 1. Create `deploy/docker/.env` with the [required secrets](#required-secrets) and set `APP_URL`. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true` (see [Reverse proxy](#reverse-proxy)).
 2. Compose up (command above).
 3. On first visit, register (bootstrap admin).
-4. Optional OIDC: set issuer, client id, and secret. Callback: `{APP_URL}/api/auth/oidc/callback`.
+4. Optional OIDC: set issuer, client id, and secret. `OIDC_ISSUER` is the provider's issuer exactly as its `/.well-known/openid-configuration` reports it, trailing slash included (Authentik: `https://auth.example.com/application/o/<slug>/`). Callback: `{APP_URL}/api/auth/oidc/callback`. OIDC sign-in obeys closed registration: an unknown identity gets no account unless registration is open.
 5. Avatars persist in the `avatars` volume (`AVATAR_DIR`); screenshots + favicon/OG binaries in `previews` (`PREVIEW_DIR`). Include both with Postgres backups.
 
 Secrets are injected via environment variables (or the operator's preferred secret store). No Infisical dependency. `deploy/docker/.env` is gitignored; keep it out of version control.

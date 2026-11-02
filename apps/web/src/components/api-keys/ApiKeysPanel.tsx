@@ -19,7 +19,7 @@ export function ApiKeysPanel(): ReactElement {
 
   async function onCreate(): Promise<void> {
     const trimmed = name.trim()
-    if (!trimmed) return
+    if (!trimmed || create.isPending) return
     try {
       const res = await create.mutateAsync({ name: trimmed })
       setName('')

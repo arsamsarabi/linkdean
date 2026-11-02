@@ -16,7 +16,7 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLogin, IconUserPlus } from '@tabler/icons-react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { LogoMark, QueryErrorAlert } from '@/components'
 import { useBootstrap, useLogin } from '@/hooks'
@@ -31,6 +31,7 @@ export function LoginPage(): ReactElement {
   const [password, setPassword] = useState('')
   const bootstrap = useBootstrap()
   const login = useLogin()
+  const { oidc_error: oidcError } = useSearch({ from: '/login' })
 
   useEffect(() => {
     if (bootstrap.data?.needs_bootstrap) {
@@ -39,6 +40,7 @@ export function LoginPage(): ReactElement {
   }, [bootstrap.data, nav])
 
   async function submit(): Promise<void> {
+    if (login.isPending) return
     try {
       const res = await login.mutateAsync({ email, password })
       if (!res.user.onboarding_completed) {
@@ -88,6 +90,11 @@ export function LoginPage(): ReactElement {
       </Stack>
       <Paper p="xl" radius="md" withBorder>
         <Stack gap="md">
+          {oidcError && !login.isError ? (
+            <Alert color="red" variant="light" title="Single sign-on failed">
+              {oidcError}
+            </Alert>
+          ) : null}
           {login.isError ? (
             <Alert color="red" variant="light">
               {String(login.error)}

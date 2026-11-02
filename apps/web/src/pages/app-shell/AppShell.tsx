@@ -1,6 +1,7 @@
 import { useEffect, type ReactElement } from 'react'
 import { Drawer, Group, Loader, AppShell as MantineAppShell, NavLink, Stack } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
+import { notifications } from '@mantine/notifications'
 import { IconBooks, IconLayoutDashboard, IconLock } from '@tabler/icons-react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
@@ -12,7 +13,7 @@ import {
   PageContainer,
   QueryErrorAlert,
 } from '@/components'
-import { useLogout, usePrefsHydration, useShareInvites, useUnreadNotificationCount } from '@/hooks'
+import { useLogout, usePrefsHydration, useSessionSync, useShareInvites, useUnreadNotificationCount } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
@@ -23,6 +24,7 @@ export function AppShell(): ReactElement {
   const nav = useNavigate()
   const me = usePrefsHydration(true)
   const logout = useLogout()
+  useSessionSync()
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
   const shell = useShellUi()
   const unread = useUnreadNotificationCount(!!me.data)
@@ -55,7 +57,12 @@ export function AppShell(): ReactElement {
   ])
 
   async function onLogout(): Promise<void> {
-    await logout.mutateAsync()
+    try {
+      await logout.mutateAsync()
+    } catch {
+      notifications.show({ color: 'red', message: 'Could not sign out. Try again.' })
+      return
+    }
     void nav({ to: '/login' })
   }
 

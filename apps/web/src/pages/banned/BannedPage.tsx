@@ -1,5 +1,6 @@
 import { useEffect, type ReactElement } from 'react'
 import { Button, Center, Loader, Paper, Stack, Text, Title } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api, ApiError, banFromBody } from '@/api'
@@ -20,7 +21,12 @@ export function BannedPage(): ReactElement {
   }, [check.isSuccess, nav, signedOut])
 
   async function signOut(): Promise<void> {
-    await logout.mutateAsync()
+    try {
+      await logout.mutateAsync()
+    } catch {
+      notifications.show({ color: 'red', message: 'Could not sign out. Try again.' })
+      return
+    }
     await nav({ to: '/login' })
   }
 

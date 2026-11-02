@@ -1,6 +1,7 @@
+import { useEffect } from 'react'
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
-import { api } from '@/api'
-import { setToken } from '@/lib'
+import { api, ApiError } from '@/api'
+import { setToken, tokenStorageKey } from '@/lib'
 import type { AuthTokenResponse, UserPublic } from '@/schemas'
 
 type LoginBody = { email: string; password: string }
@@ -17,8 +18,9 @@ export function useLogin(): UseMutationResult<AuthTokenResponse, Error, LoginBod
   return useMutation({
     mutationFn: (body: LoginBody) => api.login(body),
     onSuccess: (res) => {
+      // Another user may have been signed in on this tab: drop everything cached for them.
+      qc.clear()
       setToken(res.token)
-      void qc.invalidateQueries({ queryKey: ['me'] })
     },
   })
 }
@@ -28,23 +30,40 @@ export function useRegister(): UseMutationResult<AuthTokenResponse, Error, Regis
   return useMutation({
     mutationFn: (body: RegisterBody) => api.register(body),
     onSuccess: (res) => {
+      qc.clear()
       setToken(res.token)
-      void qc.invalidateQueries({ queryKey: ['me'] })
     },
   })
 }
 
+/** Fails, keeping the session, when the API could not end it. A 401 means it had already ended. */
 export function useLogout(): UseMutationResult<void, Error, void> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async () => {
-      await api.logout().catch(() => undefined)
+      try {
+        await api.logout()
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 401)) throw e
+      }
       setToken(null)
     },
     onSuccess: () => {
       qc.clear()
     },
   })
+}
+
+/** Follows sign-in and sign-out in other tabs, so no tab keeps showing another session's data. */
+export function useSessionSync(): void {
+  useEffect(() => {
+    function onStorage(e: StorageEvent): void {
+      if (e.key !== tokenStorageKey && e.key !== null) return
+      location.assign(e.newValue ? '/' : '/login')
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 }
 
 export function useCompleteOnboarding(): UseMutationResult<{ user: UserPublic }, Error, void> {

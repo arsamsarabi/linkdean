@@ -38,6 +38,17 @@ function sessionExpired(body: unknown): boolean {
   return !!body && typeof body === 'object' && (body as { code?: unknown }).code === 'session_expired'
 }
 
+/** Pages a signed-out visitor may stay on. Elsewhere a cookie session (OIDC) has no token to clear. */
+function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/onboarding' ||
+    pathname === '/banned' ||
+    pathname.startsWith('/l/')
+  )
+}
+
 export async function req<T>(path: string, init: RequestInit = {}, schema?: z.ZodType<T>): Promise<T> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
@@ -65,7 +76,7 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
     if (res.status === 403 && banFromBody(body) && location.pathname !== '/banned') {
       location.assign('/banned')
     }
-    if (res.status === 401 && sessionExpired(body) && token) {
+    if (res.status === 401 && sessionExpired(body) && (token || !isPublicPath(location.pathname))) {
       // A full page load also drops the signed-out user's cached data.
       setToken(null)
       if (location.pathname !== '/login') location.assign('/login')

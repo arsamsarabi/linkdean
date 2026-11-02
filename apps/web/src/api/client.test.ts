@@ -83,6 +83,13 @@ describe('expired sessions', () => {
     expect(assign).not.toHaveBeenCalled()
   })
 
+  it('sends a cookie session (OIDC) to login from an app page', async () => {
+    const assign = stubLocation('/library')
+    respond(401, expired)
+    await expect(req('/bookmarks')).rejects.toThrow('session expired')
+    expect(assign).toHaveBeenCalledWith('/login')
+  })
+
   it('does not loop on the login page', async () => {
     setToken('stale')
     const assign = stubLocation('/login')
