@@ -524,3 +524,42 @@ async fn moving_in_removes_tags_social_rows_audit_and_list_activity() {
     assert!(!activity.is_empty());
     assert!(activity.iter().all(|a| !a.contains("Secret plans")));
 }
+
+#[tokio::test]
+async fn a_profile_listed_folder_turns_private_in_a_vault() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let shown = category(&s, "Shown", None).await;
+    let child = category(&s, "Shown child", Some(shown)).await;
+    sqlx::query("UPDATE categories SET visibility = 'followers' WHERE id = $1")
+        .bind(shown)
+        .execute(&s.pool)
+        .await
+        .expect("followers");
+    sqlx::query("UPDATE categories SET visibility = 'members' WHERE id = $1")
+        .bind(child)
+        .execute(&s.pool)
+        .await
+        .expect("members");
+
+    db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![shown], vec![], Some(s.vault)),
+        &s.keyring,
+    )
+    .await
+    .expect("move");
+
+    let visibility: Vec<String> =
+        sqlx::query_scalar("SELECT visibility FROM categories WHERE id = ANY($1) AND is_vault")
+            .bind(vec![shown, child])
+            .fetch_all(&s.pool)
+            .await
+            .expect("visibility");
+    assert_eq!(
+        visibility,
+        vec!["private".to_string(), "private".to_string()]
+    );
+}

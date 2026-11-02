@@ -427,6 +427,8 @@ pub async fn move_to_vault(
             UPDATE categories
             SET is_vault = $1, vault_id = $2,
                 parent_id = CASE WHEN $3 THEN parent_id END,
+                -- A vault folder is never listed on a profile.
+                visibility = CASE WHEN $1 THEN 'private' ELSE visibility END,
                 updated_at = now()
             WHERE id = $4
             "#,
