@@ -136,7 +136,7 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 docker compose -f deploy/docker/docker-compose.dev.yml up --build
 ```
 
-Open **http://localhost:5173**. The dev stack uses well-known secrets and sets `ALLOW_DEFAULT_SECRETS=true`, so it needs no `.env`. Web changes appear through Vite hot reload, and the API rebuilds and restarts when `crates/` or `migrations/` change. The first run compiles the API, so it takes a few minutes. `docker-compose.dev.yml` shares its project name and data volumes with `docker-compose.yml`, so run one at a time.
+Open **http://localhost:5173**. The dev stack uses well-known secrets and sets `ALLOW_DEFAULT_SECRETS=true`, so it needs no `.env`. Its ports bind to `127.0.0.1` only, so other machines on the network cannot reach them. Web changes appear through Vite hot reload, and the API rebuilds and restarts when `crates/` or `migrations/` change. The first run compiles the API, so it takes a few minutes. `docker-compose.dev.yml` shares its project name and data volumes with `docker-compose.yml`, so run one at a time.
 
 ### On the host
 

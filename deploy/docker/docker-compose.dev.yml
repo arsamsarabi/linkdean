@@ -1,5 +1,9 @@
 # Development stack with live reload. Open http://localhost:5173.
 # Shares its project name and data volumes with docker-compose.yml, so run one at a time.
+# Ports bind to localhost only: these services use published dev credentials.
+# Known gap: because volumes are shared, a production stack started on the same Docker
+# host reuses this dev data, credentials included. Give production its own project name
+# (`-p`) on any host that also runs this file.
 name: linkdean
 
 services:
@@ -10,7 +14,7 @@ services:
       POSTGRES_PASSWORD: linkdean
       POSTGRES_DB: linkdean
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -27,7 +31,7 @@ services:
     volumes:
       - meili:/meili_data
     ports:
-      - "7700:7700"
+      - "127.0.0.1:7700:7700"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health"]
       interval: 5s
@@ -70,7 +74,7 @@ services:
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ../..:/src
       - api_target:/src/target
@@ -96,7 +100,7 @@ services:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
     command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm dev --host 0.0.0.0"
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       - ../../apps/web:/web
       - web_node_modules:/web/node_modules
