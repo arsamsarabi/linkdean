@@ -64,7 +64,7 @@
 .titleLink {
   flex: 1;
   min-width: 0;
-  color: var(--mantine-color-ice-filled);
+  color: var(--mantine-color-anchor);
 }
 
 .externalIcon {
@@ -78,6 +78,10 @@
 
 .previewFallback {
   background: linear-gradient(145deg, var(--mantine-color-violet-1), var(--mantine-color-orchid-1));
+}
+
+[data-mantine-color-scheme='dark'] .previewFallback {
+  background: linear-gradient(145deg, var(--mantine-color-violet-9), var(--mantine-color-dark-6));
 }
 
 .categoryRow {
@@ -96,13 +100,13 @@
   max-width: min(12rem, 100%);
   min-width: 0;
   background-color: var(--mantine-color-violet-filled);
-  color: var(--mantine-color-gray-0);
+  color: var(--mantine-color-white);
 }
 
 .unsortedPill {
   cursor: pointer;
-  background-color: var(--mantine-color-orange-filled);
-  color: var(--mantine-color-gray-0);
+  background-color: var(--mantine-color-yellow-filled);
+  color: var(--mantine-color-white);
 }
 
 .categoryPill > span:first-child {

@@ -1,1 +1,1 @@
-export { linkdeanTheme } from './theme'
+export { linkdeanCssVariables, linkdeanTheme } from './theme'

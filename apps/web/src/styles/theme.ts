@@ -1,128 +1,151 @@
-import { createTheme, type MantineColorsTuple, type MantineThemeOverride } from '@mantine/core'
+import {
+  createTheme,
+  type CSSVariablesResolver,
+  type MantineColorsTuple,
+  type MantineThemeOverride,
+} from '@mantine/core'
 
-/**
- * Brand —
- * Ice Cold #A0D2EB · Freeze Purple #E5EAF5 · Medium Purple #D0BDF4
+/*
+ * Brand: Ice Cold #A0D2EB · Freeze Purple #E5EAF5 · Medium Purple #D0BDF4
  * Purple Pain #8458B3 · Heavy Purple #A28089
+ *
+ * Every scale is generated in OKLCH on one lightness ramp, so the same shade index has the
+ * same lightness across colours, and the brand hex is pinned at its index. Filled shade is 6
+ * in both schemes, and every 6 carries white text at WCAG AA.
  */
 
-/** Purple Pain — primary; #8458B3 @ 5 */
+/** Purple Pain, the primary. Brand #8458B3 sits at shade 6, the filled shade in both schemes (5.2:1 with white text). */
 const violet: MantineColorsTuple = [
-  '#F7F2FC',
-  '#EDE4F7',
-  '#D9C6EB',
-  '#C1A3DE',
-  '#A57DCD',
+  '#F8F3FE',
+  '#EFE4FE',
+  '#E1CAFF',
+  '#CEABF9',
+  '#B78BE9',
+  '#9E6FD2',
   '#8458B3',
-  '#6E4796',
-  '#58387A',
-  '#432A5C',
-  '#2E1D40',
+  '#6C4297',
+  '#543078',
+  '#3C2058',
 ]
 
-/** Ice Cold — cool accent; #A0D2EB @ 3 */
+/** Ice Cold, the link and info accent. Brand #A0D2EB at 3. Links use 7 in light (6.7:1 on white) and 3 in dark. */
 const ice: MantineColorsTuple = [
-  '#F0F8FC',
-  '#E0F1F8',
-  '#C5E5F3',
+  '#EFF7FB',
+  '#DAEDF7',
+  '#B5DDF1',
   '#A0D2EB',
-  '#7ABFE0',
-  '#5AABD0',
-  '#458EAF',
-  '#35708C',
-  '#28556B',
-  '#1C3C4C',
+  '#60AED2',
+  '#3E95BB',
+  '#1D7BA0',
+  '#046384',
+  '#004C66',
+  '#023549',
 ]
 
-/** Medium Purple — soft accent; #D0BDF4 @ 3 */
+/** Medium Purple, a soft accent for tints and washes. Brand #D0BDF4 at 3. */
 const orchid: MantineColorsTuple = [
-  '#F8F5FD',
-  '#F0EAFB',
-  '#E4D8F8',
+  '#F7F4FD',
+  '#EDE6FB',
+  '#DCCEF8',
   '#D0BDF4',
-  '#B89AEB',
-  '#9F7ADF',
-  '#8560C4',
-  '#6B4BA3',
-  '#523A7F',
-  '#3A295A',
+  '#AE92DE',
+  '#9678C7',
+  '#7D5FAC',
+  '#654A8E',
+  '#4E3770',
+  '#372552',
 ]
 
-/** Neutrals: Freeze Purple → Heavy Purple */
-const mist: MantineColorsTuple = [
-  '#E5EAF5',
-  '#D8DDE8',
-  '#C5CAD6',
-  '#ADB3C0',
-  '#949AA8',
+/** Heavy Purple, a warm muted accent. Brand #A28089 at 5. */
+const mauve: MantineColorsTuple = [
+  '#F9F4F5',
+  '#F2E6E9',
+  '#E7CFD5',
+  '#D6B3BC',
+  '#BF96A1',
   '#A28089',
-  '#7A5F66',
-  '#5C484E',
-  '#3F3236',
-  '#2A2225',
+  '#8D646F',
+  '#724E59',
+  '#593B44',
+  '#40292F',
 ]
 
-/**
- * Dark-mode surfaces — neutral charcoal from Heavy Purple (not violet).
- * Mantine: dark[6] ≈ Paper/Card, dark[7] ≈ body.
- * Tuned deeper so dark theme reads near-black, not muddy brown-grey.
- */
-const charcoal: MantineColorsTuple = [
-  '#E5EAF5',
-  '#C5CAD6',
-  '#A28089',
-  '#7A5F66',
-  '#5C484E',
-  '#3F3236',
-  '#1A1618',
-  '#121011',
-  '#0C0A0B',
-  '#080707',
+/** Danger. Shade 6 carries white text at AA; 4 is the readable tint text in dark. */
+const red: MantineColorsTuple = [
+  '#FFF3F1',
+  '#FFE2DF',
+  '#FEC7C1',
+  '#FFA098',
+  '#EE7D76',
+  '#D55F5A',
+  '#B84542',
+  '#993230',
+  '#782222',
+  '#581415',
 ]
 
-/** Soft semantic — keep calm, not neon */
-const softGreen: MantineColorsTuple = [
-  '#F1F7F3',
-  '#DDECE2',
-  '#C2DCCB',
-  '#A3C9B0',
-  '#84B595',
-  '#68997A',
-  '#527C62',
-  '#3F614B',
-  '#2F4A39',
-  '#21352A',
+/** Success. Same rules as red. */
+const green: MantineColorsTuple = [
+  '#F0F8F3',
+  '#DDEFE2',
+  '#BBE2C7',
+  '#92CEA6',
+  '#6CB687',
+  '#4C9D6C',
+  '#308354',
+  '#1D6A40',
+  '#0F522F',
+  '#053B1F',
 ]
 
-/** Danger — mid shades lifted so dark theme text/buttons stay readable */
-const softCoral: MantineColorsTuple = [
-  '#FBF3F2',
-  '#F5E0DD',
-  '#F0C8C2',
-  '#E8A8A0',
-  '#E0887E',
-  '#D46B60',
-  '#C2554C',
-  '#A3443C',
-  '#7A3E3A',
-  '#5C2F2C',
+/** Warning, a soft apricot. Same rules as red. */
+const yellow: MantineColorsTuple = [
+  '#FBF4ED',
+  '#F7E7D6',
+  '#F1D0AC',
+  '#E5B37D',
+  '#D19551',
+  '#B97A2C',
+  '#9E6101',
+  '#7F4E04',
+  '#623B01',
+  '#462900',
 ]
 
-const softApricot: MantineColorsTuple = [
-  '#FAF6F0',
-  '#F0E6D6',
-  '#E4D0B4',
-  '#D5B890',
-  '#C49F70',
-  '#A88355',
-  '#8A6A42',
-  '#6C5233',
-  '#4F3C26',
-  '#352919',
+/** Light-scheme neutrals, tinted toward Freeze Purple (#E5EAF5). 6 is dimmed text (5.7:1 on white), 9 is body text. */
+const gray: MantineColorsTuple = [
+  '#F6F8FC',
+  '#EDEFF5',
+  '#E1E4EB',
+  '#D3D7E0',
+  '#C2C5CF',
+  '#9A9EA9',
+  '#636772',
+  '#484B56',
+  '#31343D',
+  '#1B1E25',
+]
+
+/** Dark-scheme neutrals, near-black with a faint violet tint. 0 text, 2 dimmed, 4 border, 6 inputs, 7 surfaces, 8 page canvas. */
+const dark: MantineColorsTuple = [
+  '#ECECF1',
+  '#CAC9D1',
+  '#A9A8B2',
+  '#86858F',
+  '#414049',
+  '#313038',
+  '#26252C',
+  '#1C1B21',
+  '#121217',
+  '#0B0A0E',
 ]
 
 export const linkdeanTheme: MantineThemeOverride = createTheme({
   primaryColor: 'violet',
+  primaryShade: { light: 6, dark: 6 },
+  autoContrast: true,
+  white: '#FFFFFF',
+  black: gray[9],
   fontFamily: 'Satoshi, system-ui, sans-serif',
   headings: {
     fontFamily: 'Rajdhani, system-ui, sans-serif',
@@ -140,48 +163,20 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
     violet,
     ice,
     orchid,
-    mist,
-    /** @deprecated alias — prefer violet */
-    harbor: violet,
-    /** @deprecated alias — prefer orchid */
-    mauve: orchid,
-    green: softGreen,
-    red: softCoral,
-    yellow: softApricot,
+    mauve,
+    red,
+    green,
+    yellow,
+    gray,
+    dark,
     blue: ice,
-    gray: mist,
-    dark: charcoal,
   },
-  primaryShade: { light: 5, dark: 5 },
-  white: '#E5EAF5',
-  black: '#080707',
   other: {
-    brandIce: '#A0D2EB',
-    brandFreeze: '#E5EAF5',
-    brandOrchid: '#D0BDF4',
-    brandPain: '#8458B3',
-    brandHeavy: '#A28089',
-    brandNight: '#0C0A0B',
     pageMaxWidth: 1440,
   },
   components: {
-    Anchor: {
-      defaultProps: { c: 'ice' },
-    },
-    Button: {
-      defaultProps: { radius: 'md' },
-    },
-    Card: {
-      defaultProps: { radius: 'md' },
-    },
-    Paper: {
-      defaultProps: { radius: 'md' },
-    },
     Modal: {
-      defaultProps: { radius: 'md', centered: true },
-    },
-    Drawer: {
-      defaultProps: { radius: 'md' },
+      defaultProps: { centered: true },
     },
     Tooltip: {
       defaultProps: { withArrow: true, openDelay: 400 },
@@ -189,8 +184,28 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
     Skeleton: {
       defaultProps: { radius: 'sm' },
     },
-    Notification: {
-      defaultProps: { radius: 'md' },
-    },
+  },
+})
+
+/**
+ * Semantic colours. `--mantine-color-body` is the surface of cards, modals and menus;
+ * `--ld-canvas` is the page behind them, one step deeper so surfaces read as raised.
+ */
+export const linkdeanCssVariables: CSSVariablesResolver = () => ({
+  variables: {},
+  light: {
+    '--ld-canvas': 'var(--mantine-color-gray-1)',
+    '--mantine-color-anchor': 'var(--mantine-color-ice-7)',
+    '--mantine-color-dimmed': 'var(--mantine-color-gray-6)',
+    '--mantine-color-placeholder': 'var(--mantine-color-gray-6)',
+    '--mantine-color-default-border': 'var(--mantine-color-gray-3)',
+    '--mantine-color-error': 'var(--mantine-color-red-6)',
+    '--mantine-color-success': 'var(--mantine-color-green-7)',
+  },
+  dark: {
+    '--ld-canvas': 'var(--mantine-color-dark-8)',
+    '--mantine-color-anchor': 'var(--mantine-color-ice-3)',
+    '--mantine-color-error': 'var(--mantine-color-red-4)',
+    '--mantine-color-success': 'var(--mantine-color-green-4)',
   },
 })

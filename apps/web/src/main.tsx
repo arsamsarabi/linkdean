@@ -6,7 +6,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { routeTree } from '@/routeTree.gen'
-import { linkdeanTheme } from '@/styles'
+import { linkdeanCssVariables, linkdeanTheme } from '@/styles'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
 import '@/styles/fonts.css'
@@ -26,7 +26,7 @@ registerSW({ immediate: true })
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={linkdeanTheme} defaultColorScheme="auto">
+      <MantineProvider theme={linkdeanTheme} cssVariablesResolver={linkdeanCssVariables} defaultColorScheme="auto">
         <Notifications />
         <RouterProvider router={router} />
       </MantineProvider>

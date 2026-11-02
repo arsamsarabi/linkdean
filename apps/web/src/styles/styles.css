@@ -1,6 +1,6 @@
 /*
- * Global styles only: body, fonts, Mantine theme overrides.
- * Component-specific styles live in *.module.css next to components.
+ * Global styles only: body, fonts, page canvas. Colours come from the theme and its CSS
+ * variables resolver in theme.ts. Component styles live in *.module.css next to components.
  */
 
 :root {
@@ -11,7 +11,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: Satoshi, system-ui, sans-serif;
-  background-color: var(--mantine-color-body);
+  background-color: var(--ld-canvas);
   color: var(--mantine-color-text);
 }
 
@@ -25,91 +25,27 @@ h6 {
   font-weight: 700;
 }
 
-/* Freeze base + soft orchid wash — light (ice reserved for links) */
+/* A faint brand wash on the canvas: orchid top left, ice top right. */
 [data-mantine-color-scheme='light'] body {
   background:
-    radial-gradient(1100px 520px at 8% -8%, #d0bdf433, transparent),
-    radial-gradient(900px 480px at 92% 0%, #a2808922, transparent), #e5eaf5;
-}
-
-/*
- * Dark theme — neutral charcoal (Heavy lineage), not purple.
- * Ice Cold only on links/anchors.
- */
-[data-mantine-color-scheme='dark'] {
-  --ld-night: #0c0a0b;
-  --ld-night-elevated: #141113;
-  --ld-night-deep: #080707;
-  --ld-ink: #2e2629;
-  --ld-pain: #8458b3;
-  --ld-ice: #a0d2eb;
-  --ld-freeze: #e5eaf5;
-  --ld-heavy: #a28089;
-  --ld-danger: #e8887e;
-  --ld-danger-text: #f3b0a8;
-
-  --mantine-color-body: var(--ld-night);
-  --mantine-color-default: var(--ld-night-elevated);
-  --mantine-color-default-hover: var(--ld-ink);
-  --mantine-color-default-border: color-mix(in srgb, var(--ld-heavy) 40%, transparent);
-  --mantine-color-dimmed: var(--ld-heavy);
-  --mantine-color-text: var(--ld-freeze);
-  --mantine-color-anchor: var(--ld-ice);
-
-  --mantine-color-dark-6: var(--ld-night-elevated);
-  --mantine-color-dark-7: var(--ld-night);
-  --mantine-color-dark-8: var(--ld-night-deep);
-  --mantine-color-dark-9: var(--ld-night-deep);
-
-  /* Danger — soft coral mid tones wash out on near-black; lift filled/text */
-  --mantine-color-red-filled: var(--ld-danger);
-  --mantine-color-red-filled-hover: #f09a92;
-  --mantine-color-red-light: color-mix(in srgb, var(--ld-danger) 16%, transparent);
-  --mantine-color-red-light-hover: color-mix(in srgb, var(--ld-danger) 24%, transparent);
-  --mantine-color-red-light-color: var(--ld-danger-text);
-  --mantine-color-red-outline: var(--ld-danger);
-  --mantine-color-red-text: var(--ld-danger-text);
-  --mantine-color-error: var(--ld-danger);
+    radial-gradient(1100px 520px at 8% -8%, rgb(208 189 244 / 0.28), transparent),
+    radial-gradient(900px 480px at 92% 0%, rgb(160 210 235 / 0.2), transparent), var(--ld-canvas);
 }
 
 [data-mantine-color-scheme='dark'] body {
-  background: var(--ld-night);
-  color: var(--ld-freeze);
-}
-
-[data-mantine-color-scheme='dark'] .mantine-AppShell-main {
-  background-color: var(--ld-night) !important;
-}
-
-[data-mantine-color-scheme='dark'] .mantine-Paper-root,
-[data-mantine-color-scheme='dark'] .mantine-Card-root,
-[data-mantine-color-scheme='dark'] .mantine-AppShell-header,
-[data-mantine-color-scheme='dark'] .mantine-AppShell-navbar,
-[data-mantine-color-scheme='dark'] .mantine-Drawer-content,
-[data-mantine-color-scheme='dark'] .mantine-Modal-content,
-[data-mantine-color-scheme='dark'] .mantine-Menu-dropdown,
-[data-mantine-color-scheme='dark'] .mantine-Select-dropdown,
-[data-mantine-color-scheme='dark'] .mantine-Combobox-dropdown {
-  background-color: var(--ld-night-elevated) !important;
-  border-color: color-mix(in srgb, var(--ld-heavy) 40%, transparent);
+  background: radial-gradient(1100px 520px at 8% -8%, rgb(132 88 179 / 0.12), transparent), var(--ld-canvas);
 }
 
 a {
   color: inherit;
 }
 
-a[href]:not([class*='mantine-']):hover,
-.mantine-Anchor-root {
-  color: var(--mantine-color-ice-filled);
+a[href]:not([class*='mantine-']):hover {
+  color: var(--mantine-color-anchor);
 }
 
-[data-mantine-color-scheme='light'] .mantine-AppShell-header {
-  background: color-mix(in srgb, #e5eaf5 82%, transparent);
+.mantine-AppShell-header {
+  background: color-mix(in srgb, var(--mantine-color-body) 82%, transparent);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid color-mix(in srgb, #a28089 22%, transparent);
-}
-
-[data-mantine-color-scheme='dark'] .mantine-AppShell-header {
-  background: color-mix(in srgb, var(--ld-night-elevated) 90%, transparent);
-  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--mantine-color-default-border);
 }
