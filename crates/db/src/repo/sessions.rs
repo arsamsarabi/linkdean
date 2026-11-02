@@ -51,3 +51,12 @@ pub async fn delete_session(pool: &PgPool, token: &str) -> Result<()> {
         .map_err(|e| Error::msg(e.to_string()))?;
     Ok(())
 }
+
+/// Remove sessions past their expiry. Returns how many were removed.
+pub async fn purge_expired_sessions(pool: &PgPool) -> Result<u64> {
+    let res = sqlx::query("DELETE FROM sessions WHERE expires_at <= now()")
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(res.rows_affected())
+}

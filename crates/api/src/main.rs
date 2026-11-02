@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod error;
+mod maintenance;
 mod metrics;
 mod rate_limit;
 mod routes;
@@ -25,21 +26,7 @@ async fn main() -> anyhow::Result<()> {
     let cfg = config::Config::from_env()?;
     let state = AppState::new(cfg.clone()).await?;
 
-    {
-        let pool = state.pool.clone();
-        match linkdean_db::purge_expired_trash(&pool).await {
-            Ok((b, c, d)) if b + c + d > 0 => {
-                tracing::info!(
-                    bookmarks = b,
-                    categories = c,
-                    dashboards = d,
-                    "purged expired trash"
-                );
-            }
-            Ok(_) => {}
-            Err(e) => tracing::warn!(error = %e, "trash retention purge failed"),
-        }
-    }
+    tokio::spawn(maintenance::run(state.clone()));
 
     {
         let pool = state.pool.clone();

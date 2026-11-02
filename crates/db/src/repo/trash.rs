@@ -1,4 +1,3 @@
-use chrono::{Duration, Utc};
 use linkdean_core::{Error, Result, TrashItem, TrashKind};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -85,116 +84,57 @@ pub async fn list_trash(pool: &PgPool, user_id: Uuid) -> Result<Vec<TrashItem>> 
     Ok(out)
 }
 
-/// Hard-delete soft-deleted rows past each owner's retention window.
-pub async fn purge_expired_trash(pool: &PgPool) -> Result<(u64, u64, u64)> {
-    let settings: Vec<(Uuid, i32)> = sqlx::query_as(
-        r#"
-        SELECT user_id, trash_retention_days FROM user_settings s
-        WHERE NOT EXISTS (
-            SELECT 1 FROM user_bans b
-            WHERE b.user_id = s.user_id
-              AND b.lifted_at IS NULL
-              AND (b.ends_at IS NULL OR b.ends_at > now())
-        )
-        "#,
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+/// What one retention pass removed.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct PurgedTrash {
+    /// Bookmarks removed from the database. Their search documents and preview files
+    /// live outside it, so the caller removes those.
+    pub bookmark_ids: Vec<Uuid>,
+    pub categories: u64,
+    pub dashboards: u64,
+}
 
-    let mut bookmarks = 0u64;
-    let mut categories = 0u64;
-    let mut dashboards = 0u64;
-
-    for (user_id, days) in settings {
-        // A cutoff before the calendar's range means nothing is old enough to purge.
-        let Some(cutoff) = Utc::now().checked_sub_signed(Duration::days(i64::from(days.max(1))))
-        else {
-            continue;
-        };
-        let b = sqlx::query(
+/// Hard-delete soft-deleted rows past each owner's retention window (30 days with no
+/// settings row). Owners under an active ban keep their trash.
+pub async fn purge_expired_trash(pool: &PgPool) -> Result<PurgedTrash> {
+    // `{table}` and `{alias}` come from the fixed list below, never from input.
+    fn sql(table: &str, alias: &str) -> String {
+        format!(
             r#"
-            DELETE FROM bookmarks
-            WHERE owner_user_id = $1 AND deleted_at IS NOT NULL AND deleted_at < $2
-            "#,
+            DELETE FROM {table} {alias}
+            USING users u
+            LEFT JOIN user_settings s ON s.user_id = u.id
+            WHERE {alias}.owner_user_id = u.id
+              AND {alias}.deleted_at IS NOT NULL
+              AND {alias}.deleted_at
+                  < now() - make_interval(days => GREATEST(COALESCE(s.trash_retention_days, 30), 1))
+              AND NOT EXISTS (
+                  SELECT 1 FROM user_bans b
+                  WHERE b.user_id = u.id
+                    AND b.lifted_at IS NULL
+                    AND (b.ends_at IS NULL OR b.ends_at > now())
+              )
+            RETURNING {alias}.id
+            "#
         )
-        .bind(user_id)
-        .bind(cutoff)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-        bookmarks += b.rows_affected();
-
-        let c = sqlx::query(
-            r#"
-            DELETE FROM categories
-            WHERE owner_user_id = $1 AND deleted_at IS NOT NULL AND deleted_at < $2
-            "#,
-        )
-        .bind(user_id)
-        .bind(cutoff)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-        categories += c.rows_affected();
-
-        let d = sqlx::query(
-            r#"
-            DELETE FROM dashboards
-            WHERE owner_user_id = $1 AND deleted_at IS NOT NULL AND deleted_at < $2
-            "#,
-        )
-        .bind(user_id)
-        .bind(cutoff)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-        dashboards += d.rows_affected();
     }
 
-    // Owners with no settings row yet: use default 30 days.
-    let cutoff_default = Utc::now() - Duration::days(30);
-    let b = sqlx::query(
-        r#"
-        DELETE FROM bookmarks b
-        WHERE b.deleted_at IS NOT NULL
-          AND b.deleted_at < $1
-          AND NOT EXISTS (SELECT 1 FROM user_settings s WHERE s.user_id = b.owner_user_id)
-        "#,
-    )
-    .bind(cutoff_default)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    bookmarks += b.rows_affected();
+    let bookmark_ids: Vec<Uuid> = sqlx::query_scalar(&sql("bookmarks", "bm"))
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    let categories: Vec<Uuid> = sqlx::query_scalar(&sql("categories", "c"))
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    let dashboards: Vec<Uuid> = sqlx::query_scalar(&sql("dashboards", "d"))
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
 
-    let c = sqlx::query(
-        r#"
-        DELETE FROM categories c
-        WHERE c.deleted_at IS NOT NULL
-          AND c.deleted_at < $1
-          AND NOT EXISTS (SELECT 1 FROM user_settings s WHERE s.user_id = c.owner_user_id)
-        "#,
-    )
-    .bind(cutoff_default)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    categories += c.rows_affected();
-
-    let d = sqlx::query(
-        r#"
-        DELETE FROM dashboards d
-        WHERE d.deleted_at IS NOT NULL
-          AND d.deleted_at < $1
-          AND NOT EXISTS (SELECT 1 FROM user_settings s WHERE s.user_id = d.owner_user_id)
-        "#,
-    )
-    .bind(cutoff_default)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    dashboards += d.rows_affected();
-
-    Ok((bookmarks, categories, dashboards))
+    Ok(PurgedTrash {
+        bookmark_ids,
+        categories: categories.len() as u64,
+        dashboards: dashboards.len() as u64,
+    })
 }
