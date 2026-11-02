@@ -153,7 +153,14 @@ pub async fn enrich_bookmark(
         }
     }
 
-    if !raw.has_preview {
+    let wants_preview = !raw.has_preview
+        && db::bookmark_wants_preview(pool, bookmark_id)
+            .await
+            .unwrap_or_else(|e| {
+                warn!(%bookmark_id, "preview check: {e}");
+                false
+            });
+    if wants_preview {
         if let Some(browser_url) = opts.browser_ws_url.as_deref() {
             match capture_screenshot(browser_url, &raw.url).await {
                 Ok(jpeg) => {
@@ -176,7 +183,12 @@ pub async fn enrich_bookmark(
                         Err(e) => warn!("preview write: {e}"),
                     }
                 }
-                Err(e) => warn!(%bookmark_id, "screenshot failed: {e}"),
+                Err(e) => {
+                    warn!(%bookmark_id, "screenshot failed: {e}");
+                    if let Err(e) = db::record_preview_failure(pool, bookmark_id).await {
+                        warn!(%bookmark_id, "record screenshot failure: {e}");
+                    }
+                }
             }
         }
     }

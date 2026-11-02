@@ -34,7 +34,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Shared-folder visibility in search (owned + readable shared categories)
 - Wait/retry UX when Meili lags writes: local matches merged + retry banner
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
-- Optional headless Chrome screenshots for previews
+- Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot waits a week before the boot backfill retries it)
 - Admin reindex: rebuild Meili from Postgres (Settings → Admin)
 - Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; shell header control (next to History) → drawer + card badges; `POST /bookmarks/{id}/check-link`
 

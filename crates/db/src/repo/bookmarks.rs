@@ -1160,7 +1160,9 @@ pub async fn update_bookmark(
                 link_check_status_code = NULL,
                 link_check_error = NULL,
                 link_checked_at = NULL,
-                link_check_fail_count = 0
+                link_check_fail_count = 0,
+                preview_dismissed = FALSE,
+                preview_failed_at = NULL
             WHERE id=$5
             "#,
         )
@@ -1419,11 +1421,14 @@ pub async fn update_bookmark_metadata(
     Ok(())
 }
 
+/// Records a saved preview, or the owner removing it. A removed preview is not taken
+/// again until the URL changes or the owner uploads one.
 pub async fn set_bookmark_has_preview(pool: &PgPool, id: Uuid, has_preview: bool) -> Result<()> {
     sqlx::query(
         r#"
         UPDATE bookmarks
-        SET has_preview = $2, updated_at = now()
+        SET has_preview = $2, preview_dismissed = NOT $2, preview_failed_at = NULL,
+            updated_at = now()
         WHERE id = $1 AND is_vault = FALSE
         "#,
     )
@@ -1435,12 +1440,36 @@ pub async fn set_bookmark_has_preview(pool: &PgPool, id: Uuid, has_preview: bool
     Ok(())
 }
 
+/// A screenshot failed. Backfills skip the bookmark for a week.
+pub async fn record_preview_failure(pool: &PgPool, id: Uuid) -> Result<()> {
+    sqlx::query("UPDATE bookmarks SET preview_failed_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(())
+}
+
+/// Whether enrichment should take a screenshot: none saved, and the owner has not removed one.
+pub async fn bookmark_wants_preview(pool: &PgPool, id: Uuid) -> Result<bool> {
+    let wants: Option<bool> = sqlx::query_scalar(
+        "SELECT NOT has_preview AND NOT preview_dismissed FROM bookmarks WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(wants.unwrap_or(false))
+}
+
 /// Non-vault bookmarks that still need a local screenshot (owner_id, bookmark_id).
 pub async fn list_bookmarks_needing_preview(pool: &PgPool) -> Result<Vec<(Uuid, Uuid)>> {
     let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(
         r#"
         SELECT owner_user_id, id FROM bookmarks
         WHERE is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
+          AND NOT preview_dismissed
+          AND (preview_failed_at IS NULL OR preview_failed_at < now() - interval '7 days')
         ORDER BY created_at ASC
         "#,
     )
@@ -1463,6 +1492,8 @@ pub async fn list_user_bookmarks_needing_preview(
           AND has_preview = FALSE
           AND deleted_at IS NULL
           AND url <> ''
+          AND NOT preview_dismissed
+          AND (preview_failed_at IS NULL OR preview_failed_at < now() - interval '7 days')
         ORDER BY created_at ASC
         "#,
     )

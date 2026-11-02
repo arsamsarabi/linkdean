@@ -2,7 +2,7 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
-use linkdean_core::{CreateBookmark, LinkCheckStatus, User, VaultKeyring};
+use linkdean_core::{CreateBookmark, LinkCheckStatus, UpdateBookmark, User, VaultKeyring};
 use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -91,4 +91,54 @@ async fn unused_tags_are_reaped_after_an_hour() {
         .collect();
     left.sort();
     assert_eq!(left, vec!["new-unused".to_string(), "used".to_string()]);
+}
+
+async fn wanted(pool: &PgPool, owner: &User, id: Uuid) -> bool {
+    db::list_user_bookmarks_needing_preview(pool, owner.id)
+        .await
+        .expect("needing")
+        .iter()
+        .any(|(_, b)| *b == id)
+}
+
+#[tokio::test]
+async fn a_removed_or_failed_preview_is_not_retaken() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    let b = bookmark(&pool, &owner, vec![]).await;
+    assert!(wanted(&pool, &owner, b).await);
+
+    db::set_bookmark_has_preview(&pool, b, true)
+        .await
+        .expect("saved");
+    db::set_bookmark_has_preview(&pool, b, false)
+        .await
+        .expect("removed");
+    assert!(!wanted(&pool, &owner, b).await);
+    assert!(!db::bookmark_wants_preview(&pool, b).await.expect("wants"));
+
+    db::update_bookmark(
+        &pool,
+        owner.id,
+        b,
+        UpdateBookmark {
+            url: Some(format!("https://moved-{}.example/", Uuid::new_v4())),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("new url");
+    assert!(wanted(&pool, &owner, b).await);
+
+    db::record_preview_failure(&pool, b).await.expect("failed");
+    assert!(!wanted(&pool, &owner, b).await);
+    sqlx::query("UPDATE bookmarks SET preview_failed_at = now() - interval '8 days' WHERE id = $1")
+        .bind(b)
+        .execute(&pool)
+        .await
+        .expect("age");
+    assert!(wanted(&pool, &owner, b).await);
 }
