@@ -45,7 +45,7 @@ Registration is open by default (`migrations/008_platform_settings.sql`), so "an
 | H24 | **Duplicate merge could trash the only live copy.** | `024aba9`. Duplicate detection leaves out trashed bookmarks. |
 | H25 | **Clearing a field did nothing.** | `4ad76cd`. `null` now clears, and a missing field stays unchanged, for lists, bookmarks and profiles. |
 | M1 | **Password change kept all sessions and API keys.** | `a729666`. A new password ends every other login session in the same transaction and keeps the one making the change. A checkbox also revokes every API key. Vault keys were already dropped (H7). |
-| M6 | **Sensitive vault actions needed no passphrase, some while locked: replacing the recovery key, turning off the global passphrase, and purging locked items.** | `HASH`. Replacing or creating a recovery key and turning off the global passphrase take the passphrase (rate limited with unlock). Purging trashed vault content needs the vault unlocked. Changing the global passphrase already took the current one, and moves already needed the source unlocked. |
+| M6 | **Sensitive vault actions needed no passphrase, some while locked: replacing the recovery key, turning off the global passphrase, and purging locked items.** | `aa599e8`. Replacing or creating a recovery key and turning off the global passphrase take the passphrase (rate limited with unlock). Purging trashed vault content needs the vault unlocked. Changing the global passphrase already took the current one, and moves already needed the source unlocked. |
 | M7 | **Locked vault category names were served by Trash, activity and `GET /categories/{id}`.** | `a3bf7bb`. Trash and history say "Vault folder", migration 037 scrubs history, and PATCH returns 423 while the vault is locked. |
 | M8 | **Move-in left plaintext tags, comments, audit titles and category activity.** | `caedb65`. Unused tags and social rows are deleted, and audit and list activity titles are replaced. |
 | M9 | **Moving a followers or members category into a vault returned 500.** | `6ce0ee9`. A folder moved into a vault turns private, as the schema requires, so the move goes through. |
@@ -117,6 +117,8 @@ All fixed. See the Fixed table.
 All fixed. See the Fixed table.
 
 ### Tier 3: fix when working nearby
+
+Paused on 2026-11-02 after M6. Next up is L1. H1 waits on the SMTP item in [ROADMAP.md](./ROADMAP.md).
 
 | Rank | ID | Defect | Impact | Probability | Score | Trigger | Code read |
 | --- | --- | --- | --- | --- | --- | --- | --- |
