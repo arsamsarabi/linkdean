@@ -33,4 +33,32 @@ describe('library selection', () => {
     expect([...result.current.selectedIds]).toEqual(['a'])
     expect(result.current.selectedItems.some((b) => b.is_vault)).toBe(false)
   })
+
+  it('starts selecting when a box is ticked, without Select first', () => {
+    const list = [item('a'), item('b')]
+    const { result } = renderHook(() => useLibrarySelection({ list }))
+    expect(result.current.selectMode).toBe(false)
+    act(() => result.current.toggleSelect('b'))
+    expect(result.current.selectMode).toBe(true)
+    expect([...result.current.selectedIds]).toEqual(['b'])
+  })
+
+  it('selects the whole range with shift, in either direction', () => {
+    const list = ['a', 'b', 'c', 'd', 'e'].map((id) => item(id))
+    const { result } = renderHook(() => useLibrarySelection({ list }))
+    act(() => result.current.toggleSelect('b'))
+    act(() => result.current.toggleSelect('d', true))
+    expect([...result.current.selectedIds].sort()).toEqual(['b', 'c', 'd'])
+    act(() => result.current.exitSelectMode())
+    act(() => result.current.toggleSelect('e'))
+    act(() => result.current.toggleSelect('c', true))
+    expect([...result.current.selectedIds].sort()).toEqual(['c', 'd', 'e'])
+  })
+
+  it('treats shift on the first tick as a plain tick', () => {
+    const list = [item('a'), item('b')]
+    const { result } = renderHook(() => useLibrarySelection({ list }))
+    act(() => result.current.toggleSelect('b', true))
+    expect([...result.current.selectedIds]).toEqual(['b'])
+  })
 })

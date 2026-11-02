@@ -36,7 +36,7 @@ type Props = {
   viewerUserId?: string
   selectMode?: boolean
   selectedIds?: ReadonlySet<string>
-  onToggleSelect?: (id: string) => void
+  onToggleSelect?: (id: string, range?: boolean) => void
   /** Category ⋮ menu — same actions as Settings → Categories. */
   categoryMenuFor?: (cat: Category) => CategoryMenuHandlers | undefined
 }

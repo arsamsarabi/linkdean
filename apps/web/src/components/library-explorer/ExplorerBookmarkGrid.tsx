@@ -13,7 +13,7 @@ type Props = {
   onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   selectMode?: boolean
   selectedIds?: ReadonlySet<string>
-  onToggleSelect?: (id: string) => void
+  onToggleSelect?: (id: string, range?: boolean) => void
 }
 
 export function ExplorerBookmarkGrid({

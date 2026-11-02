@@ -37,3 +37,12 @@
     width: auto;
   }
 }
+
+/* The bulk bar follows you down the list, just under the header. */
+.bulkBar {
+  position: sticky;
+  top: var(--app-shell-header-height, 64px);
+  z-index: 5;
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-sm);
+}

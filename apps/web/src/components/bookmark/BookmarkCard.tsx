@@ -29,7 +29,8 @@ type Props = {
   onFlags?: (id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>) => void
   selectMode?: boolean
   selected?: boolean
-  onToggleSelect?: (id: string) => void
+  /** `range`: shift was held, select everything from the last ticked bookmark to this one. */
+  onToggleSelect?: (id: string, range?: boolean) => void
   /** `row` is the compact list layout: icon, title, site and description, folders and badges. */
   layout?: 'card' | 'row'
 }
@@ -49,7 +50,8 @@ export function BookmarkCard({
 }: Props): ReactElement {
   const title = b.title.trim() || 'Untitled'
   const canWrite = b.can_write !== false
-  const selectable = selectMode && canWrite && !!onToggleSelect
+  // Outside select mode the box still shows on hover or focus, and ticking it starts selecting.
+  const selectable = canWrite && !!onToggleSelect
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
   const socialEnabled = !!share || showOutgoing
@@ -98,11 +100,14 @@ export function BookmarkCard({
 
   const selectBox = selectable ? (
     <Checkbox
-      className={styles.selectCheck}
+      className={`${styles.selectCheck} ${selectMode ? '' : styles.selectOnHover}`}
       checked={selected}
-      onChange={() => onToggleSelect?.(b.id)}
+      onChange={() => undefined}
       aria-label={`Select ${title}`}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggleSelect?.(b.id, e.shiftKey)
+      }}
     />
   ) : null
 

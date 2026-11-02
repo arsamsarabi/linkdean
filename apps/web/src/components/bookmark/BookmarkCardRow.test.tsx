@@ -58,7 +58,7 @@ describe('BookmarkCard row layout', () => {
   it('keeps the bookmark menu and selection', async () => {
     const h = renderRow({ selectMode: true, selected: false })
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Mantine button' }))
-    expect(h.onToggleSelect).toHaveBeenCalledWith('b1')
+    expect(h.onToggleSelect).toHaveBeenCalledWith('b1', false)
     await userEvent.click(screen.getByRole('button', { name: /actions|menu|more/i }))
     await userEvent.click(await screen.findByRole('menuitem', { name: /edit/i }))
     expect(h.onEdit).toHaveBeenCalledWith('b1')

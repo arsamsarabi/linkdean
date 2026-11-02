@@ -13,7 +13,7 @@ export function LibraryBulkBar(): ReactElement | null {
   const { selectedCount, allVisibleSelected, selectableIds } = lib
 
   return (
-    <Group justify="space-between" wrap="wrap" gap="sm" p="sm" className={styles.filterPanel}>
+    <Group justify="space-between" wrap="wrap" gap="sm" p="sm" className={`${styles.filterPanel} ${styles.bulkBar}`}>
       <Group gap="sm">
         <Text size="sm" fw={600}>
           {selectedCount} selected

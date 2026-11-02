@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { notifications } from '@mantine/notifications'
 import type { BulkEditMode } from '@/components'
 import { useBulkAddCategories, useBulkDeleteBookmarks, useBulkTagBookmarks } from '@/hooks/bookmarks'
@@ -51,6 +51,7 @@ export function useLibrarySelection({ list }: Input) {
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id))
 
   function exitSelectMode(): void {
+    anchorRef.current = null
     setSelectMode(false)
     setSelectedIds(new Set())
     setBulkMode(null)
@@ -62,7 +63,26 @@ export function useLibrarySelection({ list }: Input) {
     setSelectedIds(new Set())
   }
 
-  function toggleSelect(id: string): void {
+  const anchorRef = useRef<string | null>(null)
+
+  /**
+   * Ticking a box starts selecting, so no separate Select step is needed. With `range` (shift
+   * held), every bookmark between the last ticked one and this one is selected.
+   */
+  function toggleSelect(id: string, range = false): void {
+    setSelectMode(true)
+    const anchor = anchorRef.current
+    if (range && anchor && anchor !== id) {
+      const from = selectableIds.indexOf(anchor)
+      const to = selectableIds.indexOf(id)
+      if (from >= 0 && to >= 0) {
+        const [lo, hi] = from < to ? [from, to] : [to, from]
+        setSelectedIds((prev) => new Set([...prev, ...selectableIds.slice(lo, hi + 1)]))
+        anchorRef.current = id
+        return
+      }
+    }
+    anchorRef.current = id
     setSelectedIds((prev) => toggleId(prev, id))
   }
 
