@@ -41,6 +41,9 @@ services:
     # Chrome renders untrusted pages, so it gets no route to the database or search.
     networks: [browser]
     command:
+      # Known issue: Chrome 124 runs without its sandbox, so a renderer exploit gets a shell in this
+      # container. Production keeps it off the database and search networks. Fix: a maintained
+      # Chrome image, the sandbox where possible, and memory and pid limits.
       - --no-sandbox
       - --disable-gpu
       - --disable-dev-shm-usage

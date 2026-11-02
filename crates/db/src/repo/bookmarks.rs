@@ -855,6 +855,9 @@ pub async fn get_bookmark_for_assets(pool: &PgPool, user_id: Uuid, id: Uuid) -> 
     .ok_or(Error::NotFound)
 }
 
+// Known issue: URLs get no scheme check here, on update or on import. React blocks `javascript:`
+// links and the worker refuses non-web URLs, so this is defence in depth. Fix: reject anything but
+// http(s).
 pub async fn create_bookmark(
     pool: &PgPool,
     user_id: Uuid,
@@ -1202,6 +1205,8 @@ pub async fn update_bookmark(
         _ => None,
     };
     // Tags stay in the actor's tag namespace. Vault tags live inside the ciphertext.
+    // Known issue: A write invitee's tag edit therefore moves the owner's bookmark's tags into
+    // the invitee's namespace. Fix: use the bookmark owner's namespace.
     let tag_ids: Option<Vec<Uuid>> = match &req.tags {
         Some(tags) if !existing.is_vault => Some(
             ensure_tags(pool, user_id, tags)

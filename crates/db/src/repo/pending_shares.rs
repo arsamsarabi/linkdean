@@ -560,6 +560,8 @@ async fn release_claim(pool: &PgPool, id: Uuid, revoke: bool) -> Result<()> {
     Ok(())
 }
 
+// Known issue: Owners cannot see or revoke a rejected invite, and the invitee can restore it at any
+// time. Fix: let owners revoke rejected invites, or make rejection final.
 pub async fn reject_share_invite(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
     let row = find_invitee_row(pool, user_id, id).await?;
     if row.rejected_at.is_some() {

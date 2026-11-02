@@ -57,6 +57,8 @@ export function useLibraryPageChrome({
       },
     ],
     [
+      // Known issue: Esc in any dialog or drawer also clears the library selection. Fix: skip while
+      // a dialog is open, as `useDrawerClosesOnEscape` in hooks/render does.
       'Escape',
       () => {
         if (selectMode) exitSelectMode()

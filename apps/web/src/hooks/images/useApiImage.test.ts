@@ -26,6 +26,8 @@ describe('useApiImage', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  // Known issue: This failed once under a loaded full run and passed on rerun. Likely a timing
+  // dependency; check before relying on it.
   it('loads API images with the page token', async () => {
     fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['x'])) })
     const { result } = renderHook(() => useApiImage('/api/bookmarks/1/preview'))

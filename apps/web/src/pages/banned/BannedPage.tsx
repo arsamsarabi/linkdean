@@ -7,6 +7,8 @@ import { api, ApiError, banFromBody } from '@/api'
 import { useLogout } from '@/hooks'
 
 /** Asks the API whether the ban still holds, so an ended ban leaves this page. */
+// Known issue: On a 5xx or network failure this shows a spinner forever with no way to sign out.
+// Fix: an error state with retry and Sign out.
 export function BannedPage(): ReactElement {
   const nav = useNavigate()
   const logout = useLogout()

@@ -9,6 +9,8 @@ type Input = {
   list: LibraryListItem[]
 }
 
+// Known issue: Bulk failures carry no detail, and the selection clears even on partial failure.
+// Fix: keep the failed ids selected, with the reason.
 function notifyBulk(label: string, result: { ok: number; failed: number }): void {
   if (result.failed === 0) {
     notifications.show({ message: `${label}: ${result.ok} bookmark${result.ok === 1 ? '' : 's'}` })

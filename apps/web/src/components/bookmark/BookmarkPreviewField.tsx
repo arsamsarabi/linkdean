@@ -35,6 +35,8 @@ type Props = {
   disabled?: boolean
 }
 
+// Known issue: After cancelling a crop, picking the same file again does nothing, because the file
+// input's value did not change. Fix: reset the FileButton with `resetRef`.
 export function BookmarkPreviewField({
   bookmarkId,
   hasPreview,

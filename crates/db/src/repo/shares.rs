@@ -40,6 +40,8 @@ fn to_view(row: ShareRow) -> Result<CategoryShareView> {
 /// Resolve effective access for `user_id` on `category_id`.
 /// Owner wins. Else nearest ancestor share (walking parent chain). Vault → NotFound for non-owners.
 /// Trash is the owner's: a non-owner gets NotFound when the folder or any ancestor is trashed.
+// Known issue: With nested shares, the UI can show write access where the nearest grant only gives
+// read. The API enforces read. Fix: compute and show the nearest grant.
 pub async fn category_access(
     pool: &PgPool,
     user_id: Uuid,
@@ -254,6 +256,9 @@ pub async fn list_shares_for_category(
     rows.into_iter().map(to_view).collect()
 }
 
+// Known issue: Email addresses are never verified, so whoever registers an address first, or
+// changes their email to it, receives invites sent to that address. Fix with email verification,
+// planned under SMTP in docs/ROADMAP.md.
 pub async fn create_share(
     pool: &PgPool,
     owner_user_id: Uuid,

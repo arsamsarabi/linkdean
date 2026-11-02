@@ -794,6 +794,8 @@ pub struct VaultPayload {
 
 /// Keys of the vaults a user has unlocked right now.
 #[derive(Debug, Clone, Default)]
+// Known issue: Keys are not zeroized when dropped, and this derives `Debug` over raw keys. Fix:
+// `Zeroizing` keys, a redacted `Debug`, and an `Arc` around the ring.
 pub struct VaultKeyring(std::collections::HashMap<Uuid, [u8; 32]>);
 
 impl VaultKeyring {

@@ -66,6 +66,8 @@ export function useSessionSync(): void {
   }, [])
 }
 
+// Known issue: Finishing onboarding can bounce back to it if the `me` refetch lands after
+// navigation. Not reproduced. Fix: write the returned user into the cache before navigating.
 export function useCompleteOnboarding(): UseMutationResult<{ user: UserPublic }, Error, void> {
   const qc = useQueryClient()
   return useMutation({

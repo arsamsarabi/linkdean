@@ -176,6 +176,9 @@ async fn get_avatar(
     avatar_response(&state, user.id, user.has_avatar).await
 }
 
+// Known issue: `/users/me/avatar` is cached for up to an hour, so after switching accounts the
+// previous user's avatar can show. Fix: serve `/users/{id}/avatar` to the web app, or send `no-
+// store` for `me`.
 async fn avatar_response(
     state: &AppState,
     user_id: Uuid,
@@ -211,6 +214,9 @@ async fn my_following(
     Ok(Json(json!({ "users": users })))
 }
 
+// Known issue: Hidden profiles and blocks can be detected through follower counts and differing
+// status codes here, in profile routes and in share routes. Fix: gate them through
+// `require_viewable_profile` and return uniform responses.
 async fn follow_user(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

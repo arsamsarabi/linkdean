@@ -4,6 +4,8 @@ import { IconFolders, IconLock, IconTags, IconTrash } from '@tabler/icons-react'
 import styles from './LibraryPage.module.css'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
+// Known issue: Move to vault is offered for shared bookmarks the API refuses, and one refusal fails
+// the whole batch. Fix: send owned ids only, or disable the action with a reason.
 export function LibraryBulkBar(): ReactElement | null {
   const lib = useLibraryPageModel()
   if (!lib.selectMode) return null

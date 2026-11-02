@@ -1,3 +1,5 @@
+# Known issue: There is no `.dockerignore`, so a local `node_modules` or `target` can be copied into
+# the build and override the image's own. Fix: add one.
 # --- frontend ---
 FROM node:22-alpine AS web
 WORKDIR /web

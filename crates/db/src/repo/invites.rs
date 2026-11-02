@@ -109,6 +109,9 @@ pub async fn revoke_registration_invite(pool: &PgPool, id: Uuid) -> Result<()> {
 }
 
 /// Validate a pending invite for registration. Returns invite id on success.
+// Known issue: Concurrent registrations can all pass the redeemable check before one consumes the
+// invite, and the user row survives a failed consume, so one invite can create several accounts.
+// Fix: claim the invite and insert the user in one transaction.
 pub async fn consume_registration_invite(
     pool: &PgPool,
     code: &str,

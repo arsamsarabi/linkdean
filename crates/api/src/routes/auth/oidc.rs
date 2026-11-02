@@ -261,6 +261,8 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
     {
         return Err(Error::Forbidden);
     }
+    // Known issue: Someone who registers a local account with a victim's email first blocks the
+    // victim's first OIDC sign-in. Fix: email verification, or an approved account-link flow.
     if db::find_user_by_email(&state.pool, &email).await?.is_some() {
         return Err(Error::Conflict(
             "email already registered; sign in with your password".into(),

@@ -43,6 +43,8 @@ export function GeneralSettingsPanel({ settings, saving, onPatch }: Props): Reac
           max={3650}
           value={settings.trash_retention_days}
           onChange={(v) => {
+            // Known issue: Saves on every keystroke: typing 365 stores 3 first, and a purge in
+            // between deletes items older than 3 days. Fix: keep a local draft and save on blur.
             const n = typeof v === 'number' ? v : Number(v)
             if (Number.isFinite(n) && n > 0) onPatch({ trash_retention_days: Math.floor(n) })
           }}

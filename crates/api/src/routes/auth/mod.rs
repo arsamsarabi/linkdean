@@ -47,6 +47,10 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     })))
 }
 
+// Known issue: The first account becomes admin, and that check races: two registrations on a fresh
+// install can both become admin, and whoever registers first owns the instance. Fix: an advisory
+// lock, and an optional `BOOTSTRAP_TOKEN`. The invite check here also races; see
+// `consume_registration_invite`.
 async fn register(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,

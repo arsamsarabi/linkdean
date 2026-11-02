@@ -15,6 +15,8 @@ export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> 
   const appliedTheme = useRef<string | null>(null)
   const me = useMe(enabled)
   const vaultLock = useLockAllVaults()
+  // Known issue: If the idle auto-lock request fails, the UI reports locked while decrypted data
+  // stays on screen. Fix: keep the unlocked state and retry, and always drop cached vault data.
   const lockRef = useRef(vaultLock.mutateAsync)
 
   useEffect(() => {

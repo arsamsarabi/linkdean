@@ -6,6 +6,8 @@ import { useDashboardBoard } from './useDashboardBoard'
 import { useDashboardEdit } from './useDashboardEdit'
 
 /** Compose dashboard board + edit-draft hooks for DashboardPage. */
+// Known issue: An edit draft is not tied to its dashboard, so after losing access to one it can be
+// saved onto another. Fix: bind the draft to its dashboard id.
 export function useDashboardPage() {
   const me = useMe()
   const board = useDashboardBoard()

@@ -220,6 +220,9 @@ fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
     Ok(key)
 }
 
+// Known issue: Ciphertext has no associated data, so a row's ciphertext could be swapped onto
+// another row, and sealed keys trust `public_key` unauthenticated. Both need database write access.
+// Fix: AAD of the vault and bookmark ids, and verify the key on open.
 fn encrypt(key_bytes: &[u8], plaintext: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
     let cipher = Aes256Gcm::new_from_slice(key_bytes).map_err(|e| Error::msg(e.to_string()))?;
     let nonce_bytes = random_bytes(NONCE_LEN);

@@ -43,6 +43,8 @@ async fn expand_categories(pool: &PgPool, user_id: Uuid, ids: &[Uuid]) -> Result
 }
 
 /// Requested bookmarks plus everything in the moved categories, trashed included.
+// Known issue: Trashed bookmarks are collected too, so moving a folder out of a vault re-indexes
+// its trashed rows in search. Fix: filter `deleted_at`.
 async fn collect_bookmarks(
     pool: &PgPool,
     user_id: Uuid,
@@ -71,6 +73,9 @@ async fn collect_bookmarks(
 }
 
 /// A bookmark's readable content, whichever side of a vault it is on.
+// Known issue: A bookmark an invitee created in a moved folder fails the move with a bare 404
+// rather than a blocker, and `is_private` is lost when a bookmark moves into a vault and back out.
+// Fix: add a blocker kind, and carry `is_private` in the payload.
 async fn read_payload(
     pool: &PgPool,
     bookmark: &Bookmark,
@@ -166,6 +171,9 @@ async fn find_blockers(
             continue;
         }
 
+        // Known issue: This counts pins on any dashboard, including other users'. Someone else's
+        // stale pin blocks the move indefinitely, and the message reveals that dashboard's title.
+        // Fix: delete foreign pins, and block only on the owner's dashboards.
         let boards: Vec<(Uuid, String)> = sqlx::query_as(
             r#"
             SELECT DISTINCT d.id, d.title FROM dashboard_items i
@@ -190,6 +198,9 @@ async fn find_blockers(
     Ok(out)
 }
 
+// Known issue: The move reads payloads before its transaction and takes no row lock, so an edit
+// saved in between is lost or, in the worst case, lands as plaintext. Fix: lock the rows `FOR
+// UPDATE` and re-read inside the transaction.
 async fn write_encrypted(
     tx: &mut Transaction<'_, Postgres>,
     id: Uuid,

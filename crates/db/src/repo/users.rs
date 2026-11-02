@@ -192,6 +192,8 @@ pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
         .collect())
 }
 
+// Known issue: The last-admin check races: two admins demoting each other at once can both succeed,
+// leaving no admin and no way back short of SQL. Fix: check and update under the ban advisory lock.
 pub async fn update_admin_user(
     pool: &PgPool,
     user_id: Uuid,

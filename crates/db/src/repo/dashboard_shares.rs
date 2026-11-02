@@ -64,6 +64,8 @@ async fn find_direct_dashboard_share(
 }
 
 /// Owner wins. Else direct share. Else NotFound.
+// Known issue: Invitees keep access to a dashboard in Trash and can view and edit it. Fix: NotFound
+// for non-owners when `deleted_at` is set.
 pub async fn dashboard_access(
     pool: &PgPool,
     user_id: Uuid,

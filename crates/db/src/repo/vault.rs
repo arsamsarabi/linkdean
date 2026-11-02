@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use super::bookmarks::bookmarks_to_views;
 
+// Known issue: Trashed vault bookmarks appear in these results. Fix: filter `deleted_at IS NULL`.
 pub async fn search_vault_bookmarks(
     pool: &PgPool,
     user_id: Uuid,

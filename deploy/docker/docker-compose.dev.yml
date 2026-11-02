@@ -45,6 +45,9 @@ services:
     ports:
       - "127.0.0.1:9222:9222"
     command:
+      # Known issue: Chrome runs without its sandbox, and unlike production this dev stack does not
+      # isolate it from the database and search. Fix: the same networks as production, and a
+      # maintained Chrome image.
       - --no-sandbox
       - --disable-gpu
       - --disable-dev-shm-usage
