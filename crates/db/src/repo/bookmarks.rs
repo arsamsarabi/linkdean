@@ -821,9 +821,12 @@ pub async fn get_bookmark_raw(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
 /// Bookmark for serving its preview, favicon or OG image. A dashboard share shows its
 /// non-vault pins to invitees without granting `bookmark_can_read`, so those images
 /// are allowed here and nowhere else: this must not back social or write paths.
+/// A bookmark whose cached images the user may load. Vault bookmarks have none to serve:
+/// their files are deleted when they move in, and any left by a late enrichment stay hidden.
 pub async fn get_bookmark_for_assets(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Bookmark> {
     match get_bookmark_raw(pool, user_id, id).await {
         Err(Error::NotFound) => {}
+        Ok(b) if b.is_vault => return Err(Error::NotFound),
         result => return result,
     }
     sqlx::query_as::<_, Bookmark>(

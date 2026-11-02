@@ -197,6 +197,16 @@ pub async fn enrich_bookmark(
     }
 
     match db::get_bookmark_raw(pool, user_id, bookmark_id).await {
+        // Moved into a vault while this ran: delete what it just cached and keep it out of
+        // search. A trashed one keeps its files for a restore, but is not reindexed.
+        Ok(updated) if updated.is_vault => {
+            purge_preview_assets(&opts.preview_dir, bookmark_id).await;
+            if let Err(e) = search.delete_bookmark(bookmark_id).await {
+                warn!(%bookmark_id, "search delete after vault move: {e}");
+            }
+            return;
+        }
+        Ok(updated) if updated.deleted_at.is_some() => return,
         Ok(updated) => {
             let owner = updated.owner_user_id;
             match db::bookmark_to_view(pool, updated, &VaultKeyring::default(), owner).await {

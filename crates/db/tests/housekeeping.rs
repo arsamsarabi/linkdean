@@ -320,3 +320,36 @@ async fn only_live_non_vault_bookmarks_pass_the_search_recheck() {
         .expect("recheck");
     assert_eq!(ok.into_iter().collect::<Vec<_>>(), vec![live]);
 }
+
+#[tokio::test]
+async fn vault_bookmarks_have_no_assets_to_serve() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    let b = bookmark(&pool, &owner, vec![]).await;
+    db::get_bookmark_for_assets(&pool, owner.id, b)
+        .await
+        .expect("plain bookmark serves assets");
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "V", "vault-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    db::move_to_vault(
+        &pool,
+        owner.id,
+        linkdean_core::MoveToVaultRequest {
+            category_ids: vec![],
+            bookmark_ids: vec![b],
+            destination_vault_id: Some(vault.id),
+        },
+        &keyring,
+    )
+    .await
+    .expect("move");
+    assert!(matches!(
+        db::get_bookmark_for_assets(&pool, owner.id, b).await,
+        Err(linkdean_core::Error::NotFound)
+    ));
+}
