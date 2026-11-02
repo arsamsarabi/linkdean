@@ -944,6 +944,12 @@ pub struct UpdateBookmark {
     pub category_id: Option<Option<Uuid>>,
     pub category_ids: Option<Vec<Uuid>>,
     pub tags: Option<Vec<String>>,
+    /// Tags to add to whatever the bookmark has when the edit is saved.
+    #[serde(default)]
+    pub add_tags: Option<Vec<String>>,
+    /// Folders to add the bookmark to, alongside the ones it is in when the edit is saved.
+    #[serde(default)]
+    pub add_category_ids: Option<Vec<Uuid>>,
     pub is_favorite: Option<bool>,
     pub is_unread: Option<bool>,
     pub is_pinned: Option<bool>,

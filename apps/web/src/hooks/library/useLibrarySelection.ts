@@ -3,12 +3,10 @@ import { notifications } from '@mantine/notifications'
 import type { BulkEditMode } from '@/components'
 import { useBulkAddCategories, useBulkDeleteBookmarks, useBulkTagBookmarks } from '@/hooks/bookmarks'
 import { useSyncDuringRender } from '@/hooks/render'
-import type { Bookmark } from '@/schemas'
 import { toggleId, writableIds, type LibraryListItem } from '@/services'
 
 type Input = {
   list: LibraryListItem[]
-  bookmarks: Bookmark[]
 }
 
 function notifyBulk(label: string, result: { ok: number; failed: number }): void {
@@ -23,7 +21,7 @@ function notifyBulk(label: string, result: { ok: number; failed: number }): void
 }
 
 /** Multi-select + bulk category/tag/delete actions. */
-export function useLibrarySelection({ list, bookmarks }: Input) {
+export function useLibrarySelection({ list }: Input) {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [bulkMode, setBulkMode] = useState<BulkEditMode | null>(null)
@@ -69,8 +67,7 @@ export function useLibrarySelection({ list, bookmarks }: Input) {
   async function applyBulkCategories(categoryIds: string[]): Promise<void> {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const byId = new Map<string, Bookmark>(bookmarks.map((b) => [b.id, b]))
-    const result = await bulkCategories.mutateAsync({ ids, category_ids: categoryIds, byId })
+    const result = await bulkCategories.mutateAsync({ ids, category_ids: categoryIds })
     notifyBulk('Categories added', result)
     setBulkMode(null)
     exitSelectMode()
@@ -79,8 +76,7 @@ export function useLibrarySelection({ list, bookmarks }: Input) {
   async function applyBulkTag(tags: string[], tagMode: 'add' | 'replace'): Promise<void> {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const byId = new Map<string, Bookmark>(bookmarks.map((b) => [b.id, b]))
-    const result = await bulkTag.mutateAsync({ ids, tags, mode: tagMode, byId })
+    const result = await bulkTag.mutateAsync({ ids, tags, mode: tagMode })
     notifyBulk(tagMode === 'add' ? 'Tagged' : 'Tags replaced', result)
     setBulkMode(null)
     exitSelectMode()

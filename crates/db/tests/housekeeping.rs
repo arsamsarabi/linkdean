@@ -221,3 +221,67 @@ async fn concurrent_edits_to_different_fields_both_land() {
         assert_eq!((raw.title, raw.notes), (title, Some(notes)));
     }
 }
+
+#[tokio::test]
+async fn adding_tags_and_folders_keeps_what_is_there() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    let folder = |name: &'static str| {
+        let pool = pool.clone();
+        let owner_id = owner.id;
+        async move {
+            db::create_category(
+                &pool,
+                owner_id,
+                linkdean_core::CreateCategory {
+                    name: name.into(),
+                    parent_id: None,
+                    is_hidden: false,
+                    vault_id: None,
+                    icon: None,
+                },
+            )
+            .await
+            .expect("folder")
+            .id
+        }
+    };
+    let (first, second) = (folder("First").await, folder("Second").await);
+    let b = bookmark(&pool, &owner, vec!["old".into()]).await;
+    db::update_bookmark(
+        &pool,
+        owner.id,
+        b,
+        UpdateBookmark {
+            category_ids: Some(vec![first]),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("file");
+
+    let view = db::update_bookmark(
+        &pool,
+        owner.id,
+        b,
+        UpdateBookmark {
+            add_tags: Some(vec!["new".into(), "old".into()]),
+            add_category_ids: Some(vec![second]),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("add");
+    let mut tags = view.tags.clone();
+    tags.sort();
+    assert_eq!(tags, vec!["new".to_string(), "old".to_string()]);
+    let mut folders: Vec<Uuid> = view.categories.iter().map(|c| c.id).collect();
+    folders.sort();
+    let mut want = vec![first, second];
+    want.sort();
+    assert_eq!(folders, want);
+}

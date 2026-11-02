@@ -19,7 +19,7 @@ function item(id: string, is_vault = false): Bookmark {
 describe('library selection', () => {
   it('drops selected items that leave the screen', () => {
     const all = [item('a'), item('v', true)]
-    const { result, rerender } = renderHook(({ list }) => useLibrarySelection({ list, bookmarks: all }), {
+    const { result, rerender } = renderHook(({ list }) => useLibrarySelection({ list }), {
       initialProps: { list: all },
     })
     act(() => {

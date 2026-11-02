@@ -53,7 +53,8 @@ fn reject_nul_in_update(req: &UpdateBookmark) -> Result<()> {
             .chain(req.title.as_deref())
             .chain(opt(&req.description))
             .chain(opt(&req.notes))
-            .chain(req.tags.iter().flatten().map(String::as_str)),
+            .chain(req.tags.iter().flatten().map(String::as_str))
+            .chain(req.add_tags.iter().flatten().map(String::as_str)),
     )
 }
 
@@ -508,13 +509,37 @@ async fn apply_categories(
     Ok(())
 }
 
-/// The categories an update asks for, if it asks.
-fn requested_categories(req: &UpdateBookmark) -> Option<Vec<Uuid>> {
-    match (&req.category_ids, req.category_id) {
+/// The categories an update asks for, if it asks. `add_category_ids` adds to the links
+/// the bookmark has now, read here rather than trusted from the client.
+async fn requested_categories(
+    pool: &PgPool,
+    bookmark_id: Uuid,
+    req: &UpdateBookmark,
+) -> Result<Option<Vec<Uuid>>> {
+    let mut ids = match (&req.category_ids, req.category_id) {
         (Some(ids), _) => Some(ids.clone()),
         (None, Some(c)) => Some(c.into_iter().collect()),
         (None, None) => None,
+    };
+    if let Some(add) = &req.add_category_ids {
+        let mut next = match ids {
+            Some(ids) => ids,
+            None => sqlx::query_scalar(
+                "SELECT category_id FROM bookmark_categories WHERE bookmark_id = $1",
+            )
+            .bind(bookmark_id)
+            .fetch_all(pool)
+            .await
+            .map_err(db_err)?,
+        };
+        for id in add {
+            if !next.contains(id) {
+                next.push(*id);
+            }
+        }
+        ids = Some(next);
     }
+    Ok(ids)
 }
 
 fn resolve_category_ids(req_ids: &[Uuid], legacy: Option<Uuid>) -> Vec<Uuid> {
@@ -997,6 +1022,8 @@ fn update_has_content(req: &UpdateBookmark) -> bool {
         || req.category_id.is_some()
         || req.category_ids.is_some()
         || req.tags.is_some()
+        || req.add_tags.is_some()
+        || req.add_category_ids.is_some()
         || req.is_private.is_some()
 }
 
@@ -1033,11 +1060,11 @@ fn bookmark_content_changes(
         changes.push("notes".into());
         keys.push("notes");
     }
-    if req.tags.is_some() {
+    if req.tags.is_some() || req.add_tags.is_some() {
         changes.push("tags".into());
         keys.push("tags");
     }
-    if req.category_ids.is_some() || req.category_id.is_some() {
+    if req.category_ids.is_some() || req.category_id.is_some() || req.add_category_ids.is_some() {
         changes.push("folders".into());
         keys.push("categories");
     }
@@ -1167,7 +1194,7 @@ pub async fn update_bookmark(
     if content && existing.is_vault && existing.owner_user_id != user_id {
         return Err(Error::Forbidden);
     }
-    let categories = match requested_categories(&req) {
+    let categories = match requested_categories(pool, id, &req).await? {
         Some(ids) if content => Some(plan_bookmark_categories(pool, user_id, id, &ids).await?),
         _ => None,
     };
@@ -1182,7 +1209,18 @@ pub async fn update_bookmark(
         ),
         _ => None,
     };
+    let add_tag_ids: Option<Vec<Uuid>> = match &req.add_tags {
+        Some(tags) if !existing.is_vault => Some(
+            ensure_tags(pool, user_id, tags)
+                .await?
+                .into_iter()
+                .map(|t| t.id)
+                .collect(),
+        ),
+        _ => None,
+    };
     let content_fields = req.url.is_some()
+        || req.add_tags.is_some()
         || req.title.is_some()
         || req.description.is_some()
         || req.notes.is_some()
@@ -1231,6 +1269,12 @@ pub async fn update_bookmark(
             }
             if let Some(tags) = req.tags.clone() {
                 payload.tags = tags;
+            }
+            for tag in req.add_tags.iter().flatten() {
+                let tag = tag.trim();
+                if !tag.is_empty() && !payload.tags.iter().any(|t| t == tag) {
+                    payload.tags.push(tag.to_string());
+                }
             }
             let (ct, nonce) =
                 super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload))
@@ -1282,6 +1326,20 @@ pub async fn update_bookmark(
             .map_err(db_err)?;
             if let Some(tag_ids) = &tag_ids {
                 apply_tags(&mut tx, id, tag_ids).await?;
+            }
+            if let Some(add) = &add_tag_ids {
+                sqlx::query(
+                    r#"
+                    INSERT INTO bookmark_tags (bookmark_id, tag_id)
+                    SELECT $1, t FROM unnest($2::uuid[]) AS t
+                    ON CONFLICT DO NOTHING
+                    "#,
+                )
+                .bind(id)
+                .bind(add)
+                .execute(&mut *tx)
+                .await
+                .map_err(db_err)?;
             }
         }
         if let Some(plan) = &categories {

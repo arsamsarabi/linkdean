@@ -448,6 +448,10 @@ export const api = {
       notes: string | null
       category_ids: string[]
       tags: string[]
+      /** Added on the server to the bookmark's current tags. */
+      add_tags: string[]
+      /** Added on the server to the bookmark's current folders. */
+      add_category_ids: string[]
       is_favorite: boolean
       is_unread: boolean
       is_pinned: boolean

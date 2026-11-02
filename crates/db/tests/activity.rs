@@ -91,6 +91,8 @@ async fn bookmark_category_dashboard_activity_flow() {
             is_unread: None,
             is_pinned: None,
             is_private: None,
+            add_tags: None,
+            add_category_ids: None,
         },
         &VaultKeyring::default(),
     )

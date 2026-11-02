@@ -70,10 +70,7 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
     url.sort,
   ])
 
-  const selection = useLibrarySelection({
-    list: selectable,
-    bookmarks: listState.bookmarks.data || [],
-  })
+  const selection = useLibrarySelection({ list: selectable })
 
   const folderCat = useMemo(() => {
     if (!url.folderId || url.folderId === FOLDER_ALL || url.folderId === FOLDER_UNCATEGORIZED) {

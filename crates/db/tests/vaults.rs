@@ -409,6 +409,8 @@ async fn renaming_a_vault_bookmark_keeps_its_titles_out_of_activity() {
         is_unread: None,
         is_pinned: None,
         is_private: None,
+        add_tags: None,
+        add_category_ids: None,
     };
     db::update_bookmark(&pool, owner.id, bookmark.id, rename("New secret"), &keyring)
         .await

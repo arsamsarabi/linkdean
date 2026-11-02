@@ -1,21 +1,17 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { Bookmark } from '@/schemas'
-import { unionIds, unionTags } from '@/services'
 
+// Adding happens on the server, against what each bookmark holds when it saves. A list
+// snapshot from the browser could be stale, or miss a bookmark and wipe its tags.
 export type BulkAddCategoriesVars = {
   ids: string[]
   category_ids: string[]
-  /** Needed so we can union without an extra fetch. */
-  byId: Map<string, Bookmark>
 }
 
 export type BulkTagVars = {
   ids: string[]
   tags: string[]
   mode: 'add' | 'replace'
-  /** Needed for add-mode so we can union without an extra fetch. */
-  byId: Map<string, Bookmark>
 }
 
 export type BulkDeleteVars = {
@@ -54,12 +50,8 @@ function invalidate(qc: ReturnType<typeof useQueryClient>): void {
 export function useBulkAddCategories(): UseMutationResult<BulkResult, Error, BulkAddCategoriesVars> {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ ids, category_ids, byId }: BulkAddCategoriesVars) =>
-      runAll(ids, (id) => {
-        const existing = (byId.get(id)?.categories || []).map((c) => c.id)
-        const next = unionIds(existing, category_ids)
-        return api.updateBookmark(id, { category_ids: next })
-      }),
+    mutationFn: ({ ids, category_ids }: BulkAddCategoriesVars) =>
+      runAll(ids, (id) => api.updateBookmark(id, { add_category_ids: category_ids })),
     onSuccess: () => invalidate(qc),
   })
 }
@@ -67,12 +59,10 @@ export function useBulkAddCategories(): UseMutationResult<BulkResult, Error, Bul
 export function useBulkTagBookmarks(): UseMutationResult<BulkResult, Error, BulkTagVars> {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ ids, tags, mode, byId }: BulkTagVars) =>
-      runAll(ids, (id) => {
-        const next =
-          mode === 'replace' ? tags.map((t) => t.trim()).filter(Boolean) : unionTags(byId.get(id)?.tags ?? [], tags)
-        return api.updateBookmark(id, { tags: next })
-      }),
+    mutationFn: ({ ids, tags, mode }: BulkTagVars) => {
+      const clean = tags.map((t) => t.trim()).filter(Boolean)
+      return runAll(ids, (id) => api.updateBookmark(id, mode === 'replace' ? { tags: clean } : { add_tags: clean }))
+    },
     onSuccess: () => invalidate(qc),
   })
 }

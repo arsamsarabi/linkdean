@@ -622,6 +622,8 @@ async fn public_list_slug_is_unlisted_and_revocable() {
         is_unread: None,
         is_pinned: None,
         is_private: Some(is_private),
+        add_tags: None,
+        add_category_ids: None,
     };
     db::update_bookmark(
         &pool,

@@ -57,6 +57,8 @@ async fn a_bookmark_description_and_notes_can_be_cleared() {
             is_unread: None,
             is_pinned: None,
             is_private: None,
+            add_tags: None,
+            add_category_ids: None,
         },
         &keyring,
     )
