@@ -123,6 +123,29 @@ pub async fn purge_expired_trash(pool: &PgPool) -> Result<PurgedTrash> {
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
+    // Live folders under expiring ones move to the top level first; the purge's cascade
+    // would otherwise take them along.
+    let expiring: Vec<Uuid> = sqlx::query_scalar(
+        r#"
+        SELECT c.id
+        FROM categories c
+        JOIN users u ON u.id = c.owner_user_id
+        LEFT JOIN user_settings s ON s.user_id = u.id
+        WHERE c.deleted_at IS NOT NULL
+          AND c.deleted_at
+              < now() - make_interval(days => GREATEST(COALESCE(s.trash_retention_days, 30), 1))
+          AND NOT EXISTS (
+              SELECT 1 FROM user_bans b
+              WHERE b.user_id = u.id
+                AND b.lifted_at IS NULL
+                AND (b.ends_at IS NULL OR b.ends_at > now())
+          )
+        "#,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    super::categories::rescue_live_children(pool, &expiring).await?;
     let categories: Vec<Uuid> = sqlx::query_scalar(&sql("categories", "c"))
         .fetch_all(pool)
         .await

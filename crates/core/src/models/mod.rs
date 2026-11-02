@@ -969,7 +969,7 @@ pub struct ForkCategory {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UpdateCategory {
     pub name: Option<String>,
     #[serde(

@@ -237,6 +237,9 @@ pub async fn create_category(
     }
     let owner_user_id = if let Some(pid) = req.parent_id {
         let (parent, access) = require_category_write(pool, user_id, pid).await?;
+        if parent.deleted_at.is_some() {
+            return Err(Error::BadRequest("that folder is in Trash".into()));
+        }
         if parent.vault_id != req.vault_id {
             return Err(Error::BadRequest(
                 "a subcategory stays in its parent's vault".into(),
@@ -328,6 +331,9 @@ pub async fn update_category(
         if let Some(pid) = parent {
             // Moving: need write on new parent; owner-only if leaving owner's tree.
             let (new_parent, _) = require_category_write(pool, user_id, pid).await?;
+            if new_parent.deleted_at.is_some() {
+                return Err(Error::BadRequest("that folder is in Trash".into()));
+            }
             if new_parent.owner_user_id != cat.owner_user_id && !access.is_owner() {
                 return Err(Error::Forbidden);
             }
@@ -564,6 +570,20 @@ pub async fn restore_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
     .execute(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
+    // Restored under a folder still in Trash, it moves to the top level, so purging that
+    // folder later cannot take it along.
+    sqlx::query(
+        r#"
+        UPDATE categories c
+        SET parent_id = NULL, updated_at = now()
+        FROM categories p
+        WHERE c.id = $1 AND p.id = c.parent_id AND p.deleted_at IS NOT NULL
+        "#,
+    )
+    .bind(id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
     super::activity::record_activity(
         pool,
         user_id,
@@ -601,6 +621,33 @@ pub async fn delete_category_by_mode(pool: &PgPool, user_id: Uuid, id: Uuid) -> 
     Ok(())
 }
 
+/// Move live folders out from under the trashed folders `ids` (and their trashed
+/// descendants) to the top level, so a purge's cascade cannot delete them.
+pub(crate) async fn rescue_live_children<'e, E>(executor: E, ids: &[Uuid]) -> Result<u64>
+where
+    E: sqlx::PgExecutor<'e>,
+{
+    let res = sqlx::query(
+        r#"
+        WITH RECURSIVE doomed AS (
+            SELECT id FROM categories WHERE id = ANY($1) AND deleted_at IS NOT NULL
+            UNION
+            SELECT c.id FROM categories c
+            JOIN doomed ON c.parent_id = doomed.id
+            WHERE c.deleted_at IS NOT NULL
+        )
+        UPDATE categories
+        SET parent_id = NULL, updated_at = now()
+        WHERE deleted_at IS NULL AND parent_id IN (SELECT id FROM doomed)
+        "#,
+    )
+    .bind(ids)
+    .execute(executor)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(res.rows_affected())
+}
+
 pub async fn purge_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
     require_category_owner(pool, user_id, id).await?;
     let title = sqlx::query_scalar::<_, String>(
@@ -615,6 +662,7 @@ pub async fn purge_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()
     .await
     .map_err(|e| Error::msg(e.to_string()))?
     .ok_or(Error::NotFound)?;
+    rescue_live_children(pool, &[id]).await?;
     let res = sqlx::query(
         r#"
         DELETE FROM categories
