@@ -705,15 +705,61 @@ pub async fn fork_category(
     if root.is_vault {
         return Err(Error::BadRequest("cannot fork vault categories".into()));
     }
+    if root.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
 
+    // The copy is built with the ordinary create helpers, which each commit. If any step
+    // fails, everything made so far is deleted, so a fork lands whole or not at all.
+    let mut made_categories: Vec<Uuid> = Vec::new();
+    let mut made_bookmarks: Vec<Uuid> = Vec::new();
+    let result = fork_category_inner(
+        pool,
+        user_id,
+        source_id,
+        root,
+        req,
+        &mut made_categories,
+        &mut made_bookmarks,
+    )
+    .await;
+    if result.is_err() {
+        let undo = async {
+            sqlx::query("DELETE FROM bookmarks WHERE id = ANY($1) AND owner_user_id = $2")
+                .bind(&made_bookmarks)
+                .bind(user_id)
+                .execute(pool)
+                .await?;
+            sqlx::query("DELETE FROM categories WHERE id = ANY($1) AND owner_user_id = $2")
+                .bind(&made_categories)
+                .bind(user_id)
+                .execute(pool)
+                .await
+        };
+        if let Err(e) = undo.await {
+            tracing::warn!(%user_id, %source_id, error = %e, "fork cleanup failed");
+        }
+    }
+    result
+}
+
+async fn fork_category_inner(
+    pool: &PgPool,
+    user_id: Uuid,
+    source_id: Uuid,
+    root: Category,
+    req: ForkCategory,
+    made_categories: &mut Vec<Uuid>,
+    made_bookmarks: &mut Vec<Uuid>,
+) -> Result<(CategoryView, Vec<BookmarkView>)> {
     let subtree: Vec<Category> = sqlx::query_as(
         r#"
         WITH RECURSIVE tree AS (
-            SELECT * FROM categories WHERE id = $1 AND is_vault = FALSE
+            SELECT * FROM categories WHERE id = $1 AND is_vault = FALSE AND deleted_at IS NULL
             UNION
             SELECT c.* FROM categories c
             JOIN tree ON c.parent_id = tree.id
-            WHERE c.is_vault = FALSE
+            WHERE c.is_vault = FALSE AND c.deleted_at IS NULL
         )
         SELECT * FROM tree
         "#,
@@ -771,6 +817,7 @@ pub async fn fork_category(
                 },
             )
             .await?;
+            made_categories.push(created.id);
             id_map.insert(cat.id, created.id);
             progressed = true;
         }
@@ -783,8 +830,9 @@ pub async fn fork_category(
     let old_ids: Vec<Uuid> = id_map.keys().copied().collect();
     let mut bookmark_ids: HashSet<Uuid> = sqlx::query_scalar(
         r#"
-        SELECT DISTINCT bookmark_id FROM bookmark_categories
-        WHERE category_id = ANY($1)
+        SELECT DISTINCT bc.bookmark_id FROM bookmark_categories bc
+        JOIN bookmarks b ON b.id = bc.bookmark_id
+        WHERE bc.category_id = ANY($1) AND b.deleted_at IS NULL
         "#,
     )
     .bind(&old_ids)
@@ -797,7 +845,7 @@ pub async fn fork_category(
     let legacy_ids: Vec<Uuid> = sqlx::query_scalar(
         r#"
         SELECT id FROM bookmarks
-        WHERE is_vault = FALSE AND category_id = ANY($1)
+        WHERE is_vault = FALSE AND category_id = ANY($1) AND deleted_at IS NULL
         "#,
     )
     .bind(&old_ids)
@@ -815,7 +863,7 @@ pub async fn fork_category(
             Ok(b) => b,
             Err(_) => continue,
         };
-        if raw.is_vault {
+        if raw.is_vault || raw.deleted_at.is_some() {
             continue;
         }
         let Some(view) = bookmark_to_view(pool, raw, &VaultKeyring::default(), user_id).await?
@@ -850,6 +898,7 @@ pub async fn fork_category(
             &VaultKeyring::default(),
         )
         .await?;
+        made_bookmarks.push(created.id);
         copied.push(created);
     }
 
