@@ -99,6 +99,8 @@ Writes upsert non-vault docs into Meilisearch index `bookmarks` using the bookma
 
 Vault bookmarks are not exported as plaintext.
 
+Linkdean JSON is versioned (`EXPORT_VERSION` in `crates/core/src/import_export/mod.rs`, now 2). Version 1 files still import. A file newer than the server is refused. Trash and vault content are left out.
+
 ## Local dev
 
 `deploy/docker/docker-compose.dev.yml` runs everything with live reload on `:5173`. `deploy/docker/docker-compose.yml` is the production stack and needs `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET` (see [self-host.md](./self-host.md#production-deployment)). The dev stack uses published secrets with `ALLOW_DEFAULT_SECRETS=true`. Both use the same project name and volumes, so run one at a time.

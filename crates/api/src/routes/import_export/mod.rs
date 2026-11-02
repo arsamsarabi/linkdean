@@ -112,7 +112,7 @@ async fn export(
     AuthUser(user): AuthUser,
     Query(q): Query<ExportQuery>,
 ) -> ApiResult<impl axum::response::IntoResponse> {
-    let (cats, bms) = db::export_data(&state.pool, user.id).await?;
+    let (cats, bms, dashboards) = db::export_data(&state.pool, user.id).await?;
     let format = q.format.to_ascii_lowercase();
     match format.as_str() {
         "html" | "netscape" => {
@@ -124,7 +124,7 @@ async fn export(
                 .into_response())
         }
         "json" | "linkdean" => {
-            let export = build_linkdean_export(cats, bms);
+            let export = build_linkdean_export(cats, bms, dashboards);
             let body =
                 serde_json::to_string_pretty(&export).map_err(|e| Error::msg(e.to_string()))?;
             Ok((

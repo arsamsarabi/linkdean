@@ -1028,10 +1028,29 @@ pub struct SearchHit {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinkdeanExport {
+    /// 1: categories and bookmarks with one category each. 2 adds every category of a
+    /// bookmark, its flags and timestamps, and dashboards.
     pub version: u32,
     pub exported_at: DateTime<Utc>,
     pub categories: Vec<CategoryExport>,
     pub bookmarks: Vec<BookmarkExport>,
+    #[serde(default)]
+    pub dashboards: Vec<DashboardExport>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardExport {
+    pub title: String,
+    #[serde(default)]
+    pub is_default: bool,
+    pub sections: Vec<DashboardSectionExport>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardSectionExport {
+    pub title: String,
+    /// `BookmarkExport::id` values, in order.
+    pub bookmark_ids: Vec<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1046,15 +1065,44 @@ pub struct CategoryExport {
     pub position: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BookmarkExport {
+    /// Lets dashboards in the same file point at this bookmark. Not kept on import.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<Uuid>,
     pub url: String,
     pub title: String,
     pub description: Option<String>,
     pub notes: Option<String>,
+    /// First of `category_ids`, kept for version 1 readers.
     pub category_id: Option<Uuid>,
+    #[serde(default)]
+    pub category_ids: Vec<Uuid>,
     pub tags: Vec<String>,
     pub is_vault: bool,
+    #[serde(default)]
+    pub is_favorite: bool,
+    #[serde(default)]
+    pub is_unread: bool,
+    #[serde(default)]
+    pub is_pinned: bool,
+    #[serde(default)]
+    pub is_private: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl BookmarkExport {
+    /// Every category this bookmark sits in, for files with or without `category_ids`.
+    pub fn all_category_ids(&self) -> Vec<Uuid> {
+        if self.category_ids.is_empty() {
+            self.category_id.into_iter().collect()
+        } else {
+            self.category_ids.clone()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

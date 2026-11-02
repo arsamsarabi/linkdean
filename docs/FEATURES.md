@@ -136,6 +136,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Import: Netscape HTML, Linkdean JSON, Pocket CSV, Raindrop CSV
 - Imported bookmarks get metadata and previews in the background
 - Export: Netscape HTML, Linkdean JSON
+- Linkdean JSON (version 2) keeps every folder of a bookmark, its favourite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
+- Netscape HTML lists a bookmark under each folder it is in, and reads `<DD>` descriptions on import
 
 ---
 

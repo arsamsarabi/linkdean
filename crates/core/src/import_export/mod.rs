@@ -1,16 +1,45 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::{
-    BookmarkExport, CategoryExport, CreateBookmark, CreateCategory, Error, LinkdeanExport, Result,
+    BookmarkExport, CategoryExport, CreateBookmark, CreateCategory, DashboardExport, Error,
+    LinkdeanExport, Result,
 };
+
+/// The Linkdean JSON format this build writes.
+pub const EXPORT_VERSION: u32 = 2;
 
 #[derive(Debug, Default)]
 pub struct ParsedImport {
     pub categories: Vec<CreateCategory>,
     /// Parallel to categories: temporary path key for nesting ("Folder/Sub")
     pub category_paths: Vec<String>,
-    pub bookmarks: Vec<(CreateBookmark, Option<String>)>, // bookmark + category path
+    pub bookmarks: Vec<ParsedBookmark>,
+    /// Dashboards from a Linkdean export. Pins name `ParsedBookmark::source_id` values.
+    pub dashboards: Vec<DashboardExport>,
+}
+
+#[derive(Debug, Default)]
+pub struct ParsedBookmark {
+    pub bookmark: CreateBookmark,
+    /// Folder paths (as in `category_paths`, without the parent part). Empty = unsorted.
+    pub category_paths: Vec<String>,
+    /// Id in the exported file, so its dashboards can point at this bookmark.
+    pub source_id: Option<Uuid>,
+    pub is_private: bool,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl ParsedBookmark {
+    pub fn new(bookmark: CreateBookmark, category_path: Option<String>) -> Self {
+        Self {
+            bookmark,
+            category_paths: category_path.into_iter().collect(),
+            ..Default::default()
+        }
+    }
 }
 
 pub fn export_netscape(bookmarks: &[BookmarkExport], categories: &[CategoryExport]) -> String {
@@ -23,19 +52,20 @@ pub fn export_netscape(bookmarks: &[BookmarkExport], categories: &[CategoryExpor
          <DL><p>\n",
     );
 
-    let roots: Vec<_> = categories
+    let exported: Vec<&CategoryExport> = categories.iter().filter(|c| !c.is_vault).collect();
+    let known: HashSet<Uuid> = exported.iter().map(|c| c.id).collect();
+    // A folder whose parent is not in the file (trashed, or someone else's) starts a tree.
+    let roots = exported
         .iter()
-        .filter(|c| c.parent_id.is_none() && !c.is_vault)
-        .collect();
+        .filter(|c| c.parent_id.is_none_or(|p| !known.contains(&p)));
     for cat in roots {
-        write_category_html(&mut out, cat, categories, bookmarks, 1);
+        write_category_html(&mut out, cat, &exported, bookmarks, 1);
     }
-    let uncategorized: Vec<_> = bookmarks
-        .iter()
-        .filter(|b| b.category_id.is_none() && !b.is_vault)
-        .collect();
-    for b in uncategorized {
-        write_bookmark_html(&mut out, b, 1);
+    // A bookmark in no exported folder, such as one only in a shared folder, goes at the top.
+    for b in bookmarks.iter().filter(|b| !b.is_vault) {
+        if !b.all_category_ids().iter().any(|id| known.contains(id)) {
+            write_bookmark_html(&mut out, b, 1);
+        }
     }
     out.push_str("</DL><p>\n");
     out
@@ -44,7 +74,7 @@ pub fn export_netscape(bookmarks: &[BookmarkExport], categories: &[CategoryExpor
 fn write_category_html(
     out: &mut String,
     cat: &CategoryExport,
-    all: &[CategoryExport],
+    all: &[&CategoryExport],
     bookmarks: &[BookmarkExport],
     depth: usize,
 ) {
@@ -53,15 +83,13 @@ fn write_category_html(
         "{pad}<DT><H3>{}</H3>\n{pad}<DL><p>\n",
         html_escape(&cat.name)
     ));
-    for child in all
-        .iter()
-        .filter(|c| c.parent_id == Some(cat.id) && !c.is_vault)
-    {
+    for child in all.iter().filter(|c| c.parent_id == Some(cat.id)) {
         write_category_html(out, child, all, bookmarks, depth + 1);
     }
+    // A bookmark in several folders appears in each.
     for b in bookmarks
         .iter()
-        .filter(|b| b.category_id == Some(cat.id) && !b.is_vault)
+        .filter(|b| !b.is_vault && b.all_category_ids().contains(&cat.id))
     {
         write_bookmark_html(out, b, depth + 1);
     }
@@ -126,10 +154,29 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
     let mut parsed = ParsedImport::default();
     let mut stack: Vec<String> = Vec::new();
     let mut pending_folder: Option<String> = None;
+    // `<DD>` describes the item just before it. Only a bookmark's is kept.
+    let mut last_was_bookmark = false;
 
     for raw in html.lines() {
         let line = raw.trim();
         let lower = line.to_ascii_lowercase();
+
+        if lower.starts_with("<dd>") {
+            if last_was_bookmark {
+                if let Some(last) = parsed.bookmarks.last_mut() {
+                    let text = extract_inner_text(line);
+                    if !text.is_empty() {
+                        last.bookmark.description = Some(text);
+                    }
+                }
+            }
+            last_was_bookmark = false;
+            continue;
+        }
+        let is_bookmark_line = lower.contains("<a ") && lower.contains("href=");
+        if !is_bookmark_line {
+            last_was_bookmark = false;
+        }
 
         if lower.contains("<dl") {
             if let Some(name) = pending_folder.take() {
@@ -177,11 +224,13 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
             continue;
         }
 
-        if lower.contains("<a ") && lower.contains("href=") {
+        if is_bookmark_line {
             let url = attr_value(line, "href").unwrap_or_default();
+            last_was_bookmark = false;
             if url.is_empty() {
                 continue;
             }
+            last_was_bookmark = true;
             let title = extract_inner_text(line);
             let tags = attr_value(line, "tags")
                 .map(|t| {
@@ -192,7 +241,7 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
                 })
                 .unwrap_or_default();
             let cat_path = stack.last().cloned();
-            parsed.bookmarks.push((
+            parsed.bookmarks.push(ParsedBookmark::new(
                 CreateBookmark {
                     url,
                     title: Some(title),
@@ -214,6 +263,12 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
 pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
     let export: LinkdeanExport =
         serde_json::from_str(raw).map_err(|e| Error::BadRequest(e.to_string()))?;
+    if export.version > EXPORT_VERSION {
+        return Err(Error::BadRequest(format!(
+            "export version {} is newer than this server reads ({EXPORT_VERSION})",
+            export.version
+        )));
+    }
     check_category_tree(&export.categories)?;
     let mut parsed = ParsedImport::default();
 
@@ -242,12 +297,14 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
     }
 
     for b in export.bookmarks.into_iter().filter(|b| !b.is_vault) {
-        let cat_path = b
-            .category_id
-            .and_then(|cid| cats.iter().find(|c| c.id == cid))
-            .map(|c| category_path_name(c, &cats));
-        parsed.bookmarks.push((
-            CreateBookmark {
+        let category_paths = b
+            .all_category_ids()
+            .iter()
+            .filter_map(|cid| cats.iter().find(|c| c.id == *cid))
+            .map(|c| category_path_name(c, &cats))
+            .collect();
+        parsed.bookmarks.push(ParsedBookmark {
+            bookmark: CreateBookmark {
                 url: b.url,
                 title: Some(b.title),
                 description: b.description,
@@ -255,11 +312,19 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
                 category_id: None,
                 category_ids: vec![],
                 tags: b.tags,
+                is_favorite: b.is_favorite,
+                is_unread: b.is_unread,
+                is_pinned: b.is_pinned,
                 ..Default::default()
             },
-            cat_path,
-        ));
+            category_paths,
+            source_id: b.id,
+            is_private: b.is_private,
+            created_at: b.created_at,
+            updated_at: b.updated_at,
+        });
     }
+    parsed.dashboards = export.dashboards;
 
     Ok(parsed)
 }
@@ -282,7 +347,7 @@ pub fn parse_pocket_csv(raw: &str) -> Result<ParsedImport> {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
-        parsed.bookmarks.push((
+        parsed.bookmarks.push(ParsedBookmark::new(
             CreateBookmark {
                 url,
                 title: Some(if title.is_empty() {
@@ -361,7 +426,7 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
             .or_else(|| idx("excerpt"))
             .and_then(|i| row.get(i))
             .map(|s| s.to_string());
-        parsed.bookmarks.push((
+        parsed.bookmarks.push(ParsedBookmark::new(
             CreateBookmark {
                 url,
                 title: Some(title),
@@ -381,12 +446,14 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
 pub fn build_linkdean_export(
     categories: Vec<CategoryExport>,
     bookmarks: Vec<BookmarkExport>,
+    dashboards: Vec<DashboardExport>,
 ) -> LinkdeanExport {
     LinkdeanExport {
-        version: 1,
+        version: EXPORT_VERSION,
         exported_at: Utc::now(),
         categories,
         bookmarks,
+        dashboards,
     }
 }
 
@@ -475,7 +542,7 @@ mod tests {
 <DT><A HREF="https://x.com/?a=1&amp;b=2" TAGS="r&amp;d,&lt;tools&gt;">Q &amp; A</A>
 </DL>"#;
         let parsed = parse_netscape(html).unwrap();
-        let bookmark = &parsed.bookmarks[0].0;
+        let bookmark = &parsed.bookmarks[0].bookmark;
         assert_eq!(bookmark.url, "https://x.com/?a=1&b=2");
         assert_eq!(bookmark.tags, vec!["r&d", "<tools>"]);
         assert_eq!(bookmark.title.as_deref(), Some("Q & A"));
@@ -507,6 +574,7 @@ mod tests {
                 category_id: Some(Uuid::nil()),
                 tags: vec![],
                 is_vault: false,
+                ..Default::default()
             },
             BookmarkExport {
                 url: "https://secret.example".into(),
@@ -516,6 +584,7 @@ mod tests {
                 category_id: None,
                 tags: vec![],
                 is_vault: true,
+                ..Default::default()
             },
         ];
         let html = export_netscape(&bms, &cats);
@@ -523,7 +592,7 @@ mod tests {
         assert!(!html.contains("secret.example"));
         let parsed = parse_netscape(&html).unwrap();
         assert_eq!(parsed.bookmarks.len(), 1);
-        assert_eq!(parsed.bookmarks[0].0.url, "https://a.example");
+        assert_eq!(parsed.bookmarks[0].bookmark.url, "https://a.example");
     }
 
     #[test]
@@ -531,8 +600,8 @@ mod tests {
         let raw = "title,url,time_added,tags,status\nHello,https://pocket.example,1,foo|bar,0\n";
         let parsed = parse_pocket_csv(raw).unwrap();
         assert_eq!(parsed.bookmarks.len(), 1);
-        assert_eq!(parsed.bookmarks[0].0.url, "https://pocket.example");
-        assert_eq!(parsed.bookmarks[0].0.tags, vec!["foo", "bar"]);
+        assert_eq!(parsed.bookmarks[0].bookmark.url, "https://pocket.example");
+        assert_eq!(parsed.bookmarks[0].bookmark.tags, vec!["foo", "bar"]);
     }
 
     #[test]
@@ -541,6 +610,7 @@ mod tests {
             version: 1,
             exported_at: Utc::now(),
             categories: vec![],
+            dashboards: vec![],
             bookmarks: vec![
                 BookmarkExport {
                     url: "https://ok.example".into(),
@@ -550,6 +620,7 @@ mod tests {
                     category_id: None,
                     tags: vec![],
                     is_vault: false,
+                    ..Default::default()
                 },
                 BookmarkExport {
                     url: "https://vault.example".into(),
@@ -559,13 +630,127 @@ mod tests {
                     category_id: None,
                     tags: vec![],
                     is_vault: true,
+                    ..Default::default()
                 },
             ],
         };
         let raw = serde_json::to_string(&export).unwrap();
         let parsed = parse_linkdean_json(&raw).unwrap();
         assert_eq!(parsed.bookmarks.len(), 1);
-        assert_eq!(parsed.bookmarks[0].0.url, "https://ok.example");
+        assert_eq!(parsed.bookmarks[0].bookmark.url, "https://ok.example");
+    }
+
+    fn cat(id: u128, parent: Option<u128>, name: &str) -> CategoryExport {
+        CategoryExport {
+            id: Uuid::from_u128(id),
+            parent_id: parent.map(Uuid::from_u128),
+            name: name.into(),
+            is_hidden: false,
+            is_vault: false,
+            icon: None,
+            position: 0,
+        }
+    }
+
+    #[test]
+    fn netscape_export_keeps_every_live_bookmark() {
+        // Folder 2's parent (9) is trashed, so it is not in the file.
+        let cats = vec![cat(1, None, "Work"), cat(2, Some(9), "Orphan")];
+        let bms = vec![
+            BookmarkExport {
+                url: "https://both.example".into(),
+                title: "Both".into(),
+                category_id: Some(Uuid::from_u128(1)),
+                category_ids: vec![Uuid::from_u128(1), Uuid::from_u128(2)],
+                ..Default::default()
+            },
+            BookmarkExport {
+                url: "https://orphan.example".into(),
+                title: "Orphan".into(),
+                category_id: Some(Uuid::from_u128(2)),
+                ..Default::default()
+            },
+            BookmarkExport {
+                url: "https://shared-only.example".into(),
+                title: "Shared".into(),
+                category_id: Some(Uuid::from_u128(77)),
+                category_ids: vec![Uuid::from_u128(77)],
+                ..Default::default()
+            },
+        ];
+        let html = export_netscape(&bms, &cats);
+        assert_eq!(html.matches("https://both.example").count(), 2);
+        assert!(html.contains("https://orphan.example"));
+        assert!(html.contains("https://shared-only.example"));
+        assert!(html.contains("<H3>Orphan</H3>"));
+    }
+
+    #[test]
+    fn netscape_import_reads_bookmark_descriptions() {
+        let html = r#"<DL><p>
+<DT><H3>Folder</H3>
+<DD>About the folder
+<DL><p>
+<DT><A HREF="https://a.example">A</A>
+<DD>Fish &amp; chips
+<DT><A HREF="https://b.example">B</A>
+</DL><p>
+</DL>"#;
+        let parsed = parse_netscape(html).unwrap();
+        assert_eq!(parsed.bookmarks.len(), 2);
+        assert_eq!(
+            parsed.bookmarks[0].bookmark.description.as_deref(),
+            Some("Fish & chips")
+        );
+        assert_eq!(parsed.bookmarks[1].bookmark.description, None);
+    }
+
+    #[test]
+    fn linkdean_json_round_trips_folders_flags_times_and_dashboards() {
+        let id = Uuid::from_u128(5);
+        let created = Utc::now() - chrono::Duration::days(400);
+        let export = build_linkdean_export(
+            vec![cat(1, None, "Work"), cat(2, Some(1), "Sub")],
+            vec![BookmarkExport {
+                id: Some(id),
+                url: "https://a.example".into(),
+                title: "A".into(),
+                category_id: Some(Uuid::from_u128(1)),
+                category_ids: vec![Uuid::from_u128(1), Uuid::from_u128(2)],
+                is_favorite: true,
+                is_private: true,
+                created_at: Some(created),
+                ..Default::default()
+            }],
+            vec![DashboardExport {
+                title: "Home".into(),
+                is_default: true,
+                sections: vec![crate::DashboardSectionExport {
+                    title: "Top".into(),
+                    bookmark_ids: vec![id],
+                }],
+            }],
+        );
+        assert_eq!(export.version, EXPORT_VERSION);
+        let parsed = parse_linkdean_json(&serde_json::to_string(&export).unwrap()).unwrap();
+        let b = &parsed.bookmarks[0];
+        assert_eq!(
+            b.category_paths,
+            vec!["Work".to_string(), "Work/Sub".to_string()]
+        );
+        assert!(b.bookmark.is_favorite && b.is_private);
+        assert_eq!(b.created_at, Some(created));
+        assert_eq!(b.source_id, Some(id));
+        assert_eq!(parsed.dashboards[0].sections[0].bookmark_ids, vec![id]);
+    }
+
+    #[test]
+    fn linkdean_json_refuses_a_newer_version() {
+        let raw = r#"{"version": 99, "exported_at": "2026-01-01T00:00:00Z", "categories": [], "bookmarks": []}"#;
+        assert!(matches!(
+            parse_linkdean_json(raw),
+            Err(Error::BadRequest(_))
+        ));
     }
 
     #[test]
