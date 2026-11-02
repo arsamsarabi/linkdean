@@ -49,3 +49,8 @@ a[href]:not([class*='mantine-']):hover {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
+
+/* An off switch on a white card needs a visible track (Mantine's gray-3 is 1.4:1). */
+[data-mantine-color-scheme='light'] .mantine-Switch-input:not(:checked):not(:disabled) + .mantine-Switch-track {
+  --switch-bg: var(--mantine-color-gray-5);
+}
