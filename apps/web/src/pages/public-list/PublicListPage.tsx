@@ -66,6 +66,7 @@ export function PublicListPage(): ReactElement {
   }
 
   const data = list.data!
+  const total = data.total ?? data.bookmarks.length
 
   return (
     <PageContainer py="xl" fadeIn>
@@ -77,8 +78,9 @@ export function PublicListPage(): ReactElement {
               <Title order={2}>{data.name}</Title>
             </Group>
             <Text size="sm" c="dimmed">
-              Shared by {data.owner_display_name} · {data.bookmarks.length} bookmark
-              {data.bookmarks.length === 1 ? '' : 's'}
+              Shared by {data.owner_display_name} · {total} bookmark
+              {total === 1 ? '' : 's'}
+              {total > data.bookmarks.length ? ` · showing the newest ${data.bookmarks.length}` : ''}
             </Text>
           </Stack>
           <Anchor component={Link} to="/login" size="sm">

@@ -3,6 +3,7 @@ use linkdean_core::{
     ShareAccess, UpdateCategoryShare,
 };
 use sqlx::PgPool;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::categories::get_category_by_id;
@@ -535,47 +536,65 @@ pub async fn owned_shared_out_invitees(
 
 /// Invitee labels when any of the bookmark's folders (or an ancestor) is shared out.
 pub async fn bookmark_shared_with(pool: &PgPool, bookmark_id: Uuid) -> Result<Vec<String>> {
-    let rows: Vec<(Option<String>, String)> = sqlx::query_as(
+    Ok(bookmarks_shared_with(pool, &[bookmark_id])
+        .await?
+        .remove(&bookmark_id)
+        .unwrap_or_default())
+}
+
+/// Labels of the people each bookmark's folders, or their ancestors, are shared with, for
+/// every bookmark in `ids` that has any. Sorted, without repeats.
+pub async fn bookmarks_shared_with(
+    pool: &PgPool,
+    ids: &[Uuid],
+) -> Result<HashMap<Uuid, Vec<String>>> {
+    let mut out: HashMap<Uuid, Vec<String>> = HashMap::new();
+    if ids.is_empty() {
+        return Ok(out);
+    }
+    let rows: Vec<(Uuid, Option<String>, String)> = sqlx::query_as(
         r#"
         WITH RECURSIVE bm_cats AS (
-            SELECT category_id AS id
+            SELECT bookmark_id, category_id AS id
             FROM bookmark_categories
-            WHERE bookmark_id = $1
+            WHERE bookmark_id = ANY($1)
             UNION
-            SELECT category_id
+            SELECT id, category_id
             FROM bookmarks
-            WHERE id = $1 AND category_id IS NOT NULL
+            WHERE id = ANY($1) AND category_id IS NOT NULL
         ),
         ancestors AS (
-            SELECT c.id, c.parent_id
+            SELECT b.bookmark_id, c.id, c.parent_id
             FROM categories c
             JOIN bm_cats b ON c.id = b.id
-            UNION ALL
-            SELECT c.id, c.parent_id
+            UNION
+            SELECT a.bookmark_id, c.id, c.parent_id
             FROM categories c
             JOIN ancestors a ON a.parent_id = c.id
         )
-        SELECT DISTINCT u.display_name, u.email
+        SELECT DISTINCT a.bookmark_id, u.display_name, u.email
         FROM category_shares cs
         JOIN users u ON u.id = cs.invitee_user_id
-        WHERE cs.category_id IN (SELECT id FROM ancestors)
-        ORDER BY u.email
+        JOIN ancestors a ON a.id = cs.category_id
+        ORDER BY a.bookmark_id, u.email
         "#,
     )
-    .bind(bookmark_id)
+    .bind(ids)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    let mut labels = Vec::new();
-    for (display_name, email) in rows {
+    for (bookmark_id, display_name, email) in rows {
         let label = super::users::share_invitee_label(display_name.as_deref(), &email, "User");
-        if !labels.iter().any(|s| s == &label) {
+        let labels = out.entry(bookmark_id).or_default();
+        if !labels.contains(&label) {
             labels.push(label);
         }
     }
-    labels.sort();
-    Ok(labels)
+    for labels in out.values_mut() {
+        labels.sort();
+    }
+    Ok(out)
 }
 
 /// True when any of the bookmark's folders (or an ancestor) is shared out by the owner.

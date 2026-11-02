@@ -86,6 +86,7 @@ async fn public_list_images_are_reachable_only_through_the_list() {
         .await
         .expect("public list");
     assert_eq!(view.bookmarks.len(), 1);
+    assert_eq!(view.total, 1);
     let b = &view.bookmarks[0];
     assert_eq!(b.id, listed);
     let base = format!("/api/public/lists/{slug}/bookmarks/{listed}");

@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use super::categories::{get_category_by_id, list_owned_categories};
 use super::shares::{
-    bookmark_can_read, bookmark_can_write, bookmark_shared_with, category_access,
+    bookmark_can_read, bookmark_can_write, bookmarks_shared_with, category_access,
     require_category_read, require_category_write,
 };
 use super::tags::ensure_tags;
@@ -170,12 +170,12 @@ fn category_path(cat: &Category, by_id: &HashMap<Uuid, Category>) -> String {
 /// highest list they can read, so the owner's other folder names never show.
 async fn categories_for_bookmark(
     pool: &PgPool,
-    owner_user_id: Uuid,
-    bookmark_id: Uuid,
+    b: &Bookmark,
     viewer_id: Uuid,
+    batch: &ViewBatch,
 ) -> Result<Vec<CategoryRef>> {
-    let all = categories_for_bookmark_owner(pool, owner_user_id, bookmark_id).await?;
-    if viewer_id == owner_user_id {
+    let all = categories_for_bookmark_owner(pool, b, batch).await?;
+    if viewer_id == b.owner_user_id {
         return Ok(all);
     }
     let mut out = Vec::new();
@@ -209,39 +209,26 @@ async fn readable_path(pool: &PgPool, viewer_id: Uuid, category_id: Uuid) -> Res
 
 async fn categories_for_bookmark_owner(
     pool: &PgPool,
-    owner_user_id: Uuid,
-    bookmark_id: Uuid,
+    b: &Bookmark,
+    batch: &ViewBatch,
 ) -> Result<Vec<CategoryRef>> {
-    let linked: Vec<Uuid> = sqlx::query_as(
-        r#"
-        SELECT category_id FROM bookmark_categories
-        WHERE bookmark_id = $1
-        ORDER BY category_id
-        "#,
-    )
-    .bind(bookmark_id)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?
-    .into_iter()
-    .map(|(id,)| id)
-    .collect();
-
-    if linked.is_empty() {
+    let Some(linked) = batch.links.get(&b.id) else {
         return Ok(Vec::new());
-    }
-
-    let all = list_owned_categories(pool, owner_user_id, true, true).await?;
-    let by_id: HashMap<Uuid, Category> = all.into_iter().map(|c| (c.id, c)).collect();
+    };
+    let empty = HashMap::new();
+    let by_id = batch
+        .owner_categories
+        .get(&b.owner_user_id)
+        .unwrap_or(&empty);
     let mut out = Vec::new();
     for id in linked {
-        if let Some(cat) = by_id.get(&id) {
+        if let Some(cat) = by_id.get(id) {
             out.push(CategoryRef {
                 id: cat.id,
                 name: cat.name.clone(),
-                path: category_path(cat, &by_id),
+                path: category_path(cat, by_id),
             });
-        } else if let Ok(cat) = get_category_by_id(pool, id).await {
+        } else if let Ok(cat) = get_category_by_id(pool, *id).await {
             // Shared / cross-owner link: path may be shallow if ancestors not loaded.
             out.push(CategoryRef {
                 id: cat.id,
@@ -251,6 +238,129 @@ async fn categories_for_bookmark_owner(
         }
     }
     Ok(out)
+}
+
+/// Tag names per bookmark, sorted, for every bookmark in `ids`.
+pub(crate) async fn tags_for_bookmarks(
+    pool: &PgPool,
+    ids: &[Uuid],
+) -> Result<HashMap<Uuid, Vec<String>>> {
+    let mut out: HashMap<Uuid, Vec<String>> = HashMap::new();
+    if ids.is_empty() {
+        return Ok(out);
+    }
+    let rows: Vec<(Uuid, String)> = sqlx::query_as(
+        r#"
+        SELECT bt.bookmark_id, t.name FROM bookmark_tags bt
+        JOIN tags t ON t.id = bt.tag_id
+        WHERE bt.bookmark_id = ANY($1)
+        ORDER BY t.name
+        "#,
+    )
+    .bind(ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    for (id, name) in rows {
+        out.entry(id).or_default().push(name);
+    }
+    Ok(out)
+}
+
+/// What building a set of bookmark views needs, loaded with a few queries for the whole
+/// set rather than several for each bookmark.
+struct ViewBatch {
+    tags: HashMap<Uuid, Vec<String>>,
+    flags: HashMap<Uuid, BookmarkFlagsRow>,
+    /// Category ids linked to each bookmark, in id order.
+    links: HashMap<Uuid, Vec<Uuid>>,
+    /// Owned bookmarks only: who their folders are shared with.
+    shared_with: HashMap<Uuid, Vec<String>>,
+    /// Every category of each owner with a linked bookmark in the set.
+    owner_categories: HashMap<Uuid, HashMap<Uuid, Category>>,
+    owner_names: HashMap<Uuid, Option<String>>,
+}
+
+impl ViewBatch {
+    async fn load(pool: &PgPool, rows: &[Bookmark], viewer_id: Uuid) -> Result<Self> {
+        let ids: Vec<Uuid> = rows.iter().map(|b| b.id).collect();
+        let plain: Vec<Uuid> = rows.iter().filter(|b| !b.is_vault).map(|b| b.id).collect();
+        let owned: Vec<Uuid> = rows
+            .iter()
+            .filter(|b| b.owner_user_id == viewer_id)
+            .map(|b| b.id)
+            .collect();
+
+        let tags = tags_for_bookmarks(pool, &plain).await?;
+
+        let flag_rows: Vec<(Uuid, bool, bool, bool)> = sqlx::query_as(
+            r#"
+            SELECT bookmark_id, is_favorite, is_unread, is_pinned
+            FROM bookmark_flags
+            WHERE user_id = $1 AND bookmark_id = ANY($2)
+            "#,
+        )
+        .bind(viewer_id)
+        .bind(&ids)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+        let flags = flag_rows
+            .into_iter()
+            .map(|(id, is_favorite, is_unread, is_pinned)| {
+                (
+                    id,
+                    BookmarkFlagsRow {
+                        is_favorite,
+                        is_unread,
+                        is_pinned,
+                    },
+                )
+            })
+            .collect();
+
+        let link_rows: Vec<(Uuid, Uuid)> = sqlx::query_as(
+            r#"
+            SELECT bookmark_id, category_id FROM bookmark_categories
+            WHERE bookmark_id = ANY($1)
+            ORDER BY bookmark_id, category_id
+            "#,
+        )
+        .bind(&ids)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+        let mut links: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+        for (bookmark_id, category_id) in link_rows {
+            links.entry(bookmark_id).or_default().push(category_id);
+        }
+
+        let shared_with = bookmarks_shared_with(pool, &owned).await?;
+
+        let mut owner_categories = HashMap::new();
+        let mut owner_names = HashMap::new();
+        for b in rows {
+            let owner = b.owner_user_id;
+            if !owner_names.contains_key(&owner) {
+                let name =
+                    super::users::owner_display_name_for_viewer(pool, owner, viewer_id).await?;
+                owner_names.insert(owner, name);
+            }
+            if links.contains_key(&b.id) && !owner_categories.contains_key(&owner) {
+                let cats = list_owned_categories(pool, owner, true, true).await?;
+                owner_categories.insert(owner, cats.into_iter().map(|c| (c.id, c)).collect());
+            }
+        }
+
+        Ok(Self {
+            tags,
+            flags,
+            links,
+            shared_with,
+            owner_categories,
+            owner_names,
+        })
+    }
 }
 
 async fn set_bookmark_categories(
@@ -364,7 +474,37 @@ pub async fn bookmark_to_view(
     keyring: &VaultKeyring,
     viewer_id: Uuid,
 ) -> Result<Option<BookmarkView>> {
-    let categories = categories_for_bookmark(pool, b.owner_user_id, b.id, viewer_id).await?;
+    let batch = ViewBatch::load(pool, std::slice::from_ref(&b), viewer_id).await?;
+    view_from_batch(pool, b, keyring, viewer_id, &batch).await
+}
+
+/// Views of `rows` for `viewer_id`, in the same order, leaving out vault bookmarks whose key
+/// `keyring_for` does not hold.
+pub async fn bookmarks_to_views<'k>(
+    pool: &PgPool,
+    rows: Vec<Bookmark>,
+    viewer_id: Uuid,
+    keyring_for: impl Fn(&Bookmark) -> &'k VaultKeyring,
+) -> Result<Vec<BookmarkView>> {
+    let batch = ViewBatch::load(pool, &rows, viewer_id).await?;
+    let mut out = Vec::with_capacity(rows.len());
+    for b in rows {
+        let keyring = keyring_for(&b);
+        if let Some(view) = view_from_batch(pool, b, keyring, viewer_id, &batch).await? {
+            out.push(view);
+        }
+    }
+    Ok(out)
+}
+
+async fn view_from_batch(
+    pool: &PgPool,
+    b: Bookmark,
+    keyring: &VaultKeyring,
+    viewer_id: Uuid,
+    batch: &ViewBatch,
+) -> Result<Option<BookmarkView>> {
+    let categories = categories_for_bookmark(pool, &b, viewer_id, batch).await?;
     let category_id = categories
         .first()
         .map(|c| c.id)
@@ -374,15 +514,10 @@ pub async fn bookmark_to_view(
     } else {
         bookmark_can_write(pool, viewer_id, b.id).await?
     };
-    let shared_with = if b.owner_user_id == viewer_id {
-        bookmark_shared_with(pool, b.id).await?
-    } else {
-        Vec::new()
-    };
+    let shared_with = batch.shared_with.get(&b.id).cloned().unwrap_or_default();
     let shared_out = !shared_with.is_empty();
-    let owner_display_name =
-        super::users::owner_display_name_for_viewer(pool, b.owner_user_id, viewer_id).await?;
-    let flags = flags_for_viewer(pool, viewer_id, b.id).await?;
+    let owner_display_name = batch.owner_names.get(&b.owner_user_id).cloned().flatten();
+    let flags = batch.flags.get(&b.id).copied().unwrap_or_default();
 
     if b.is_vault {
         let Some(key) = b.vault_id.and_then(|id| keyring.get(id)) else {
@@ -432,7 +567,7 @@ pub async fn bookmark_to_view(
             updated_at: b.updated_at,
         }));
     }
-    let tags = tags_for_bookmark(pool, b.id).await?;
+    let tags = batch.tags.get(&b.id).cloned().unwrap_or_default();
     let (link_check_status, link_check_status_code, link_check_error, link_checked_at) =
         link_check_fields(&b);
     Ok(Some(BookmarkView {
@@ -577,18 +712,14 @@ pub async fn list_bookmarks(
     };
 
     let none = VaultKeyring::default();
-    let mut out = Vec::new();
-    for b in rows {
-        let ring = if b.is_vault && b.owner_user_id == user_id {
+    bookmarks_to_views(pool, rows, user_id, |b| {
+        if b.is_vault && b.owner_user_id == user_id {
             keyring
         } else {
             &none
-        };
-        if let Some(v) = bookmark_to_view(pool, b, ring, user_id).await? {
-            out.push(v);
         }
-    }
-    Ok(out)
+    })
+    .await
 }
 
 pub async fn get_bookmark_raw(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Bookmark> {
@@ -1489,13 +1620,8 @@ pub async fn list_broken_bookmarks(pool: &PgPool, user_id: Uuid) -> Result<Vec<B
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    let mut out = Vec::with_capacity(rows.len());
-    for b in rows {
-        if let Some(view) = bookmark_to_view(pool, b, &VaultKeyring::default(), user_id).await? {
-            out.push(view);
-        }
-    }
-    Ok(out)
+    let none = VaultKeyring::default();
+    bookmarks_to_views(pool, rows, user_id, |_| &none).await
 }
 
 pub async fn find_duplicate_urls(pool: &PgPool, user_id: Uuid) -> Result<Vec<String>> {
@@ -1535,13 +1661,8 @@ pub async fn find_duplicate_groups(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
 
-        let mut bookmarks = Vec::with_capacity(rows.len());
-        for b in rows {
-            if let Some(view) = bookmark_to_view(pool, b, &VaultKeyring::default(), user_id).await?
-            {
-                bookmarks.push(view);
-            }
-        }
+        let none = VaultKeyring::default();
+        let bookmarks = bookmarks_to_views(pool, rows, user_id, |_| &none).await?;
         if bookmarks.len() > 1 {
             groups.push((url, bookmarks));
         }

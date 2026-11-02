@@ -3,7 +3,7 @@ use linkdean_core::{Bookmark, BookmarkView, Error, Result, User, Vault, VaultKey
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::bookmarks::bookmark_to_view;
+use super::bookmarks::bookmarks_to_views;
 
 pub async fn search_vault_bookmarks(
     pool: &PgPool,
@@ -21,8 +21,8 @@ pub async fn search_vault_bookmarks(
     .map_err(|e| Error::msg(e.to_string()))?;
     let q = query.to_ascii_lowercase();
     let mut out = Vec::new();
-    for b in rows {
-        if let Some(v) = bookmark_to_view(pool, b, keyring, user_id).await? {
+    for v in bookmarks_to_views(pool, rows, user_id, |_| keyring).await? {
+        {
             let hay = format!(
                 "{} {} {} {} {}",
                 v.title,

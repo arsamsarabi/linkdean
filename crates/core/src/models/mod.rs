@@ -559,7 +559,11 @@ pub struct PublicListView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
     pub owner_display_name: String,
+    /// The newest bookmarks, at most `PUBLIC_LIST_LIMIT` of them.
     pub bookmarks: Vec<PublicBookmarkView>,
+    /// How many bookmarks the list holds, including any left out of `bookmarks`.
+    #[serde(default)]
+    pub total: i64,
 }
 
 /// Bookmark fields safe to expose on a public list (no notes / vault / owner ids).

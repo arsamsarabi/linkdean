@@ -9,7 +9,9 @@ use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-use super::bookmarks::{bookmark_to_view, create_bookmark, get_bookmark_raw, tags_for_bookmark};
+use super::bookmarks::{
+    bookmark_to_view, create_bookmark, get_bookmark_raw, tags_for_bookmark, tags_for_bookmarks,
+};
 use super::shares::{
     bookmark_can_read, category_access, list_shared_categories, owned_shared_out_invitees,
     require_category_owner, require_category_read, require_category_write,
@@ -960,7 +962,11 @@ pub(super) async fn public_bookmark_view(
     b: linkdean_core::Bookmark,
 ) -> Result<PublicBookmarkView> {
     let tags = tags_for_bookmark(pool, b.id).await?;
-    Ok(PublicBookmarkView {
+    Ok(public_view_with_tags(b, tags))
+}
+
+fn public_view_with_tags(b: linkdean_core::Bookmark, tags: Vec<String>) -> PublicBookmarkView {
+    PublicBookmarkView {
         id: b.id,
         url: b.url,
         title: b.title,
@@ -970,11 +976,14 @@ pub(super) async fn public_bookmark_view(
         has_preview: b.has_preview,
         preview_url: None,
         tags,
-    })
+    }
 }
 
 /// A bookmark is on a public list when it is directly in the list and is not vault,
 /// private or trashed. Binds the list's category id as `$1`.
+/// A public list shows at most this many bookmarks, newest first.
+pub const PUBLIC_LIST_LIMIT: i64 = 500;
+
 const PUBLIC_LIST_BOOKMARK_FILTER: &str = r#"
     b.is_vault = FALSE
     AND b.is_private = FALSE
@@ -1047,27 +1056,43 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
         .ok_or(Error::NotFound)?;
     let owner_display_name = super::users::public_user_label(&owner, "Owner");
 
-    let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(&format!(
-        "SELECT b.* FROM bookmarks b WHERE {PUBLIC_LIST_BOOKMARK_FILTER} ORDER BY b.updated_at DESC"
+    let (total,): (i64,) = sqlx::query_as(&format!(
+        "SELECT COUNT(*) FROM bookmarks b WHERE {PUBLIC_LIST_BOOKMARK_FILTER}"
     ))
     .bind(cat.id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(&format!(
+        "SELECT b.* FROM bookmarks b WHERE {PUBLIC_LIST_BOOKMARK_FILTER} \
+         ORDER BY b.updated_at DESC, b.id LIMIT $2"
+    ))
+    .bind(cat.id)
+    .bind(PUBLIC_LIST_LIMIT)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    let mut bookmarks = Vec::with_capacity(rows.len());
-    for b in rows {
-        let updated_at = b.updated_at;
-        let mut view = public_bookmark_view(pool, b).await?;
-        use_public_asset_urls(&mut view, slug, updated_at);
-        bookmarks.push(view);
-    }
+    let ids: Vec<Uuid> = rows.iter().map(|b| b.id).collect();
+    let mut tags = tags_for_bookmarks(pool, &ids).await?;
+    let bookmarks = rows
+        .into_iter()
+        .map(|b| {
+            let updated_at = b.updated_at;
+            let tags = tags.remove(&b.id).unwrap_or_default();
+            let mut view = public_view_with_tags(b, tags);
+            use_public_asset_urls(&mut view, slug, updated_at);
+            view
+        })
+        .collect();
 
     Ok(PublicListView {
         name: cat.name,
         icon: cat.icon,
         owner_display_name,
         bookmarks,
+        total,
     })
 }
 

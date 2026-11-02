@@ -101,6 +101,8 @@ export const publicListSchema = z.object({
   icon: z.string().nullish(),
   owner_display_name: z.string(),
   bookmarks: z.array(publicBookmarkSchema),
+  /** All bookmarks on the list; `bookmarks` holds at most the newest 500. */
+  total: z.number().optional(),
 })
 
 export type CategoryPublicLink = z.infer<typeof categoryPublicLinkSchema>
