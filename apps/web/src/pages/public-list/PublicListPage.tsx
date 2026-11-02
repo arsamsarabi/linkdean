@@ -28,6 +28,7 @@ export function PublicListPage(): ReactElement {
             favicon_url: b.favicon_url,
             preview_image_url: b.preview_image_url,
             has_preview: b.has_preview,
+            preview_url: b.preview_url,
             is_vault: false,
             tags: b.tags,
             can_write: false,

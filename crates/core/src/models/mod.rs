@@ -575,6 +575,10 @@ pub struct PublicBookmarkView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preview_image_url: Option<String>,
     pub has_preview: bool,
+    /// Where anyone may load the stored preview, when `has_preview` and the caller is
+    /// anonymous. Set on public lists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview_url: Option<String>,
     pub tags: Vec<String>,
 }
 

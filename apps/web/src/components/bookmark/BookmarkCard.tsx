@@ -72,7 +72,7 @@ export function BookmarkCard({
     if (await owner.block()) setBlockOpen(false)
   }
 
-  const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_image_url ?? ''}:${b.updated_at}`
+  const previewKey = `${b.id}:${String(b.has_preview)}:${b.preview_url ?? ''}:${b.preview_image_url ?? ''}:${b.updated_at}`
   const [srcIndex, setSrcIndex] = useState(0)
   const [srcForKey, setSrcForKey] = useState(previewKey)
   if (srcForKey !== previewKey) {

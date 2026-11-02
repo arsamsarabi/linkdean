@@ -92,6 +92,7 @@ export const publicBookmarkSchema = z.object({
   favicon_url: z.string().nullish(),
   preview_image_url: z.string().nullish(),
   has_preview: z.boolean(),
+  preview_url: z.string().nullish(),
   tags: z.array(z.string()),
 })
 

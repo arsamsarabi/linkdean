@@ -22,6 +22,17 @@ describe('bookmarkPreviewSrc', () => {
     ).toBe('/api/bookmarks/1/preview?v=2024-01-02T00%3A00%3A00Z')
   })
 
+  it('uses the given preview url, as on a public list', () => {
+    expect(
+      bookmarkPreviewSrc({
+        id: '1',
+        has_preview: true,
+        preview_url: '/api/public/lists/ldl_x/bookmarks/1/preview?v=5',
+        updated_at: '2024-01-02T00:00:00Z',
+      })
+    ).toBe('/api/public/lists/ldl_x/bookmarks/1/preview?v=5')
+  })
+
   it('falls back to remote OG', () => {
     expect(
       bookmarkPreviewSrc({

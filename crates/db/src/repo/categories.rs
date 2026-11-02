@@ -968,17 +968,32 @@ pub(super) async fn public_bookmark_view(
         favicon_url: b.favicon_url,
         preview_image_url: b.preview_image_url,
         has_preview: b.has_preview,
+        preview_url: None,
         tags,
     })
 }
 
-pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<PublicListView> {
+/// A bookmark is on a public list when it is directly in the list and is not vault,
+/// private or trashed. Binds the list's category id as `$1`.
+const PUBLIC_LIST_BOOKMARK_FILTER: &str = r#"
+    b.is_vault = FALSE
+    AND b.is_private = FALSE
+    AND b.deleted_at IS NULL
+    AND (
+      b.category_id = $1
+      OR EXISTS (
+        SELECT 1 FROM bookmark_categories bc
+        WHERE bc.bookmark_id = b.id AND bc.category_id = $1
+      )
+    )
+"#;
+
+async fn public_list_category(pool: &PgPool, slug: &str) -> Result<Category> {
     let slug = slug.trim();
     if slug.is_empty() || !slug.starts_with(PUBLIC_SLUG_PREFIX) {
         return Err(Error::NotFound);
     }
-
-    let cat = sqlx::query_as::<_, Category>(
+    sqlx::query_as::<_, Category>(
         r#"
         SELECT * FROM categories
         WHERE public_slug = $1
@@ -990,29 +1005,51 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
     .fetch_optional(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?
-    .ok_or(Error::NotFound)?;
+    .ok_or(Error::NotFound)
+}
+
+/// Where an anonymous visitor of list `slug` loads a bookmark's stored images.
+pub fn public_asset_url(slug: &str, bookmark_id: Uuid, asset: &str) -> String {
+    format!("/api/public/lists/{slug}/bookmarks/{bookmark_id}/{asset}")
+}
+
+/// Point the bookmark's own `/api/bookmarks/{id}/…` images, which need a session, at the
+/// public list's routes.
+fn use_public_asset_urls(
+    view: &mut PublicBookmarkView,
+    slug: &str,
+    updated_at: chrono::DateTime<chrono::Utc>,
+) {
+    let id = view.id;
+    for (field, asset) in [
+        (&mut view.favicon_url, "favicon"),
+        (&mut view.preview_image_url, "og"),
+    ] {
+        if field.as_deref() == Some(format!("/api/bookmarks/{id}/{asset}").as_str()) {
+            *field = Some(public_asset_url(slug, id, asset));
+        }
+    }
+    view.preview_url = view.has_preview.then(|| {
+        format!(
+            "{}?v={}",
+            public_asset_url(slug, id, "preview"),
+            updated_at.timestamp_millis()
+        )
+    });
+}
+
+pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<PublicListView> {
+    let cat = public_list_category(pool, slug).await?;
+    let slug = slug.trim();
 
     let owner = find_user_by_id(pool, cat.owner_user_id)
         .await?
         .ok_or(Error::NotFound)?;
     let owner_display_name = super::users::public_user_label(&owner, "Owner");
 
-    let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(
-        r#"
-        SELECT b.* FROM bookmarks b
-        WHERE b.is_vault = FALSE
-          AND b.is_private = FALSE
-          AND b.deleted_at IS NULL
-          AND (
-            b.category_id = $1
-            OR EXISTS (
-              SELECT 1 FROM bookmark_categories bc
-              WHERE bc.bookmark_id = b.id AND bc.category_id = $1
-            )
-          )
-        ORDER BY b.updated_at DESC
-        "#,
-    )
+    let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(&format!(
+        "SELECT b.* FROM bookmarks b WHERE {PUBLIC_LIST_BOOKMARK_FILTER} ORDER BY b.updated_at DESC"
+    ))
     .bind(cat.id)
     .fetch_all(pool)
     .await
@@ -1020,7 +1057,10 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
 
     let mut bookmarks = Vec::with_capacity(rows.len());
     for b in rows {
-        bookmarks.push(public_bookmark_view(pool, b).await?);
+        let updated_at = b.updated_at;
+        let mut view = public_bookmark_view(pool, b).await?;
+        use_public_asset_urls(&mut view, slug, updated_at);
+        bookmarks.push(view);
     }
 
     Ok(PublicListView {
@@ -1029,4 +1069,22 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
         owner_display_name,
         bookmarks,
     })
+}
+
+/// The bookmark, when it is on public list `slug`, so its images may be served to anyone.
+pub async fn get_public_list_bookmark(
+    pool: &PgPool,
+    slug: &str,
+    bookmark_id: Uuid,
+) -> Result<linkdean_core::Bookmark> {
+    let cat = public_list_category(pool, slug).await?;
+    sqlx::query_as::<_, linkdean_core::Bookmark>(&format!(
+        "SELECT b.* FROM bookmarks b WHERE b.id = $2 AND {PUBLIC_LIST_BOOKMARK_FILTER}"
+    ))
+    .bind(cat.id)
+    .bind(bookmark_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
 }

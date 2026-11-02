@@ -1,23 +1,23 @@
-/** Local screenshot / custom upload when present; else remote OG image. */
-export function bookmarkPreviewSrc(b: {
+type PreviewSource = {
   id: string
   has_preview?: boolean
+  /** Where to load the stored preview instead of the signed-in route, e.g. on a public list. */
+  preview_url?: string | null
   preview_image_url?: string | null
   updated_at?: string | null
-}): string | undefined {
+}
+
+/** Local screenshot / custom upload when present; else remote OG image. */
+export function bookmarkPreviewSrc(b: PreviewSource): string | undefined {
   if (b.has_preview) {
+    if (b.preview_url) return b.preview_url
     const bust = b.updated_at ? `?v=${encodeURIComponent(b.updated_at)}` : ''
     return `/api/bookmarks/${b.id}/preview${bust}`
   }
   return b.preview_image_url || undefined
 }
 
-export function previewSrcCandidates(b: {
-  id: string
-  has_preview?: boolean
-  preview_image_url?: string | null
-  updated_at?: string | null
-}): string[] {
+export function previewSrcCandidates(b: PreviewSource): string[] {
   const list: string[] = []
   const primary = bookmarkPreviewSrc(b)
   if (primary) list.push(primary)
