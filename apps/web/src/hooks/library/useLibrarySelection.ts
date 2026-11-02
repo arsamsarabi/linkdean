@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { notifications } from '@mantine/notifications'
 import type { BulkEditMode } from '@/components'
 import { useBulkAddCategories, useBulkDeleteBookmarks, useBulkTagBookmarks } from '@/hooks/bookmarks'
+import { useSyncDuringRender } from '@/hooks/render'
 import type { Bookmark } from '@/schemas'
 import { toggleId, writableIds, type LibraryListItem } from '@/services'
 
@@ -34,6 +35,18 @@ export function useLibrarySelection({ list, bookmarks }: Input) {
   const bulkPending = bulkCategories.isPending || bulkTag.isPending || bulkDelete.isPending
 
   const selectableIds = useMemo(() => writableIds(list), [list])
+
+  // What leaves the screen (a new search, folder or filter) leaves the selection, so bulk
+  // actions and their warnings only ever cover what the user can see.
+  useSyncDuringRender([selectableIds], () => {
+    setSelectedIds((prev) => {
+      const visible = new Set(selectableIds)
+      const kept = [...prev].filter((id) => visible.has(id))
+      return kept.length === prev.size ? prev : new Set(kept)
+    })
+  })
+
+  const selectedItems = useMemo(() => list.filter((b) => selectedIds.has(b.id)), [list, selectedIds])
   const selectedCount = selectedIds.size
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id))
 
@@ -93,6 +106,7 @@ export function useLibrarySelection({ list, bookmarks }: Input) {
     bulkDelete,
     bulkPending,
     selectableIds,
+    selectedItems,
     selectedCount,
     allVisibleSelected,
     exitSelectMode,

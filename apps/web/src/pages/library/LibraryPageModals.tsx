@@ -11,8 +11,10 @@ export function LibraryPageModals(): ReactElement {
   const lib = useLibraryPageModel()
   const categories = lib.cats.data || []
   const permanent = lib.me.data?.settings.vault_delete_mode === 'permanent'
-  const deletesVaultItem = permanent && lib.list.some((b) => b.id === lib.deleteId && b.is_vault)
-  const bulkDeletesVaultItem = permanent && lib.list.some((b) => lib.selectedIds.has(b.id) && b.is_vault)
+  // Look the item up everywhere it can come from: the grid, Explorer and search all open this.
+  const deleting = [...lib.list, ...(lib.bookmarks.data ?? []), ...lib.searchItems].find((b) => b.id === lib.deleteId)
+  const deletesVaultItem = permanent && !!deleting?.is_vault
+  const bulkDeletesVaultItem = permanent && lib.selectedItems.some((b) => b.is_vault)
 
   return (
     <>
