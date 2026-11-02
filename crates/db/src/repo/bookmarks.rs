@@ -755,6 +755,8 @@ pub async fn get_bookmark_for_assets(pool: &PgPool, user_id: Uuid, id: Uuid) -> 
           AND d.deleted_at IS NULL
           AND b.deleted_at IS NULL
           AND b.is_vault = FALSE
+          -- Same rule as the dashboard view: a share carries the owner's own pins only.
+          AND b.owner_user_id = d.owner_user_id
         LIMIT 1
         "#,
     )

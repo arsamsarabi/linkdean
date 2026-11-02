@@ -180,20 +180,39 @@ pub async fn get_dashboard(
     load_dashboard_view(pool, user_id, dash, access, keyring).await
 }
 
-/// Whether `user_id` cannot see this pin on a dashboard: the bookmark is trashed, or it
-/// is a vault bookmark that is someone else's or locked.
+/// Whether `user_id` may see this pin on a dashboard owned by `dashboard_owner`.
+///
+/// Sharing a dashboard shares the owner's own non-vault bookmarks pinned on it. Any other
+/// pin shows only to people who can read the bookmark themselves, so a pin never outlives
+/// a revoked folder share or re-shares someone else's bookmark. Vault pins show only to
+/// their owner while the vault is unlocked.
+async fn pin_visible_to(
+    pool: &PgPool,
+    user_id: Uuid,
+    b: &Bookmark,
+    dashboard_owner: Uuid,
+    keyring: &VaultKeyring,
+) -> Result<bool> {
+    if b.is_vault {
+        return Ok(b.owner_user_id == user_id && b.vault_id.and_then(|v| keyring.get(v)).is_some());
+    }
+    if b.owner_user_id == dashboard_owner {
+        return Ok(true);
+    }
+    bookmark_can_read(pool, user_id, b.id).await
+}
+
+/// Whether `user_id` cannot see this pin: the bookmark is trashed, or [`pin_visible_to`] says no.
 async fn pin_hidden_from(
     pool: &PgPool,
     user_id: Uuid,
     bookmark_id: Uuid,
+    dashboard_owner: Uuid,
     keyring: &VaultKeyring,
 ) -> Result<bool> {
     Ok(match fetch_bookmark_row(pool, bookmark_id).await? {
         None => true,
-        Some(b) if b.is_vault => {
-            b.owner_user_id != user_id || b.vault_id.and_then(|v| keyring.get(v)).is_none()
-        }
-        Some(_) => false,
+        Some(b) => !pin_visible_to(pool, user_id, &b, dashboard_owner, keyring).await?,
     })
 }
 
@@ -247,8 +266,7 @@ async fn load_dashboard_view(
             let Some(raw) = fetch_bookmark_row(pool, item.bookmark_id).await? else {
                 continue;
             };
-            // Vault pins: bookmark owner only. Non-vault: any dashboard viewer may glance the pin.
-            if raw.is_vault && raw.owner_user_id != user_id {
+            if !pin_visible_to(pool, user_id, &raw, dash.owner_user_id, keyring).await? {
                 continue;
             }
             let none = VaultKeyring::default();
@@ -402,10 +420,12 @@ pub async fn put_dashboard(
     .map_err(|e| Error::msg(e.to_string()))?;
     let mut hidden: Vec<(usize, String, Uuid)> = Vec::new();
     let mut old_index = std::collections::HashMap::new();
+    let mut already_pinned = std::collections::HashSet::new();
     for (pos, sec_title, bookmark_id) in existing {
         let next = old_index.len();
         let index = *old_index.entry(pos).or_insert(next);
-        if pin_hidden_from(pool, user_id, bookmark_id, keyring).await? {
+        already_pinned.insert(bookmark_id);
+        if pin_hidden_from(pool, user_id, bookmark_id, dash.owner_user_id, keyring).await? {
             hidden.push((index, sec_title, bookmark_id));
         }
     }
@@ -439,20 +459,22 @@ pub async fn put_dashboard(
 
         let mut seen = std::collections::HashSet::new();
         for (ii, bookmark_id) in section.bookmark_ids.iter().enumerate() {
-            if pin_hidden_from(pool, user_id, *bookmark_id, keyring).await? {
-                // Kept below from the stored layout, never added from the request.
-                continue;
+            let pinned = already_pinned.contains(bookmark_id);
+            if pin_hidden_from(pool, user_id, *bookmark_id, dash.owner_user_id, keyring).await? {
+                if pinned {
+                    // Kept below from the stored layout, never added from the request.
+                    continue;
+                }
+                return Err(Error::BadRequest(
+                    "bookmark not found or not readable".into(),
+                ));
             }
             if !seen.insert(*bookmark_id) {
                 continue;
             }
-            // Owner / readers of the bookmark, or write invitees rearranging owner's non-vault pins.
-            let readable = bookmark_can_read(pool, user_id, *bookmark_id).await?;
-            let owner_pin = matches!(
-                fetch_bookmark_row(pool, *bookmark_id).await?,
-                Some(b) if !b.is_vault && b.owner_user_id == dash.owner_user_id
-            );
-            if !readable && !owner_pin {
+            // New pins must be readable by the editor. Pins already on the dashboard, such as
+            // the owner's bookmarks a write invitee sees through it, may only be rearranged.
+            if !pinned && !bookmark_can_read(pool, user_id, *bookmark_id).await? {
                 return Err(Error::BadRequest(
                     "bookmark not found or not readable".into(),
                 ));

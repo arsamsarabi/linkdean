@@ -4,8 +4,9 @@
 
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
-    CreateBookmark, CreateDashboard, CreateDashboardShare, Dashboard, DashboardView, Error,
-    PatchDashboard, PutDashboardLayout, PutDashboardSection, ShareAccess, User,
+    CreateBookmark, CreateCategory, CreateCategoryShare, CreateDashboard, CreateDashboardShare,
+    Dashboard, DashboardView, Error, PatchDashboard, PutDashboardLayout, PutDashboardSection,
+    ShareAccess, User,
 };
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -379,4 +380,180 @@ async fn vault_pins_stay_hidden_from_invitees() {
 
     let denied = db::get_bookmark_for_assets(&pool, invitee.id, bookmark).await;
     assert!(matches!(denied, Err(Error::NotFound)));
+}
+
+fn pin_ids(view: &DashboardView) -> Vec<Uuid> {
+    view.sections
+        .iter()
+        .flat_map(|s| s.items.iter().map(|i| i.bookmark.id))
+        .collect()
+}
+
+async fn layout(
+    pool: &PgPool,
+    editor: &User,
+    board: Uuid,
+    ids: Vec<Uuid>,
+) -> Result<DashboardView, Error> {
+    db::put_dashboard(
+        pool,
+        editor.id,
+        board,
+        PutDashboardLayout {
+            title: None,
+            sections: vec![PutDashboardSection {
+                title: "Pins".into(),
+                bookmark_ids: ids,
+            }],
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+}
+
+async fn board_view(pool: &PgPool, viewer: &User, board: Uuid) -> DashboardView {
+    db::get_dashboard(pool, viewer.id, board, &VaultKeyring::default())
+        .await
+        .expect("view")
+}
+
+/// A bookmark of `owner` in a folder shared with `invitee`.
+async fn bookmark_in_shared_folder(pool: &PgPool, owner: &User, invitee: &User) -> (Uuid, Uuid) {
+    let folder = db::create_category(
+        pool,
+        owner.id,
+        CreateCategory {
+            name: "Shared folder".into(),
+            parent_id: None,
+            is_hidden: false,
+            vault_id: None,
+            icon: None,
+        },
+    )
+    .await
+    .expect("folder")
+    .id;
+    let bookmark = db::create_bookmark(
+        pool,
+        owner.id,
+        CreateBookmark {
+            url: format!("https://pins.example/{}", Uuid::new_v4()),
+            title: Some("Folder bookmark".into()),
+            category_id: Some(folder),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("bookmark")
+    .id;
+    db::create_share(
+        pool,
+        owner.id,
+        folder,
+        CreateCategoryShare {
+            email: invitee.email.clone(),
+            access: ShareAccess::Read,
+        },
+    )
+    .await
+    .expect("share");
+    accept_invites(pool, invitee.id).await;
+    (folder, bookmark)
+}
+
+#[tokio::test]
+async fn pins_do_not_reshare_someone_elses_bookmark_or_outlive_a_revoke() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let alice = user(&pool, "alice").await;
+    let bob = user(&pool, "bob").await;
+    let carol = user(&pool, "carol").await;
+    let (folder, bookmark) = bookmark_in_shared_folder(&pool, &alice, &bob).await;
+    let board = shared_board(&pool, &bob, &carol, ShareAccess::Read).await;
+    layout(&pool, &bob, board, vec![bookmark])
+        .await
+        .expect("bob pins");
+
+    assert_eq!(
+        pin_ids(&board_view(&pool, &bob, board).await),
+        vec![bookmark]
+    );
+    assert!(pin_ids(&board_view(&pool, &carol, board).await).is_empty());
+    let image = db::get_bookmark_for_assets(&pool, carol.id, bookmark).await;
+    assert!(matches!(image, Err(Error::NotFound)));
+
+    db::delete_share(&pool, alice.id, folder, bob.id)
+        .await
+        .expect("revoke");
+    assert!(pin_ids(&board_view(&pool, &bob, board).await).is_empty());
+}
+
+#[tokio::test]
+async fn write_invitee_cannot_pin_an_owner_bookmark_by_id() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let editor = user(&pool, "editor").await;
+    let board = shared_board(&pool, &owner, &editor, ShareAccess::Write).await;
+    let pinned = pinned_bookmark(&pool, &owner, board).await;
+    let unpinned = db::create_bookmark(
+        &pool,
+        owner.id,
+        CreateBookmark {
+            url: format!("https://pins.example/{}", Uuid::new_v4()),
+            title: Some("Not pinned".into()),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("bookmark")
+    .id;
+
+    let refused = layout(&pool, &editor, board, vec![pinned, unpinned]).await;
+    assert!(matches!(refused, Err(Error::BadRequest(_))), "{refused:?}");
+
+    // Rearranging the owner's existing pins still works.
+    let kept = layout(&pool, &editor, board, vec![pinned])
+        .await
+        .expect("rearrange");
+    assert_eq!(pin_ids(&kept), vec![pinned]);
+}
+
+#[tokio::test]
+async fn an_invitees_own_pin_stays_theirs() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let editor = user(&pool, "editor").await;
+    let board = shared_board(&pool, &owner, &editor, ShareAccess::Write).await;
+    let own = db::create_bookmark(
+        &pool,
+        editor.id,
+        CreateBookmark {
+            url: format!("https://pins.example/{}", Uuid::new_v4()),
+            title: Some("Editor's own".into()),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("bookmark")
+    .id;
+    layout(&pool, &editor, board, vec![own])
+        .await
+        .expect("pin own");
+
+    assert_eq!(pin_ids(&board_view(&pool, &editor, board).await), vec![own]);
+    assert!(pin_ids(&board_view(&pool, &owner, board).await).is_empty());
+
+    // The owner saving the layout keeps the pin they cannot see.
+    layout(&pool, &owner, board, vec![])
+        .await
+        .expect("owner saves");
+    assert_eq!(pin_ids(&board_view(&pool, &editor, board).await), vec![own]);
 }
