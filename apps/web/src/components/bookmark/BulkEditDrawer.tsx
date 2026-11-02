@@ -12,6 +12,7 @@ import {
 } from '@mantine/core'
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
+import { ConfirmModal } from '../confirm-modal/ConfirmModal'
 
 export type BulkEditMode = 'categories' | 'tag'
 
@@ -39,6 +40,7 @@ export function BulkEditDrawer({
   const [categoryIds, setCategoryIds] = useState<string[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [tagMode, setTagMode] = useState<'add' | 'replace'>('add')
+  const [confirmReplace, setConfirmReplace] = useState(false)
   const [openEpoch, setOpenEpoch] = useState(opened)
   const [modeEpoch, setModeEpoch] = useState(mode)
   if (opened !== openEpoch || mode !== modeEpoch) {
@@ -48,8 +50,10 @@ export function BulkEditDrawer({
       setCategoryIds([])
       setTags([])
       setTagMode('add')
+      setConfirmReplace(false)
     }
   }
+  const noTags = tags.every((t) => !t.trim())
 
   const writable = writableCategories(categories)
   const title =
@@ -58,7 +62,15 @@ export function BulkEditDrawer({
       : `Tag ${count} bookmark${count === 1 ? '' : 's'}`
 
   return (
-    <Drawer opened={opened} onClose={onClose} title={title} position="right" size="md" padding="lg">
+    <Drawer
+      opened={opened}
+      onClose={onClose}
+      closeOnEscape={!confirmReplace}
+      title={title}
+      position="right"
+      size="md"
+      padding="lg"
+    >
       <Box pos="relative">
         <LoadingOverlay visible={!!pending} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
@@ -103,11 +115,22 @@ export function BulkEditDrawer({
                 clearable
               />
               <Button
-                onClick={() => onApplyTag(tags, tagMode)}
-                disabled={pending || (tagMode === 'add' && tags.every((t) => !t.trim()))}
+                onClick={() => (tagMode === 'replace' ? setConfirmReplace(true) : onApplyTag(tags, tagMode))}
+                disabled={pending || noTags}
               >
                 Apply tags
               </Button>
+              <ConfirmModal
+                opened={confirmReplace}
+                onClose={() => setConfirmReplace(false)}
+                onConfirm={() => {
+                  setConfirmReplace(false)
+                  onApplyTag(tags, 'replace')
+                }}
+                title="Replace tags?"
+                body={`Every tag on ${count} bookmark${count === 1 ? '' : 's'} is replaced with ${tags.join(', ')}. The old tags are not kept.`}
+                confirmLabel="Replace tags"
+              />
             </>
           )}
         </Stack>

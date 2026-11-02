@@ -13,6 +13,7 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconHeart, IconHeartFilled, IconTrash } from '@tabler/icons-react'
+import { ConfirmModal } from '@/components/confirm-modal/ConfirmModal'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import {
   useAddSocialComment,
@@ -38,12 +39,21 @@ export function SocialDrawer({ opened, onClose, subjectType, subjectId, title }:
   const deleteComment = useDeleteSocialComment(subjectType, subjectId)
   const setRating = useSetSocialRating(subjectType, subjectId)
   const [draft, setDraft] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const s = social.data?.social
   const heading = title?.trim() || 'Shared activity'
 
   return (
-    <Drawer opened={opened} onClose={onClose} position="right" size="md" title={heading} padding="md">
+    <Drawer
+      opened={opened}
+      onClose={onClose}
+      closeOnEscape={!deletingId}
+      position="right"
+      size="md"
+      title={heading}
+      padding="md"
+    >
       <Stack gap="lg">
         {social.isError ? (
           <QueryErrorAlert
@@ -130,12 +140,8 @@ export function SocialDrawer({ opened, onClose, subjectType, subjectId, title }:
                         variant="subtle"
                         color="red"
                         aria-label="Delete comment"
-                        loading={deleteComment.isPending}
-                        onClick={() => {
-                          deleteComment.mutate(c.id, {
-                            onError: (err) => notifications.show({ color: 'red', message: String(err) }),
-                          })
-                        }}
+                        loading={deleteComment.isPending && deleteComment.variables === c.id}
+                        onClick={() => setDeletingId(c.id)}
                       >
                         <IconTrash size={14} stroke={1.5} />
                       </ActionIcon>
@@ -179,6 +185,20 @@ export function SocialDrawer({ opened, onClose, subjectType, subjectId, title }:
           </>
         ) : null}
       </Stack>
+      <ConfirmModal
+        opened={!!deletingId}
+        onClose={() => setDeletingId(null)}
+        onConfirm={() => {
+          if (!deletingId) return
+          deleteComment.mutate(deletingId, {
+            onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+          })
+          setDeletingId(null)
+        }}
+        title="Delete comment?"
+        body="The comment is removed for everyone. It cannot be restored."
+        confirmLabel="Delete"
+      />
     </Drawer>
   )
 }

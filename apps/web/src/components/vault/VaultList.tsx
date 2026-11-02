@@ -14,6 +14,7 @@ import {
   useVaults,
 } from '@/hooks'
 import type { Vault } from '@/schemas'
+import { ConfirmModal } from '../confirm-modal/ConfirmModal'
 import { DeleteVaultModal } from './DeleteVaultModal'
 import { RecoverVaultModal } from './RecoverVaultModal'
 import { RecoveryKeyModal } from './RecoveryKeyModal'
@@ -39,6 +40,7 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
   const [recovering, setRecovering] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null)
+  const [confirmNewKey, setConfirmNewKey] = useState(false)
   const unlock = useUnlockVault()
   const lock = useLockVault()
   const rename = useRenameVault()
@@ -55,6 +57,7 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
   }
 
   async function onNewKey(): Promise<void> {
+    setConfirmNewKey(false)
     try {
       const res = await newKey.mutateAsync(vault.id)
       setRecoveryKey(res.recovery_key)
@@ -103,7 +106,11 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
               >
                 Lock
               </Button>
-              <Button variant="default" loading={newKey.isPending} onClick={() => void onNewKey()}>
+              <Button
+                variant="default"
+                loading={newKey.isPending}
+                onClick={() => (vault.has_recovery_key ? setConfirmNewKey(true) : void onNewKey())}
+              >
                 {vault.has_recovery_key ? 'Replace recovery key' : 'Create recovery key'}
               </Button>
             </Group>
@@ -159,6 +166,15 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
 
       {recovering ? <RecoverVaultModal vault={vault} onClose={() => setRecovering(false)} /> : null}
       {deleting ? <DeleteVaultModal vault={vault} onClose={() => setDeleting(false)} /> : null}
+      <ConfirmModal
+        opened={confirmNewKey}
+        onClose={() => setConfirmNewKey(false)}
+        onConfirm={() => void onNewKey()}
+        title="Replace recovery key?"
+        body={`The current recovery key for ${vault.name} stops working at once. Only the new key, shown next, can recover this vault.`}
+        confirmLabel="Replace key"
+        loading={newKey.isPending}
+      />
       {recoveryKey ? <RecoveryKeyModal recoveryKey={recoveryKey} onDone={() => setRecoveryKey(null)} /> : null}
     </Paper>
   )

@@ -1,6 +1,7 @@
-import { type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { Divider, Drawer } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { ConfirmModal } from '@/components/confirm-modal/ConfirmModal'
 import { ShareInvitePanel } from '@/components/share-invite'
 import { useShareCategoryDrawer } from '@/hooks/categories'
 import { CategoryPublicLinkSection } from './CategoryPublicLinkSection'
@@ -22,9 +23,18 @@ export function ShareCategoryDrawer({
   onClose,
 }: Props): ReactElement {
   const s = useShareCategoryDrawer({ categoryId, opened, isVault })
+  const [confirmRotate, setConfirmRotate] = useState(false)
 
   return (
-    <Drawer opened={opened} onClose={onClose} title={`Share “${categoryName}”`} position="right" size="md" padding="lg">
+    <Drawer
+      opened={opened}
+      onClose={onClose}
+      closeOnEscape={!confirmRotate}
+      title={`Share “${categoryName}”`}
+      position="right"
+      size="md"
+      padding="lg"
+    >
       <ShareInvitePanel
         description="Invite by email. They get access once they accept."
         email={s.email}
@@ -79,7 +89,19 @@ export function ShareCategoryDrawer({
           busy={s.publicBusy}
           rotatePending={s.rotatePublic.isPending}
           onToggle={(next) => void s.onTogglePublic(next)}
-          onRotate={() => void s.onRotatePublic()}
+          onRotate={() => setConfirmRotate(true)}
+        />
+        <ConfirmModal
+          opened={confirmRotate}
+          onClose={() => setConfirmRotate(false)}
+          onConfirm={() => {
+            setConfirmRotate(false)
+            void s.onRotatePublic()
+          }}
+          title="Rotate public link?"
+          body="The current link stops working at once, for everyone who has it. Share the new link to give access again."
+          confirmLabel="Rotate link"
+          loading={s.rotatePublic.isPending}
         />
       </ShareInvitePanel>
     </Drawer>

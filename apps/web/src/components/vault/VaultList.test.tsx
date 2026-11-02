@@ -9,6 +9,7 @@ const unlock = vi.hoisted(() => vi.fn())
 const lock = vi.hoisted(() => vi.fn())
 const join = vi.hoisted(() => vi.fn())
 const leave = vi.hoisted(() => vi.fn())
+const newKey = vi.hoisted(() => vi.fn())
 const data = vi.hoisted(() => ({ vaults: [] as Vault[], global: false }))
 const idle = { mutateAsync: vi.fn(), isPending: false }
 
@@ -17,7 +18,7 @@ vi.mock('@/hooks', () => ({
   useUnlockVault: () => ({ mutateAsync: unlock, isPending: false }),
   useLockVault: () => ({ mutateAsync: lock, isPending: false }),
   useRenameVault: () => idle,
-  useNewRecoveryKey: () => idle,
+  useNewRecoveryKey: () => ({ mutateAsync: newKey, isPending: false }),
   useJoinGlobal: () => ({ mutateAsync: join, isPending: false }),
   useLeaveGlobal: () => ({ mutateAsync: leave, isPending: false }),
   useGlobalPassphrase: () => ({ data: { enabled: data.global } }),
@@ -25,6 +26,7 @@ vi.mock('@/hooks', () => ({
 
 vi.mock('./RecoverVaultModal', () => ({ RecoverVaultModal: () => null }))
 vi.mock('./DeleteVaultModal', () => ({ DeleteVaultModal: () => null }))
+vi.mock('./RecoveryKeyModal', () => ({ RecoveryKeyModal: () => null }))
 
 const base: Vault = { id: 'v1', name: 'Work', unlocked: false, has_recovery_key: true, in_global: false }
 
@@ -95,5 +97,19 @@ describe('VaultList', () => {
     )
     expect(screen.getByRole('switch')).toBeDisabled()
     expect(screen.getByText('Unlock this vault to turn this on.')).toBeTruthy()
+  })
+
+  it('asks before replacing a recovery key', async () => {
+    newKey.mockReset().mockResolvedValue({ recovery_key: 'new-key' })
+    data.vaults = [{ ...base, unlocked: true }]
+    render(
+      <MantineProvider>
+        <VaultList />
+      </MantineProvider>
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Replace recovery key' }))
+    expect(newKey).not.toHaveBeenCalled()
+    await userEvent.click(await screen.findByRole('button', { name: 'Replace key' }))
+    expect(newKey).toHaveBeenCalledWith('v1')
   })
 })
