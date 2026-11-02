@@ -1,5 +1,6 @@
 export * from './bulkSelection'
 export * from './explorerLibrary'
+export * from './explorerSelection'
 export * from './libraryList'
 export * from './mergeDuplicates'
 export * from './searchCatchUp'

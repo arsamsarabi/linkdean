@@ -4,7 +4,7 @@ import { useMe } from '@/hooks/auth'
 import { useCategoryFolderActions } from '@/hooks/categories'
 import { buildLibrarySearch } from '@/lib'
 import type { Category } from '@/schemas'
-import { FOLDER_ALL, FOLDER_UNCATEGORIZED, type ExplorerFolderId } from '@/services'
+import { explorerSelectableItems, FOLDER_ALL, FOLDER_UNCATEGORIZED, type ExplorerFolderId } from '@/services'
 import { useUi } from '@/stores'
 import type { LibraryPath, LibraryScope } from './types'
 import { useLibraryBookmarkEditor } from './useLibraryBookmarkEditor'
@@ -43,8 +43,35 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
     filterActive: url.filterActive,
   })
 
+  // Bulk actions must only reach what is on screen, and Explorer shows one folder at a time.
+  const searchHits = listState.search.data?.hits
+  const selectable = useMemo(() => {
+    if (viewMode !== 'explorer') return listState.list
+    return explorerSelectableItems({
+      searching: listState.searching,
+      searchHits: searchHits || [],
+      folderId: url.folderId,
+      categories: listState.cats.data || [],
+      bookmarks: listState.bookmarks.data || [],
+      showHidden,
+      filterFlags: url.filterFlags,
+      sort: url.sort,
+    })
+  }, [
+    viewMode,
+    listState.list,
+    listState.searching,
+    searchHits,
+    url.folderId,
+    listState.cats.data,
+    listState.bookmarks.data,
+    showHidden,
+    url.filterFlags,
+    url.sort,
+  ])
+
   const selection = useLibrarySelection({
-    list: listState.list,
+    list: selectable,
     bookmarks: listState.bookmarks.data || [],
   })
 
