@@ -437,3 +437,151 @@ async fn dashboard_share_read_write_and_revoke() {
         Err(Error::NotFound)
     ));
 }
+
+#[tokio::test]
+async fn saving_a_layout_keeps_pins_the_editor_cannot_see() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = db::create_user(
+        &pool,
+        &unique_email("hidden"),
+        Some("password-long"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("user");
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "Work", "work-passphrase")
+        .await
+        .expect("vault");
+    let mut unlocked = VaultKeyring::default();
+    unlocked.insert(vault.id, key);
+
+    let plain = db::create_bookmark(
+        &pool,
+        owner.id,
+        CreateBookmark {
+            url: format!("https://plain.example/{}", Uuid::new_v4()),
+            ..Default::default()
+        },
+        &unlocked,
+    )
+    .await
+    .expect("plain")
+    .id;
+    let trashed = db::create_bookmark(
+        &pool,
+        owner.id,
+        CreateBookmark {
+            url: format!("https://trashed.example/{}", Uuid::new_v4()),
+            ..Default::default()
+        },
+        &unlocked,
+    )
+    .await
+    .expect("trashed")
+    .id;
+    let secret = db::create_bookmark(
+        &pool,
+        owner.id,
+        CreateBookmark {
+            url: "https://secret.example/".into(),
+            vault_id: Some(vault.id),
+            ..Default::default()
+        },
+        &unlocked,
+    )
+    .await
+    .expect("vault bookmark")
+    .id;
+
+    let board = db::create_dashboard(
+        &pool,
+        owner.id,
+        CreateDashboard {
+            title: Some("Board".into()),
+        },
+        &unlocked,
+    )
+    .await
+    .expect("dashboard");
+    db::put_dashboard(
+        &pool,
+        owner.id,
+        board.id,
+        PutDashboardLayout {
+            title: None,
+            sections: vec![PutDashboardSection {
+                title: "Main".into(),
+                bookmark_ids: vec![plain, trashed, secret],
+            }],
+        },
+        &unlocked,
+    )
+    .await
+    .expect("first layout");
+    db::delete_bookmark(&pool, owner.id, trashed)
+        .await
+        .expect("trash");
+
+    // Saved while the vault is locked: the editor sees only `plain`, renamed into a new section.
+    db::put_dashboard(
+        &pool,
+        owner.id,
+        board.id,
+        PutDashboardLayout {
+            title: None,
+            sections: vec![PutDashboardSection {
+                title: "Renamed".into(),
+                bookmark_ids: vec![plain],
+            }],
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("locked layout");
+
+    let mut kept: Vec<Uuid> = sqlx::query_scalar(
+        r#"
+        SELECT i.bookmark_id FROM dashboard_items i
+        JOIN dashboard_sections s ON s.id = i.section_id
+        WHERE s.dashboard_id = $1
+        "#,
+    )
+    .bind(board.id)
+    .fetch_all(&pool)
+    .await
+    .expect("items");
+    kept.sort();
+    let mut want = vec![plain, trashed, secret];
+    want.sort();
+    assert_eq!(kept, want);
+
+    // Removing every section still keeps the hidden pins.
+    db::put_dashboard(
+        &pool,
+        owner.id,
+        board.id,
+        PutDashboardLayout {
+            title: None,
+            sections: vec![],
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("empty layout");
+    let left: i64 = sqlx::query_scalar(
+        r#"
+        SELECT COUNT(*) FROM dashboard_items i
+        JOIN dashboard_sections s ON s.id = i.section_id
+        WHERE s.dashboard_id = $1
+        "#,
+    )
+    .bind(board.id)
+    .fetch_one(&pool)
+    .await
+    .expect("count");
+    assert_eq!(left, 2);
+}

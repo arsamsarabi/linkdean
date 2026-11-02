@@ -180,6 +180,23 @@ pub async fn get_dashboard(
     load_dashboard_view(pool, user_id, dash, access, keyring).await
 }
 
+/// Whether `user_id` cannot see this pin on a dashboard: the bookmark is trashed, or it
+/// is a vault bookmark that is someone else's or locked.
+async fn pin_hidden_from(
+    pool: &PgPool,
+    user_id: Uuid,
+    bookmark_id: Uuid,
+    keyring: &VaultKeyring,
+) -> Result<bool> {
+    Ok(match fetch_bookmark_row(pool, bookmark_id).await? {
+        None => true,
+        Some(b) if b.is_vault => {
+            b.owner_user_id != user_id || b.vault_id.and_then(|v| keyring.get(v)).is_none()
+        }
+        Some(_) => false,
+    })
+}
+
 async fn load_dashboard_view(
     pool: &PgPool,
     user_id: Uuid,
@@ -368,11 +385,38 @@ pub async fn put_dashboard(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
+    // The editor only sees some pins: not trashed bookmarks, not locked vault pins, not
+    // another member's vault pins. Keep those, since the layout sent cannot mention them.
+    let existing: Vec<(i32, String, Uuid)> = sqlx::query_as(
+        r#"
+        SELECT s.position, s.title, i.bookmark_id
+        FROM dashboard_items i
+        JOIN dashboard_sections s ON s.id = i.section_id
+        WHERE s.dashboard_id = $1
+        ORDER BY s.position, s.created_at, i.position, i.created_at
+        "#,
+    )
+    .bind(dash.id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let mut hidden: Vec<(usize, String, Uuid)> = Vec::new();
+    let mut old_index = std::collections::HashMap::new();
+    for (pos, sec_title, bookmark_id) in existing {
+        let next = old_index.len();
+        let index = *old_index.entry(pos).or_insert(next);
+        if pin_hidden_from(pool, user_id, bookmark_id, keyring).await? {
+            hidden.push((index, sec_title, bookmark_id));
+        }
+    }
+
     sqlx::query("DELETE FROM dashboard_sections WHERE dashboard_id = $1")
         .bind(dash.id)
         .execute(&mut *tx)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
+
+    let mut new_sections: Vec<(Uuid, std::collections::HashSet<Uuid>, i32)> = Vec::new();
 
     for (si, section) in req.sections.iter().enumerate() {
         let section_title = section.title.trim();
@@ -395,6 +439,10 @@ pub async fn put_dashboard(
 
         let mut seen = std::collections::HashSet::new();
         for (ii, bookmark_id) in section.bookmark_ids.iter().enumerate() {
+            if pin_hidden_from(pool, user_id, *bookmark_id, keyring).await? {
+                // Kept below from the stored layout, never added from the request.
+                continue;
+            }
             if !seen.insert(*bookmark_id) {
                 continue;
             }
@@ -422,6 +470,45 @@ pub async fn put_dashboard(
             .await
             .map_err(|e| Error::msg(e.to_string()))?;
         }
+        new_sections.push((sec.id, seen, section.bookmark_ids.len() as i32));
+    }
+
+    // Hidden pins go back to the section at the same index, else the last one. With no
+    // sections left, their old section is recreated so they are not lost.
+    for (index, old_title, bookmark_id) in hidden {
+        if new_sections.is_empty() {
+            let sec_id: Uuid = sqlx::query_scalar(
+                r#"
+                INSERT INTO dashboard_sections (dashboard_id, title, position)
+                VALUES ($1, $2, 0)
+                RETURNING id
+                "#,
+            )
+            .bind(dash.id)
+            .bind(&old_title)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+            new_sections.push((sec_id, std::collections::HashSet::new(), 0));
+        }
+        let target = index.min(new_sections.len() - 1);
+        let (sec_id, seen, next_pos) = &mut new_sections[target];
+        if !seen.insert(bookmark_id) {
+            continue;
+        }
+        sqlx::query(
+            r#"
+            INSERT INTO dashboard_items (section_id, bookmark_id, position)
+            VALUES ($1, $2, $3)
+            "#,
+        )
+        .bind(*sec_id)
+        .bind(bookmark_id)
+        .bind(*next_pos)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+        *next_pos += 1;
     }
 
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
