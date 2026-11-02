@@ -27,7 +27,8 @@ export function useLibraryUrlState(basePath: LibraryPath) {
   const [qFromUrl, setQFromUrl] = useState(urlQ)
   if (qFromUrl !== urlQ) {
     setQFromUrl(urlQ)
-    setQ(urlQ)
+    // The URL holds the trimmed query. Keep what is being typed when it only differs by spaces.
+    if (urlQ !== q.trim()) setQ(urlQ)
   }
   const [debouncedQ] = useDebouncedValue(q, 280)
 
