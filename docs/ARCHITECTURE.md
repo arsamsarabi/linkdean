@@ -55,11 +55,23 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 ## Auth & sessions
 
 - Register / login issues an opaque session token (cookie + `Authorization: Bearer`)
+- Expired or revoked session → `401 {"code":"session_expired"}`; the SPA clears its token and opens `/login`. A wrong password stays a plain `401`
+- In-memory rate limits (`crates/api/src/rate_limit.rs`) on login, registration and vault unlock/recovery → `429`. Counters reset on restart. Client address comes from the TCP peer, or from the last `X-Forwarded-For` entry when `TRUST_FORWARDED_FOR=true`
+- Argon2 work runs on a blocking pool, at most 4 at once (`crates/db/src/repo/blocking.rs`)
+- Startup refuses published secrets unless `ALLOW_DEFAULT_SECRETS=true` (dev only)
 - First install uses `/onboarding` (admin account, optional vault, optional import)
 - OIDC: Authorization Code against `OIDC_*` env; callback `/api/auth/oidc/callback`
 - Profile (`/profile`) and settings (`/settings`); header avatar menu
 - Avatars: client crop, server resize to 256×256 WebP under `AVATAR_DIR`
 - Prefs in `user_settings` (show hidden, vault search mode, theme, auto-lock, landing `/`|`/library`)
+
+## API conventions
+
+- `PATCH` bodies: an omitted field stays unchanged; `null` clears it (profile name/bio/timezone, bookmark description/notes/category, category parent/icon)
+- Per-route body limits: import 20 MiB (10 MiB file content), avatar 6 MiB, preview 9 MiB
+- Each Postgres statement times out after 30 s; migrations run on a separate connection without the limit
+
+Operator-facing limits and behaviour: [self-host.md](./self-host.md#limits-and-behaviour-operators-should-know).
 
 ## Hidden vs vault
 
@@ -87,7 +99,7 @@ Vault bookmarks are not exported as plaintext.
 
 ## Local dev
 
-`deploy/docker/docker-compose.dev.yml` runs everything with live reload on `:5173`. `deploy/docker/docker-compose.yml` is the production stack. Both use the same project name and volumes, so run one at a time.
+`deploy/docker/docker-compose.dev.yml` runs everything with live reload on `:5173`. `deploy/docker/docker-compose.yml` is the production stack and needs `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET` (see [self-host.md](./self-host.md#production-deployment)). The dev stack uses published secrets with `ALLOW_DEFAULT_SECRETS=true`. Both use the same project name and volumes, so run one at a time.
 
 ```bash
 docker compose -f deploy/docker/docker-compose.dev.yml up --build
@@ -97,7 +109,7 @@ To run the API and web on the host instead:
 
 ```bash
 docker compose -f deploy/docker/docker-compose.dev.yml up -d db meilisearch
-cp .env.example .env   # SESSION_SECRET, DATABASE_URL → :5433
+cp .env.example .env   # DATABASE_URL → :5433; keeps ALLOW_DEFAULT_SECRETS=true
 cargo run -p linkdean-api
 cd apps/web && pnpm dev   # :5173 proxies /api → :8080
 ```

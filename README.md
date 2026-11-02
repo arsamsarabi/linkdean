@@ -85,6 +85,8 @@ docker compose --env-file deploy/docker/.env -f deploy/docker/docker-compose.yml
 
 Open **http://localhost:8080**. The first registered user becomes admin.
 
+Production Compose refuses to start without `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET`, and the API refuses the default values published in this repo. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`. Required secrets, proxy setup, limits and upgrade steps: [docs/self-host.md](docs/self-host.md#production-deployment).
+
 Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/self-host.md](docs/self-host.md).
 
 ### Stack services
@@ -107,17 +109,17 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Postgres connection string |
-| `SESSION_SECRET` | yes | Long random secret (cookie / session signing) |
-| `POSTGRES_PASSWORD` | Compose | Database password, used by the `db` and `api` services |
-| `ALLOW_DEFAULT_SECRETS` | | Development only. Without it, the API refuses to start on a well-known secret |
+| `SESSION_SECRET` | yes | Long random secret. Published defaults are refused |
+| `POSTGRES_PASSWORD` | Compose | Database password, used by the `db` and `api` services. The `linkdean:linkdean` login is refused |
+| `ALLOW_DEFAULT_SECRETS` | | Development only. Without it, the API refuses to start on a well-known secret. Never set in production |
 | `APP_URL` | yes | Public base URL (e.g. `http://localhost:8080`) |
 | `BIND` | | Listen address (default `0.0.0.0:8080`) |
-| `MEILI_URL` / `MEILI_MASTER_KEY` | | Meilisearch endpoint + key |
+| `MEILI_URL` / `MEILI_MASTER_KEY` | Compose (key) | Meilisearch endpoint + key. Published default key is refused |
 | `STATIC_DIR` | | Built SPA directory (Compose sets this) |
 | `AVATAR_DIR` / `PREVIEW_DIR` | | Avatar uploads; screenshots + favicon/OG cache |
 | `SESSION_DAYS` | | Session lifetime (default `30`) |
 | `CORS_ORIGINS` | | Comma-separated origins; default = `APP_URL` |
-| `TRUST_FORWARDED_FOR` | | Set `true` behind a reverse proxy, so login limits see client addresses |
+| `TRUST_FORWARDED_FOR` | Behind a proxy | Set `true` behind a reverse proxy, else all clients share one address for login limits. Leave unset when the API is reachable directly |
 | `BROWSER_WS_URL` | | Chrome CDP URL for screenshots |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | | Optional OIDC |
 
@@ -133,7 +135,7 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 docker compose -f deploy/docker/docker-compose.dev.yml up --build
 ```
 
-Open **http://localhost:5173**. Web changes appear through Vite hot reload, and the API rebuilds and restarts when `crates/` or `migrations/` change. The first run compiles the API, so it takes a few minutes. `docker-compose.dev.yml` shares its project name and data volumes with `docker-compose.yml`, so run one at a time.
+Open **http://localhost:5173**. The dev stack uses well-known secrets and sets `ALLOW_DEFAULT_SECRETS=true`, so it needs no `.env`. Web changes appear through Vite hot reload, and the API rebuilds and restarts when `crates/` or `migrations/` change. The first run compiles the API, so it takes a few minutes. `docker-compose.dev.yml` shares its project name and data volumes with `docker-compose.yml`, so run one at a time.
 
 ### On the host
 
@@ -143,7 +145,7 @@ Open **http://localhost:5173**. Web changes appear through Vite hot reload, and 
 # Infra only
 docker compose -f deploy/docker/docker-compose.dev.yml up -d db meilisearch
 
-cp .env.example .env
+cp .env.example .env   # keeps ALLOW_DEFAULT_SECRETS=true for the dev secrets
 # Host → Compose Postgres is mapped to 5433:
 # DATABASE_URL=postgres://linkdean:linkdean@127.0.0.1:5433/linkdean
 
@@ -208,7 +210,7 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 | [Features](docs/FEATURES.md) | What the app can do today |
 | [Architecture](docs/ARCHITECTURE.md) | Stack, domain model, auth, vault vs hidden |
 | [Roadmap](docs/ROADMAP.md) | Planned milestones / backlog |
-| [Self-host](docs/self-host.md) | Compose + OIDC + backup checklist |
+| [Self-host](docs/self-host.md) | Production secrets, reverse proxy, limits, upgrades, backup |
 | [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---
