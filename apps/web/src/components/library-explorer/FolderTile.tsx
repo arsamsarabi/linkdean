@@ -45,44 +45,47 @@ export function FolderTile({
   const showBadges = isVault || isHidden || !!shared || showOutgoing || pendingDelete
   const menuProps = menu && access ? { name, access, isVault, className: styles.menu, ...menu } : null
 
+  // The menu is a sibling of the tile button: a button may not contain another button.
   return (
-    <button
-      type="button"
-      className={styles.tile}
-      onClick={() => onOpen(id)}
-      aria-label={`Open folder ${name}, ${countLabel}`}
-    >
+    <div className={styles.wrap}>
+      <button
+        type="button"
+        className={styles.tile}
+        onClick={() => onOpen(id)}
+        aria-label={`Open folder ${name}, ${countLabel}`}
+      >
+        <CategoryIcon icon={icon} className={styles.icon} size={40} aria-hidden />
+        <div className={styles.name}>
+          <Text size="sm" fw={600} lineClamp={2}>
+            {name}
+          </Text>
+          <Text size="xs" c="dimmed" mt={2}>
+            {countLabel}
+          </Text>
+          {showBadges ? (
+            <Group gap={4} justify="center" mt={6}>
+              {shared ? <ShareBadge access={shared} ownerLabel={ownerDisplayName} /> : null}
+              {showOutgoing ? <ShareBadge outgoing sharedWith={sharedWith} /> : null}
+              {pendingDelete ? (
+                <Badge size="xs" variant="outline" color="red" tt="none">
+                  Pending delete
+                </Badge>
+              ) : null}
+              {isVault ? (
+                <Badge size="xs" variant="light" color="grape" leftSection={<IconLock size={10} stroke={1.5} />}>
+                  Vault
+                </Badge>
+              ) : null}
+              {isHidden ? (
+                <Badge size="xs" variant="outline" color="gray">
+                  Hidden
+                </Badge>
+              ) : null}
+            </Group>
+          ) : null}
+        </div>
+      </button>
       {menuProps ? <CategoryFolderMenu {...menuProps} /> : null}
-      <CategoryIcon icon={icon} className={styles.icon} size={40} aria-hidden />
-      <div className={styles.name}>
-        <Text size="sm" fw={600} lineClamp={2}>
-          {name}
-        </Text>
-        <Text size="xs" c="dimmed" mt={2}>
-          {countLabel}
-        </Text>
-        {showBadges ? (
-          <Group gap={4} justify="center" mt={6}>
-            {shared ? <ShareBadge access={shared} ownerLabel={ownerDisplayName} /> : null}
-            {showOutgoing ? <ShareBadge outgoing sharedWith={sharedWith} /> : null}
-            {pendingDelete ? (
-              <Badge size="xs" variant="outline" color="red" tt="none">
-                Pending delete
-              </Badge>
-            ) : null}
-            {isVault ? (
-              <Badge size="xs" variant="light" color="grape" leftSection={<IconLock size={10} stroke={1.5} />}>
-                Vault
-              </Badge>
-            ) : null}
-            {isHidden ? (
-              <Badge size="xs" variant="outline" color="gray">
-                Hidden
-              </Badge>
-            ) : null}
-          </Group>
-        ) : null}
-      </div>
-    </button>
+    </div>
   )
 }
