@@ -77,10 +77,10 @@ Full list: [docs/FEATURES.md](docs/FEATURES.md).
 ```bash
 git clone https://github.com/arsamsarabi/linkdean.git
 cd linkdean
-cp .env.example .env
-# set SESSION_SECRET to a long random string
+printf 'POSTGRES_PASSWORD=%s\nMEILI_MASTER_KEY=%s\nSESSION_SECRET=%s\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > deploy/docker/.env
 
-docker compose -f deploy/docker/docker-compose.yml up -d --build
+docker compose --env-file deploy/docker/.env -f deploy/docker/docker-compose.yml up -d --build
 ```
 
 Open **http://localhost:8080**. The first registered user becomes admin.
@@ -108,6 +108,8 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Postgres connection string |
 | `SESSION_SECRET` | yes | Long random secret (cookie / session signing) |
+| `POSTGRES_PASSWORD` | Compose | Database password, used by the `db` and `api` services |
+| `ALLOW_DEFAULT_SECRETS` | | Development only. Without it, the API refuses to start on a well-known secret |
 | `APP_URL` | yes | Public base URL (e.g. `http://localhost:8080`) |
 | `BIND` | | Listen address (default `0.0.0.0:8080`) |
 | `MEILI_URL` / `MEILI_MASTER_KEY` | | Meilisearch endpoint + key |

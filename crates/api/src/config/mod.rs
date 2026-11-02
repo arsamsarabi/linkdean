@@ -23,8 +23,42 @@ pub struct Config {
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
+/// Values published in this repository, so nobody should run on them in production.
+const KNOWN_SECRETS: [&str; 4] = [
+    "change-me-to-a-long-random-string",
+    "replace-with-long-random-string",
+    "dev_session_secret_change_me",
+    "dev_master_key_change_me",
+];
+const KNOWN_DATABASE_LOGIN: &str = "linkdean:linkdean@";
+
+/// Refuse to start on a published secret unless development explicitly allows it.
+fn refuse_known_secrets(
+    session_secret: &str,
+    meili_key: Option<&str>,
+    database_url: &str,
+) -> anyhow::Result<()> {
+    if KNOWN_SECRETS.contains(&session_secret) {
+        anyhow::bail!("SESSION_SECRET is a published default; generate your own");
+    }
+    if meili_key.is_some_and(|key| KNOWN_SECRETS.contains(&key)) {
+        anyhow::bail!("MEILI_MASTER_KEY is a published default; generate your own");
+    }
+    if database_url.contains(KNOWN_DATABASE_LOGIN) {
+        anyhow::bail!("DATABASE_URL uses the published default password; set your own");
+    }
+    Ok(())
+}
+
 impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
+        if !env_bool("ALLOW_DEFAULT_SECRETS", false) {
+            refuse_known_secrets(
+                &required("SESSION_SECRET")?,
+                std::env::var("MEILI_MASTER_KEY").ok().as_deref(),
+                &required("DATABASE_URL")?,
+            )?;
+        }
         let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:8080".into());
         let cors_origins = match std::env::var("CORS_ORIGINS") {
             Ok(s) if s.trim() == "*" => vec!["*".into()],
@@ -123,4 +157,26 @@ fn env_usize(key: &str, default: usize) -> usize {
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(default)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const URL: &str = "postgres://linkdean:a1b2c3@db:5432/linkdean";
+
+    #[test]
+    fn published_secrets_are_refused() {
+        for secret in KNOWN_SECRETS {
+            assert!(refuse_known_secrets(secret, None, URL).is_err());
+            assert!(refuse_known_secrets("own-secret", Some(secret), URL).is_err());
+        }
+        let default_login = "postgres://linkdean:linkdean@db:5432/linkdean";
+        assert!(refuse_known_secrets("own-secret", None, default_login).is_err());
+    }
+
+    #[test]
+    fn generated_secrets_pass() {
+        assert!(refuse_known_secrets("own-secret", Some("own-key"), URL).is_ok());
+    }
 }

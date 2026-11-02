@@ -60,6 +60,8 @@ services:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev_master_key_change_me}
       APP_URL: ${APP_URL:-http://localhost:5173}
       SESSION_SECRET: ${SESSION_SECRET:-dev_session_secret_change_me}
+      # Development only. The API refuses the well-known values above without this.
+      ALLOW_DEFAULT_SECRETS: "true"
       BIND: 0.0.0.0:8080
       AVATAR_DIR: /app/data/avatars
       PREVIEW_DIR: /app/data/previews
