@@ -285,3 +285,38 @@ async fn adding_tags_and_folders_keeps_what_is_there() {
     want.sort();
     assert_eq!(folders, want);
 }
+
+#[tokio::test]
+async fn only_live_non_vault_bookmarks_pass_the_search_recheck() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    let live = bookmark(&pool, &owner, vec![]).await;
+    let trashed = bookmark(&pool, &owner, vec![]).await;
+    let vaulted = bookmark(&pool, &owner, vec![]).await;
+    db::delete_bookmark(&pool, owner.id, trashed)
+        .await
+        .expect("trash");
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "V", "vault-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    db::move_to_vault(
+        &pool,
+        owner.id,
+        linkdean_core::MoveToVaultRequest {
+            category_ids: vec![],
+            bookmark_ids: vec![vaulted],
+            destination_vault_id: Some(vault.id),
+        },
+        &keyring,
+    )
+    .await
+    .expect("move to vault");
+    let ok = db::live_plain_bookmark_ids(&pool, &[live, trashed, vaulted, Uuid::new_v4()])
+        .await
+        .expect("recheck");
+    assert_eq!(ok.into_iter().collect::<Vec<_>>(), vec![live]);
+}

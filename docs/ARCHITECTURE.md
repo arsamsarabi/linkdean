@@ -86,7 +86,7 @@ Operator-facing limits and behaviour: [self-host.md](./self-host.md#limits-and-b
 
 ## Search
 
-Writes upsert non-vault docs into Meilisearch index `bookmarks` using the bookmark's `owner_user_id` and `category_ids`. Queries filter by owner or readable categories (owned + shared). Vault docs stay out of that index.
+Writes upsert non-vault docs into Meilisearch index `bookmarks` using the bookmark's `owner_user_id` and `category_ids`. Queries filter by owner or readable categories (owned + shared). Vault docs stay out of that index. Each hit is rechecked against Postgres before it is returned: vault, trashed or unreadable bookmarks are dropped, and stale documents are deleted from the index.
 
 ## Import / export
 

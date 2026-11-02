@@ -52,8 +52,30 @@ async fn search(
             .await
         {
             Ok(docs) => {
+                // The index is cleaned up after the database commits, and that can fail. Serve
+                // only hits Postgres still has as live, non-vault and readable, and drop the
+                // stale documents so they stop coming back.
+                let ids: Vec<Uuid> = docs
+                    .iter()
+                    .filter_map(|d| Uuid::parse_str(&d.id).ok())
+                    .collect();
+                let live = db::live_plain_bookmark_ids(&state.pool, &ids).await?;
+                for stale in ids.iter().filter(|id| !live.contains(id)) {
+                    if let Err(e) = state.search.delete_bookmark(*stale).await {
+                        tracing::warn!(bookmark_id = %stale, error = %e, "drop stale search document failed");
+                    }
+                }
                 for d in docs {
-                    let id = Uuid::parse_str(&d.id).unwrap_or_else(|_| Uuid::nil());
+                    let Ok(id) = Uuid::parse_str(&d.id) else {
+                        continue;
+                    };
+                    if !live.contains(&id)
+                        || !db::bookmark_can_read(&state.pool, user.id, id)
+                            .await
+                            .unwrap_or(false)
+                    {
+                        continue;
+                    }
                     let owner_user_id = Uuid::parse_str(&d.owner_user_id).unwrap_or(user.id);
                     let can_write = db::bookmark_can_write(&state.pool, user.id, id)
                         .await

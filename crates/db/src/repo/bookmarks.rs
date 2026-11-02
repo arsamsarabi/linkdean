@@ -1871,3 +1871,19 @@ pub async fn find_duplicate_groups(
     }
     Ok(groups)
 }
+
+/// Which of `ids` are live bookmarks outside any vault. Search hits are checked against
+/// this, so a document the index failed to drop is never served.
+pub async fn live_plain_bookmark_ids(
+    pool: &PgPool,
+    ids: &[Uuid],
+) -> Result<std::collections::HashSet<Uuid>> {
+    let rows: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM bookmarks WHERE id = ANY($1) AND is_vault = FALSE AND deleted_at IS NULL",
+    )
+    .bind(ids)
+    .fetch_all(pool)
+    .await
+    .map_err(db_err)?;
+    Ok(rows.into_iter().collect())
+}
