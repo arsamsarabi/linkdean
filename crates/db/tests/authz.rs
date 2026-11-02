@@ -610,6 +610,45 @@ async fn public_list_slug_is_unlisted_and_revocable() {
     assert_eq!(pub_list.bookmarks[0].title, "Public BM");
     // notes never appear on PublicBookmarkView
 
+    let only_me = |is_private| UpdateBookmark {
+        url: None,
+        title: None,
+        description: None,
+        notes: None,
+        category_id: None,
+        category_ids: None,
+        tags: None,
+        is_favorite: None,
+        is_unread: None,
+        is_pinned: None,
+        is_private: Some(is_private),
+    };
+    db::update_bookmark(
+        &pool,
+        user_a.id,
+        bm.id,
+        only_me(true),
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("set private");
+    let hidden = db::get_public_list_by_slug(&pool, &slug)
+        .await
+        .expect("resolve public");
+    assert!(
+        hidden.bookmarks.is_empty(),
+        "\"only me\" must stay off the public page"
+    );
+    db::update_bookmark(
+        &pool,
+        user_a.id,
+        bm.id,
+        only_me(false),
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("clear private");
+
     let rotated = db::rotate_category_public_link(&pool, user_a.id, cat.id)
         .await
         .expect("rotate");

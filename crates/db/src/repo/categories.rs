@@ -945,6 +945,7 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
         r#"
         SELECT b.* FROM bookmarks b
         WHERE b.is_vault = FALSE
+          AND b.is_private = FALSE
           AND b.deleted_at IS NULL
           AND (
             b.category_id = $1
