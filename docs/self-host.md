@@ -61,7 +61,7 @@ Only enable it when the proxy is the sole route to the API, and make sure the pr
 | Failed logins | 10 per address per account, 50 per address, 50 per account, each per 15 minutes. Past a limit the API returns `429` until the window ends. A successful login clears only the per-address-per-account counter |
 | Account lockout | 50 failed logins on one account from any address lock that account for 15 minutes, **including the correct password**. Someone who knows a user's email can trigger this on purpose |
 | Registration | 10 attempts per address per 15 minutes, counted whether or not they succeed |
-| Vault unlock, recovery, global unlock | 10 failed attempts per user per 15 minutes, shared across all three |
+| Vault unlock, recovery, global unlock, recovery key replacement, global passphrase off | 10 failed attempts per user per 15 minutes, shared across all of these |
 | Limit storage | Counters live in API memory. Restarting the API resets them, and several API replicas would each keep their own |
 | Not limited yet | Password change and global vault passphrase change |
 | Password hashing | At most 4 Argon2 hashes run at once; extra logins queue |

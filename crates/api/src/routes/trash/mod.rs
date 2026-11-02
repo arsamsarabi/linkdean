@@ -63,12 +63,29 @@ async fn restore(
     Ok(Json(json!({ "ok": true })))
 }
 
+/// Vault content is purged only while its vault is unlocked.
+async fn require_unlocked(
+    state: &AppState,
+    keyring: &linkdean_core::VaultKeyring,
+    user_id: Uuid,
+    kind: TrashKind,
+    id: Uuid,
+) -> Result<(), linkdean_core::Error> {
+    match db::trashed_item_vault(&state.pool, user_id, kind, id).await? {
+        Some(vault) if !keyring.contains(vault) => Err(linkdean_core::Error::VaultLocked),
+        _ => Ok(()),
+    }
+}
+
 async fn purge_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Path((kind, id)): Path<(String, Uuid)>,
 ) -> ApiResult<Json<Value>> {
     let kind = parse_kind(&kind)?;
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
+    require_unlocked(&state, &keyring, user.id, kind, id).await?;
     match kind {
         TrashKind::Bookmark => {
             db::purge_bookmark(&state.pool, user.id, id).await?;
@@ -87,11 +104,20 @@ async fn purge_one(
 async fn purge_selected(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    vault_session: VaultSession,
     Json(body): Json<PurgeTrashRequest>,
 ) -> ApiResult<Json<Value>> {
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
     let mut ok = 0u32;
     let mut failed = 0u32;
     for item in body.items {
+        if require_unlocked(&state, &keyring, user.id, item.kind, item.id)
+            .await
+            .is_err()
+        {
+            failed += 1;
+            continue;
+        }
         let res = match item.kind {
             TrashKind::Bookmark => {
                 let r = db::purge_bookmark(&state.pool, user.id, item.id).await;

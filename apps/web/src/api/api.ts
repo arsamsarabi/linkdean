@@ -498,8 +498,8 @@ export const api = {
   recoverVault: (id: string, body: { recovery_key: string; new_passphrase: string }): Promise<unknown> =>
     req(`/vaults/${id}/recover`, { method: 'POST', body: JSON.stringify(body) }),
 
-  newRecoveryKey: (id: string): Promise<{ recovery_key: string }> =>
-    req(`/vaults/${id}/recovery-key`, { method: 'POST' }, recoveryKeySchema),
+  newRecoveryKey: (id: string, passphrase: string): Promise<{ recovery_key: string }> =>
+    req(`/vaults/${id}/recovery-key`, { method: 'POST', body: JSON.stringify({ passphrase }) }, recoveryKeySchema),
 
   globalPassphrase: (): Promise<{ enabled: boolean }> => req('/vaults/global', {}, globalPassphraseSchema),
 
@@ -509,7 +509,8 @@ export const api = {
   changeGlobalPassphrase: (body: { current_passphrase: string; new_passphrase: string }): Promise<unknown> =>
     req('/vaults/global', { method: 'PUT', body: JSON.stringify(body) }),
 
-  disableGlobalPassphrase: (): Promise<unknown> => req('/vaults/global', { method: 'DELETE' }),
+  disableGlobalPassphrase: (passphrase: string): Promise<unknown> =>
+    req('/vaults/global', { method: 'DELETE', body: JSON.stringify({ passphrase }) }),
 
   unlockAllVaults: (passphrase: string): Promise<unknown> =>
     req('/vaults/global/unlock', { method: 'POST', body: JSON.stringify({ passphrase }) }),

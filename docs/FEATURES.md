@@ -44,8 +44,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Multiple named vaults, each with its own passphrase and key (Argon2id + AES-GCM)
 - Vaults hold categories and loose bookmarks; move items in, out and between vaults, with a checklist when something blocks the move
-- Recovery key per vault, shown once; a lost passphrase and recovery key means the contents are gone
-- Optional global passphrase that unlocks chosen vaults in one step, alongside each vault's own passphrase
+- Recovery key per vault, shown once; replacing it asks for the vault passphrase. A lost passphrase and recovery key means the contents are gone
+- Optional global passphrase that unlocks chosen vaults in one step, alongside each vault's own passphrase; turning it off asks for it
 - Vaults page: open vaults get the Library's filters, sorting, views and bulk actions, with a vault filter and lock controls; the header link shows only while a vault is open
 - Settings for whether vault items also appear in the Library, and whether deleted vault items go to Trash or are removed immediately
 - Unlock from Settings or the command palette's Unlock vault command; locking clears decrypted data from the browser cache

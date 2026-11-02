@@ -183,15 +183,19 @@ async fn recover(
     Ok(Json(json!({ "ok": true })))
 }
 
+/// Replacing the recovery key cancels the old one, so it takes the vault passphrase even
+/// when the vault is unlocked.
 async fn new_recovery_key(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    vault_session: VaultSession,
     Path(id): Path<Uuid>,
+    Json(req): Json<VaultUnlockRequest>,
 ) -> ApiResult<Json<Value>> {
-    let keyring = state.vault_keyring(&vault_session, user.id).await;
-    let key = keyring.get(id).ok_or(Error::VaultLocked)?;
-    let recovery_key = db::replace_recovery_key(&state.pool, user.id, id, key).await?;
+    let limits = vault_limit(user.id);
+    state.limiter.check(&limits)?;
+    let result = db::unlock_vault(&state.pool, user.id, id, &req.passphrase).await;
+    let key = state.limiter.settle(&limits, result)?;
+    let recovery_key = db::replace_recovery_key(&state.pool, user.id, id, &key).await?;
     Ok(Json(json!({ "recovery_key": recovery_key })))
 }
 
@@ -232,8 +236,12 @@ async fn global_change(
 async fn global_disable(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    Json(req): Json<VaultUnlockRequest>,
 ) -> ApiResult<Json<Value>> {
-    db::disable_global_passphrase(&state.pool, user.id).await?;
+    let limits = vault_limit(user.id);
+    state.limiter.check(&limits)?;
+    let result = db::disable_global_passphrase(&state.pool, user.id, &req.passphrase).await;
+    state.limiter.settle(&limits, result)?;
     Ok(Json(json!({ "ok": true })))
 }
 

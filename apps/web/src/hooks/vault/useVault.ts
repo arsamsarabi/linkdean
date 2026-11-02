@@ -65,9 +65,16 @@ export function useCreateVault(): UseMutationResult<
   return useMutation({ mutationFn: api.createVault, onSuccess: () => invalidateVaultRelated(qc) })
 }
 
-export function useNewRecoveryKey(): UseMutationResult<{ recovery_key: string }, Error, string> {
+export function useNewRecoveryKey(): UseMutationResult<
+  { recovery_key: string },
+  Error,
+  { id: string; passphrase: string }
+> {
   const qc = useQueryClient()
-  return useMutation({ mutationFn: api.newRecoveryKey, onSuccess: () => invalidateVaultRelated(qc) })
+  return useMutation({
+    mutationFn: ({ id, passphrase }) => api.newRecoveryKey(id, passphrase),
+    onSuccess: () => invalidateVaultRelated(qc),
+  })
 }
 
 export const useRenameVault = (): UseMutationResult<unknown, Error, { id: string; name: string }> =>
@@ -96,8 +103,8 @@ export const useChangeGlobalPassphrase = (): UseMutationResult<
   { current_passphrase: string; new_passphrase: string }
 > => useVaultAction(api.changeGlobalPassphrase)
 
-export const useDisableGlobalPassphrase = (): UseMutationResult<unknown, Error, void> =>
-  useVaultAction(() => api.disableGlobalPassphrase())
+export const useDisableGlobalPassphrase = (): UseMutationResult<unknown, Error, string> =>
+  useVaultAction(api.disableGlobalPassphrase)
 
 export const useUnlockAllVaults = (): UseMutationResult<unknown, Error, string> => useVaultAction(api.unlockAllVaults)
 

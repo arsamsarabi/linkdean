@@ -72,8 +72,10 @@ export function GlobalPassphraseCard(): ReactElement {
               </Button>
               <Button
                 variant="default"
+                disabled={!current}
+                title={current ? undefined : 'Enter the current passphrase first'}
                 loading={disable.isPending}
-                onClick={() => void run(disable.mutateAsync(), 'Global passphrase turned off')}
+                onClick={() => void run(disable.mutateAsync(current), 'Global passphrase turned off')}
               >
                 Turn off
               </Button>

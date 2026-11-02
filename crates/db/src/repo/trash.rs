@@ -161,3 +161,29 @@ pub async fn purge_expired_trash(pool: &PgPool) -> Result<PurgedTrash> {
         dashboards: dashboards.len() as u64,
     })
 }
+
+/// The vault a trashed item belongs to, if any. Purging vault content needs that vault
+/// unlocked.
+pub async fn trashed_item_vault(
+    pool: &PgPool,
+    user_id: Uuid,
+    kind: TrashKind,
+    id: Uuid,
+) -> Result<Option<Uuid>> {
+    let sql = match kind {
+        TrashKind::Bookmark => {
+            "SELECT vault_id FROM bookmarks WHERE id = $1 AND owner_user_id = $2"
+        }
+        TrashKind::Category => {
+            "SELECT vault_id FROM categories WHERE id = $1 AND owner_user_id = $2"
+        }
+        TrashKind::Dashboard => return Ok(None),
+    };
+    let row: Option<Option<Uuid>> = sqlx::query_scalar(sql)
+        .bind(id)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(row.flatten())
+}

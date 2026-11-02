@@ -47,7 +47,7 @@ Browser ──► Vite (dev) or static SPA
 - **Category:** tree (`parent_id`); flags `is_hidden`, `is_vault`; `vault_id` when inside a vault
 - **Tag:** per-user; M2M with bookmarks
 - **Bookmark:** url/title/notes/tags; vault rows store ciphertext instead of plaintext fields
-- **Vault:** named, many per user; data key wrapped by its passphrase, by its recovery key, and optionally by the user's master key for the global passphrase (Argon2id + AES-GCM). Unlocked keys live in API memory per login session (`crates/api/src/vault_keys.rs`), keyed by the session token hash. API keys never get vault keys. Keys are dropped after the user's auto-lock time with no request using them, on logout or password change, and when the hourly maintenance task finds the session gone
+- **Vault:** named, many per user; data key wrapped by its passphrase, by its recovery key, and optionally by the user's master key for the global passphrase (Argon2id + AES-GCM). Unlocked keys live in API memory per login session (`crates/api/src/vault_keys.rs`), keyed by the session token hash. API keys never get vault keys. Keys are dropped after the user's auto-lock time with no request using them, on logout or password change, and when the hourly maintenance task finds the session gone. Replacing a recovery key and turning off the global passphrase take the passphrase again, even while unlocked, and trashed vault content is purged only while its vault is unlocked
 - **ImportJob:** import run stats
 
 Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`/`write`) beside ownership; access covers the shared category and its non-vault descendants. Milestone 2 adds `dashboards` / `dashboard_sections` / `dashboard_items` for a per-user home layout (default dashboard auto-created). Categories may also carry an unlisted `public_slug` for anonymous read-only list URLs (`GET /api/public/lists/{slug}` → SPA `/l/{slug}`).
@@ -56,7 +56,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 
 - Register / login issues an opaque session token (cookie + `Authorization: Bearer`)
 - Expired or revoked session → `401 {"code":"session_expired"}`; the SPA clears its token and opens `/login`. A wrong password stays a plain `401`
-- In-memory rate limits (`crates/api/src/rate_limit.rs`) on login, registration and vault unlock/recovery → `429`. Counters reset on restart. Client address comes from the TCP peer, or from the last `X-Forwarded-For` entry when `TRUST_FORWARDED_FOR=true`
+- In-memory rate limits (`crates/api/src/rate_limit.rs`) on login, registration and vault passphrase checks (unlock, recovery, recovery key replacement, global unlock and turning the global passphrase off) → `429`. Counters reset on restart. Client address comes from the TCP peer, or from the last `X-Forwarded-For` entry when `TRUST_FORWARDED_FOR=true`
 - Argon2 work runs on a blocking pool, at most 4 at once (`crates/db/src/repo/blocking.rs`)
 - Startup refuses published secrets unless `ALLOW_DEFAULT_SECRETS=true` (dev only)
 - First install uses `/onboarding` (admin account, optional vault, optional import)
@@ -67,7 +67,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 
 ## API conventions
 
-- `PATCH` bodies: an omitted field stays unchanged; `null` clears it (profile name/bio/timezone, bookmark description/notes/category, category parent/icon)
+- `PATCH` bodies: an omitted field stays unchanged; `null` clears it (profile name/bio/timezone, bookmark description/notes/category, category parent/icon). Bookmark `add_tags` and `add_category_ids` add to what the bookmark holds instead of replacing it
 - Per-route body limits: import 20 MiB (10 MiB file content), avatar 6 MiB, preview 9 MiB. Uploaded images over 40 megapixels are refused from their header, each decode may allocate at most 160 MiB, and two decode at once.
 - Each Postgres statement times out after 30 s; migrations run on a separate connection without the limit
 - `GET /api/metrics` needs `Authorization: Bearer $METRICS_TOKEN` and is off when the token is unset. Labels use the route template, not the raw path. `GET /api/ready` returns booleans only

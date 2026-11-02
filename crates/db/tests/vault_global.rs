@@ -144,7 +144,16 @@ async fn leaving_and_disabling_clear_the_wrapped_keys() {
         .expect("unlock");
     assert_eq!(opened, vec![(second.id, second_key)]);
 
-    db::disable_global_passphrase(&pool, owner.id)
+    assert!(
+        db::disable_global_passphrase(&pool, owner.id, "wrong-passphrase")
+            .await
+            .is_err(),
+        "a wrong passphrase must not turn the global passphrase off"
+    );
+    assert!(db::has_global_passphrase(&pool, owner.id)
+        .await
+        .expect("still on"));
+    db::disable_global_passphrase(&pool, owner.id, "global-passphrase")
         .await
         .expect("disable");
     assert!(!db::has_global_passphrase(&pool, owner.id)

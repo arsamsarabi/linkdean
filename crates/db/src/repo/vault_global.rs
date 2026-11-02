@@ -100,7 +100,12 @@ pub async fn change_global_passphrase(
 }
 
 /// Removes the global path only. No vault contents or passphrases change.
-pub async fn disable_global_passphrase(pool: &PgPool, user_id: Uuid) -> Result<()> {
+pub async fn disable_global_passphrase(
+    pool: &PgPool,
+    user_id: Uuid,
+    passphrase: &str,
+) -> Result<()> {
+    open_master(pool, user_id, passphrase).await?;
     let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
     sqlx::query(
         r#"

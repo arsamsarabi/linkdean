@@ -1,5 +1,17 @@
 import { useState, type ReactElement } from 'react'
-import { Badge, Button, Group, Paper, PasswordInput, Skeleton, Stack, Switch, Text, TextInput } from '@mantine/core'
+import {
+  Badge,
+  Button,
+  Group,
+  Modal,
+  Paper,
+  PasswordInput,
+  Skeleton,
+  Stack,
+  Switch,
+  Text,
+  TextInput,
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconLock, IconLockOpen } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
@@ -14,7 +26,6 @@ import {
   useVaults,
 } from '@/hooks'
 import type { Vault } from '@/schemas'
-import { ConfirmModal } from '../confirm-modal/ConfirmModal'
 import { DeleteVaultModal } from './DeleteVaultModal'
 import { RecoverVaultModal } from './RecoverVaultModal'
 import { RecoveryKeyModal } from './RecoveryKeyModal'
@@ -56,10 +67,13 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
     setPassphrase('')
   }
 
+  const [keyPassphrase, setKeyPassphrase] = useState('')
+
   async function onNewKey(): Promise<void> {
-    setConfirmNewKey(false)
     try {
-      const res = await newKey.mutateAsync(vault.id)
+      const res = await newKey.mutateAsync({ id: vault.id, passphrase: keyPassphrase })
+      setConfirmNewKey(false)
+      setKeyPassphrase('')
       setRecoveryKey(res.recovery_key)
     } catch (e) {
       notifications.show({ color: 'red', message: e instanceof Error ? e.message : String(e) })
@@ -106,11 +120,7 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
               >
                 Lock
               </Button>
-              <Button
-                variant="default"
-                loading={newKey.isPending}
-                onClick={() => (vault.has_recovery_key ? setConfirmNewKey(true) : void onNewKey())}
-              >
+              <Button variant="default" loading={newKey.isPending} onClick={() => setConfirmNewKey(true)}>
                 {vault.has_recovery_key ? 'Replace recovery key' : 'Create recovery key'}
               </Button>
             </Group>
@@ -166,15 +176,40 @@ function VaultRow({ vault, globalEnabled }: { vault: Vault; globalEnabled: boole
 
       {recovering ? <RecoverVaultModal vault={vault} onClose={() => setRecovering(false)} /> : null}
       {deleting ? <DeleteVaultModal vault={vault} onClose={() => setDeleting(false)} /> : null}
-      <ConfirmModal
+      <Modal
         opened={confirmNewKey}
-        onClose={() => setConfirmNewKey(false)}
-        onConfirm={() => void onNewKey()}
-        title="Replace recovery key?"
-        body={`The current recovery key for ${vault.name} stops working at once. Only the new key, shown next, can recover this vault.`}
-        confirmLabel="Replace key"
-        loading={newKey.isPending}
-      />
+        onClose={() => {
+          setConfirmNewKey(false)
+          setKeyPassphrase('')
+        }}
+        title={vault.has_recovery_key ? 'Replace recovery key?' : 'Create recovery key'}
+        centered
+      >
+        <Stack>
+          {vault.has_recovery_key ? (
+            <Text size="sm">
+              The current recovery key for {vault.name} stops working at once. Only the new key, shown next, can recover
+              this vault.
+            </Text>
+          ) : null}
+          <PasswordInput
+            label={`Passphrase for ${vault.name}`}
+            value={keyPassphrase}
+            onChange={(e) => setKeyPassphrase(e.currentTarget.value)}
+            data-autofocus
+          />
+          <Group justify="flex-end">
+            <Button
+              color={vault.has_recovery_key ? 'red' : undefined}
+              disabled={!keyPassphrase}
+              loading={newKey.isPending}
+              onClick={() => void onNewKey()}
+            >
+              {vault.has_recovery_key ? 'Replace key' : 'Create key'}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
       {recoveryKey ? <RecoveryKeyModal recoveryKey={recoveryKey} onDone={() => setRecoveryKey(null)} /> : null}
     </Paper>
   )
