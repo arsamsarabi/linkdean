@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { banFromBody, req } from './client'
+import { banFromBody, getToken, req, setToken } from './client'
 
 function respond(status: number, body: unknown): void {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })))
@@ -40,6 +40,55 @@ describe('banned responses', () => {
     const assign = stubLocation('/library')
     respond(403, { error: 'forbidden' })
     await expect(req('/admin/users')).rejects.toThrow('forbidden')
+    expect(assign).not.toHaveBeenCalled()
+  })
+})
+
+describe('expired sessions', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    setToken(null)
+  })
+
+  function stubLocation(pathname: string) {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { pathname, assign })
+    return assign
+  }
+
+  const expired = { error: 'session expired', code: 'session_expired' }
+
+  it('signs out and goes to login', async () => {
+    setToken('stale')
+    const assign = stubLocation('/library')
+    respond(401, expired)
+    await expect(req('/bookmarks')).rejects.toThrow('session expired')
+    expect(getToken()).toBeNull()
+    expect(assign).toHaveBeenCalledWith('/login')
+  })
+
+  it('keeps the session on a wrong password', async () => {
+    setToken('good')
+    const assign = stubLocation('/settings')
+    respond(401, { error: 'unauthorized' })
+    await expect(req('/users/me/password')).rejects.toThrow('unauthorized')
+    expect(getToken()).toBe('good')
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('leaves signed-out visitors where they are', async () => {
+    const assign = stubLocation('/l/some-list')
+    respond(401, expired)
+    await expect(req('/auth/me')).rejects.toThrow()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('does not loop on the login page', async () => {
+    setToken('stale')
+    const assign = stubLocation('/login')
+    respond(401, expired)
+    await expect(req('/auth/me')).rejects.toThrow()
+    expect(getToken()).toBeNull()
     expect(assign).not.toHaveBeenCalled()
   })
 })

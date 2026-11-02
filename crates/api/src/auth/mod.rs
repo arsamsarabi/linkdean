@@ -14,10 +14,10 @@ impl FromRequestParts<AppState> for AuthUser {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let token = extract_token(parts).ok_or(Error::Unauthorized)?;
+        let token = extract_token(parts).ok_or(Error::SessionExpired)?;
         let user = db::user_from_token(&state.pool, &token)
             .await?
-            .ok_or(Error::Unauthorized)?;
+            .ok_or(Error::SessionExpired)?;
         if let Some(ban) = db::active_ban(&state.pool, user.id).await? {
             return Err(Error::Banned {
                 reason: ban.reason,

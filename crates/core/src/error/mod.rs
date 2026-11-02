@@ -9,6 +9,9 @@ pub enum Error {
     Msg(String),
     #[error("unauthorized")]
     Unauthorized,
+    /// No usable session or API key, unlike `Unauthorized`, which is a wrong password.
+    #[error("session expired")]
+    SessionExpired,
     #[error("forbidden")]
     Forbidden,
     #[error("not found")]

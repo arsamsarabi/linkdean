@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import { getToken } from '@/lib'
+import { getToken, setToken } from '@/lib'
 import { banNoticeSchema, type BanNotice } from '@/schemas'
 
 export { getToken, setToken } from '@/lib'
@@ -33,6 +33,11 @@ export function banFromBody(body: unknown): BanNotice | null {
   return banNoticeSchema.safeParse((body as { ban?: unknown }).ban).data ?? null
 }
 
+/** A wrong password is also a 401, so only this code means the session has gone. */
+function sessionExpired(body: unknown): boolean {
+  return !!body && typeof body === 'object' && (body as { code?: unknown }).code === 'session_expired'
+}
+
 export async function req<T>(path: string, init: RequestInit = {}, schema?: z.ZodType<T>): Promise<T> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
@@ -59,6 +64,11 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
     }
     if (res.status === 403 && banFromBody(body) && location.pathname !== '/banned') {
       location.assign('/banned')
+    }
+    if (res.status === 401 && sessionExpired(body) && token) {
+      // A full page load also drops the signed-out user's cached data.
+      setToken(null)
+      if (location.pathname !== '/login') location.assign('/login')
     }
     throw new ApiError(msg, res.status, body)
   }
