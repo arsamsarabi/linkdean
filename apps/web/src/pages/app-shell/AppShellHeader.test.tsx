@@ -3,6 +3,7 @@ import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useShellUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
 
 vi.mock('@tanstack/react-router', () => ({
@@ -14,12 +15,8 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 vi.mock('@/components', () => ({
-  BrokenLinksButton: () => null,
-  DuplicatesButton: () => null,
-  HistoryButton: () => null,
   LogoMark: () => null,
   NotificationsBell: () => null,
-  PageContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   ThemeMenuSwitch: () => null,
   UserAvatar: () => null,
 }))
@@ -30,9 +27,6 @@ function renderHeader(vaultUnlocked: boolean) {
       <AppShellHeader
         loading={false}
         landing="/"
-        onDashboard={false}
-        onLibrary
-        onVaults={false}
         label="Ana"
         displayName="Ana"
         email="ana@example.com"
@@ -48,14 +42,16 @@ function renderHeader(vaultUnlocked: boolean) {
 describe('AppShellHeader', () => {
   afterEach(cleanup)
 
-  it('links to Vaults while a vault is open', () => {
-    renderHeader(true)
-    expect(screen.getByRole('link', { name: 'Vaults' }).getAttribute('href')).toBe('/vaults')
+  it('opens the command palette from the search field', async () => {
+    useShellUi.setState({ paletteOpen: false })
+    renderHeader(false)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Search' })[0])
+    expect(useShellUi.getState().paletteOpen).toBe(true)
   })
 
-  it('hides the link when every vault is locked', () => {
+  it('offers Add, which opens the new-bookmark form in the library', () => {
     renderHeader(false)
-    expect(screen.queryByRole('link', { name: 'Vaults' })).toBeNull()
+    expect(screen.getByRole('link', { name: /add/i }).getAttribute('href')).toBe('/library')
   })
 
   it('keeps vault entries out of the user menu', async () => {

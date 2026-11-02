@@ -1,9 +1,8 @@
 import { useEffect, type ReactElement } from 'react'
-import { Drawer, Group, Loader, AppShell as MantineAppShell, NavLink, Stack } from '@mantine/core'
+import { Group, Loader, AppShell as MantineAppShell } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconBooks, IconLayoutDashboard, IconLock } from '@tabler/icons-react'
-import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   BrokenLinksDrawer,
   CommandPalette,
@@ -17,8 +16,7 @@ import { useLogout, usePrefsHydration, useSessionSync, useShareInvites, useUnrea
 import { resolveDefaultLanding } from '@/lib'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
-
-const iconProps = { size: 18, stroke: 1.5 } as const
+import { AppSidebar } from './AppSidebar'
 
 export function AppShell(): ReactElement {
   const nav = useNavigate()
@@ -70,20 +68,19 @@ export function AppShell(): ReactElement {
   const label = user?.display_name || user?.email || '?'
   const loading = me.isLoading && !me.data
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, unknown> })
   const landing = resolveDefaultLanding(me.data?.settings.default_landing)
-  const onDashboard = pathname === '/'
-  const onLibrary = pathname.startsWith('/library')
-  const onVaults = pathname === '/vaults' || pathname.startsWith('/vaults/')
 
   return (
-    <MantineAppShell header={{ height: 64 }} padding="lg">
+    <MantineAppShell
+      header={{ height: 64 }}
+      navbar={{ width: 248, breakpoint: 'sm', collapsed: { mobile: !shell.navOpen } }}
+      padding="lg"
+    >
       <MantineAppShell.Header px={0}>
         <AppShellHeader
           loading={loading}
           landing={landing}
-          onDashboard={onDashboard}
-          onLibrary={onLibrary}
-          onVaults={onVaults}
           label={label}
           displayName={user?.display_name ?? undefined}
           email={user?.email}
@@ -94,6 +91,10 @@ export function AppShell(): ReactElement {
           onLogout={() => void onLogout()}
         />
       </MantineAppShell.Header>
+
+      <MantineAppShell.Navbar aria-label="Main">
+        <AppSidebar pathname={pathname} search={search} vaultUnlocked={vaultUnlocked} />
+      </MantineAppShell.Navbar>
 
       <MantineAppShell.Main>
         <PageContainer pb="xl" fadeIn>
@@ -109,37 +110,6 @@ export function AppShell(): ReactElement {
           )}
         </PageContainer>
       </MantineAppShell.Main>
-
-      <Drawer opened={shell.navOpen} onClose={shell.closeNav} size="xs" padding="md" title="Navigate" hiddenFrom="sm">
-        <Stack gap="xs">
-          <NavLink
-            component={Link}
-            to="/"
-            label="Dashboard"
-            leftSection={<IconLayoutDashboard {...iconProps} />}
-            active={onDashboard}
-            onClick={shell.closeNav}
-          />
-          <NavLink
-            component={Link}
-            to="/library"
-            label="Library"
-            leftSection={<IconBooks {...iconProps} />}
-            active={onLibrary}
-            onClick={shell.closeNav}
-          />
-          {vaultUnlocked ? (
-            <NavLink
-              component={Link}
-              to="/vaults"
-              label="Vaults"
-              leftSection={<IconLock {...iconProps} />}
-              active={onVaults}
-              onClick={shell.closeNav}
-            />
-          ) : null}
-        </Stack>
-      </Drawer>
 
       <CommandPalette opened={shell.paletteOpen} onClose={shell.closePalette} />
       <BrokenLinksDrawer opened={shell.brokenOpen} onClose={shell.closeBroken} />

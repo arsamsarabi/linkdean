@@ -19,8 +19,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
 - Bulk select: move, tag, delete
-- Duplicate detection and merge UI
-- Broken-link header control + drawer; red badges on confirmed dead / unreachable cards
+- Duplicate detection and merge UI (sidebar → Library health → Duplicates)
+- Broken links in the sidebar's Library health group, opening a drawer; red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
 - Reading list (unread), favorites, and pin-to-top; opening a link can mark unread as read
 - Category manager in Settings (explorer + create drawer)
@@ -36,7 +36,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot waits a week before the boot backfill retries it)
 - Admin reindex: rebuild Meili from Postgres (Settings → Admin)
-- Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; shell header control (next to History) → drawer + card badges; `POST /bookmarks/{id}/check-link`
+- Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; sidebar Library health entry → drawer + card badges; `POST /bookmarks/{id}/check-link`
 
 ---
 
@@ -46,7 +46,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Vaults hold categories and loose bookmarks; move items in, out and between vaults, with a checklist when something blocks the move
 - Recovery key per vault, shown once; replacing it asks for the vault passphrase. A lost passphrase and recovery key means the contents are gone
 - Optional global passphrase that unlocks chosen vaults in one step, alongside each vault's own passphrase; turning it off asks for it
-- Vaults page: open vaults get the Library's filters, sorting, views and bulk actions, with a vault filter and lock controls; the header link shows only while a vault is open
+- Vaults page: open vaults get the Library's filters, sorting, views and bulk actions, with a vault filter and lock controls; the sidebar link shows only while a vault is open
 - Settings for whether vault items also appear in the Library, and whether deleted vault items go to Trash or are removed immediately
 - Unlock from Settings or the command palette's Unlock vault command; locking clears decrypted data from the browser cache
 - Vault content never indexed in Meilisearch
@@ -101,7 +101,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Personal activity history
 
 - Per-user create / edit / delete / restore log for bookmarks, lists, and dashboards
-- History drawer in the app shell (filter by subject + action)
+- History drawer, opened from the sidebar's Library health group (filter by subject + action)
 - Distinct from shared-activity notifications; vault bookmark titles redacted
 - API `GET /activity`
 
@@ -148,7 +148,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Avatars and preview volumes; backup recipe in [self-host.md](./self-host.md)
-- Mobile burger nav for small viewports
+- Sidebar navigation (Dashboard, Library, Vaults, quick views, Library health, Deleted items, settings); on phones the burger slides it in
+- Header search field opens the command palette; header Add opens the new-bookmark form
 - PWA install: web manifest + service worker (standalone / “Add to Home Screen”)
 
 ---

@@ -1,10 +1,14 @@
 import { type ReactElement } from 'react'
 import { ActionIcon, Affix, Group, Tooltip, Transition } from '@mantine/core'
 import { IconArrowUp, IconBookmarkPlus } from '@tabler/icons-react'
+import { useShellUi } from '@/stores'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
 export function LibraryFab(): ReactElement {
   const lib = useLibraryPageModel()
+  // The phone menu slides over the page; keep the floating buttons out of it.
+  const navOpen = useShellUi((s) => s.navOpen)
+  if (navOpen) return <></>
 
   return (
     <Affix position={{ bottom: 24, right: 24 }}>

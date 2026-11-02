@@ -1,0 +1,84 @@
+import type { ReactNode } from 'react'
+import { AppShell, MantineProvider } from '@mantine/core'
+import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useShellUi } from '@/stores'
+import { AppSidebar } from './AppSidebar'
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, search, children, ...rest }: { to: string; search?: Record<string, string>; children: ReactNode }) => (
+    <a href={search ? `${to}?${new URLSearchParams(search)}` : to} {...rest}>
+      {children}
+    </a>
+  ),
+}))
+
+vi.mock('@/hooks', () => ({ usePrefetchBrokenLinks: () => () => undefined }))
+
+beforeAll(() => {
+  // The sidebar's ScrollArea measures itself; jsdom has no ResizeObserver.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+  )
+})
+
+function renderSidebar(opts: { vaultUnlocked?: boolean; pathname?: string; search?: Record<string, unknown> } = {}) {
+  return render(
+    <MantineProvider env="test">
+      <AppShell navbar={{ width: 248, breakpoint: 'sm' }}>
+        <AppShell.Navbar>
+          <AppSidebar
+            pathname={opts.pathname ?? '/'}
+            search={opts.search ?? {}}
+            vaultUnlocked={opts.vaultUnlocked ?? false}
+          />
+        </AppShell.Navbar>
+      </AppShell>
+    </MantineProvider>
+  )
+}
+
+describe('AppSidebar', () => {
+  beforeEach(() => useShellUi.setState({ brokenOpen: false, dupesOpen: false, historyOpen: false, navOpen: true }))
+  afterEach(cleanup)
+
+  it('links to Vaults while a vault is open', () => {
+    renderSidebar({ vaultUnlocked: true })
+    expect(screen.getByRole('link', { name: 'Vaults' }).getAttribute('href')).toBe('/vaults')
+  })
+
+  it('hides the Vaults link when every vault is locked', () => {
+    renderSidebar()
+    expect(screen.queryByRole('link', { name: 'Vaults' })).toBeNull()
+  })
+
+  it('links each quick view to the filtered library and marks the open one', () => {
+    renderSidebar({ pathname: '/library', search: { flag: 'favorite' } })
+    expect(screen.getByRole('link', { name: 'Reading list' }).getAttribute('href')).toBe('/library?flag=unread')
+    expect(screen.getByRole('link', { name: 'Favorites' }).hasAttribute('data-active')).toBe(true)
+    expect(screen.getByRole('link', { name: 'Library' }).hasAttribute('data-active')).toBe(false)
+  })
+
+  it('opens the library health drawers and closes the phone menu', async () => {
+    renderSidebar()
+    await userEvent.click(screen.getByRole('button', { name: 'Broken links' }))
+    expect(useShellUi.getState().brokenOpen).toBe(true)
+    expect(useShellUi.getState().navOpen).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: 'Duplicates' }))
+    expect(useShellUi.getState().dupesOpen).toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: 'History' }))
+    expect(useShellUi.getState().historyOpen).toBe(true)
+  })
+
+  it('keeps Deleted items and settings reachable', () => {
+    renderSidebar()
+    expect(screen.getByRole('link', { name: 'Deleted items' }).getAttribute('href')).toBe('/trash')
+    expect(screen.getByRole('link', { name: 'Config options' }).getAttribute('href')).toBe('/settings')
+  })
+})

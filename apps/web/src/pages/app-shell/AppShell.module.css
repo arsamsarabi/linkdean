@@ -1,3 +1,42 @@
 .codeRoot {
   font-size: 16px;
 }
+
+.brand {
+  flex-shrink: 0;
+}
+
+.searchTrigger {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  flex: 1;
+  max-width: 480px;
+  height: 36px;
+  padding-inline: var(--mantine-spacing-sm);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-default);
+  color: var(--mantine-color-dimmed);
+  transition: border-color 120ms ease;
+}
+
+.searchTrigger:hover {
+  border-color: var(--mantine-color-violet-filled);
+}
+
+.searchText {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.groupLabel {
+  letter-spacing: 0.04em;
+}
+
+.footer {
+  border-top: 1px solid var(--mantine-color-default-border);
+}
