@@ -24,6 +24,7 @@ const folders = vi.hoisted(() => [
 vi.mock('@/hooks', () => ({
   usePrefetchBrokenLinks: () => () => undefined,
   useCategories: () => ({ isLoading: false, data: folders }),
+  useShareInvites: () => ({ data: { invites: [{ id: 'i1', rejected_at: null }] } }),
 }))
 
 beforeAll(() => {
@@ -104,5 +105,12 @@ describe('AppSidebar', () => {
     renderSidebar()
     expect(screen.getByRole('link', { name: 'Deleted items' }).getAttribute('href')).toBe('/trash')
     expect(screen.getByRole('link', { name: 'Config options' }).getAttribute('href')).toBe('/settings')
+  })
+
+  it('links Shared, with the number of invites waiting', () => {
+    renderSidebar()
+    const hrefs = screen.getAllByRole('link', { name: /Shared/ }).map((a) => a.getAttribute('href'))
+    expect(hrefs).toContain('/shared')
+    expect(screen.getByLabelText('1 invites waiting')).toBeTruthy()
   })
 })

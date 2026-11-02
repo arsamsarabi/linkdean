@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { notifications } from '@mantine/notifications'
+import { useSearch } from '@tanstack/react-router'
 import { useBookmarks } from '@/hooks/bookmarks'
 import type { Dashboard } from '@/schemas'
 import {
@@ -14,15 +15,19 @@ import {
 export function useDashboardBoard() {
   const list = useDashboards()
   const defaultDash = useDefaultDashboard()
-  const [activeId, setActiveId] = useState<string | undefined>(undefined)
+  // A link can name the board to open (`?board=`); otherwise the pinned one opens.
+  const requested = (useSearch({ strict: false }) as { board?: string }).board
+  const [activeId, setActiveId] = useState<string | undefined>(requested)
   const pinnedId = list.data?.find((d) => d.is_default)?.id || defaultDash.data?.id
+  // A board that is gone, or no longer shared with you, falls back to the pinned one.
+  const activeKnown = !activeId || !list.data || list.data.some((d) => d.id === activeId)
 
   useEffect(() => {
-    if (!activeId && pinnedId) {
+    if ((!activeId || !activeKnown) && pinnedId && activeId !== pinnedId) {
       // oxlint-disable-next-line react/set-state-in-effect -- pick pin once list/default known
       setActiveId(pinnedId)
     }
-  }, [activeId, pinnedId])
+  }, [activeId, activeKnown, pinnedId])
 
   const bookmarks = useBookmarks()
   const create = useCreateDashboard()

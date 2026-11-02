@@ -1,5 +1,5 @@
 import { type ReactElement, type ReactNode } from 'react'
-import { AppShell, NavLink, ScrollArea, Stack, Text } from '@mantine/core'
+import { AppShell, Badge, NavLink, ScrollArea, Stack, Text } from '@mantine/core'
 import {
   IconBookmark,
   IconBooks,
@@ -12,9 +12,10 @@ import {
   IconSettings,
   IconStar,
   IconTrash,
+  IconUsers,
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { usePrefetchBrokenLinks } from '@/hooks'
+import { usePrefetchBrokenLinks, useShareInvites } from '@/hooks'
 import { asStringList, type FlagKey } from '@/lib'
 import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
@@ -56,6 +57,8 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
   const openDupes = useShellUi((s) => s.openDupes)
   const openHistory = useShellUi((s) => s.openHistory)
   const prefetchBroken = usePrefetchBrokenLinks()
+  const invites = useShareInvites()
+  const pendingInvites = (invites.data?.invites ?? []).filter((i) => !i.rejected_at).length
 
   const onLibrary = pathname.startsWith('/library')
   const flags = onLibrary ? asStringList(search.flag) : []
@@ -86,6 +89,22 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
             label="Library"
             leftSection={<IconBooks {...iconProps} />}
             active={plainLibrary}
+            onClick={closeNav}
+          />
+          <NavLink
+            component={Link}
+            activeOptions={EXACT}
+            to="/shared"
+            label="Shared"
+            leftSection={<IconUsers {...iconProps} />}
+            rightSection={
+              pendingInvites > 0 ? (
+                <Badge size="sm" circle aria-label={`${pendingInvites} invites waiting`}>
+                  {pendingInvites}
+                </Badge>
+              ) : null
+            }
+            active={pathname === '/shared'}
             onClick={closeNav}
           />
           {vaultUnlocked ? (
