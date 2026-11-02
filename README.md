@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="brand/graphics/the-link-dean.png" alt="The Link Dean, Linkdean mascot" width="360" />
+  <img src="brand/graphics/the-link-dean.png" alt="The Link Dean, Linkdean mascot" width="280" />
 </p>
 
 <h1 align="center">Linkdean</h1>
