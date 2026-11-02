@@ -196,7 +196,7 @@ async fn write_encrypted(
     vault_id: Uuid,
     ct: Vec<u8>,
     nonce: Vec<u8>,
-) -> Result<()> {
+) -> Result<Vec<Uuid>> {
     sqlx::query(
         r#"
         UPDATE bookmarks
@@ -217,11 +217,12 @@ async fn write_encrypted(
     .execute(&mut **tx)
     .await
     .map_err(db_err)?;
-    sqlx::query("DELETE FROM bookmark_tags WHERE bookmark_id = $1")
-        .bind(id)
-        .execute(&mut **tx)
-        .await
-        .map_err(db_err)?;
+    let tag_ids: Vec<Uuid> =
+        sqlx::query_scalar("DELETE FROM bookmark_tags WHERE bookmark_id = $1 RETURNING tag_id")
+            .bind(id)
+            .fetch_all(&mut **tx)
+            .await
+            .map_err(db_err)?;
     sqlx::query(
         r#"
         UPDATE activity_events
@@ -245,6 +246,87 @@ async fn write_encrypted(
     .bind(SCRUBBED_TITLE)
     .bind(SCRUBBED_SUMMARY)
     .bind(id)
+    .execute(&mut **tx)
+    .await
+    .map_err(db_err)?;
+    Ok(tag_ids)
+}
+
+/// Remove what still names moved items in plaintext once they are in a vault: tags no
+/// bookmark uses any more, likes, comments and ratings, moderation audit titles, and list
+/// activity and notifications.
+async fn scrub_moved_in(
+    tx: &mut Transaction<'_, Postgres>,
+    user_id: Uuid,
+    bookmark_ids: &[Uuid],
+    category_ids: &[Uuid],
+    tag_ids: &[Uuid],
+) -> Result<()> {
+    sqlx::query(
+        r#"
+        DELETE FROM tags t
+        WHERE t.owner_user_id = $1 AND t.id = ANY($2)
+          AND NOT EXISTS (SELECT 1 FROM bookmark_tags bt WHERE bt.tag_id = t.id)
+        "#,
+    )
+    .bind(user_id)
+    .bind(tag_ids)
+    .execute(&mut **tx)
+    .await
+    .map_err(db_err)?;
+
+    for table in ["social_likes", "social_comments", "social_ratings"] {
+        // `table` comes from the fixed list above.
+        sqlx::query(&format!(
+            r#"
+            DELETE FROM {table}
+            WHERE (subject_type = 'bookmark' AND subject_id = ANY($1))
+               OR (subject_type = 'category' AND subject_id = ANY($2))
+            "#
+        ))
+        .bind(bookmark_ids)
+        .bind(category_ids)
+        .execute(&mut **tx)
+        .await
+        .map_err(db_err)?;
+    }
+
+    sqlx::query(
+        r#"
+        UPDATE moderation_actions SET subject_title = $1
+        WHERE subject_id = ANY($2) OR subject_id = ANY($3)
+        "#,
+    )
+    .bind(SCRUBBED_TITLE)
+    .bind(bookmark_ids)
+    .bind(category_ids)
+    .execute(&mut **tx)
+    .await
+    .map_err(db_err)?;
+
+    sqlx::query(
+        r#"
+        UPDATE activity_events
+        SET subject_title = $1, summary = $2, payload = '{}'::jsonb
+        WHERE subject_type = 'category' AND subject_id = ANY($3)
+        "#,
+    )
+    .bind(SCRUBBED_TITLE)
+    .bind(SCRUBBED_SUMMARY)
+    .bind(category_ids)
+    .execute(&mut **tx)
+    .await
+    .map_err(db_err)?;
+    sqlx::query(
+        r#"
+        UPDATE notifications
+        SET subject_title = $1, body = $2, payload = '{}'::jsonb
+        WHERE subject_type = 'category' AND subject_id = ANY($3)
+        "#,
+    )
+    .bind(SCRUBBED_TITLE)
+    .bind(SCRUBBED_SUMMARY)
+    .bind(category_ids)
     .execute(&mut **tx)
     .await
     .map_err(db_err)?;
@@ -358,9 +440,15 @@ pub async fn move_to_vault(
         .map_err(db_err)?;
     }
 
+    let mut freed_tags = Vec::new();
+    let mut moved_in = Vec::new();
     for (id, ct, nonce) in encrypted {
         let vault_id = destination.ok_or(Error::msg("move destination missing"))?;
-        write_encrypted(&mut tx, id, vault_id, ct, nonce).await?;
+        freed_tags.extend(write_encrypted(&mut tx, id, vault_id, ct, nonce).await?);
+        moved_in.push(id);
+    }
+    if destination.is_some() {
+        scrub_moved_in(&mut tx, user_id, &moved_in, &category_ids, &freed_tags).await?;
     }
     if destination.is_none() {
         for (bookmark, payload) in &loaded {

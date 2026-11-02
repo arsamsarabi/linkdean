@@ -426,3 +426,101 @@ async fn a_bookmark_cannot_leave_while_its_vault_category_stays() {
         .expect("raw");
     assert!(!raw.is_vault);
 }
+
+#[tokio::test]
+async fn moving_in_removes_tags_social_rows_audit_and_list_activity() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let cat = category(&s, "Secret plans", None).await;
+    let only_here = format!("only-{}", Uuid::new_v4());
+    let shared_tag = format!("shared-{}", Uuid::new_v4());
+    let id = bookmark(
+        &s,
+        "https://plans.example/",
+        vec![cat],
+        vec![only_here.clone(), shared_tag.clone()],
+    )
+    .await;
+    bookmark(
+        &s,
+        "https://other.example/",
+        vec![],
+        vec![shared_tag.clone()],
+    )
+    .await;
+    let commenter = person(&s.pool, "commenter").await;
+    for (kind, subject) in [("bookmark", id), ("category", cat)] {
+        sqlx::query(
+            "INSERT INTO social_comments (user_id, subject_type, subject_id, body) VALUES ($1, $2, $3, 'plaintext')",
+        )
+        .bind(commenter.id)
+        .bind(kind)
+        .bind(subject)
+        .execute(&s.pool)
+        .await
+        .expect("comment");
+    }
+    sqlx::query(
+        "INSERT INTO moderation_actions (user_id, action, subject_type, subject_id, subject_title) VALUES ($1, 'bookmark_private', 'bookmark', $2, 'Rust docs')",
+    )
+    .bind(s.owner.id)
+    .bind(id)
+    .execute(&s.pool)
+    .await
+    .expect("audit");
+    sqlx::query(
+        "INSERT INTO activity_events (user_id, action, subject_type, subject_id, subject_title, summary) VALUES ($1, 'created', 'category', $2, 'Secret plans', 'Added Secret plans')",
+    )
+    .bind(s.owner.id)
+    .bind(cat)
+    .execute(&s.pool)
+    .await
+    .expect("activity");
+
+    let outcome = db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![cat], vec![], Some(s.vault)),
+        &s.keyring,
+    )
+    .await
+    .expect("move");
+    assert!(matches!(outcome, VaultMoveOutcome::Moved { .. }));
+
+    let tags: Vec<String> =
+        sqlx::query_scalar("SELECT name FROM tags WHERE owner_user_id = $1 ORDER BY name")
+            .bind(s.owner.id)
+            .fetch_all(&s.pool)
+            .await
+            .expect("tags");
+    assert_eq!(tags, vec![shared_tag], "only the tag still in use stays");
+
+    let comments: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM social_comments WHERE subject_id = $1 OR subject_id = $2",
+    )
+    .bind(id)
+    .bind(cat)
+    .fetch_one(&s.pool)
+    .await
+    .expect("comments");
+    assert_eq!(comments, 0);
+
+    let audit: String =
+        sqlx::query_scalar("SELECT subject_title FROM moderation_actions WHERE subject_id = $1")
+            .bind(id)
+            .fetch_one(&s.pool)
+            .await
+            .expect("audit");
+    assert_eq!(audit, "Vault item");
+
+    let activity: Vec<String> = sqlx::query_scalar(
+        "SELECT subject_title || ' ' || summary FROM activity_events WHERE subject_id = $1",
+    )
+    .bind(cat)
+    .fetch_all(&s.pool)
+    .await
+    .expect("activity");
+    assert!(!activity.is_empty());
+    assert!(activity.iter().all(|a| !a.contains("Secret plans")));
+}
