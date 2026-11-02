@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { notifications } from '@mantine/notifications'
 import type { Dashboard, PutDashboardLayout } from '@/schemas'
 import {
+  dashboardDraftError,
   emptyDashboardDraft,
   moveSection,
   newDraftSection,
@@ -61,6 +62,11 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
 
   async function onSave(): Promise<void> {
     if (!editDraft || !activeId) return
+    const invalid = dashboardDraftError(editDraft)
+    if (invalid) {
+      notifications.show({ color: 'red', message: invalid })
+      return
+    }
     try {
       await save.mutateAsync({ id: activeId, body: toPutDashboardLayout(editDraft) })
       notifications.show({ message: 'Dashboard saved' })

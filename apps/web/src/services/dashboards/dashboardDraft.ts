@@ -35,18 +35,21 @@ export function moveSection<T>(sections: readonly T[], index: number, delta: num
   return next
 }
 
+/** Why the draft cannot be saved, or null. A blank section title would lose its pins. */
+export function dashboardDraftError(draft: DashboardDraft): string | null {
+  return draft.sections.some((s) => !s.title.trim()) ? 'Every section needs a title.' : null
+}
+
 export function toPutDashboardLayout(draft: DashboardDraft): {
   title: string
   sections: { title: string; bookmark_ids: string[] }[]
 } {
   return {
     title: draft.title.trim() || 'Home',
-    sections: draft.sections
-      .map((s) => ({
-        title: s.title.trim(),
-        bookmark_ids: s.bookmark_ids,
-      }))
-      .filter((s) => s.title.length > 0),
+    sections: draft.sections.map((s) => ({
+      title: s.title.trim(),
+      bookmark_ids: s.bookmark_ids,
+    })),
   }
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Bookmark, Dashboard } from '@/schemas'
 import {
+  dashboardDraftError,
   dashboardToShowInstead,
   mergeDashboardBookmarks,
   moveSection,
@@ -23,18 +24,28 @@ describe('moveSection', () => {
 })
 
 describe('toPutDashboardLayout', () => {
-  it('drops blank titles and defaults dashboard title', () => {
+  it('trims titles and defaults the dashboard title', () => {
     const draft: DashboardDraft = {
       title: '  ',
-      sections: [
-        { key: '1', title: ' Keep ', bookmark_ids: ['b1'] },
-        { key: '2', title: '   ', bookmark_ids: ['b2'] },
-      ],
+      sections: [{ key: '1', title: ' Keep ', bookmark_ids: ['b1'] }],
     }
     expect(toPutDashboardLayout(draft)).toEqual({
       title: 'Home',
       sections: [{ title: 'Keep', bookmark_ids: ['b1'] }],
     })
+    expect(dashboardDraftError(draft)).toBeNull()
+  })
+
+  it('refuses a blank section title instead of dropping its pins', () => {
+    const draft: DashboardDraft = {
+      title: 'Home',
+      sections: [
+        { key: '1', title: 'Keep', bookmark_ids: ['b1'] },
+        { key: '2', title: '   ', bookmark_ids: ['b2'] },
+      ],
+    }
+    expect(dashboardDraftError(draft)).toBe('Every section needs a title.')
+    expect(toPutDashboardLayout(draft).sections).toHaveLength(2)
   })
 })
 
