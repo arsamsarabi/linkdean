@@ -44,13 +44,23 @@ fn cover_crop_rgb(img: DynamicImage, tw: u32, th: u32) -> image::RgbImage {
     if w == 0 || h == 0 {
         return image::RgbImage::new(tw, th);
     }
-    let scale = f32::max(tw as f32 / w as f32, th as f32 / h as f32);
-    let nw = ((w as f32) * scale).ceil().max(1.0) as u32;
-    let nh = ((h as f32) * scale).ceil().max(1.0) as u32;
-    let resized = img.resize_exact(nw, nh, FilterType::Lanczos3);
-    let x = nw.saturating_sub(tw) / 2;
-    let y = nh.saturating_sub(th) / 2;
-    resized.crop_imm(x, y, tw, th).to_rgb8()
+    // Crop before resizing. Scaling first turns a 1×65535 image into tens of gigabytes.
+    let (cw, ch) = cover_crop_size(w, h, tw, th);
+    let x = (w - cw) / 2;
+    let y = (h - ch) / 2;
+    img.crop_imm(x, y, cw, ch)
+        .resize_exact(tw, th, FilterType::Lanczos3)
+        .to_rgb8()
+}
+
+/// Largest centred region of a `w`×`h` image with the `tw`:`th` aspect ratio.
+fn cover_crop_size(w: u32, h: u32, tw: u32, th: u32) -> (u32, u32) {
+    let (w64, h64, tw64, th64) = (w as u64, h as u64, tw as u64, th as u64);
+    if w64 * th64 > h64 * tw64 {
+        (((h64 * tw64 / th64).max(1) as u32).min(w), h)
+    } else {
+        (w, ((w64 * th64 / tw64).max(1) as u32).min(h))
+    }
 }
 
 /// Validate content-type header loosely (multipart may lie; bytes still checked).
@@ -88,5 +98,26 @@ mod tests {
         assert_eq!(fmt, ImageFormat::Jpeg);
         let decoded = image::load_from_memory(&jpeg).expect("decode");
         assert_eq!(decoded.dimensions(), (PREVIEW_W, PREVIEW_H));
+    }
+
+    #[test]
+    fn extreme_aspect_ratios_stay_small() {
+        for (w, h) in [(1, 65_535), (65_535, 1)] {
+            let img = image::GrayImage::new(w, h);
+            let mut buf = Vec::new();
+            img.write_to(&mut std::io::Cursor::new(&mut buf), ImageFormat::Png)
+                .unwrap();
+            let out = process_bookmark_preview(&buf).expect("preview");
+            let decoded = image::load_from_memory(&out).unwrap();
+            assert_eq!((decoded.width(), decoded.height()), (PREVIEW_W, PREVIEW_H));
+        }
+    }
+
+    #[test]
+    fn cover_crop_keeps_the_target_aspect() {
+        assert_eq!(cover_crop_size(1600, 900, 16, 9), (1600, 900));
+        assert_eq!(cover_crop_size(1000, 1000, 16, 9), (1000, 562));
+        assert_eq!(cover_crop_size(1000, 100, 16, 9), (177, 100));
+        assert_eq!(cover_crop_size(1, 65_535, 16, 9), (1, 1));
     }
 }
