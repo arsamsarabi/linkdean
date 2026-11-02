@@ -14,7 +14,7 @@ export function LibraryResults(): ReactElement {
         <LibraryExplorerView
           categories={lib.cats.data || []}
           bookmarks={lib.bookmarks.data || []}
-          searchHits={lib.search.data?.hits || []}
+          searchHits={lib.searchItems}
           searching={lib.searching}
           searchQuery={lib.debouncedQ}
           folderId={lib.folderId}

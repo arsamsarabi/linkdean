@@ -69,6 +69,13 @@ export function useLibraryList({
 
   const allTags = useMemo(() => collectTagOptions(bookmarks.data || []), [bookmarks.data])
 
+  // What a search finds, before list filters. Explorer shows these in place of a folder.
+  const searchItems = useMemo((): LibraryListItem[] => {
+    if (!searching) return []
+    if (inVaults) return (bookmarks.data || []).filter((b) => matchesVaultQuery(b, debouncedQ))
+    return search.data?.hits || []
+  }, [searching, inVaults, bookmarks.data, debouncedQ, search.data])
+
   const catLabel = useMemo(() => {
     const list = cats.data || []
     const byId = new Map(list.map((c) => [c.id, c]))
@@ -85,7 +92,7 @@ export function useLibraryList({
     let catchUpCount = 0
     let raw: LibraryListItem[]
     if (searching && inVaults) {
-      raw = (bookmarks.data || []).filter((b) => matchesVaultQuery(b, debouncedQ))
+      raw = searchItems
     } else if (searching) {
       const merged = mergeSearchWithLocalCatchUp(search.data?.hits || [], bookmarks.data || [], debouncedQ)
       raw = merged.items
@@ -128,6 +135,7 @@ export function useLibraryList({
     bookmarks.data,
     inVaults,
     search.data,
+    searchItems,
     searching,
     debouncedQ,
     filterCats,
@@ -149,6 +157,7 @@ export function useLibraryList({
     bookmarks,
     searching,
     search,
+    searchItems,
     allTags,
     catLabel,
     list,

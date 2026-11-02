@@ -44,12 +44,12 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
   })
 
   // Bulk actions must only reach what is on screen, and Explorer shows one folder at a time.
-  const searchHits = listState.search.data?.hits
+  const searchHits = listState.searchItems
   const selectable = useMemo(() => {
     if (viewMode !== 'explorer') return listState.list
     return explorerSelectableItems({
       searching: listState.searching,
-      searchHits: searchHits || [],
+      searchHits,
       folderId: url.folderId,
       categories: listState.cats.data || [],
       bookmarks: listState.bookmarks.data || [],
@@ -84,7 +84,7 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
 
   const editor = useLibraryBookmarkEditor({
     bookmarks: listState.bookmarks.data || [],
-    searchHits: listState.search.data?.hits || [],
+    searchHits: listState.searchItems,
     folderCat,
     vaultPrompt: scope === 'library' && !!listState.search.data?.vault_prompt,
     scope,
