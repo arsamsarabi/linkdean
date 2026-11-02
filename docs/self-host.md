@@ -5,15 +5,15 @@
 ```bash
 git clone https://github.com/arsamsarabi/linkdean.git
 cd linkdean
-cp .env.example .env
-# set SESSION_SECRET to a long random string
+printf 'POSTGRES_PASSWORD=%s\nMEILI_MASTER_KEY=%s\nSESSION_SECRET=%s\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > deploy/docker/.env
 
-docker compose -f deploy/docker/docker-compose.yml up -d --build
+docker compose --env-file deploy/docker/.env -f deploy/docker/docker-compose.yml up -d --build
 ```
 
 Open `http://localhost:8080`. First registered user → admin.
 
-1. Copy `.env.example` to `.env`. Set `SESSION_SECRET` and `APP_URL`.
+1. Create `deploy/docker/.env` with `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET` from `openssl rand -hex 32`, and set `APP_URL`. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`.
 2. Compose up (command above).
 3. On first visit, register (bootstrap admin).
 4. Optional OIDC: set issuer, client id, and secret. Callback: `{APP_URL}/api/auth/oidc/callback`.
