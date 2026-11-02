@@ -18,6 +18,8 @@ import { usePrefetchBrokenLinks } from '@/hooks'
 import { asStringList, type FlagKey } from '@/lib'
 import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
+import { SidebarFolders } from './SidebarFolders'
+import { EXACT } from './sidebarLinks'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 
@@ -57,7 +59,8 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
 
   const onLibrary = pathname.startsWith('/library')
   const flags = onLibrary ? asStringList(search.flag) : []
-  const plainLibrary = onLibrary && flags.length === 0
+  const folder = onLibrary && typeof search.folder === 'string' && search.folder !== 'all' ? search.folder : undefined
+  const plainLibrary = onLibrary && flags.length === 0 && !folder
   const open = (fn: () => void) => () => {
     closeNav()
     fn()
@@ -69,6 +72,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
         <Stack gap={2}>
           <NavLink
             component={Link}
+            activeOptions={EXACT}
             to="/"
             label="Dashboard"
             leftSection={<IconLayoutDashboard {...iconProps} />}
@@ -77,6 +81,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
           />
           <NavLink
             component={Link}
+            activeOptions={EXACT}
             to="/library"
             label="Library"
             leftSection={<IconBooks {...iconProps} />}
@@ -86,6 +91,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
           {vaultUnlocked ? (
             <NavLink
               component={Link}
+              activeOptions={EXACT}
               to="/vaults"
               label="Vaults"
               leftSection={<IconLock {...iconProps} />}
@@ -99,13 +105,17 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
           {QUICK_VIEWS.map(({ flag, label, Icon }) => (
             <NavLink
               key={flag}
-              renderRoot={(props) => <Link {...props} to="/library" search={{ flag }} />}
+              renderRoot={(props) => <Link {...props} to="/library" search={{ flag }} activeOptions={EXACT} />}
               label={label}
               leftSection={<Icon {...iconProps} />}
               active={flags.length === 1 && flags[0] === flag}
               onClick={closeNav}
             />
           ))}
+        </Group>
+
+        <Group label="Folders">
+          <SidebarFolders activeFolder={folder} onNavigate={closeNav} />
         </Group>
 
         <Group label="Library health">
@@ -136,6 +146,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
         <Stack gap={2}>
           <NavLink
             component={Link}
+            activeOptions={EXACT}
             to="/trash"
             label="Deleted items"
             leftSection={<IconTrash {...iconProps} />}
@@ -144,6 +155,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
           />
           <NavLink
             component={Link}
+            activeOptions={EXACT}
             to="/settings"
             label="Config options"
             leftSection={<IconSettings {...iconProps} />}

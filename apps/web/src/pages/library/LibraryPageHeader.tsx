@@ -1,5 +1,5 @@
 import { type ReactElement } from 'react'
-import { Box, Button, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { Anchor, Box, Button, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import {
   IconBookmark,
@@ -12,7 +12,7 @@ import {
   IconStar,
 } from '@tabler/icons-react'
 import type { LibraryViewMode } from '@/hooks'
-import type { FlagFilter } from '@/services'
+import { FOLDER_ALL, type FlagFilter } from '@/services'
 import styles from './LibraryPage.module.css'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
@@ -71,7 +71,21 @@ export function LibraryPageHeader(): ReactElement {
   return (
     <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
       <Stack gap={4}>
-        <Title order={2}>{lib.scope === 'vault' ? 'Vaults' : 'Library'}</Title>
+        {lib.folderCat ? (
+          <Text size="sm" c="dimmed">
+            <Anchor
+              component="button"
+              type="button"
+              size="sm"
+              c="dimmed"
+              onClick={() => lib.setLibrarySearch({ folder: FOLDER_ALL })}
+            >
+              {lib.scope === 'vault' ? 'Vaults' : 'Library'}
+            </Anchor>{' '}
+            /
+          </Text>
+        ) : null}
+        <Title order={2}>{lib.folderCat?.name ?? (lib.scope === 'vault' ? 'Vaults' : 'Library')}</Title>
         <Text size="sm" c="dimmed" aria-live="polite" className={styles.countLine}>
           {!loading && viewMode !== 'explorer'
             ? `${listCount} bookmark${listCount === 1 ? '' : 's'}${searching ? ' matched' : ''}`

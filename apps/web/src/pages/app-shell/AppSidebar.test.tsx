@@ -14,7 +14,17 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }))
 
-vi.mock('@/hooks', () => ({ usePrefetchBrokenLinks: () => () => undefined }))
+const folders = vi.hoisted(() => [
+  { id: 'f1', name: 'Design', parent_id: null, is_hidden: false, is_vault: false, access: 'owner', shared_out: false },
+  { id: 'f2', name: 'Fonts', parent_id: 'f1', is_hidden: false, is_vault: false, access: 'owner', shared_out: false },
+  { id: 'f3', name: 'From Ana', parent_id: null, is_hidden: false, is_vault: false, access: 'read', shared_out: false },
+  { id: 'v1', name: 'Secret', parent_id: null, is_hidden: false, is_vault: true, access: 'owner', shared_out: false },
+])
+
+vi.mock('@/hooks', () => ({
+  usePrefetchBrokenLinks: () => () => undefined,
+  useCategories: () => ({ isLoading: false, data: folders }),
+}))
 
 beforeAll(() => {
   // The sidebar's ScrollArea measures itself; jsdom has no ResizeObserver.
@@ -74,6 +84,20 @@ describe('AppSidebar', () => {
     expect(useShellUi.getState().dupesOpen).toBe(true)
     await userEvent.click(screen.getByRole('button', { name: 'History' }))
     expect(useShellUi.getState().historyOpen).toBe(true)
+  })
+
+  it('lists folders with Unsorted first, nests children, and leaves vault folders out', () => {
+    renderSidebar({ pathname: '/library', search: { folder: 'f2' } })
+    expect(screen.getByRole('link', { name: 'Unsorted' }).getAttribute('href')).toBe(
+      '/library?folder=uncategorized&category=uncategorized'
+    )
+    expect(screen.getByRole('link', { name: 'Design' }).getAttribute('href')).toBe('/library?folder=f1')
+    // The open folder's parent starts expanded, so the open folder shows and is marked.
+    expect(screen.getByRole('link', { name: 'Fonts' }).hasAttribute('data-active')).toBe(true)
+    expect(screen.getByRole('link', { name: /From Ana/ })).toBeTruthy()
+    expect(screen.getByLabelText('Shared')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Secret' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Library' }).hasAttribute('data-active')).toBe(false)
   })
 
   it('keeps Deleted items and settings reachable', () => {

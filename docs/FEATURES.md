@@ -148,7 +148,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Avatars and preview volumes; backup recipe in [self-host.md](./self-host.md)
-- Sidebar navigation (Dashboard, Library, Vaults, quick views, Library health, Deleted items, settings); on phones the burger slides it in
+- Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in
+- An open folder titles the library page, with a breadcrumb back to the whole library; an empty folder offers Add bookmark here
 - Header search field opens the command palette; header Add opens the new-bookmark form
 - PWA install: web manifest + service worker (standalone / “Add to Home Screen”)
 

@@ -55,6 +55,21 @@ export function LibraryGridView(): ReactElement {
               : undefined
           }
         />
+      ) : lib.emptyFiltered && lib.folderCat && !lib.searching && !lib.filterActive ? (
+        <EmptyState
+          icon={<IconFolder size={28} stroke={1.5} />}
+          title="This folder is empty"
+          description={
+            lib.canCreateInContext
+              ? 'Add a bookmark here, or move bookmarks in from the library.'
+              : 'Nothing has been added to this shared folder yet.'
+          }
+          action={
+            lib.canCreateInContext
+              ? { label: 'Add bookmark here', onClick: lib.openCreate, leftSection: <IconBookmarkPlus {...iconSm} /> }
+              : undefined
+          }
+        />
       ) : lib.emptyFiltered ? (
         <EmptyState
           icon={<IconSearch size={28} stroke={1.5} />}
