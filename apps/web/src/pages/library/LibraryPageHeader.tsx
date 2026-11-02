@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react'
-import { Button, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { Box, Button, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import {
   IconBookmark,
   IconBookmarkPlus,
@@ -27,7 +28,40 @@ const VIEW_MODES: { mode: LibraryViewMode; label: string; Icon: typeof IconStar 
   { mode: 'explorer', label: 'Explorer', Icon: IconFolders },
 ]
 
+type ToolbarButtonProps = {
+  label: string
+  Icon: typeof IconStar
+  compact: boolean
+  active?: boolean
+  pressed?: boolean
+  disabled?: boolean
+  onClick: () => void
+}
+
+/** Labelled on wide screens; icon-only with a tooltip on phones, so the toolbar fits one row. */
+function ToolbarButton({ label, Icon, compact, active, pressed, disabled, onClick }: ToolbarButtonProps): ReactElement {
+  return (
+    <Tooltip label={label} disabled={!compact}>
+      <Button
+        variant={active ? 'light' : 'default'}
+        leftSection={<Icon {...iconSm} />}
+        aria-label={label}
+        aria-pressed={pressed}
+        disabled={disabled}
+        onClick={onClick}
+        px={compact ? 'xs' : undefined}
+        styles={compact ? { section: { marginInlineEnd: 0 } } : undefined}
+      >
+        <Box component="span" visibleFrom="sm">
+          {label}
+        </Box>
+      </Button>
+    </Tooltip>
+  )
+}
+
 export function LibraryPageHeader(): ReactElement {
+  const compact = useMediaQuery('(max-width: 48em)') ?? false
   const lib = useLibraryPageModel()
   const { loading, viewMode, searching, selectMode, canCreateInContext: canCreate } = lib
   const listCount = lib.list.length
@@ -47,29 +81,29 @@ export function LibraryPageHeader(): ReactElement {
           {FLAG_FILTERS.map(({ flag, label, Icon }) => {
             const active = lib.filterFlags.includes(flag)
             return (
-              <Button
+              <ToolbarButton
                 key={flag}
-                variant={active ? 'light' : 'default'}
-                leftSection={<Icon {...iconSm} />}
-                aria-pressed={active}
+                label={label}
+                Icon={Icon}
+                compact={compact}
+                active={active}
+                pressed={active}
                 onClick={() => lib.toggleFlagFilter(flag)}
-              >
-                {label}
-              </Button>
+              />
             )
           })}
         </Button.Group>
         <Button.Group aria-label="Library view">
           {VIEW_MODES.map(({ mode, label, Icon }) => (
-            <Button
+            <ToolbarButton
               key={mode}
-              variant={viewMode === mode ? 'light' : 'default'}
-              leftSection={<Icon {...iconSm} />}
-              aria-pressed={viewMode === mode}
+              label={label}
+              Icon={Icon}
+              compact={compact}
+              active={viewMode === mode}
+              pressed={viewMode === mode}
               onClick={() => lib.onViewModeChange(mode)}
-            >
-              {label}
-            </Button>
+            />
           ))}
         </Button.Group>
         {selectMode ? (
@@ -77,28 +111,30 @@ export function LibraryPageHeader(): ReactElement {
             Cancel select
           </Button>
         ) : (
-          <Button
-            variant="default"
-            leftSection={<IconCheck {...iconSm} />}
+          <ToolbarButton
+            label="Select"
+            Icon={IconCheck}
+            compact={compact}
             onClick={lib.enterSelectMode}
             disabled={loading || listCount === 0}
-          >
-            Select
-          </Button>
+          />
         )}
-        {canCreate ? (
-          <Tooltip label="New bookmark (N)">
-            <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={lib.openCreate}>
-              Add bookmark
-            </Button>
-          </Tooltip>
-        ) : (
-          <Tooltip label="Read-only shared folder">
-            <Button leftSection={<IconBookmarkPlus {...iconSm} />} disabled>
-              Add bookmark
-            </Button>
-          </Tooltip>
-        )}
+        {/* On phones the floating button in LibraryFab adds bookmarks. */}
+        <Box visibleFrom="sm">
+          {canCreate ? (
+            <Tooltip label="New bookmark (N)">
+              <Button leftSection={<IconBookmarkPlus {...iconSm} />} onClick={lib.openCreate}>
+                Add bookmark
+              </Button>
+            </Tooltip>
+          ) : (
+            <Tooltip label="Read-only shared folder">
+              <Button leftSection={<IconBookmarkPlus {...iconSm} />} disabled>
+                Add bookmark
+              </Button>
+            </Tooltip>
+          )}
+        </Box>
       </Group>
     </Group>
   )

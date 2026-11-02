@@ -43,7 +43,7 @@ export function LibrarySearchToolbar(): ReactElement {
           onChange={(e) => lib.setQ(e.currentTarget.value)}
           className={styles.searchInput}
         />
-        <Group gap="xs" wrap="nowrap" align="stretch">
+        <Group gap="xs" wrap="nowrap" align="stretch" className={styles.sortGroup}>
           {lib.viewMode === 'grid' ? (
             <Tooltip label="Filter by category or tag">
               <Button
@@ -64,7 +64,7 @@ export function LibrarySearchToolbar(): ReactElement {
             value={lib.sort}
             onChange={(v) => v && lib.setLibrarySearch({ sort: v as SortKey })}
             allowDeselect={false}
-            w={200}
+            className={styles.sortSelect}
             data={[
               { value: 'updated_desc', label: 'Recently updated' },
               { value: 'updated_asc', label: 'Oldest updated' },
