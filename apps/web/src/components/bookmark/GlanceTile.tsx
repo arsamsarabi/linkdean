@@ -28,7 +28,7 @@ type Props = {
 export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
   const title = b.title.trim() || 'Untitled'
   const [iconFailed, setIconFailed] = useState(false)
-  const iconSrc = !iconFailed ? b.favicon_url || googleFavicon(b.url) : undefined
+  const iconSrc = !iconFailed ? b.favicon_url || (b.is_vault ? undefined : googleFavicon(b.url)) : undefined
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
 

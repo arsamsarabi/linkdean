@@ -111,6 +111,7 @@ export function BookmarkCard({
             title={title}
             previewSrc={previewSrc}
             faviconUrl={b.favicon_url}
+            isVault={b.is_vault}
             onPreviewError={() => setSrcIndex((i) => i + 1)}
           />
         </Card.Section>
