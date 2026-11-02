@@ -39,6 +39,7 @@ fn to_view(row: ShareRow) -> Result<CategoryShareView> {
 
 /// Resolve effective access for `user_id` on `category_id`.
 /// Owner wins. Else nearest ancestor share (walking parent chain). Vault → NotFound for non-owners.
+/// Trash is the owner's: a non-owner gets NotFound when the folder or any ancestor is trashed.
 pub async fn category_access(
     pool: &PgPool,
     user_id: Uuid,
@@ -52,18 +53,24 @@ pub async fn category_access(
         return Err(Error::NotFound);
     }
 
+    let mut found = None;
     let mut current = Some(cat);
     while let Some(c) = current {
-        if let Some(share) = find_direct_share(pool, c.id, user_id).await? {
-            let access = ShareAccess::parse(&share.access).map_err(Error::BadRequest)?;
-            return Ok(access.to_category_access());
+        if c.deleted_at.is_some() {
+            return Err(Error::NotFound);
+        }
+        if found.is_none() {
+            if let Some(share) = find_direct_share(pool, c.id, user_id).await? {
+                let access = ShareAccess::parse(&share.access).map_err(Error::BadRequest)?;
+                found = Some(access.to_category_access());
+            }
         }
         current = match c.parent_id {
             Some(pid) => Some(get_category_by_id(pool, pid).await?),
             None => None,
         };
     }
-    Err(Error::NotFound)
+    found.ok_or(Error::NotFound)
 }
 
 pub async fn require_category_read(
@@ -138,6 +145,16 @@ pub async fn list_shared_categories(
               AND c.is_vault = FALSE
               AND c.deleted_at IS NULL
               AND ($2 OR c.is_hidden = FALSE)
+              -- A share under a trashed folder is in the owner's Trash too.
+              AND NOT EXISTS (
+                  WITH RECURSIVE up AS (
+                      SELECT c.parent_id AS id
+                      UNION
+                      SELECT a.parent_id FROM categories a JOIN up ON a.id = up.id
+                  )
+                  SELECT 1 FROM up JOIN categories a ON a.id = up.id
+                  WHERE a.deleted_at IS NOT NULL
+              )
             UNION
             SELECT
                 child.id, child.owner_user_id, child.parent_id, child.name, child.is_hidden,
@@ -416,6 +433,10 @@ pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) 
     if owned.is_some() {
         return Ok(true);
     }
+    if bookmark_trashed(pool, bookmark_id).await? {
+        // Trash is the owner's alone.
+        return Ok(false);
+    }
 
     let cat_ids: Vec<(Uuid,)> = sqlx::query_as(
         r#"
@@ -437,6 +458,16 @@ pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) 
     Ok(false)
 }
 
+async fn bookmark_trashed(pool: &PgPool, bookmark_id: Uuid) -> Result<bool> {
+    let trashed: Option<bool> =
+        sqlx::query_scalar("SELECT deleted_at IS NOT NULL FROM bookmarks WHERE id = $1")
+            .bind(bookmark_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(trashed.unwrap_or(true))
+}
+
 /// True if user can mutate bookmark: owns it, or has write on any linked category.
 pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) -> Result<bool> {
     let owned: Option<(Uuid,)> =
@@ -448,6 +479,10 @@ pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid)
             .map_err(|e| Error::msg(e.to_string()))?;
     if owned.is_some() {
         return Ok(true);
+    }
+    if bookmark_trashed(pool, bookmark_id).await? {
+        // Trash is the owner's alone.
+        return Ok(false);
     }
 
     let cat_ids: Vec<(Uuid,)> = sqlx::query_as(

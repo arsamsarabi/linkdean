@@ -641,6 +641,8 @@ pub async fn list_bookmarks(
             SELECT b.* FROM bookmarks b
             WHERE ($2 OR b.is_vault = FALSE)
               AND ($3 OR b.deleted_at IS NULL)
+              -- Trash is the owner's alone, even in a shared folder.
+              AND (b.deleted_at IS NULL OR b.owner_user_id = $4)
               AND (
                 b.category_id = $1
                 OR EXISTS (
@@ -654,6 +656,7 @@ pub async fn list_bookmarks(
         .bind(cid)
         .bind(include_vault)
         .bind(include_deleted)
+        .bind(user_id)
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?
