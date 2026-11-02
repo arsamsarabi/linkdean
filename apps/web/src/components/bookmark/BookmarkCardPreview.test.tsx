@@ -6,7 +6,7 @@ import { GlanceTile } from './GlanceTile'
 
 function images(ui: React.ReactElement): string[] {
   const { container } = render(<MantineProvider env="test">{ui}</MantineProvider>)
-  return [...container.querySelectorAll('img')].map((i) => i.getAttribute('src') ?? '')
+  return Array.from(container.querySelectorAll('img'), (i) => i.getAttribute('src') ?? '')
 }
 
 const url = 'https://secret.example/path'
