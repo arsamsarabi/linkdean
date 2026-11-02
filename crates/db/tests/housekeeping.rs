@@ -142,3 +142,82 @@ async fn a_removed_or_failed_preview_is_not_retaken() {
         .expect("age");
     assert!(wanted(&pool, &owner, b).await);
 }
+
+#[tokio::test]
+async fn a_refused_edit_changes_nothing() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    let b = bookmark(&pool, &owner, vec!["keep".into()]).await;
+
+    let nul = db::update_bookmark(
+        &pool,
+        owner.id,
+        b,
+        UpdateBookmark {
+            title: Some("New title".into()),
+            tags: Some(vec!["ok".into(), "bad\0tag".into()]),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await;
+    assert!(matches!(nul, Err(linkdean_core::Error::BadRequest(_))));
+
+    let missing_folder = db::update_bookmark(
+        &pool,
+        owner.id,
+        b,
+        UpdateBookmark {
+            title: Some("New title".into()),
+            category_ids: Some(vec![Uuid::new_v4()]),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await;
+    assert!(missing_folder.is_err());
+
+    let raw = db::get_bookmark_raw(&pool, owner.id, b).await.expect("raw");
+    assert_ne!(raw.title, "New title");
+    let view = db::bookmark_to_view(&pool, raw, &VaultKeyring::default(), owner.id)
+        .await
+        .expect("view")
+        .expect("visible");
+    assert_eq!(view.tags, vec!["keep".to_string()]);
+}
+
+#[tokio::test]
+async fn concurrent_edits_to_different_fields_both_land() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    for round in 0..5 {
+        let b = bookmark(&pool, &owner, vec![]).await;
+        let title = format!("Title {round}");
+        let notes = format!("Notes {round}");
+        let edit = |req: UpdateBookmark| {
+            let pool = pool.clone();
+            let owner_id = owner.id;
+            async move {
+                db::update_bookmark(&pool, owner_id, b, req, &VaultKeyring::default())
+                    .await
+                    .expect("edit")
+            }
+        };
+        tokio::join!(
+            edit(UpdateBookmark {
+                title: Some(title.clone()),
+                ..Default::default()
+            }),
+            edit(UpdateBookmark {
+                notes: Some(Some(notes.clone())),
+                ..Default::default()
+            }),
+        );
+        let raw = db::get_bookmark_raw(&pool, owner.id, b).await.expect("raw");
+        assert_eq!((raw.title, raw.notes), (title, Some(notes)));
+    }
+}

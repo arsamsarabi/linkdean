@@ -31,29 +31,60 @@ pub(super) async fn bookmark_tag_names(pool: &PgPool, bookmark_id: Uuid) -> Resu
     Ok(rows.into_iter().map(|r| r.0).collect())
 }
 
-async fn set_bookmark_tags(
-    pool: &PgPool,
-    user_id: Uuid,
+/// Postgres refuses NUL in text. Checked before any write, so a bad field cannot fail a
+/// save half way.
+fn reject_nul<'a>(fields: impl IntoIterator<Item = &'a str>) -> Result<()> {
+    if fields.into_iter().any(|f| f.contains('\0')) {
+        return Err(Error::BadRequest(
+            "text cannot contain NUL characters".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn reject_nul_in_update(req: &UpdateBookmark) -> Result<()> {
+    fn opt(o: &Option<Option<String>>) -> Option<&str> {
+        o.as_ref().and_then(|v| v.as_deref())
+    }
+    reject_nul(
+        req.url
+            .as_deref()
+            .into_iter()
+            .chain(req.title.as_deref())
+            .chain(opt(&req.description))
+            .chain(opt(&req.notes))
+            .chain(req.tags.iter().flatten().map(String::as_str)),
+    )
+}
+
+fn db_err(e: sqlx::Error) -> Error {
+    Error::msg(e.to_string())
+}
+
+/// Replaces a bookmark's tags. Tags are made beforehand with `ensure_tags`.
+async fn apply_tags(
+    conn: &mut sqlx::PgConnection,
     bookmark_id: Uuid,
-    tags: &[String],
-) -> Result<Vec<String>> {
+    tag_ids: &[Uuid],
+) -> Result<()> {
     sqlx::query("DELETE FROM bookmark_tags WHERE bookmark_id = $1")
         .bind(bookmark_id)
-        .execute(pool)
+        .execute(&mut *conn)
         .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-    let ensured = ensure_tags(pool, user_id, tags).await?;
-    for t in &ensured {
-        sqlx::query(
-            "INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        )
-        .bind(bookmark_id)
-        .bind(t.id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-    }
-    Ok(ensured.into_iter().map(|t| t.name).collect())
+        .map_err(db_err)?;
+    sqlx::query(
+        r#"
+        INSERT INTO bookmark_tags (bookmark_id, tag_id)
+        SELECT $1, t FROM unnest($2::uuid[]) AS t
+        ON CONFLICT DO NOTHING
+        "#,
+    )
+    .bind(bookmark_id)
+    .bind(tag_ids)
+    .execute(&mut *conn)
+    .await
+    .map_err(db_err)?;
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, Default, sqlx::FromRow)]
@@ -363,12 +394,20 @@ impl ViewBatch {
     }
 }
 
-async fn set_bookmark_categories(
+/// Where a bookmark will be filed: every link to write, and the primary category.
+struct CategoryPlan {
+    links: Vec<Uuid>,
+    primary: Option<Uuid>,
+}
+
+/// Checks a request to file a bookmark in `category_ids`, and works out the links. Reads
+/// only, so it runs before the write transaction opens.
+async fn plan_bookmark_categories(
     pool: &PgPool,
     user_id: Uuid,
     bookmark_id: Uuid,
     category_ids: &[Uuid],
-) -> Result<Option<Uuid>> {
+) -> Result<CategoryPlan> {
     let mut unique = Vec::new();
     for id in category_ids {
         if !unique.contains(id) {
@@ -431,34 +470,51 @@ async fn set_bookmark_categories(
         }
     }
 
-    sqlx::query("DELETE FROM bookmark_categories WHERE bookmark_id = $1")
-        .bind(bookmark_id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-
-    for id in &links {
-        sqlx::query(
-            "INSERT INTO bookmark_categories (bookmark_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        )
-        .bind(bookmark_id)
-        .bind(id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-    }
-
     let primary = match current_primary {
         Some(p) if !is_owner && links.contains(&p) => Some(p),
         _ => links.first().copied(),
     };
+    Ok(CategoryPlan { links, primary })
+}
+
+async fn apply_categories(
+    conn: &mut sqlx::PgConnection,
+    bookmark_id: Uuid,
+    plan: &CategoryPlan,
+) -> Result<()> {
+    sqlx::query("DELETE FROM bookmark_categories WHERE bookmark_id = $1")
+        .bind(bookmark_id)
+        .execute(&mut *conn)
+        .await
+        .map_err(db_err)?;
+    sqlx::query(
+        r#"
+        INSERT INTO bookmark_categories (bookmark_id, category_id)
+        SELECT $1, c FROM unnest($2::uuid[]) AS c
+        ON CONFLICT DO NOTHING
+        "#,
+    )
+    .bind(bookmark_id)
+    .bind(&plan.links)
+    .execute(&mut *conn)
+    .await
+    .map_err(db_err)?;
     sqlx::query("UPDATE bookmarks SET category_id = $2 WHERE id = $1")
         .bind(bookmark_id)
-        .bind(primary)
-        .execute(pool)
+        .bind(plan.primary)
+        .execute(&mut *conn)
         .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(primary)
+        .map_err(db_err)?;
+    Ok(())
+}
+
+/// The categories an update asks for, if it asks.
+fn requested_categories(req: &UpdateBookmark) -> Option<Vec<Uuid>> {
+    match (&req.category_ids, req.category_id) {
+        (Some(ids), _) => Some(ids.clone()),
+        (None, Some(c)) => Some(c.into_iter().collect()),
+        (None, None) => None,
+    }
 }
 
 fn resolve_category_ids(req_ids: &[Uuid], legacy: Option<Uuid>) -> Vec<Uuid> {
@@ -777,6 +833,14 @@ pub async fn create_bookmark(
     req: CreateBookmark,
     keyring: &VaultKeyring,
 ) -> Result<BookmarkView> {
+    reject_nul(
+        [req.url.as_str()]
+            .into_iter()
+            .chain(req.title.as_deref())
+            .chain(req.description.as_deref())
+            .chain(req.notes.as_deref())
+            .chain(req.tags.iter().map(String::as_str)),
+    )?;
     let cat_ids = resolve_category_ids(&req.category_ids, req.category_id);
     let mut vault_id = req.vault_id;
     let mut first = true;
@@ -799,9 +863,22 @@ pub async fn create_bookmark(
     }
 
     let title = req.title.clone().unwrap_or_else(|| req.url.clone());
-    let primary = cat_ids.first().copied();
+    let mut links: Vec<Uuid> = Vec::new();
+    for id in &cat_ids {
+        if !links.contains(id) {
+            links.push(*id);
+        }
+    }
+    let categories = CategoryPlan {
+        primary: links.first().copied(),
+        links,
+    };
+    let primary = categories.primary;
 
-    let bookmark = if let Some(vault_id) = vault_id {
+    // Everything that can fail on its own runs before the transaction: checks above,
+    // vault encryption and tag creation here.
+    let mut sealed = None;
+    if let Some(vault_id) = vault_id {
         let key = *keyring.get(vault_id).ok_or(Error::VaultLocked)?;
         let payload = VaultPayload {
             url: req.url.clone(),
@@ -810,8 +887,22 @@ pub async fn create_bookmark(
             notes: req.notes.clone(),
             tags: req.tags.clone(),
         };
-        let (ct, nonce) =
-            super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload)).await?;
+        sealed = Some(
+            super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload)).await?,
+        );
+    }
+    let tag_ids: Vec<Uuid> = if vault_id.is_none() {
+        ensure_tags(pool, user_id, &req.tags)
+            .await?
+            .into_iter()
+            .map(|t| t.id)
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    let mut tx = pool.begin().await.map_err(db_err)?;
+    let bookmark = if let (Some(vault_id), Some((ct, nonce))) = (vault_id, sealed) {
         sqlx::query_as::<_, Bookmark>(
             r#"
             INSERT INTO bookmarks (
@@ -826,9 +917,9 @@ pub async fn create_bookmark(
         .bind(vault_id)
         .bind(ct)
         .bind(nonce)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await
-        .map_err(|e| Error::msg(e.to_string()))?
+        .map_err(db_err)?
     } else {
         let b = sqlx::query_as::<_, Bookmark>(
             r#"
@@ -844,25 +935,31 @@ pub async fn create_bookmark(
         .bind(&title)
         .bind(&req.description)
         .bind(&req.notes)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-        set_bookmark_tags(pool, user_id, b.id, &req.tags).await?;
+        .map_err(db_err)?;
+        apply_tags(&mut tx, b.id, &tag_ids).await?;
         b
     };
 
-    set_bookmark_categories(pool, user_id, bookmark.id, &cat_ids).await?;
+    apply_categories(&mut tx, bookmark.id, &categories).await?;
     if req.is_favorite || req.is_unread || req.is_pinned {
-        set_bookmark_flags(
-            pool,
-            user_id,
-            bookmark.id,
-            Some(req.is_favorite),
-            Some(req.is_unread),
-            Some(req.is_pinned),
+        sqlx::query(
+            r#"
+            INSERT INTO bookmark_flags (user_id, bookmark_id, is_favorite, is_unread, is_pinned)
+            VALUES ($1, $2, $3, $4, $5)
+            "#,
         )
-        .await?;
+        .bind(user_id)
+        .bind(bookmark.id)
+        .bind(req.is_favorite)
+        .bind(req.is_unread)
+        .bind(req.is_pinned)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_err)?;
     }
+    tx.commit().await.map_err(db_err)?;
     let bookmark = get_bookmark_raw(pool, user_id, bookmark.id).await?;
     let view = bookmark_to_view(pool, bookmark, keyring, user_id)
         .await?
@@ -1054,10 +1151,148 @@ pub async fn update_bookmark(
         return Err(Error::NotFound);
     }
 
+    // Check everything before writing anything, so a refused request changes nothing.
+    reject_nul_in_update(&req)?;
+    let existing = get_bookmark_raw(pool, user_id, id).await?;
+    if req.is_private.is_some() {
+        if existing.owner_user_id != user_id {
+            return Err(Error::Forbidden);
+        }
+        if existing.is_vault {
+            return Err(Error::BadRequest(
+                "vault bookmarks cannot be marked private".into(),
+            ));
+        }
+    }
+    if content && existing.is_vault && existing.owner_user_id != user_id {
+        return Err(Error::Forbidden);
+    }
+    let categories = match requested_categories(&req) {
+        Some(ids) if content => Some(plan_bookmark_categories(pool, user_id, id, &ids).await?),
+        _ => None,
+    };
+    // Tags stay in the actor's tag namespace. Vault tags live inside the ciphertext.
+    let tag_ids: Option<Vec<Uuid>> = match &req.tags {
+        Some(tags) if !existing.is_vault => Some(
+            ensure_tags(pool, user_id, tags)
+                .await?
+                .into_iter()
+                .map(|t| t.id)
+                .collect(),
+        ),
+        _ => None,
+    };
+    let content_fields = req.url.is_some()
+        || req.title.is_some()
+        || req.description.is_some()
+        || req.notes.is_some()
+        || req.tags.is_some()
+        || categories.is_some();
+
+    let mut changes_out = None;
+    if content_fields {
+        let mut tx = pool.begin().await.map_err(db_err)?;
+        // Concurrent saves of one bookmark queue here, and each writes only what it sent.
+        let locked =
+            sqlx::query_as::<_, Bookmark>("SELECT * FROM bookmarks WHERE id = $1 FOR UPDATE")
+                .bind(id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db_err)?;
+
+        if locked.is_vault {
+            let key = *locked
+                .vault_id
+                .and_then(|id| keyring.get(id))
+                .ok_or(Error::VaultLocked)?;
+            let ct0 = locked
+                .vault_ciphertext
+                .clone()
+                .ok_or(Error::msg("missing ciphertext"))?;
+            let nonce0 = locked
+                .vault_nonce
+                .clone()
+                .ok_or(Error::msg("missing nonce"))?;
+            let mut payload =
+                super::blocking::run_blocking(move || crypto::decrypt_payload(&key, &ct0, &nonce0))
+                    .await?;
+            changes_out = Some(bookmark_content_changes(&req, None));
+            if let Some(url) = req.url.clone() {
+                payload.url = url;
+            }
+            if let Some(title) = req.title.clone() {
+                payload.title = title;
+            }
+            if let Some(description) = req.description.clone() {
+                payload.description = description;
+            }
+            if let Some(notes) = req.notes.clone() {
+                payload.notes = notes;
+            }
+            if let Some(tags) = req.tags.clone() {
+                payload.tags = tags;
+            }
+            let (ct, nonce) =
+                super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload))
+                    .await?;
+            sqlx::query(
+                r#"
+                UPDATE bookmarks
+                SET vault_ciphertext = $1, vault_nonce = $2, updated_at = now()
+                WHERE id = $3
+                "#,
+            )
+            .bind(ct)
+            .bind(nonce)
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+        } else {
+            changes_out = Some(bookmark_content_changes(&req, Some(locked.title.as_str())));
+            sqlx::query(
+                r#"
+                UPDATE bookmarks
+                SET url = COALESCE($1, url),
+                    title = COALESCE($2, title),
+                    description = CASE WHEN $3 THEN $4 ELSE description END,
+                    notes = CASE WHEN $5 THEN $6 ELSE notes END,
+                    updated_at = now(),
+                    link_check_status = CASE WHEN $1 <> url THEN NULL ELSE link_check_status END,
+                    link_check_status_code =
+                        CASE WHEN $1 <> url THEN NULL ELSE link_check_status_code END,
+                    link_check_error = CASE WHEN $1 <> url THEN NULL ELSE link_check_error END,
+                    link_checked_at = CASE WHEN $1 <> url THEN NULL ELSE link_checked_at END,
+                    link_check_fail_count =
+                        CASE WHEN $1 <> url THEN 0 ELSE link_check_fail_count END,
+                    preview_dismissed = CASE WHEN $1 <> url THEN FALSE ELSE preview_dismissed END,
+                    preview_failed_at = CASE WHEN $1 <> url THEN NULL ELSE preview_failed_at END
+                WHERE id = $7
+                "#,
+            )
+            .bind(&req.url)
+            .bind(&req.title)
+            .bind(req.description.is_some())
+            .bind(req.description.clone().flatten())
+            .bind(req.notes.is_some())
+            .bind(req.notes.clone().flatten())
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
+            if let Some(tag_ids) = &tag_ids {
+                apply_tags(&mut tx, id, tag_ids).await?;
+            }
+        }
+        if let Some(plan) = &categories {
+            apply_categories(&mut tx, id, plan).await?;
+        }
+        tx.commit().await.map_err(db_err)?;
+    }
+
     if let Some(is_private) = req.is_private {
         set_bookmark_private(pool, user_id, id, is_private).await?;
     }
-
     if flags {
         set_bookmark_flags(
             pool,
@@ -1069,139 +1304,11 @@ pub async fn update_bookmark(
         )
         .await?;
     }
-    if !content {
-        let existing = get_bookmark_raw(pool, user_id, id).await?;
-        let none = VaultKeyring::default();
-        let ring = if existing.is_vault { keyring } else { &none };
-        return bookmark_to_view(pool, existing, ring, user_id)
-            .await?
-            .ok_or(Error::VaultLocked);
-    }
 
-    let existing = get_bookmark_raw(pool, user_id, id).await?;
-    // Vault mutations only by bookmark owner with their key.
-    if existing.is_vault && existing.owner_user_id != user_id {
-        return Err(Error::Forbidden);
-    }
-    if existing.is_vault {
-        let key = *existing
-            .vault_id
-            .and_then(|id| keyring.get(id))
-            .ok_or(Error::VaultLocked)?;
-        let ct0 = existing
-            .vault_ciphertext
-            .clone()
-            .ok_or(Error::msg("missing ciphertext"))?;
-        let nonce0 = existing
-            .vault_nonce
-            .clone()
-            .ok_or(Error::msg("missing nonce"))?;
-        let mut payload =
-            super::blocking::run_blocking(move || crypto::decrypt_payload(&key, &ct0, &nonce0))
-                .await?;
-        let (changes, change_keys) = bookmark_content_changes(&req, None);
-        if let Some(url) = req.url {
-            payload.url = url;
-        }
-        if let Some(title) = req.title {
-            payload.title = title;
-        }
-        if let Some(description) = req.description {
-            payload.description = description;
-        }
-        if let Some(notes) = req.notes {
-            payload.notes = notes;
-        }
-        if let Some(tags) = req.tags {
-            payload.tags = tags;
-        }
-        let (ct, nonce) =
-            super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload)).await?;
-        sqlx::query_as::<_, Bookmark>(
-            r#"
-            UPDATE bookmarks
-            SET vault_ciphertext = $1, vault_nonce = $2, updated_at = now()
-            WHERE id = $3 AND owner_user_id = $4
-            RETURNING *
-            "#,
-        )
-        .bind(ct)
-        .bind(nonce)
-        .bind(id)
-        .bind(existing.owner_user_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-        if let Some(ids) = req.category_ids {
-            set_bookmark_categories(pool, user_id, id, &ids).await?;
-        } else if let Some(c) = req.category_id {
-            set_bookmark_categories(pool, user_id, id, &c.into_iter().collect::<Vec<_>>()).await?;
-        }
-        let b = get_bookmark_raw(pool, user_id, id).await?;
-        let view = bookmark_to_view(pool, b, keyring, user_id)
-            .await?
-            .ok_or(Error::VaultLocked)?;
-        record_bookmark_update_activity(pool, user_id, &view, &changes, &change_keys).await;
-        return Ok(view);
-    }
-
-    let (changes, change_keys) = bookmark_content_changes(&req, Some(existing.title.as_str()));
-    let url_changed = req.url.as_ref().is_some_and(|u| u != &existing.url);
-    let url = req.url.unwrap_or(existing.url);
-    let title = req.title.unwrap_or(existing.title);
-    let description = req.description.unwrap_or(existing.description);
-    let notes = req.notes.unwrap_or(existing.notes);
-    if url_changed {
-        sqlx::query(
-            r#"
-            UPDATE bookmarks
-            SET url=$1, title=$2, description=$3, notes=$4, updated_at=now(),
-                link_check_status = NULL,
-                link_check_status_code = NULL,
-                link_check_error = NULL,
-                link_checked_at = NULL,
-                link_check_fail_count = 0,
-                preview_dismissed = FALSE,
-                preview_failed_at = NULL
-            WHERE id=$5
-            "#,
-        )
-        .bind(&url)
-        .bind(&title)
-        .bind(&description)
-        .bind(&notes)
-        .bind(id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-    } else {
-        sqlx::query(
-            r#"
-            UPDATE bookmarks
-            SET url=$1, title=$2, description=$3, notes=$4, updated_at=now()
-            WHERE id=$5
-            "#,
-        )
-        .bind(&url)
-        .bind(&title)
-        .bind(&description)
-        .bind(&notes)
-        .bind(id)
-        .execute(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-    }
-    if let Some(tags) = req.tags {
-        // Tags stay in the actor's tag namespace.
-        set_bookmark_tags(pool, user_id, id, &tags).await?;
-    }
-    if let Some(ids) = req.category_ids {
-        set_bookmark_categories(pool, user_id, id, &ids).await?;
-    } else if let Some(c) = req.category_id {
-        set_bookmark_categories(pool, user_id, id, &c.into_iter().collect::<Vec<_>>()).await?;
-    }
     let b = get_bookmark_raw(pool, user_id, id).await?;
-    if b.owner_user_id != user_id {
+    let none = VaultKeyring::default();
+    let ring = if b.is_vault { keyring } else { &none };
+    if content_fields && !b.is_vault && b.owner_user_id != user_id {
         let title = if b.title.trim().is_empty() {
             b.url.as_str()
         } else {
@@ -1217,10 +1324,12 @@ pub async fn update_bookmark(
         )
         .await;
     }
-    let view = bookmark_to_view(pool, b, &VaultKeyring::default(), user_id)
+    let view = bookmark_to_view(pool, b, ring, user_id)
         .await?
-        .ok_or(Error::NotFound)?;
-    record_bookmark_update_activity(pool, user_id, &view, &changes, &change_keys).await;
+        .ok_or(Error::VaultLocked)?;
+    if let Some((changes, change_keys)) = changes_out {
+        record_bookmark_update_activity(pool, user_id, &view, &changes, &change_keys).await;
+    }
     Ok(view)
 }
 
