@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react'
 import { Group, Paper, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { IconArrowsExchange, IconFolder, IconKey, IconLock, IconSettings, IconShield } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
@@ -15,6 +16,7 @@ import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { AdminPlatformSettings } from './AdminPlatformSettings'
 import { GeneralSettingsPanel } from './GeneralSettingsPanel'
+import classes from './SettingsPage.module.css'
 import { SettingsSkeleton } from './SettingsSkeleton'
 import { VaultAutoLockSettings } from './VaultAutoLockSettings'
 
@@ -35,6 +37,8 @@ export function SettingsPage(): ReactElement {
   const tab: SettingsTab = requested === 'admin' && !isAdmin ? 'general' : requested
   const settings = me.data?.settings
   const save = useUpdateSettings()
+  // Sections run down the side on wide screens, and as a scrolling row on phones.
+  const wide = useMediaQuery('(min-width: 62em)', true)
 
   function patch(p: Partial<UserSettings>): void {
     if (save.isPending) return
@@ -67,8 +71,14 @@ export function SettingsPage(): ReactElement {
 
       {me.isError ? <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} /> : null}
 
-      <Tabs value={tab} onChange={setTab}>
-        <Tabs.List>
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        variant="pills"
+        orientation={wide ? 'vertical' : 'horizontal'}
+        classNames={{ list: classes.list, panel: classes.panel, tab: classes.tab, tabLabel: classes.tabLabel }}
+      >
+        <Tabs.List aria-label="Settings sections">
           <Tabs.Tab value="general" leftSection={<IconSettings size={16} stroke={1.5} />}>
             General
           </Tabs.Tab>
@@ -91,21 +101,21 @@ export function SettingsPage(): ReactElement {
           ) : null}
         </Tabs.List>
 
-        <Tabs.Panel value="general" pt="xl">
+        <Tabs.Panel value="general">
           <GeneralSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
         </Tabs.Panel>
 
-        <Tabs.Panel value="categories" pt="xl">
+        <Tabs.Panel value="categories">
           <Paper p="xl" withBorder>
             <CategoryManager />
           </Paper>
         </Tabs.Panel>
 
-        <Tabs.Panel value="import" pt="xl">
+        <Tabs.Panel value="import">
           <ImportExportPanel />
         </Tabs.Panel>
 
-        <Tabs.Panel value="vault" pt="xl">
+        <Tabs.Panel value="vault">
           <VaultPanel
             settings={
               <>
@@ -131,12 +141,12 @@ export function SettingsPage(): ReactElement {
           />
         </Tabs.Panel>
 
-        <Tabs.Panel value="api-keys" pt="xl">
+        <Tabs.Panel value="api-keys">
           <ApiKeysPanel />
         </Tabs.Panel>
 
         {isAdmin ? (
-          <Tabs.Panel value="admin" pt="xl">
+          <Tabs.Panel value="admin">
             <AdminPlatformSettings />
           </Tabs.Panel>
         ) : null}

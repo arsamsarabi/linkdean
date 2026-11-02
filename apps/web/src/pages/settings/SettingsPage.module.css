@@ -1,0 +1,41 @@
+/* Phones: one scrolling row of sections above the panel. */
+.list {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: var(--mantine-spacing-xs);
+  padding-bottom: 4px;
+}
+
+.tab {
+  flex-shrink: 0;
+}
+
+.panel {
+  padding-top: var(--mantine-spacing-xl);
+  min-width: 0;
+}
+
+/* Wide screens: a section list down the side, the panel beside it. */
+.list[data-orientation='vertical'] {
+  flex-direction: column;
+  overflow: visible;
+  width: 220px;
+  flex-shrink: 0;
+  position: sticky;
+  top: calc(var(--app-shell-header-height, 64px) + var(--mantine-spacing-md));
+  align-self: flex-start;
+}
+
+.list[data-orientation='vertical'] .tab {
+  justify-content: flex-start;
+}
+
+.panel[data-orientation='vertical'] {
+  padding-top: 0;
+  padding-inline-start: var(--mantine-spacing-xl);
+}
+
+.list[data-orientation='vertical'] .tabLabel {
+  flex: 1;
+  text-align: start;
+}
