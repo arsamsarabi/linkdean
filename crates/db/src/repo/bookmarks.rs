@@ -1552,8 +1552,7 @@ pub async fn record_link_check(
             link_check_status_code = $3,
             link_check_error = $4,
             link_check_fail_count = $5,
-            link_checked_at = now(),
-            updated_at = now()
+            link_checked_at = now()
         WHERE id = $1 AND is_vault = FALSE
         "#,
     )

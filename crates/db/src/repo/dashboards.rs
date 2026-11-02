@@ -388,21 +388,9 @@ pub async fn put_dashboard(
     let section_count = req.sections.len();
     let pin_count: usize = req.sections.iter().map(|s| s.bookmark_ids.len()).sum();
 
-    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
-
-    sqlx::query(
-        r#"
-        UPDATE dashboards
-        SET title = $1, updated_at = now()
-        WHERE id = $2
-        "#,
-    )
-    .bind(title)
-    .bind(dash.id)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-
+    // Every check reads through the pool, so it all happens before the transaction opens:
+    // a check inside it would hold a second connection per request.
+    //
     // The editor only sees some pins: not trashed bookmarks, not locked vault pins, not
     // another member's vault pins. Keep those, since the layout sent cannot mention them.
     let existing: Vec<(i32, String, Uuid)> = sqlx::query_as(
@@ -415,7 +403,7 @@ pub async fn put_dashboard(
         "#,
     )
     .bind(dash.id)
-    .fetch_all(&mut *tx)
+    .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
     let mut hidden: Vec<(usize, String, Uuid)> = Vec::new();
@@ -430,35 +418,16 @@ pub async fn put_dashboard(
         }
     }
 
-    sqlx::query("DELETE FROM dashboard_sections WHERE dashboard_id = $1")
-        .bind(dash.id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-
-    let mut new_sections: Vec<(Uuid, std::collections::HashSet<Uuid>, i32)> = Vec::new();
-
-    for (si, section) in req.sections.iter().enumerate() {
+    // (title, pins in order) per section of the request, after validation.
+    let mut planned: Vec<(&str, Vec<Uuid>)> = Vec::with_capacity(req.sections.len());
+    for section in &req.sections {
         let section_title = section.title.trim();
         if section_title.is_empty() {
             return Err(Error::BadRequest("section title required".into()));
         }
-        let sec = sqlx::query_as::<_, DashboardSection>(
-            r#"
-            INSERT INTO dashboard_sections (dashboard_id, title, position)
-            VALUES ($1, $2, $3)
-            RETURNING *
-            "#,
-        )
-        .bind(dash.id)
-        .bind(section_title)
-        .bind(si as i32)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-
         let mut seen = std::collections::HashSet::new();
-        for (ii, bookmark_id) in section.bookmark_ids.iter().enumerate() {
+        let mut pins = Vec::new();
+        for bookmark_id in &section.bookmark_ids {
             let pinned = already_pinned.contains(bookmark_id);
             if pin_hidden_from(pool, user_id, *bookmark_id, dash.owner_user_id, keyring).await? {
                 if pinned {
@@ -479,6 +448,50 @@ pub async fn put_dashboard(
                     "bookmark not found or not readable".into(),
                 ));
             }
+            pins.push(*bookmark_id);
+        }
+        planned.push((section_title, pins));
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+
+    sqlx::query(
+        r#"
+        UPDATE dashboards
+        SET title = $1, updated_at = now()
+        WHERE id = $2
+        "#,
+    )
+    .bind(title)
+    .bind(dash.id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    sqlx::query("DELETE FROM dashboard_sections WHERE dashboard_id = $1")
+        .bind(dash.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    let mut new_sections: Vec<(Uuid, std::collections::HashSet<Uuid>, i32)> = Vec::new();
+
+    for (si, (section_title, pins)) in planned.into_iter().enumerate() {
+        let sec = sqlx::query_as::<_, DashboardSection>(
+            r#"
+            INSERT INTO dashboard_sections (dashboard_id, title, position)
+            VALUES ($1, $2, $3)
+            RETURNING *
+            "#,
+        )
+        .bind(dash.id)
+        .bind(section_title)
+        .bind(si as i32)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+        for (ii, bookmark_id) in pins.iter().enumerate() {
             sqlx::query(
                 r#"
                 INSERT INTO dashboard_items (section_id, bookmark_id, position)
@@ -492,7 +505,8 @@ pub async fn put_dashboard(
             .await
             .map_err(|e| Error::msg(e.to_string()))?;
         }
-        new_sections.push((sec.id, seen, section.bookmark_ids.len() as i32));
+        let next_pos = pins.len() as i32;
+        new_sections.push((sec.id, pins.into_iter().collect(), next_pos));
     }
 
     // Hidden pins go back to the section at the same index, else the last one. With no

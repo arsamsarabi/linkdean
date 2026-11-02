@@ -34,3 +34,19 @@ pub async fn ensure_tags(pool: &PgPool, user_id: Uuid, names: &[String]) -> Resu
     }
     Ok(out)
 }
+
+/// Delete tags no bookmark uses, so renamed and removed tags do not pile up. Tags made in
+/// the last hour are left alone: a bookmark save creates its tags before linking them.
+pub async fn reap_unused_tags(pool: &PgPool) -> Result<u64> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM tags t
+        WHERE t.created_at < now() - interval '1 hour'
+          AND NOT EXISTS (SELECT 1 FROM bookmark_tags bt WHERE bt.tag_id = t.id)
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(res.rows_affected())
+}
