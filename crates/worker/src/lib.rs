@@ -42,8 +42,12 @@ pub async fn enrich_bookmark(
     let Ok(_slot) = ENRICH_SLOTS.acquire().await else {
         return;
     };
-    let Ok(raw) = db::get_bookmark_raw(pool, user_id, bookmark_id).await else {
-        return;
+    let raw = match db::get_bookmark_raw(pool, user_id, bookmark_id).await {
+        Ok(raw) => raw,
+        Err(e) => {
+            warn!(%bookmark_id, "enrichment skipped: load bookmark: {e}");
+            return;
+        }
     };
     if raw.is_vault || raw.deleted_at.is_some() || raw.url.is_empty() {
         return;
@@ -68,68 +72,84 @@ pub async fn enrich_bookmark(
         }
     };
 
-    if let Ok(resp) = client.get(&raw.url).send().await {
-        if resp.status().is_success() {
-            if let Ok(body) = resp.text().await {
-                let url = raw.url.clone();
-                let parsed = tokio::task::spawn_blocking(move || parse_meta(&body))
-                    .await
-                    .unwrap_or_default();
-
-                let title = if raw.title.is_empty() || raw.title == raw.url {
-                    parsed.title.as_deref()
-                } else {
-                    None
-                };
-                let description = if raw.description.is_none() {
-                    parsed.description.as_deref()
-                } else {
-                    None
-                };
-
-                let favicon_remote = parsed
-                    .favicon
-                    .map(|href| absolutize(&url, &href))
-                    .filter(|u| is_fetchable(u))
-                    .or_else(|| raw.favicon_url.clone().filter(|u| is_http_url(u)));
-                let favicon = resolve_cached_asset(
-                    &client,
-                    &opts.preview_dir,
-                    bookmark_id,
-                    AssetKind::Favicon,
-                    favicon_remote,
-                    raw.favicon_url.as_deref(),
-                )
-                .await;
-
-                let preview_remote = parsed
-                    .preview_image
-                    .map(|href| absolutize(&url, &href))
-                    .filter(|u| is_fetchable(u))
-                    .or_else(|| raw.preview_image_url.clone().filter(|u| is_http_url(u)));
-                let preview = resolve_cached_asset(
-                    &client,
-                    &opts.preview_dir,
-                    bookmark_id,
-                    AssetKind::Og,
-                    preview_remote,
-                    raw.preview_image_url.as_deref(),
-                )
-                .await;
-
-                if let Err(e) = db::update_bookmark_metadata(
-                    pool,
-                    bookmark_id,
-                    title,
-                    description,
-                    favicon.as_deref(),
-                    preview.as_deref(),
-                )
-                .await
-                {
-                    warn!("metadata update: {e}");
-                }
+    let mut metadata_ok = false;
+    let page = match client.get(&raw.url).send().await {
+        Ok(resp) if resp.status().is_success() => match resp.text().await {
+            Ok(body) => Some(body),
+            Err(e) => {
+                warn!(%bookmark_id, "enrichment: read page body: {e}");
+                None
             }
+        },
+        Ok(resp) => {
+            warn!(%bookmark_id, status = %resp.status(), "enrichment: page fetch refused");
+            None
+        }
+        Err(e) => {
+            warn!(%bookmark_id, "enrichment: page fetch failed: {e}");
+            None
+        }
+    };
+    if let Some(body) = page {
+        let url = raw.url.clone();
+        let parsed = tokio::task::spawn_blocking(move || parse_meta(&body))
+            .await
+            .unwrap_or_default();
+
+        let title = if raw.title.is_empty() || raw.title == raw.url {
+            parsed.title.as_deref()
+        } else {
+            None
+        };
+        let description = if raw.description.is_none() {
+            parsed.description.as_deref()
+        } else {
+            None
+        };
+
+        let favicon_remote = parsed
+            .favicon
+            .map(|href| absolutize(&url, &href))
+            .filter(|u| is_fetchable(u))
+            .or_else(|| raw.favicon_url.clone().filter(|u| is_http_url(u)));
+        let favicon = resolve_cached_asset(
+            &client,
+            &opts.preview_dir,
+            bookmark_id,
+            AssetKind::Favicon,
+            favicon_remote,
+            raw.favicon_url.as_deref(),
+        )
+        .await;
+
+        let preview_remote = parsed
+            .preview_image
+            .map(|href| absolutize(&url, &href))
+            .filter(|u| is_fetchable(u))
+            .or_else(|| raw.preview_image_url.clone().filter(|u| is_http_url(u)));
+        let preview = resolve_cached_asset(
+            &client,
+            &opts.preview_dir,
+            bookmark_id,
+            AssetKind::Og,
+            preview_remote,
+            raw.preview_image_url.as_deref(),
+        )
+        .await;
+
+        if let Err(e) = db::update_bookmark_metadata(
+            pool,
+            bookmark_id,
+            title,
+            description,
+            favicon.as_deref(),
+            preview.as_deref(),
+        )
+        .await
+        {
+            warn!(%bookmark_id, "metadata update: {e}");
+        } else {
+            metadata_ok = true;
         }
     }
 
@@ -139,7 +159,9 @@ pub async fn enrich_bookmark(
                 Ok(jpeg) => {
                     let path = preview_file(&opts.preview_dir, bookmark_id);
                     if let Some(parent) = path.parent() {
-                        let _ = tokio::fs::create_dir_all(parent).await;
+                        if let Err(e) = tokio::fs::create_dir_all(parent).await {
+                            warn!("preview dir: {e}");
+                        }
                     }
                     match tokio::fs::write(&path, &jpeg).await {
                         Ok(()) => {
@@ -159,15 +181,26 @@ pub async fn enrich_bookmark(
         }
     }
 
-    if let Ok(updated) = db::get_bookmark_raw(pool, user_id, bookmark_id).await {
-        let owner = updated.owner_user_id;
-        if let Ok(Some(view)) =
-            db::bookmark_to_view(pool, updated, &VaultKeyring::default(), owner).await
-        {
-            let _ = search.upsert_bookmark(&view).await;
+    match db::get_bookmark_raw(pool, user_id, bookmark_id).await {
+        Ok(updated) => {
+            let owner = updated.owner_user_id;
+            match db::bookmark_to_view(pool, updated, &VaultKeyring::default(), owner).await {
+                Ok(Some(view)) => {
+                    if let Err(e) = search.upsert_bookmark(&view).await {
+                        warn!(%bookmark_id, "search reindex after enrichment: {e}");
+                    }
+                }
+                Ok(None) => {}
+                Err(e) => warn!(%bookmark_id, "view after enrichment: {e}"),
+            }
         }
+        Err(e) => warn!(%bookmark_id, "reload after enrichment: {e}"),
     }
-    info!(%bookmark_id, "enriched bookmark metadata");
+    if metadata_ok {
+        info!(%bookmark_id, "enriched bookmark metadata");
+    } else {
+        info!(%bookmark_id, "enrichment finished without page metadata");
+    }
 }
 
 pub fn preview_file(dir: &Path, bookmark_id: Uuid) -> PathBuf {
@@ -318,7 +351,7 @@ async fn fetch_and_store(
         tokio::fs::create_dir_all(parent).await?;
     }
     tokio::fs::write(path, &bytes).await?;
-    let _ = tokio::fs::write(ct_path, ct.as_bytes()).await;
+    tokio::fs::write(ct_path, ct.as_bytes()).await?;
     Ok(())
 }
 
@@ -621,7 +654,9 @@ pub async fn run_link_checker(pool: PgPool, opts: LinkCheckOpts) {
                     }));
                 }
                 for j in joins {
-                    let _ = j.await;
+                    if let Err(e) = j.await {
+                        warn!("link-check task failed: {e}");
+                    }
                 }
             }
             Ok(_) => {}
@@ -633,10 +668,10 @@ pub async fn run_link_checker(pool: PgPool, opts: LinkCheckOpts) {
 
 /// Rate-limited backfill for bookmarks missing local screenshots.
 pub async fn backfill_previews(pool: PgPool, search: SearchClient, opts: EnrichOpts) {
-    let Ok(rows) = db::list_bookmarks_needing_preview(&pool).await else {
-        return;
-    };
-    enrich_rows(pool, search, opts, rows).await;
+    match db::list_bookmarks_needing_preview(&pool).await {
+        Ok(rows) => enrich_rows(pool, search, opts, rows).await,
+        Err(e) => warn!("list bookmarks needing previews: {e}"),
+    }
 }
 
 /// Enrich one user's bookmarks that have no preview yet, such as after an import.
@@ -678,7 +713,9 @@ async fn enrich_rows(
         }));
     }
     for j in joins {
-        let _ = j.await;
+        if let Err(e) = j.await {
+            warn!("enrichment task failed: {e}");
+        }
     }
     info!("preview backfill finished");
 }
