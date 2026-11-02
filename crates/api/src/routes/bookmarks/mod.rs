@@ -1,9 +1,9 @@
+use super::assets::{self, Asset, PRIVATE_CACHE};
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
-use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
-use axum::response::IntoResponse;
+use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::preview_image::{self, process_bookmark_preview};
@@ -140,29 +140,12 @@ async fn get_preview(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
-) -> ApiResult<impl IntoResponse> {
+) -> ApiResult<Response> {
     let raw = db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
     if !raw.has_preview {
         return Err(Error::NotFound.into());
     }
-    let path = state.preview_path(id);
-    let bytes = tokio::fs::read(&path).await.map_err(|_| Error::NotFound)?;
-    let mut headers = HeaderMap::new();
-    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
-    headers.insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("private, max-age=86400"),
-    );
-    // Remote content on our origin: it may be an image, but it never gets to run.
-    headers.insert(
-        header::X_CONTENT_TYPE_OPTIONS,
-        HeaderValue::from_static("nosniff"),
-    );
-    headers.insert(
-        header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static("sandbox; default-src 'none'; style-src 'unsafe-inline'"),
-    );
-    Ok((StatusCode::OK, headers, bytes))
+    assets::serve(&state, id, Asset::Preview, PRIVATE_CACHE).await
 }
 
 async fn upload_preview(
@@ -267,52 +250,18 @@ async fn get_favicon(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
-) -> ApiResult<impl IntoResponse> {
-    let _raw = db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
-    serve_cached_asset(
-        state.favicon_path(id),
-        state.favicon_ct_path(id),
-        "image/png",
-    )
-    .await
+) -> ApiResult<Response> {
+    db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
+    assets::serve(&state, id, Asset::Favicon, PRIVATE_CACHE).await
 }
 
 async fn get_og(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
-) -> ApiResult<impl IntoResponse> {
-    let _raw = db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
-    serve_cached_asset(state.og_path(id), state.og_ct_path(id), "image/jpeg").await
-}
-
-async fn serve_cached_asset(
-    path: std::path::PathBuf,
-    ct_path: std::path::PathBuf,
-    default_ct: &'static str,
-) -> ApiResult<impl IntoResponse> {
-    let bytes = tokio::fs::read(&path).await.map_err(|_| Error::NotFound)?;
-    let ct = match tokio::fs::read_to_string(&ct_path).await {
-        Ok(s) => {
-            let trimmed = s.trim().to_string();
-            if trimmed.is_empty() {
-                default_ct.to_string()
-            } else {
-                trimmed
-            }
-        }
-        Err(_) => default_ct.to_string(),
-    };
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_str(&ct).unwrap_or_else(|_| HeaderValue::from_static(default_ct)),
-    );
-    headers.insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("private, max-age=86400"),
-    );
-    Ok((StatusCode::OK, headers, bytes))
+) -> ApiResult<Response> {
+    db::get_bookmark_for_assets(&state.pool, user.id, id).await?;
+    assets::serve(&state, id, Asset::Og, PRIVATE_CACHE).await
 }
 
 async fn duplicates(
