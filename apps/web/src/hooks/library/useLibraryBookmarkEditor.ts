@@ -23,6 +23,24 @@ type Input = {
   vaultId: string | null
 }
 
+const promptDismissedKey = 'linkdean_vault_search_prompt_dismissed'
+
+function readPromptDismissed(): boolean {
+  try {
+    return sessionStorage.getItem(promptDismissedKey) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writePromptDismissed(): void {
+  try {
+    sessionStorage.setItem(promptDismissedKey, '1')
+  } catch {
+    /* storage blocked: the dismissal lasts until reload */
+  }
+}
+
 type MoveTarget = {
   categoryIds: string[]
   bookmarkIds: string[]
@@ -33,6 +51,7 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
   const [drawerOpen, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [draft, setDraft] = useState<BookmarkDraft | null>(null)
   const [unlockOpen, setUnlockOpen] = useState(false)
+  const [promptDismissed, setPromptDismissed] = useState(readPromptDismissed)
   const [vaultPass, setVaultPass] = useState('')
   const [unlockVaultId, setUnlockVaultId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -48,10 +67,17 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
   const canCreateInContext = !folderCat || canWriteCategory(folderCat)
 
   useEffect(() => {
-    if (!vaultPrompt) return
+    // Every search carries the prompt, so once dismissed it stays closed for this tab.
+    if (!vaultPrompt || promptDismissed) return
     // oxlint-disable-next-line react/set-state-in-effect -- open modal from search vault_prompt flag
     setUnlockOpen(true)
-  }, [vaultPrompt])
+  }, [vaultPrompt, promptDismissed])
+
+  function dismissUnlock(): void {
+    setUnlockOpen(false)
+    setPromptDismissed(true)
+    writePromptDismissed()
+  }
 
   function openCreate(): void {
     if (!canCreateInContext) return
@@ -123,7 +149,7 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
     closeDrawer,
     draft,
     unlockOpen,
-    setUnlockOpen,
+    dismissUnlock,
     vaultPass,
     setVaultPass,
     unlockVaultId,

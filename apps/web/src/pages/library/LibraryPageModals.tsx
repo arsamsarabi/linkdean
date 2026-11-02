@@ -67,7 +67,7 @@ export function LibraryPageModals(): ReactElement {
         loading={lib.bulkDelete.isPending}
       />
 
-      <Modal opened={lib.unlockOpen} onClose={() => lib.setUnlockOpen(false)} title="Unlock vault for search">
+      <Modal opened={lib.unlockOpen} onClose={() => lib.dismissUnlock()} title="Unlock vault for search">
         <Stack gap="md">
           <Text size="sm" c="dimmed">
             Config options say vault should be included in search. Unlock to include vault hits.
@@ -84,7 +84,7 @@ export function LibraryPageModals(): ReactElement {
             onChange={(e) => lib.setVaultPass(e.currentTarget.value)}
           />
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => lib.setUnlockOpen(false)}>
+            <Button variant="default" onClick={() => lib.dismissUnlock()}>
               Skip
             </Button>
             <Button
