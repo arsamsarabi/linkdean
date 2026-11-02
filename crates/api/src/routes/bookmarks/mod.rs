@@ -1,7 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
-use axum::extract::{Multipart, Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
@@ -13,6 +13,9 @@ use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
+
+/// The image limit in `process_bookmark_preview`, plus multipart framing.
+const MAX_PREVIEW_BODY: usize = 9 * 1024 * 1024;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -26,7 +29,10 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/{id}/save", post(save_copy))
         .route(
             "/bookmarks/{id}/preview",
-            get(get_preview).post(upload_preview).delete(delete_preview),
+            get(get_preview)
+                .post(upload_preview)
+                .delete(delete_preview)
+                .layer(DefaultBodyLimit::max(MAX_PREVIEW_BODY)),
         )
         .route("/bookmarks/{id}/favicon", get(get_favicon))
         .route("/bookmarks/{id}/og", get(get_og))

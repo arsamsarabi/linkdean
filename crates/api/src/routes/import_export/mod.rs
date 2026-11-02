@@ -1,7 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
-use axum::extract::{Query, State};
+use axum::extract::{DefaultBodyLimit, Query, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::import_export::{
@@ -16,7 +16,10 @@ use serde_json::{json, Value};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/import", post(import))
+        .route(
+            "/import",
+            post(import).layer(DefaultBodyLimit::max(MAX_IMPORT_BODY)),
+        )
         .route("/export", get(export))
 }
 
@@ -37,6 +40,8 @@ fn default_format() -> String {
 }
 
 const MAX_IMPORT_BYTES: usize = 10 * 1024 * 1024;
+/// JSON escaping can grow the file on the way in. The handler enforces the real limit.
+const MAX_IMPORT_BODY: usize = 2 * MAX_IMPORT_BYTES;
 
 async fn import(
     State(state): State<AppState>,
@@ -47,17 +52,21 @@ async fn import(
         return Err(Error::BadRequest("import too large (max 10 MiB)".into()).into());
     }
     let format = body.format.to_ascii_lowercase();
-    let parsed = match format.as_str() {
-        "netscape" | "html" => parse_netscape(&body.content)?,
-        "json" | "linkdean" => parse_linkdean_json(&body.content)?,
-        "pocket" => parse_pocket_csv(&body.content)?,
-        "raindrop" => parse_raindrop_csv(&body.content)?,
+    let content = body.content;
+    let parser = match format.as_str() {
+        "netscape" | "html" => parse_netscape,
+        "json" | "linkdean" => parse_linkdean_json,
+        "pocket" => parse_pocket_csv,
+        "raindrop" => parse_raindrop_csv,
         _ => {
             return Err(
                 Error::BadRequest("format must be netscape|json|pocket|raindrop".into()).into(),
             )
         }
     };
+    let parsed = tokio::task::spawn_blocking(move || parser(&content))
+        .await
+        .map_err(|e| Error::msg(format!("import parse: {e}")))??;
 
     let job = db::create_import_job(&state.pool, user.id, &format).await?;
     let (total, imported, failed) = db::apply_parsed_import(&state.pool, user.id, parsed).await?;

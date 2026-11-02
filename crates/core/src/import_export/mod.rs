@@ -85,6 +85,43 @@ fn write_bookmark_html(out: &mut String, b: &BookmarkExport, depth: usize) {
     }
 }
 
+/// Deeper trees are refused: folder paths grow with depth, so memory grows with its square.
+const MAX_FOLDER_DEPTH: usize = 64;
+const MAX_IMPORT_CATEGORIES: usize = 10_000;
+
+fn too_deep() -> Error {
+    Error::BadRequest(format!(
+        "import nests folders more than {MAX_FOLDER_DEPTH} deep"
+    ))
+}
+
+fn too_many_folders() -> Error {
+    Error::BadRequest(format!(
+        "import has more than {MAX_IMPORT_CATEGORIES} folders"
+    ))
+}
+
+/// Refuse a parent chain that loops or runs too deep, before anything walks it.
+fn check_category_tree(cats: &[CategoryExport]) -> Result<()> {
+    if cats.len() > MAX_IMPORT_CATEGORIES {
+        return Err(too_many_folders());
+    }
+    let parents: std::collections::HashMap<Uuid, Option<Uuid>> =
+        cats.iter().map(|c| (c.id, c.parent_id)).collect();
+    for c in cats {
+        let mut parent = c.parent_id;
+        let mut depth = 1;
+        while let Some(id) = parent {
+            depth += 1;
+            if depth > MAX_FOLDER_DEPTH {
+                return Err(too_deep());
+            }
+            parent = parents.get(&id).copied().flatten();
+        }
+    }
+    Ok(())
+}
+
 pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
     let mut parsed = ParsedImport::default();
     let mut stack: Vec<String> = Vec::new();
@@ -96,6 +133,12 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
 
         if lower.contains("<dl") {
             if let Some(name) = pending_folder.take() {
+                if stack.len() >= MAX_FOLDER_DEPTH {
+                    return Err(too_deep());
+                }
+                if parsed.categories.len() >= MAX_IMPORT_CATEGORIES {
+                    return Err(too_many_folders());
+                }
                 let path = if stack.is_empty() {
                     name.clone()
                 } else {
@@ -171,6 +214,7 @@ pub fn parse_netscape(html: &str) -> Result<ParsedImport> {
 pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
     let export: LinkdeanExport =
         serde_json::from_str(raw).map_err(|e| Error::BadRequest(e.to_string()))?;
+    check_category_tree(&export.categories)?;
     let mut parsed = ParsedImport::default();
 
     // Sort so parents tend to come first
@@ -528,5 +572,63 @@ mod tests {
     fn path_key_and_leaf() {
         assert_eq!(path_key("a/b\0a"), ("a/b", Some("a")));
         assert_eq!(leaf_name("a/b/c"), "c");
+    }
+
+    fn nested_html(depth: usize) -> String {
+        let mut html = String::from("<DL><p>\n");
+        for i in 0..depth {
+            html.push_str(&format!("<DT><H3>f{i}</H3>\n<DL><p>\n"));
+        }
+        html
+    }
+
+    #[test]
+    fn netscape_accepts_deep_folders_up_to_the_limit() {
+        let parsed = parse_netscape(&nested_html(MAX_FOLDER_DEPTH)).expect("at the limit");
+        assert_eq!(parsed.categories.len(), MAX_FOLDER_DEPTH);
+    }
+
+    #[test]
+    fn netscape_refuses_folders_past_the_depth_limit() {
+        assert!(matches!(
+            parse_netscape(&nested_html(MAX_FOLDER_DEPTH + 1)),
+            Err(Error::BadRequest(_))
+        ));
+    }
+
+    fn category(id: Uuid, parent_id: Option<Uuid>) -> serde_json::Value {
+        serde_json::json!({
+            "id": id, "parent_id": parent_id, "name": "n", "is_hidden": false,
+            "is_vault": false, "icon": null, "position": 0,
+        })
+    }
+
+    fn export_of(categories: Vec<serde_json::Value>) -> String {
+        serde_json::json!({
+            "version": 1, "exported_at": Utc::now(),
+            "categories": categories, "bookmarks": [],
+        })
+        .to_string()
+    }
+
+    #[test]
+    fn json_refuses_a_parent_cycle() {
+        let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
+        let raw = export_of(vec![category(a, Some(b)), category(b, Some(a))]);
+        assert!(matches!(
+            parse_linkdean_json(&raw),
+            Err(Error::BadRequest(_))
+        ));
+    }
+
+    #[test]
+    fn json_keeps_an_ordinary_tree_and_an_unknown_parent() {
+        let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
+        let raw = export_of(vec![
+            category(a, None),
+            category(b, Some(a)),
+            category(Uuid::new_v4(), Some(Uuid::new_v4())),
+        ]);
+        assert_eq!(parse_linkdean_json(&raw).expect("tree").categories.len(), 3);
     }
 }

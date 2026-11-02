@@ -1,7 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
-use axum::extract::{Multipart, Path, Query, State};
+use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, patch, post};
@@ -15,6 +15,9 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
+/// The image limit in `process_avatar`, plus multipart framing.
+const MAX_AVATAR_BODY: usize = 6 * 1024 * 1024;
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/users/me", patch(update_me))
@@ -25,7 +28,10 @@ pub fn router() -> Router<AppState> {
         )
         .route(
             "/users/me/avatar",
-            get(get_avatar).post(upload_avatar).delete(delete_avatar),
+            get(get_avatar)
+                .post(upload_avatar)
+                .delete(delete_avatar)
+                .layer(DefaultBodyLimit::max(MAX_AVATAR_BODY)),
         )
         .route("/users/me/followers", get(my_followers))
         .route("/users/me/following", get(my_following))
