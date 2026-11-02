@@ -89,6 +89,8 @@ async fn update(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateCategory>,
 ) -> ApiResult<Json<CategoryView>> {
+    let unlocked = state.vault_keyring(user.id).await.vault_ids();
+    db::require_category_unlocked(&state.pool, user.id, id, &unlocked).await?;
     let cat = db::update_category(&state.pool, user.id, id, req).await?;
     Ok(Json(cat))
 }

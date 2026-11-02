@@ -31,7 +31,7 @@ pub async fn list_trash(pool: &PgPool, user_id: Uuid) -> Result<Vec<TrashItem>> 
 
     let categories = sqlx::query_as::<_, TrashRow>(
         r#"
-        SELECT id, name AS title, deleted_at
+        SELECT id, CASE WHEN is_vault THEN 'Vault folder' ELSE name END AS title, deleted_at
         FROM categories
         WHERE owner_user_id = $1 AND deleted_at IS NOT NULL
         ORDER BY deleted_at DESC

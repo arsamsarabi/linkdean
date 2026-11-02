@@ -148,6 +148,24 @@ pub async fn record_activity(
     .await;
 }
 
+/// What history, trash and notifications call a vault folder.
+pub const VAULT_CATEGORY_TITLE: &str = "Vault folder";
+
+async fn is_vault_category(pool: &PgPool, id: Uuid) -> bool {
+    match sqlx::query_scalar::<_, bool>("SELECT is_vault FROM categories WHERE id = $1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+    {
+        Ok(found) => found.unwrap_or(false),
+        Err(e) => {
+            // Mask when unsure: a missing title costs less than a leaked one.
+            warn!(error = %e, "vault category lookup for activity failed");
+            true
+        }
+    }
+}
+
 pub async fn record_activity_with(
     pool: &PgPool,
     user_id: Uuid,
@@ -156,6 +174,18 @@ pub async fn record_activity_with(
     summary: Option<&str>,
     payload: serde_json::Value,
 ) {
+    // Vault folder names stay out of history, like vault bookmark titles.
+    let vault = subject.subject_type == ActivitySubjectType::Category
+        && is_vault_category(pool, subject.subject_id).await;
+    let (subject, summary, payload) = if vault {
+        let masked = ActivitySubject {
+            subject_title: VAULT_CATEGORY_TITLE,
+            ..subject
+        };
+        (masked, None, json!({}))
+    } else {
+        (subject, summary, payload)
+    };
     let summary_owned = summary
         .map(str::to_string)
         .unwrap_or_else(|| default_summary(action, subject.subject_type, subject.subject_title));

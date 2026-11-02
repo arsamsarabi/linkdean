@@ -290,6 +290,21 @@ fn visibility_label(visibility: &str) -> &'static str {
     }
 }
 
+/// `VaultLocked` when the category sits in a vault that is not in `unlocked`. Changing a
+/// locked vault folder would hand its name back in the response.
+pub async fn require_category_unlocked(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+    unlocked: &[Uuid],
+) -> Result<()> {
+    let (cat, _) = require_category_read(pool, user_id, id).await?;
+    match cat.vault_id {
+        Some(vault_id) if !unlocked.contains(&vault_id) => Err(Error::VaultLocked),
+        _ => Ok(()),
+    }
+}
+
 pub async fn update_category(
     pool: &PgPool,
     user_id: Uuid,
@@ -588,7 +603,7 @@ pub async fn purge_category(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()
     require_category_owner(pool, user_id, id).await?;
     let title = sqlx::query_scalar::<_, String>(
         r#"
-        SELECT name FROM categories
+        SELECT CASE WHEN is_vault THEN 'Vault folder' ELSE name END FROM categories
         WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NOT NULL
         "#,
     )

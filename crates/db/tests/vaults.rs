@@ -431,3 +431,50 @@ async fn renaming_a_vault_bookmark_keeps_its_titles_out_of_activity() {
         assert!(!text.contains("secret"), "plaintext in activity: {text}");
     }
 }
+
+#[tokio::test]
+async fn vault_folder_names_stay_out_of_activity_trash_and_locked_edits() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let (vault, _, _) = db::create_vault(&pool, owner.id, "Work", "work-passphrase")
+        .await
+        .expect("vault");
+    let cat = db::create_category(
+        &pool,
+        owner.id,
+        CreateCategory {
+            name: "Secret folder".into(),
+            parent_id: None,
+            is_hidden: false,
+            vault_id: Some(vault.id),
+            icon: None,
+        },
+    )
+    .await
+    .expect("category");
+
+    let locked = db::require_category_unlocked(&pool, owner.id, cat.id, &[]).await;
+    assert!(matches!(locked, Err(Error::VaultLocked)), "{locked:?}");
+    db::require_category_unlocked(&pool, owner.id, cat.id, &[vault.id])
+        .await
+        .expect("unlocked");
+
+    db::delete_category(&pool, owner.id, cat.id)
+        .await
+        .expect("trash");
+    let trash = db::list_trash(&pool, owner.id).await.expect("trash list");
+    let item = trash.iter().find(|t| t.id == cat.id).expect("in trash");
+    assert_eq!(item.title, "Vault folder");
+
+    let logged: Vec<String> = sqlx::query_scalar(
+        "SELECT subject_title || ' ' || summary FROM activity_events WHERE subject_id = $1",
+    )
+    .bind(cat.id)
+    .fetch_all(&pool)
+    .await
+    .expect("activity");
+    assert!(logged.len() >= 2, "created and deleted: {logged:?}");
+    assert!(logged.iter().all(|l| !l.contains("Secret")), "{logged:?}");
+}
