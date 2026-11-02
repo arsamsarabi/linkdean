@@ -32,6 +32,14 @@ What is still planned. Shipped capabilities live in [FEATURES.md](./FEATURES.md)
 - Localization / i18n-ready strings (and eventual locale packs)
 - Mobile-friendly layout pass
 - backend app to write logs for the app. in a structured and standard format. all activity and errors should be logged to file.
+- Page the library list. `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load. The rest of M31 in [POSSIBLE_DEFECTS.md](./POSSIBLE_DEFECTS.md).
+  - Use infinite scrolling, not numbered pages. The library is browsed and filtered rather than jumped through by page, and filters change the result set often.
+  - Keyset pagination in the API (`cursor` + `limit`, ordered by the active sort key and `id`), so new or edited bookmarks do not shift or repeat rows the way `OFFSET` would.
+  - Move folder, tag, flag, "since" and sort filters into the query, and return the total match count for headers and "select all".
+  - Explorer loads one folder's contents at a time, rather than slicing the full list.
+  - Bulk actions on "select all" act on the server-side match (filters sent to the API), not only the rows loaded so far. Keep H21's rule: select all reaches only what the open folder or search shows.
+  - Vault search stays a Postgres scan of unlocked rows. Page it the same way.
+  - Batch the access checks for bookmarks shared with the viewer, which still run one at a time.
 
 ---
 
