@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod error;
+mod mail;
 mod maintenance;
 mod metrics;
 mod rate_limit;
@@ -28,6 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState::new(cfg.clone()).await?;
 
     tokio::spawn(maintenance::run(state.clone()));
+    tokio::spawn(mail::run_sender(state.clone()));
 
     {
         let pool = state.pool.clone();

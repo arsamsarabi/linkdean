@@ -16,6 +16,7 @@ pub struct AppState {
     /// Unlocked vaults per login session (memory only; lost on restart).
     pub vault_keys: Arc<VaultKeyStore>,
     pub limiter: Arc<Limiter>,
+    pub mail: Option<Arc<crate::mail::Mail>>,
 }
 
 impl AppState {
@@ -28,12 +29,23 @@ impl AppState {
         if let Err(e) = search.ensure_index().await {
             tracing::warn!("meilisearch index setup: {e}");
         }
+        let mail = match &cfg.mail {
+            Some(mail_cfg) => Some(Arc::new(crate::mail::Mail::new(mail_cfg, &cfg.app_url)?)),
+            None => None,
+        };
+        match &mail {
+            Some(m) => {
+                tracing::info!(host = %m.cfg.host, port = m.cfg.port, tls = m.cfg.tls.as_str(), "outbound email on")
+            }
+            None => tracing::info!("outbound email off: SMTP_HOST and MAIL_FROM unset"),
+        }
         Ok(Self {
             pool,
             search,
             cfg,
             vault_keys: Arc::new(VaultKeyStore::default()),
             limiter: Arc::new(Limiter::new(WINDOW)),
+            mail,
         })
     }
 

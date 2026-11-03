@@ -25,6 +25,11 @@ pub struct Config {
     /// When set, the first account (the admin) must present it, so whoever finds a fresh
     /// install first cannot claim it.
     pub bootstrap_token: Option<String>,
+    /// SMTP settings. `None` keeps mail off and every feature that needs it on its fallback.
+    pub mail: Option<linkdean_mail::MailConfig>,
+    /// Development-only routes such as `/api/dev/emails`. On with `ALLOW_DEFAULT_SECRETS`.
+    #[allow(dead_code)] // Read once the dev routes land.
+    pub dev_routes: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
@@ -115,6 +120,8 @@ impl Config {
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
+            mail: linkdean_mail::MailConfig::from_vars(|k| std::env::var(k).ok())?,
+            dev_routes: env_bool("ALLOW_DEFAULT_SECRETS", false),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),

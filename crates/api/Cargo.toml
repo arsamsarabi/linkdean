@@ -25,6 +25,7 @@ serde_json.workspace = true
 sha2.workspace = true
 linkdean-core.workspace = true
 linkdean-db.workspace = true
+linkdean-mail.workspace = true
 linkdean-search.workspace = true
 linkdean-worker.workspace = true
 sqlx.workspace = true

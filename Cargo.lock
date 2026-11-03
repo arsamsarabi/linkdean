@@ -1968,6 +1968,7 @@ dependencies = [
  "futures",
  "linkdean-core",
  "linkdean-db",
+ "linkdean-mail",
  "linkdean-search",
  "linkdean-worker",
  "oauth2",
