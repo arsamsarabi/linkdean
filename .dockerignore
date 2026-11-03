@@ -1,0 +1,14 @@
+# The production image builds from the repo root. Send only what deploy/docker/Dockerfile
+# copies, so a local node_modules, dist, target or .env never reaches the build.
+*
+!Cargo.toml
+!Cargo.lock
+!crates
+!migrations
+!apps/web
+apps/web/node_modules
+apps/web/dist
+apps/web/.pnpm-store
+apps/web/.env*
+**/target
+**/.DS_Store
