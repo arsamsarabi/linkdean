@@ -1,9 +1,16 @@
 import { type ReactElement } from 'react'
 import { ActionIcon, Box, Button, Drawer, Group, LoadingOverlay, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconExternalLink, IconLinkOff, IconRefresh } from '@tabler/icons-react'
+import { IconExternalLink, IconLinkOff, IconRefresh, IconTrash } from '@tabler/icons-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { QueryErrorAlert } from '@/components/query-error-alert'
-import { useBrokenLinks, usePrefetchBrokenLinks, useRecheckBookmarkLink } from '@/hooks'
+import {
+  brokenLinksQueryKey,
+  useBrokenLinks,
+  useDeleteBookmark,
+  usePrefetchBrokenLinks,
+  useRecheckBookmarkLink,
+} from '@/hooks'
 import type { Bookmark } from '@/schemas'
 
 type Props = {
@@ -23,6 +30,18 @@ function statusLabel(b: Bookmark): string {
 export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElement {
   const broken = useBrokenLinks(opened)
   const recheck = useRecheckBookmarkLink()
+  const remove = useDeleteBookmark()
+  const qc = useQueryClient()
+
+  async function onRemove(b: Bookmark): Promise<void> {
+    try {
+      await remove.mutateAsync(b.id)
+      await qc.invalidateQueries({ queryKey: brokenLinksQueryKey })
+      notifications.show({ message: `Moved “${b.title || b.url}” to Deleted items` })
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    }
+  }
 
   async function onRecheck(id: string): Promise<void> {
     try {
@@ -86,6 +105,18 @@ export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElem
                     {b.link_checked_at ? ` · checked ${new Date(b.link_checked_at).toLocaleString()}` : ''}
                   </Text>
                   <Group gap="xs" justify="flex-end">
+                    <Button
+                      size="compact-sm"
+                      variant="subtle"
+                      color="red"
+                      mr="auto"
+                      loading={remove.isPending && remove.variables === b.id}
+                      leftSection={<IconTrash size={14} stroke={1.5} />}
+                      aria-label={`Remove bookmark ${b.title || b.url}`}
+                      onClick={() => void onRemove(b)}
+                    >
+                      Remove bookmark
+                    </Button>
                     <Button
                       size="compact-sm"
                       variant="subtle"

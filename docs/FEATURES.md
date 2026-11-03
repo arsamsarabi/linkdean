@@ -20,7 +20,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
 - Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens
 - Duplicate detection and merge UI (sidebar → Library health → Duplicates)
-- Broken links in the sidebar's Library health group, opening a drawer; red badges on confirmed dead / unreachable cards
+- Broken links in the sidebar's Library health group, opening a drawer where each link can be opened, edited, rechecked or removed (Remove bookmark moves it to Deleted items); red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
 - Reading list (unread), favorites, and pin-to-top; opening a link can mark unread as read
 - Category manager in Settings (explorer + create drawer)
