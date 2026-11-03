@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { asStringList, asWebUrl, buildLibrarySearch, listToSearchParam, validateLibrarySearch } from './librarySearch'
+import {
+  asStringList,
+  asWebUrl,
+  buildLibrarySearch,
+  listToSearchParam,
+  validateLibrarySearch,
+  withWebScheme,
+} from './librarySearch'
 
 describe('asStringList', () => {
   it('normalizes string, array, empty', () => {
@@ -83,5 +90,19 @@ describe('asWebUrl', () => {
       addUrl: 'https://react.dev',
       folder: 'f1',
     })
+  })
+})
+
+describe('withWebScheme', () => {
+  it('adds https to an address typed without a scheme', () => {
+    expect(withWebScheme(' example.com/page ')).toBe('https://example.com/page')
+    expect(withWebScheme('//example.com')).toBe('https://example.com')
+    expect(withWebScheme('localhost:3000/x')).toBe('https://localhost:3000/x')
+  })
+
+  it('leaves an address with a scheme alone', () => {
+    expect(withWebScheme('http://example.com')).toBe('http://example.com')
+    expect(withWebScheme('javascript:alert(1)')).toBe('javascript:alert(1)')
+    expect(withWebScheme('  ')).toBe('')
   })
 })

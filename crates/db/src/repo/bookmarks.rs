@@ -42,6 +42,21 @@ fn reject_nul<'a>(fields: impl IntoIterator<Item = &'a str>) -> Result<()> {
     Ok(())
 }
 
+/// Only web addresses are stored. Browsers, exports and API clients may open a saved URL,
+/// so `javascript:`, `data:` and other schemes are refused here rather than at every reader.
+pub fn require_web_url(url: &str) -> Result<()> {
+    let scheme = url
+        .trim_start()
+        .split_once(':')
+        .map(|(s, _)| s.to_ascii_lowercase());
+    match scheme.as_deref() {
+        Some("http" | "https") => Ok(()),
+        _ => Err(Error::BadRequest(
+            "bookmark URLs must start with http:// or https://".into(),
+        )),
+    }
+}
+
 fn reject_nul_in_update(req: &UpdateBookmark) -> Result<()> {
     fn opt(o: &Option<Option<String>>) -> Option<&str> {
         o.as_ref().and_then(|v| v.as_deref())
@@ -880,9 +895,6 @@ pub async fn get_bookmark_for_assets(pool: &PgPool, user_id: Uuid, id: Uuid) -> 
     .ok_or(Error::NotFound)
 }
 
-// Known issue: URLs get no scheme check here, on update or on import. React blocks `javascript:`
-// links and the worker refuses non-web URLs, so this is defence in depth. Fix: reject anything but
-// http(s).
 pub async fn create_bookmark(
     pool: &PgPool,
     user_id: Uuid,
@@ -897,6 +909,7 @@ pub async fn create_bookmark(
             .chain(req.notes.as_deref())
             .chain(req.tags.iter().map(String::as_str)),
     )?;
+    require_web_url(&req.url)?;
     let cat_ids = resolve_category_ids(&req.category_ids, req.category_id);
     let mut vault_id = req.vault_id;
     let mut first = true;
@@ -1211,6 +1224,9 @@ pub async fn update_bookmark(
 
     // Check everything before writing anything, so a refused request changes nothing.
     reject_nul_in_update(&req)?;
+    if let Some(url) = &req.url {
+        require_web_url(url)?;
+    }
     let existing = get_bookmark_raw(pool, user_id, id).await?;
     if req.is_private.is_some() {
         if existing.owner_user_id != user_id {

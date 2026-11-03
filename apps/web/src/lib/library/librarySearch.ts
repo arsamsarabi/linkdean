@@ -45,6 +45,16 @@ export function asWebUrl(text: string | null | undefined): string | undefined {
   }
 }
 
+/** A typed address without a scheme (`example.com/page`) gets `https://`. Anything with a scheme is
+ * left alone, so the API can refuse non-web ones with a clear message. */
+export function withWebScheme(text: string): string {
+  const t = text.trim()
+  // `localhost:3000` looks like a scheme but is a host and port.
+  const hostAndPort = /^[^/:]+:\d+(\/|$)/.test(t)
+  if (!t || (!hostAndPort && /^[a-z][a-z0-9+.-]*:/i.test(t))) return t
+  return `https://${t.replace(/^\/+/, '')}`
+}
+
 // Known issue: A tag containing a comma cannot be filtered, since lists are comma-joined in
 // the URL. Fix: repeat the param instead.
 export function asStringList(v: unknown): string[] {

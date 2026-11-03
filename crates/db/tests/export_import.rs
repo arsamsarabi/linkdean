@@ -203,3 +203,22 @@ async fn a_failed_import_reports_what_it_got_through() {
     assert!(result.is_err());
     assert_eq!((counts.total, counts.imported, counts.failed), (1, 1, 0));
 }
+
+#[tokio::test]
+async fn import_skips_links_that_are_not_web_addresses() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let to = person(&pool, "scheme").await;
+    let html = "<DL><p>\n<DT><A HREF=\"https://ok.example\">OK</A>\n<DT><A HREF=\"javascript:alert(1)\">Bad</A>\n</DL><p>\n";
+    let parsed = linkdean_core::import_export::parse_netscape(html).expect("parse");
+    db::apply_parsed_import(&pool, to.id, parsed)
+        .await
+        .expect("import");
+    let urls: Vec<(String,)> = sqlx::query_as("SELECT url FROM bookmarks WHERE owner_user_id = $1")
+        .bind(to.id)
+        .fetch_all(&pool)
+        .await
+        .expect("urls");
+    assert_eq!(urls, vec![("https://ok.example".to_string(),)]);
+}

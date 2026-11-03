@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use super::bookmarks::bookmarks_to_views;
 
-// Known issue: Trashed vault bookmarks appear in these results. Fix: filter `deleted_at IS NULL`.
 pub async fn search_vault_bookmarks(
     pool: &PgPool,
     user_id: Uuid,
@@ -13,7 +12,7 @@ pub async fn search_vault_bookmarks(
     keyring: &VaultKeyring,
 ) -> Result<Vec<BookmarkView>> {
     let rows = sqlx::query_as::<_, Bookmark>(
-        "SELECT * FROM bookmarks WHERE owner_user_id = $1 AND vault_id = ANY($2)",
+        "SELECT * FROM bookmarks WHERE owner_user_id = $1 AND vault_id = ANY($2) AND deleted_at IS NULL",
     )
     .bind(user_id)
     .bind(keyring.vault_ids())

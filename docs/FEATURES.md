@@ -10,6 +10,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Optional category icons (large curated Tabler set; picker has search + scroll + pagination)
 - Edit category drawer (name, parent, icon, hidden) from folder menu
 - Bookmarks with title, URL, description, notes
+- Only `http://` and `https://` addresses are saved, on create, edit and import; an address typed without a scheme gets `https://`
 - Bookmark cards / glance tiles: title primary, full URL muted beneath
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)
@@ -47,6 +48,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Vaults hold categories and loose bookmarks; move items in, out and between vaults, with a checklist when something blocks the move
 - Recovery key per vault, shown once; replacing it asks for the vault passphrase. A lost passphrase and recovery key means the contents are gone
 - Optional global passphrase that unlocks chosen vaults in one step, alongside each vault's own passphrase; turning it off asks for it
+- Vault search skips bookmarks in Deleted items
 - Vaults page: open vaults get the Library's filters, sorting, views and bulk actions, with a vault filter and lock controls; the sidebar link shows only while a vault is open
 - Settings for whether vault items also appear in the Library, and whether deleted vault items go to Trash or are removed immediately
 - Unlock from Settings or the command palette's Unlock vault command; locking clears decrypted data from the browser cache

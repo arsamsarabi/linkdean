@@ -26,7 +26,7 @@ import {
   useVaults,
 } from '@/hooks'
 import { useDrawerClosesOnEscape } from '@/hooks/render'
-import { categorySelectData, writableCategories } from '@/lib'
+import { categorySelectData, withWebScheme, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
 import { BookmarkPreviewField } from './BookmarkPreviewField'
@@ -78,7 +78,7 @@ export function BookmarkDrawer({
   async function save(): Promise<void> {
     const tags = draft.tags.map((t) => t.trim()).filter(Boolean)
     const body = {
-      url: draft.url.trim(),
+      url: withWebScheme(draft.url),
       title: draft.title.trim() || undefined,
       description: draft.description.trim() || undefined,
       category_ids: draft.category_ids,

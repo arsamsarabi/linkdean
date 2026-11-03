@@ -480,3 +480,47 @@ async fn vault_folder_names_stay_out_of_activity_trash_and_locked_edits() {
     assert!(logged.len() >= 2, "created and deleted: {logged:?}");
     assert!(logged.iter().all(|l| !l.contains("Secret")), "{logged:?}");
 }
+
+#[tokio::test]
+async fn vault_search_skips_trashed_bookmarks() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "Search", "search-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    let make = |url: &'static str| {
+        let pool = pool.clone();
+        let keyring = keyring.clone();
+        let owner_id = owner.id;
+        async move {
+            db::create_bookmark(
+                &pool,
+                owner_id,
+                CreateBookmark {
+                    url: url.into(),
+                    title: Some("Needle".into()),
+                    vault_id: Some(vault.id),
+                    ..Default::default()
+                },
+                &keyring,
+            )
+            .await
+            .expect("bookmark")
+        }
+    };
+    let kept = make("https://kept.example/").await;
+    let trashed = make("https://trashed.example/").await;
+    db::delete_bookmark(&pool, owner.id, trashed.id)
+        .await
+        .expect("trash");
+
+    let found = db::search_vault_bookmarks(&pool, owner.id, "needle", &keyring)
+        .await
+        .expect("search");
+    let ids: Vec<Uuid> = found.iter().map(|b| b.id).collect();
+    assert_eq!(ids, vec![kept.id]);
+}
