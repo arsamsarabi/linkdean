@@ -26,9 +26,11 @@ impl FromRequestParts<AppState> for AuthUser {
             .into());
         }
         // Verified accounts skip the gate without another query. Admins are never gated, so
-        // the setting cannot lock everyone out.
+        // the setting cannot lock everyone out. With mail off nobody can verify, so the gate
+        // is off too, even if the setting was left on.
         if user.email_verified_at.is_none()
             && !user.is_admin
+            && state.mail.is_some()
             && !gate_exempt(request_path(parts))
             && db::get_platform_settings(&state.pool)
                 .await?

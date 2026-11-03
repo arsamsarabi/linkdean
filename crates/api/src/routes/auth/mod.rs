@@ -186,7 +186,7 @@ async fn me(
         "settings": settings,
         "vault_unlocked": vault_unlocked,
         "api_keys_allowed": api_keys_allowed,
-        "require_verified_email": platform.require_verified_email,
+        "require_verified_email": platform.require_verified_email && state.mail.is_some(),
     })))
 }
 
