@@ -31,13 +31,19 @@ pub struct ResetRequest {
     pub revoke_api_keys: bool,
 }
 
+/// A link to the web page at `path` that carries `token`. The token rides in the fragment,
+/// which browsers never send to a server.
+pub fn fragment_link(app_url: &str, path: &str, token: &str) -> String {
+    format!(
+        "{}/{}#token={token}",
+        app_url.trim_end_matches('/'),
+        path.trim_start_matches('/')
+    )
+}
+
 /// The web page that takes a reset token.
 pub fn reset_url(app_url: &str, token: &str) -> String {
-    // The token rides in the fragment, which browsers never send to a server.
-    format!(
-        "{}/reset-password#token={token}",
-        app_url.trim_end_matches('/')
-    )
+    fragment_link(app_url, "reset-password", token)
 }
 
 /// Always answers the same, at once; the lookup and email happen in the background, so neither

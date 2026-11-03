@@ -25,6 +25,9 @@ pub enum Error {
         reason: String,
         ends_at: Option<DateTime<Utc>>,
     },
+    /// The instance requires a verified email and this account has not verified its address.
+    #[error("verify your email address to continue")]
+    EmailUnverified,
     #[error("vault locked")]
     VaultLocked,
     #[error("vault unlock failed")]

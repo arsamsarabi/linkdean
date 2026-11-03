@@ -14,6 +14,28 @@ pub fn router() -> Router<AppState> {
         .route("/share-invites/{id}/accept", post(accept))
         .route("/share-invites/{id}/reject", post(reject))
         .route("/share-invites/{id}/restore", post(restore))
+        .route("/shares/claim", post(claim))
+}
+
+#[derive(serde::Deserialize)]
+struct ClaimRequest {
+    token: String,
+}
+
+/// Claim an invite link while signed in. The invite must be for this account's address; it
+/// then shows up with the other invites to accept.
+async fn claim(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Json(req): Json<ClaimRequest>,
+) -> ApiResult<Json<Value>> {
+    if !db::claim_pending_share_invite_signed_in(&state.pool, req.token.trim(), user.id).await? {
+        return Err(linkdean_core::Error::BadRequest(
+            "this invite link was already used, or was sent to a different email".into(),
+        )
+        .into());
+    }
+    Ok(Json(json!({ "ok": true })))
 }
 
 async fn list(State(state): State<AppState>, AuthUser(user): AuthUser) -> ApiResult<Json<Value>> {

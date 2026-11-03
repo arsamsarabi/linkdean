@@ -25,6 +25,8 @@ pub fn router() -> Router<AppState> {
         .route("/admin/users/{id}", axum::routing::patch(patch_user))
         .route("/admin/users/{id}/ban", post(ban_user))
         .route("/admin/users/{id}/reset-link", post(create_reset_link))
+        .route("/admin/users/{id}/email-verified", post(set_email_verified))
+        .route("/admin/users/{id}/email", post(change_email))
         .route(
             "/admin/users/{id}/moderation-actions",
             get(moderation_actions),
@@ -59,7 +61,54 @@ async fn patch_platform_settings(
     if let Some(enabled) = req.api_keys_enabled {
         settings = db::set_api_keys_enabled(&state.pool, enabled).await?;
     }
+    if let Some(on) = req.require_verified_email {
+        // Nobody could verify without mail, so every unverified account would be stuck.
+        if on && state.mail.is_none() {
+            return Err(linkdean_core::Error::BadRequest(
+                "turn on outbound email first; nobody can verify without it".into(),
+            )
+            .into());
+        }
+        settings = db::set_require_verified_email(&state.pool, on).await?;
+    }
     Ok(Json(json!({ "settings": settings })))
+}
+
+#[derive(serde::Deserialize)]
+struct SetEmailVerified {
+    verified: bool,
+}
+
+/// Mark an account verified (its waiting invites attach) or remove its verification (new
+/// invites wait; accepted shares stay).
+async fn set_email_verified(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<SetEmailVerified>,
+) -> ApiResult<Json<Value>> {
+    db::set_email_verified(&state.pool, id, req.verified).await?;
+    Ok(Json(json!({ "ok": true, "email_verified": req.verified })))
+}
+
+#[derive(serde::Deserialize)]
+struct ChangeEmail {
+    email: String,
+}
+
+/// Change an account's email at once. The admin vouches for the address, so it counts as
+/// verified.
+async fn change_email(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<ChangeEmail>,
+) -> ApiResult<Json<Value>> {
+    db::admin_change_email(&state.pool, id, &req.email).await?;
+    let email = req.email.trim().to_ascii_lowercase();
+    Ok(Json(
+        json!({ "ok": true, "email": email, "email_verified": true }),
+    ))
 }
 
 async fn list_users(

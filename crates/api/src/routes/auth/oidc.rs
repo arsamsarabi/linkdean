@@ -253,6 +253,13 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
                 ends_at: ban.ends_at,
             });
         }
+        // The provider vouches for the address now, so an unverified account catches up.
+        if user.email_verified_at.is_none()
+            && email_verified == Some(true)
+            && email.trim().eq_ignore_ascii_case(&user.email)
+        {
+            mark_verified(state, user.id).await;
+        }
         return Ok(user);
     }
     // Known issue: Someone who registers a local account with a victim's email first blocks the
@@ -279,17 +286,21 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
     )
     .await?;
     if email_verified == Some(true) {
-        match db::link_pending_share_invites(&state.pool, &email, created.id).await {
-            Ok(n) if n > 0 => {
-                tracing::info!(user_id = %created.id, linked = n, "linked pending share invites")
-            }
-            Ok(_) => {}
-            Err(e) => {
-                tracing::warn!(user_id = %created.id, error = %e, "pending share link failed")
-            }
-        }
+        mark_verified(state, created.id).await;
     }
     Ok(created)
+}
+
+/// Mark the account verified, which also attaches invites waiting for its address. Best
+/// effort: sign-in goes on if it fails.
+async fn mark_verified(state: &AppState, user_id: uuid::Uuid) {
+    match db::mark_email_verified(&state.pool, user_id).await {
+        Ok(n) if n > 0 => {
+            tracing::info!(%user_id, linked = n, "linked pending share invites")
+        }
+        Ok(_) => {}
+        Err(e) => tracing::warn!(%user_id, error = %e, "marking email verified failed"),
+    }
 }
 
 #[derive(Debug, PartialEq)]

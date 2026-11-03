@@ -24,6 +24,11 @@ const RESET_REQUEST_ACCOUNT: u32 = 3;
 const RESET_REQUEST_ADDRESS: u32 = 10;
 /// Attempts to use a reset link, from one address.
 const RESET_ATTEMPT_ADDRESS: u32 = 10;
+/// Verification and email change emails for one account, so nobody floods an inbox.
+const VERIFY_RESEND_ACCOUNT: u32 = 3;
+const VERIFY_RESEND_ADDRESS: u32 = 10;
+/// Attempts to use a verification or email change link, from one address.
+const VERIFY_ATTEMPT_ADDRESS: u32 = 10;
 
 /// A counter and the attempts it allows per window.
 pub type Limit = (String, u32);
@@ -55,6 +60,21 @@ pub fn reset_request_limits(ip: IpAddr, email: &str) -> [Limit; 2] {
 
 pub fn reset_attempt_limit(ip: IpAddr) -> [Limit; 1] {
     [(format!("reset-attempt:{ip}"), RESET_ATTEMPT_ADDRESS)]
+}
+
+/// Verification and email change emails, per account and per address.
+pub fn verify_resend_limits(user_id: uuid::Uuid, ip: IpAddr) -> [Limit; 2] {
+    [
+        (
+            format!("verify-resend-account:{user_id}"),
+            VERIFY_RESEND_ACCOUNT,
+        ),
+        (format!("verify-resend-address:{ip}"), VERIFY_RESEND_ADDRESS),
+    ]
+}
+
+pub fn verify_attempt_limit(ip: IpAddr) -> [Limit; 1] {
+    [(format!("verify-attempt:{ip}"), VERIFY_ATTEMPT_ADDRESS)]
 }
 
 pub fn vault_limit(user_id: uuid::Uuid) -> [Limit; 1] {
@@ -260,6 +280,49 @@ mod tests {
         let b: IpAddr = "203.0.113.10".parse().unwrap();
         assert_ne!(reset_attempt_limit(a), reset_attempt_limit(b));
         assert_eq!(reset_attempt_limit(a)[0].1, 10);
+    }
+
+    #[test]
+    fn verify_resend_keys_differ_per_account_and_address() {
+        let ip: IpAddr = "203.0.113.9".parse().unwrap();
+        let other: IpAddr = "203.0.113.10".parse().unwrap();
+        let (bob, amy) = (uuid::Uuid::new_v4(), uuid::Uuid::new_v4());
+        let [bob_account, bob_address] = verify_resend_limits(bob, ip);
+        let [amy_account, amy_address] = verify_resend_limits(amy, ip);
+        assert_ne!(bob_account, amy_account);
+        assert_eq!(bob_address, amy_address, "one counter per address");
+        let [elsewhere_account, elsewhere_address] = verify_resend_limits(bob, other);
+        assert_eq!(bob_account, elsewhere_account, "one counter per account");
+        assert_ne!(bob_address, elsewhere_address);
+        assert_eq!(bob_account.1, 3);
+        assert_eq!(bob_address.1, 10);
+        let [reset_account, _] = reset_request_limits(ip, "bob@x.com");
+        assert_ne!(bob_account.0, reset_account.0, "apart from reset requests");
+    }
+
+    #[test]
+    fn verify_attempt_key_differs_per_address_and_from_reset() {
+        let a: IpAddr = "203.0.113.9".parse().unwrap();
+        let b: IpAddr = "203.0.113.10".parse().unwrap();
+        assert_ne!(verify_attempt_limit(a), verify_attempt_limit(b));
+        assert_ne!(verify_attempt_limit(a)[0].0, reset_attempt_limit(a)[0].0);
+        assert_eq!(verify_attempt_limit(a)[0].1, 10);
+    }
+
+    #[test]
+    fn the_fourth_verify_email_for_one_account_is_refused() {
+        let limiter = Limiter::new(WINDOW);
+        let ip: IpAddr = "203.0.113.9".parse().unwrap();
+        let user = uuid::Uuid::new_v4();
+        for _ in 0..3 {
+            let limits = verify_resend_limits(user, ip);
+            assert!(limiter.check(&limits).is_ok());
+            limiter.record(&limits);
+        }
+        assert!(limiter.check(&verify_resend_limits(user, ip)).is_err());
+        assert!(limiter
+            .check(&verify_resend_limits(uuid::Uuid::new_v4(), ip))
+            .is_ok());
     }
 
     #[test]

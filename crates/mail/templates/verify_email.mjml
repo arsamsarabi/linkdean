@@ -11,4 +11,4 @@
   </mj-column>
 </mj-section>
 {% endblock %}
-{% block why %}You got this email because an account was created with this address.{% endblock %}
+{% block why %}You got this email because this address is used for an account on {{ site.instance }}.{% endblock %}

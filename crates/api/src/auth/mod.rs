@@ -1,6 +1,6 @@
 use crate::error::ApiError;
 use crate::state::AppState;
-use axum::extract::FromRequestParts;
+use axum::extract::{FromRequestParts, OriginalUri};
 use axum::http::request::Parts;
 use linkdean_core::{Error, User};
 use linkdean_db::{self as db};
@@ -25,8 +25,35 @@ impl FromRequestParts<AppState> for AuthUser {
             }
             .into());
         }
+        // Verified accounts skip the gate without another query. Admins are never gated, so
+        // the setting cannot lock everyone out.
+        if user.email_verified_at.is_none()
+            && !user.is_admin
+            && !gate_exempt(request_path(parts))
+            && db::get_platform_settings(&state.pool)
+                .await?
+                .require_verified_email
+        {
+            return Err(Error::EmailUnverified.into());
+        }
         Ok(AuthUser(user))
     }
+}
+
+/// The full request path. Inside `.nest("/api", …)` `parts.uri` has the prefix stripped;
+/// axum keeps the original in `OriginalUri`.
+fn request_path(parts: &Parts) -> &str {
+    parts
+        .extensions
+        .get::<OriginalUri>()
+        .map(|u| u.0.path())
+        .unwrap_or_else(|| parts.uri.path())
+}
+
+/// Sign-in, sign-out, `/auth/me` and the verification routes stay open to unverified accounts
+/// under the hard gate, so they can verify or leave.
+fn gate_exempt(path: &str) -> bool {
+    path.starts_with("/api/auth/") || path.starts_with("/auth/")
 }
 
 /// Authenticated user that must be an admin.
@@ -89,6 +116,26 @@ mod tests {
             req = req.header(*k, *v);
         }
         req.body(()).unwrap().into_parts().0
+    }
+
+    #[test]
+    fn only_auth_paths_are_exempt_from_the_gate() {
+        assert!(gate_exempt("/api/auth/me"));
+        assert!(gate_exempt("/api/auth/email/resend"));
+        assert!(gate_exempt("/auth/logout"));
+        assert!(!gate_exempt("/api/bookmarks"));
+        assert!(!gate_exempt("/api/authors"));
+        assert!(!gate_exempt("/api/shares/claim"));
+    }
+
+    #[test]
+    fn the_request_path_prefers_the_original_uri() {
+        let mut p = parts(Method::GET, &[]);
+        p.uri = "/bookmarks".parse().unwrap();
+        assert_eq!(request_path(&p), "/bookmarks");
+        p.extensions
+            .insert(OriginalUri("/api/bookmarks".parse().unwrap()));
+        assert_eq!(request_path(&p), "/api/bookmarks");
     }
 
     #[test]

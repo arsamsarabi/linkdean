@@ -1,3 +1,4 @@
+mod email_verification;
 mod oidc;
 mod password_reset;
 
@@ -25,6 +26,13 @@ pub fn router() -> Router<AppState> {
         .route("/auth/logout", post(logout))
         .route("/auth/password/forgot", post(password_reset::forgot))
         .route("/auth/password/reset", post(password_reset::reset))
+        .route("/auth/email/resend", post(email_verification::resend))
+        .route("/auth/email/verify", post(email_verification::verify))
+        .route("/auth/email/change", post(email_verification::change))
+        .route(
+            "/auth/email/confirm-change",
+            post(email_verification::confirm_change),
+        )
         .route("/auth/me", get(me))
         .route("/auth/bootstrap-status", get(bootstrap_status))
         .route("/auth/onboarding/complete", post(complete_onboarding))
@@ -98,6 +106,10 @@ async fn register(
             Ok(false) => tracing::info!(user_id = %user.id, "share invite link did not match"),
             Err(e) => tracing::warn!(user_id = %user.id, error = %e, "share invite claim failed"),
         }
+    }
+    // Best effort: the account works unverified, and Resend sends another link.
+    if let Err(e) = email_verification::send_verify_email(&state, user.id, &user.email).await {
+        tracing::warn!(user_id = %user.id, error = %e, "verification email failed");
     }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let public = db::to_public(&state.pool, &user).await?;
@@ -174,6 +186,7 @@ async fn me(
         "settings": settings,
         "vault_unlocked": vault_unlocked,
         "api_keys_allowed": api_keys_allowed,
+        "require_verified_email": platform.require_verified_email,
     })))
 }
 
