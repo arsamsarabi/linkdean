@@ -230,6 +230,7 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
 fn admin_summary(user: User, ban: Option<&BanWindow>) -> AdminUserSummary {
     AdminUserSummary {
         id: user.id,
+        has_password: user.password_hash.is_some(),
         email: user.email,
         display_name: user.display_name,
         is_admin: user.is_admin,
@@ -596,6 +597,7 @@ pub async fn change_password(
     } else {
         0
     };
+    super::password_resets::void_reset_tokens(&mut tx, user_id).await?;
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
     Ok((sessions, keys))
 }

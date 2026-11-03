@@ -174,6 +174,8 @@ pub struct AdminUserSummary {
     pub banned: bool,
     /// End of the active ban. `None` while banned means permanent.
     pub banned_until: Option<DateTime<Utc>>,
+    /// False for accounts that only sign in with SSO.
+    pub has_password: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
