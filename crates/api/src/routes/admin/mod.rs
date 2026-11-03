@@ -1,3 +1,5 @@
+mod email;
+
 use crate::auth::AdminUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
@@ -33,6 +35,7 @@ pub fn router() -> Router<AppState> {
         .route("/admin/invites", get(list_invites).post(create_invite))
         .route("/admin/invites/{id}", axum::routing::delete(revoke_invite))
         .route("/admin/search/reindex", post(reindex_search))
+        .merge(email::router())
 }
 
 async fn get_platform_settings(
