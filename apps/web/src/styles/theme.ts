@@ -192,12 +192,31 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
 })
 
 /**
+ * The primary's light variant (active nav item, toggled filters, tinted badges). Mantine's
+ * default is shade 1 in light, almost white, and a 10% wash in dark, almost black. These sit
+ * one step stronger in light and clearly purple in dark; text stays at AA on both.
+ */
+const violetLight = {
+  light: {
+    '--mantine-color-violet-light': 'var(--mantine-color-violet-2)',
+    '--mantine-color-violet-light-hover': 'var(--mantine-color-violet-3)',
+    '--mantine-color-violet-light-color': 'var(--mantine-color-violet-8)',
+  },
+  dark: {
+    '--mantine-color-violet-light': 'color-mix(in srgb, var(--mantine-color-violet-5) 32%, transparent)',
+    '--mantine-color-violet-light-hover': 'color-mix(in srgb, var(--mantine-color-violet-5) 42%, transparent)',
+    '--mantine-color-violet-light-color': 'var(--mantine-color-violet-1)',
+  },
+}
+
+/**
  * Semantic colours. `--mantine-color-body` is the surface of cards, modals and menus;
  * `--ld-canvas` is the page behind them, one step deeper so surfaces read as raised.
  */
 export const linkdeanCssVariables: CSSVariablesResolver = () => ({
   variables: {},
   light: {
+    ...violetLight.light,
     '--ld-canvas': 'var(--mantine-color-gray-1)',
     '--mantine-color-anchor': 'var(--mantine-color-ice-7)',
     '--mantine-color-dimmed': 'var(--mantine-color-gray-6)',
@@ -207,6 +226,7 @@ export const linkdeanCssVariables: CSSVariablesResolver = () => ({
     '--mantine-color-success': 'var(--mantine-color-green-7)',
   },
   dark: {
+    ...violetLight.dark,
     '--ld-canvas': 'var(--mantine-color-dark-8)',
     '--mantine-color-anchor': 'var(--mantine-color-ice-3)',
     '--mantine-color-error': 'var(--mantine-color-red-4)',
