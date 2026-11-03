@@ -1,6 +1,13 @@
 export { useMe } from './useMe'
 export { useBootstrap } from './useBootstrap'
-export { useLogin, useRegister, useLogout, useSessionSync, useCompleteOnboarding } from './useAuth'
+export {
+  useCompleteOnboarding,
+  useDropSignedOutCache,
+  useLogin,
+  useLogout,
+  useRegister,
+  useSessionSync,
+} from './useAuth'
 export { useForgotPassword, useResetPassword, useCreateResetLink } from './usePasswordReset'
 export {
   useSessionCheck,

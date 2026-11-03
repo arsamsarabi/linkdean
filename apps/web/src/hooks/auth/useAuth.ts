@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api, ApiError } from '@/api'
-import { markSignedIn, sessionMarkerKey } from '@/lib'
+import { isSignedIn, markSignedIn, sessionMarkerKey } from '@/lib'
 import type { AuthTokenResponse, UserPublic } from '@/schemas'
 
 type LoginBody = { email: string; password: string }
@@ -49,10 +49,18 @@ export function useLogout(): UseMutationResult<void, Error, void> {
       }
       markSignedIn(false)
     },
-    onSuccess: () => {
-      qc.clear()
-    },
+    // The cache is dropped on the sign-in page (`useDropSignedOutCache`), not here: clearing it
+    // while the app is still on screen made every open query refetch with the session gone.
+    onSuccess: () => qc.cancelQueries(),
   })
+}
+
+/** On the sign-in page, drop what the last session left in the cache. */
+export function useDropSignedOutCache(): void {
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!isSignedIn()) qc.clear()
+  }, [qc])
 }
 
 /** Follows sign-in and sign-out in other tabs, so no tab keeps showing another session's data. */

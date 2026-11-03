@@ -4,7 +4,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, ApiError } from '@/api'
 import { dropLegacyToken, isSignedIn, markSignedIn, sessionMarkerKey } from '@/lib'
-import { useLogin, useLogout, useSessionSync } from './useAuth'
+import { useDropSignedOutCache, useLogin, useLogout, useSessionSync } from './useAuth'
 
 vi.mock('@/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api')>()
@@ -51,6 +51,16 @@ describe('signing out', () => {
     await act(() => expect(result.current.mutateAsync()).rejects.toThrow('internal error'))
     expect(isSignedIn()).toBe(true)
     expect(qc.getQueryData(['me'])).toBeDefined()
+  })
+
+  it('keeps the cache until the sign-in page drops it', async () => {
+    const qc = new QueryClient()
+    qc.setQueryData(['me'], { user: {} })
+    const { result } = renderHook(() => useLogout(), { wrapper: wrapper(qc) })
+    await act(() => result.current.mutateAsync())
+    expect(qc.getQueryData(['me'])).toBeDefined()
+    renderHook(() => useDropSignedOutCache(), { wrapper: wrapper(qc) })
+    expect(qc.getQueryData(['me'])).toBeUndefined()
   })
 
   it('treats an already ended session as signed out', async () => {

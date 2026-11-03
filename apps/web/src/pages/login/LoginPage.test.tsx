@@ -30,6 +30,7 @@ const state: {
 }
 
 vi.mock('@/hooks', () => ({
+  useDropSignedOutCache: () => undefined,
   useBootstrap: () => ({ data: state.bootstrap, isLoading: false, isError: false, error: null, refetch: vi.fn() }),
   useLogin: () => ({ ...state.loginStatus, isError: false, error: null, mutateAsync: state.login }),
   usePendingOidcLink: (enabled: boolean) => {

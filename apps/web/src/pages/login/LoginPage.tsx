@@ -19,7 +19,7 @@ import { IconLogin, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { LogoMark, QueryErrorAlert } from '@/components'
-import { useBootstrap, useLogin, usePendingOidcLink } from '@/hooks'
+import { useBootstrap, useDropSignedOutCache, useLogin, usePendingOidcLink } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import motion from '@/styles/motion.module.css'
 
@@ -27,6 +27,7 @@ const iconSm = { size: 16, stroke: 1.5 } as const
 
 export function LoginPage(): ReactElement {
   const nav = useNavigate()
+  useDropSignedOutCache()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const bootstrap = useBootstrap()
