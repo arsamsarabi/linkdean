@@ -11,7 +11,6 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 ## Now: before the first public release
 
 1. **Close the release-blocking known issues** (M). These let one person take over or break an instance, or leak vault plaintext:
-   - Two admins demoting each other at once can leave no admin (`update_admin_user`). Check and update under the ban advisory lock.
    - Chrome 124 runs with `--no-sandbox`, and the dev stack does not isolate it from the database. Use a maintained image, the sandbox where possible, memory and pid limits, and the production networks in dev.
    - A vault move takes no row lock, so a concurrent edit can land as plaintext in a vault row (`write_encrypted`).
    - The session token in localStorage undoes the cookie's `HttpOnly`. Rely on the cookie in the browser.

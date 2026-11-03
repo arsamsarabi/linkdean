@@ -83,13 +83,8 @@ pub(super) async fn active_ban_windows(pool: &PgPool) -> Result<Vec<BanWindow>> 
     .map_err(db_err)
 }
 
-/// Admins who can still act, leaving out `user_id`.
-pub async fn count_active_admins_except(pool: &PgPool, user_id: Uuid) -> Result<i64> {
-    let mut conn = pool.acquire().await.map_err(db_err)?;
-    active_admins_except(&mut conn, user_id).await
-}
-
-async fn active_admins_except(conn: &mut PgConnection, user_id: Uuid) -> Result<i64> {
+/// Admins who can still act, leaving out `user_id`. Call under the `user_bans` advisory lock.
+pub(crate) async fn active_admins_except(conn: &mut PgConnection, user_id: Uuid) -> Result<i64> {
     sqlx::query_scalar(
         r#"
         SELECT COUNT(*)::bigint FROM users u

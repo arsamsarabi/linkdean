@@ -1,10 +1,10 @@
-//! Sign-up checks hold when registrations race: one invite makes one account, and only one
-//! account can claim an empty instance as admin.
+//! Instance-wide checks hold under races: one invite makes one account, only one account can
+//! claim an empty instance as admin, and admins demoting each other leave one admin.
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset. Each test runs in its own new
 //! database, because "the first user" and closed registration are instance-wide.
 
-use linkdean_core::{CreateRegistrationInvite, Error};
+use linkdean_core::{CreateRegistrationInvite, Error, UpdateAdminUser};
 use linkdean_db::{self as db, SignupGate};
 use sqlx::{Connection, PgConnection, PgPool};
 use uuid::Uuid;
@@ -31,7 +31,7 @@ impl FreshDb {
 
 async fn fresh_db_or_skip() -> Option<FreshDb> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
-        eprintln!("skipping sign-up race tests: DATABASE_URL unset");
+        eprintln!("skipping instance race tests: DATABASE_URL unset");
         return None;
     };
     let name = format!("signup_{}", Uuid::new_v4().simple());
@@ -161,5 +161,51 @@ async fn one_invite_makes_one_account_when_sign_ups_race() {
         matches!(&reused, Err(Error::BadRequest(m)) if m == "invite already used"),
         "{reused:?}"
     );
+    fresh.drop_db().await;
+}
+
+fn set_admin(is_admin: bool) -> UpdateAdminUser {
+    UpdateAdminUser {
+        is_admin: Some(is_admin),
+        api_keys_enabled: None,
+    }
+}
+
+#[tokio::test]
+async fn admins_demoting_each_other_at_once_leave_one_admin() {
+    let Some(fresh) = fresh_db_or_skip().await else {
+        return;
+    };
+    let pool = &fresh.pool;
+    let a = sign_up(pool, "a@race.test", gate(None, None))
+        .await
+        .expect("a");
+    let b = sign_up(pool, "b@race.test", gate(None, None))
+        .await
+        .expect("b");
+    for _ in 0..10 {
+        db::update_admin_user(pool, b, set_admin(true))
+            .await
+            .expect("promote");
+        let (pa, pb) = (pool.clone(), pool.clone());
+        let (ra, rb) = tokio::join!(
+            tokio::spawn(async move { db::update_admin_user(&pa, a, set_admin(false)).await }),
+            tokio::spawn(async move { db::update_admin_user(&pb, b, set_admin(false)).await }),
+        );
+        let ok = [ra.unwrap().is_ok(), rb.unwrap().is_ok()];
+        assert_eq!(ok.iter().filter(|o| **o).count(), 1, "{ok:?}");
+        let (admins,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE is_admin")
+            .fetch_one(pool)
+            .await
+            .unwrap();
+        assert_eq!(admins, 1);
+        // Put A back as the admin for the next round.
+        db::update_admin_user(pool, a, set_admin(true))
+            .await
+            .expect("restore a");
+        db::update_admin_user(pool, b, set_admin(false))
+            .await
+            .expect("reset b");
+    }
     fresh.drop_db().await;
 }

@@ -8,7 +8,7 @@ use linkdean_core::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::moderation::{active_ban, active_ban_windows, count_active_admins_except, BanWindow};
+use super::moderation::{active_ban_windows, BanWindow};
 
 pub async fn count_users(pool: &PgPool) -> Result<i64> {
     let n: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
@@ -260,8 +260,9 @@ pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
         .collect())
 }
 
-// Known issue: The last-admin check races: two admins demoting each other at once can both succeed,
-// leaving no admin and no way back short of SQL. Fix: check and update under the ban advisory lock.
+/// Admin edits to another account. Demotion checks for another active admin and updates under
+/// the `user_bans` advisory lock that bans also take, so two admins demoting each other (or a
+/// ban racing a demotion) cannot leave the instance without one.
 pub async fn update_admin_user(
     pool: &PgPool,
     user_id: Uuid,
@@ -286,12 +287,34 @@ pub async fn update_admin_user(
         .map_err(|e| Error::msg(e.to_string()))?;
     }
     if let Some(is_admin) = patch.is_admin {
-        if !is_admin && user.is_admin {
-            let others = count_active_admins_except(pool, user_id).await?;
-            let banned = active_ban(pool, user_id).await?.is_some();
-            if others == 0 && !banned {
-                return Err(Error::BadRequest("cannot demote the last admin".into()));
-            }
+        let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtext('user_bans'))")
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+        let (was_admin, banned): (bool, bool) = sqlx::query_as(
+            r#"
+            SELECT u.is_admin, EXISTS (
+                SELECT 1 FROM user_bans b
+                WHERE b.user_id = u.id
+                  AND b.lifted_at IS NULL
+                  AND (b.ends_at IS NULL OR b.ends_at > now())
+            )
+            FROM users u WHERE u.id = $1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?
+        .ok_or(Error::NotFound)?;
+        // A banned admin is not an active one, so demoting them never removes the last.
+        if !is_admin
+            && was_admin
+            && !banned
+            && super::moderation::active_admins_except(&mut tx, user_id).await? == 0
+        {
+            return Err(Error::BadRequest("cannot demote the last admin".into()));
         }
         user = sqlx::query_as::<_, User>(
             r#"
@@ -303,9 +326,10 @@ pub async fn update_admin_user(
         )
         .bind(is_admin)
         .bind(user_id)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
+        tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
     }
     let ban = active_ban_windows(pool).await?;
     let ban = ban.iter().find(|b| b.user_id == user_id);
