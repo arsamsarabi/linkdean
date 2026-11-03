@@ -1,0 +1,15 @@
+{% extends "layout.mjml" %}
+{% block title %}Your email is being changed{% endblock %}
+{% block preview %}Someone asked to change your {{ site.instance }} email to {{ masked_email }}.{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">Your email is being changed</mj-text>
+    <mj-text>Someone asked to change this account's email to {{ masked_email }}. Until the new address is confirmed, this one stays in use.</mj-text>
+    <mj-text>Not you? Reset your password from the sign-in page.</mj-text>
+    {{ action(site.app_url ~ "/login", "Sign in") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because a change of email was requested for your account.{% endblock %}

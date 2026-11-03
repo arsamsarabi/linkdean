@@ -1,0 +1,15 @@
+{% extends "layout.mjml" %}
+{% block title %}Confirm your new email{% endblock %}
+{% block preview %}Confirm your new email for {{ site.instance }}. The link works for {{ hours }} hours.{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">Confirm your new email</mj-text>
+    <mj-text>Someone asked to use this address for a {{ site.instance }} account. Open the link within {{ hours }} hours to switch.</mj-text>
+    {{ action(verify_url, "Use this address") }}
+    <mj-text>If this wasn't you, ignore this email.</mj-text>
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because someone asked to change an account's email to this address.{% endblock %}

@@ -33,6 +33,9 @@ const TEMPLATES: &[Template] = &[
     template!("password_changed"),
     template!("password_reset_sso"),
     template!("password_reset_admin"),
+    template!("verify_email"),
+    template!("email_change_verify"),
+    template!("email_change_notice"),
 ];
 const LAYOUT: &str = include_str!("../templates/layout.mjml");
 const MACROS: &str = include_str!("../templates/macros.mjml");
@@ -247,6 +250,41 @@ mod tests {
         for line in r.text.lines().filter(|l| l.contains("token=")) {
             assert!(line.contains(&url), "wrapped link: {line:?}\n{}", r.text);
         }
+    }
+
+    #[test]
+    fn verify_email_prints_the_whole_link_on_one_line() {
+        let url = format!(
+            "https://links.example.com/verify-email#token={}",
+            "a".repeat(64)
+        );
+        let r = render(
+            "verify_email",
+            &json!({ "verify_url": url, "hours": 24 }),
+            &site(),
+        )
+        .unwrap();
+        assert_eq!(r.subject, "Verify your email for links.example.com");
+        assert!(r.html.contains(&format!(r#"href="{url}""#)));
+        assert!(r.text.contains("24 hours"));
+        let lines: Vec<_> = r.text.lines().filter(|l| l.contains("token=")).collect();
+        assert!(!lines.is_empty(), "{}", r.text);
+        for line in lines {
+            assert!(line.contains(&url), "wrapped link: {line:?}\n{}", r.text);
+        }
+    }
+
+    #[test]
+    fn email_change_notice_prints_the_masked_address() {
+        let r = render(
+            "email_change_notice",
+            &sample("email_change_notice").unwrap(),
+            &site(),
+        )
+        .unwrap();
+        assert_eq!(r.subject, "Your links.example.com email is being changed");
+        assert!(r.text.contains("n•••@example.com"), "{}", r.text);
+        assert!(r.html.contains(r#"href="https://links.example.com/login""#));
     }
 
     #[test]

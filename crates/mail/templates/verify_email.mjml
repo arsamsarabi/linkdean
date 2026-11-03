@@ -1,0 +1,14 @@
+{% extends "layout.mjml" %}
+{% block title %}Verify your email{% endblock %}
+{% block preview %}Verify your email for {{ site.instance }}. The link works for {{ hours }} hours.{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">Verify your email</mj-text>
+    <mj-text>Confirm this is your address so people can share folders and dashboards with you. The link works for {{ hours }} hours.</mj-text>
+    {{ action(verify_url, "Verify your email") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because an account was created with this address.{% endblock %}
