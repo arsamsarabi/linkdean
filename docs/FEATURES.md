@@ -24,7 +24,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Duplicate / fork a category (copy folder + bookmarks)
 - Reading list (unread), favorites, and pin-to-top; opening a link can mark unread as read
 - Category manager in Settings (explorer + create drawer)
-- Command palette (`/` or mod+K): add, search, jump category
+- Command palette (mod+K, from the header search field): add, search, jump category
+- `/` focuses the library search field on the Library and Vaults pages
 
 ---
 

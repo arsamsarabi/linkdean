@@ -218,7 +218,7 @@ export function CommandPalette({ opened, onClose }: Props): ReactElement {
         <Group gap={4}>
           <Kbd size="xs">⌘K</Kbd>
           <Text size="xs" c="dimmed">
-            /
+            toggle
           </Text>
         </Group>
       </Group>

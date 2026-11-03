@@ -45,15 +45,6 @@ export function AppShell(): ReactElement {
   }, [me.data, nav])
 
   useHotkeys([
-    [
-      '/',
-      (e) => {
-        const t = e.target as HTMLElement | null
-        if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
-        e.preventDefault()
-        shell.openPalette()
-      },
-    ],
     ['mod+B', () => shell.toggleNavCollapsed()],
     [
       'mod+K',

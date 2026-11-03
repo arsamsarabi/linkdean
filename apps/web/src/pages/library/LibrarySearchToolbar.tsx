@@ -34,7 +34,7 @@ export function LibrarySearchToolbar(): ReactElement {
               </ActionIcon>
             ) : (
               <Kbd visibleFrom="sm" size="xs">
-                ⌘K
+                /
               </Kbd>
             )
           }

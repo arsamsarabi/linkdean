@@ -49,6 +49,16 @@ export function useLibraryPageChrome({
 
   useHotkeys([
     [
+      // `/` searches this page's bookmarks; mod+K is the command palette.
+      '/',
+      (e) => {
+        const t = e.target as HTMLElement | null
+        if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
+        e.preventDefault()
+        searchRef.current?.focus()
+      },
+    ],
+    [
       'n',
       (e) => {
         const t = e.target as HTMLElement | null
