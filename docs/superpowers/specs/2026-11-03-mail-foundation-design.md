@@ -25,7 +25,7 @@ Environment variables:
 | `SMTP_HOST` | to turn mail on | Mail is on when `SMTP_HOST` and `MAIL_FROM` are both set |
 | `SMTP_PORT` | | Default 587, or 465 with `SMTP_TLS=tls` |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | | Both or neither |
-| `SMTP_TLS` | | `starttls` (default), `tls`, or `none` (refused unless `SMTP_HOST` is a private or loopback address, for Mailpit and local relays) |
+| `SMTP_TLS` | | `starttls` (default), `tls`, or `none` (refused unless `SMTP_HOST` is loopback, a private address, or a single-label name such as the Docker service `mailpit`; a single-label name could resolve through a DNS search domain, so use `none` only on networks you control) |
 | `MAIL_FROM` | to turn mail on | Mailbox, e.g. `Linkdean <no-reply@example.com>` |
 | `APP_URL` | existing | Base for every link in an email |
 
@@ -65,7 +65,7 @@ Settings → Admin → Email:
 
 ## Look and feel
 
-- Light layout, brand header (logo and wordmark), violet primary button using the theme's filled violet, Satoshi with a system fallback stack.
+- Light layout, brand header (text wordmark; no logo image, since many clients block remote images and a dev `APP_URL` is unreachable from them), violet primary button using the theme's filled violet, Satoshi with a system fallback stack.
 - One clear action per email. The link is also printed as text under the button for clients that block buttons.
 - Footer: instance name and `APP_URL`, a line saying why the recipient got the email, and for notification emails a link to email preferences (added in E).
 - No dark-mode-specific styling. The light output stays readable in clients that darken emails.
