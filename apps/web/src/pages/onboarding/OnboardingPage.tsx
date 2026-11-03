@@ -34,6 +34,7 @@ export function OnboardingPage(): ReactElement {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
+  const [bootstrapToken, setBootstrapToken] = useState('')
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null)
@@ -104,6 +105,7 @@ export function OnboardingPage(): ReactElement {
         email,
         password,
         display_name: displayName || undefined,
+        bootstrap_token: bootstrapToken.trim() || undefined,
       })
       if (pendingAvatar) {
         try {
@@ -196,6 +198,9 @@ export function OnboardingPage(): ReactElement {
 
       <OnboardingSteps
         firstAccount={firstAccount}
+        needsBootstrapToken={!!bootstrap.data?.bootstrap_token_required}
+        bootstrapToken={bootstrapToken}
+        onBootstrapToken={setBootstrapToken}
         step={step}
         busy={busy}
         displayName={displayName}

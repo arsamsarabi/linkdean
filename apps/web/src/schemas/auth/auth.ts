@@ -39,6 +39,8 @@ export const meResponseSchema = z.object({
 
 export const bootstrapStatusSchema = z.object({
   needs_bootstrap: z.boolean(),
+  /** The server has a BOOTSTRAP_TOKEN, so the first account must enter it. */
+  bootstrap_token_required: z.boolean().default(false),
   oidc_enabled: z.boolean(),
   registration_open: z.boolean().default(true),
 })

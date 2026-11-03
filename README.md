@@ -83,11 +83,11 @@ printf 'POSTGRES_PASSWORD=%s\nMEILI_MASTER_KEY=%s\nSESSION_SECRET=%s\n' \
 docker compose --env-file deploy/docker/.env -f deploy/docker/docker-compose.yml up -d --build
 ```
 
-Open **http://localhost:8080**. The first registered user becomes admin.
+Open **http://localhost:8080**. The first registered user becomes admin. On a server others can reach before you, set `BOOTSTRAP_TOKEN` so only you can create that account.
 
-Production Compose refuses to start without `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET`, and the API refuses the default values published in this repo. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`. Required secrets, proxy setup, limits and upgrade steps: [docs/self-host.md](docs/self-host.md#production-deployment).
+Production Compose refuses to start without `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET`, and the API refuses the default values published in this repo. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`. Required secrets, proxy setup, limits and upgrade steps: [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md#production-deployment).
 
-Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/self-host.md](docs/self-host.md).
+Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
 
 ### Stack services
 
@@ -98,7 +98,7 @@ Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/r
 | `meilisearch` | Search index | Internal only (dev: `7700`) |
 | `chrome` | Optional CDP for page previews | Internal only (dev: `127.0.0.1:9222`) |
 
-See [docs/self-host.md](docs/self-host.md).
+See [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
 
 ---
 
@@ -121,6 +121,7 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 | `CORS_ORIGINS` | | Comma-separated origins; default = `APP_URL` |
 | `TRUST_FORWARDED_FOR` | Behind a proxy | Set `true` behind a reverse proxy, else all clients share one address for login limits. Leave unset when the API is reachable directly |
 | `BROWSER_WS_URL` | | Chrome CDP URL for screenshots |
+| `BOOTSTRAP_TOKEN` | | When set, the first account (the admin) must enter it on the setup page, and that account must use a password, not OIDC. Unset, whoever registers first becomes admin. Ignored once any account exists |
 | `METRICS_TOKEN` | | Turns on `GET /api/metrics`, which then needs `Authorization: Bearer <token>`. Unset, the route returns `404` |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | | Optional OIDC. `OIDC_ISSUER` must match the issuer in the provider's discovery document exactly, trailing slash included. New identities get an account only while registration is open |
 
@@ -211,7 +212,7 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 | [Features](docs/FEATURES.md) | What the app can do today |
 | [Architecture](docs/ARCHITECTURE.md) | Stack, domain model, auth, vault vs hidden |
 | [Roadmap](docs/ROADMAP.md) | Planned milestones / backlog |
-| [Self-host](docs/self-host.md) | Production secrets, reverse proxy, limits, upgrades, backup |
+| [Self-host](docs/SELF_HOSTED.md) | Production secrets, reverse proxy, limits, upgrades, backup |
 | [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---

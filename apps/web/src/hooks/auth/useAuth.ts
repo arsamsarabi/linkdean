@@ -10,6 +10,7 @@ type RegisterBody = {
   password: string
   display_name?: string
   invite_code?: string
+  bootstrap_token?: string
   share_token?: string
 }
 

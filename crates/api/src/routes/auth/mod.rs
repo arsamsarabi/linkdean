@@ -33,6 +33,7 @@ async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value
     let platform = db::get_platform_settings(&state.pool).await?;
     Ok(Json(json!({
         "needs_bootstrap": count == 0,
+        "bootstrap_token_required": count == 0 && state.cfg.bootstrap_token.is_some(),
         "oidc_enabled": state.cfg.oidc_enabled(),
         "registration_open": platform.registration_open,
     })))
@@ -47,10 +48,9 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     })))
 }
 
-// Known issue: The first account becomes admin, and that check races: two registrations on a fresh
-// install can both become admin, and whoever registers first owns the instance. Fix: an advisory
-// lock, and an optional `BOOTSTRAP_TOKEN`. The invite check here also races; see
-// `consume_registration_invite`.
+/// Local sign-up. The first account becomes admin and needs `BOOTSTRAP_TOKEN` when one is set;
+/// later ones need open registration or an invite. `create_user_gated` checks both and claims
+/// the invite under one lock and transaction.
 async fn register(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -65,46 +65,25 @@ async fn register(
     let limits = register_limit(ip);
     state.limiter.check(&limits)?;
     state.limiter.record(&limits);
-    let count = db::count_users(&state.pool).await?;
     let invite_code = req
         .invite_code
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
-    let mut must_consume_invite = false;
-    if count > 0 {
-        let platform = db::get_platform_settings(&state.pool).await?;
-        if !platform.registration_open {
-            let Some(code) = invite_code else {
-                return Err(Error::Forbidden.into());
-            };
-            db::assert_invite_redeemable(&state.pool, code, &req.email).await?;
-            must_consume_invite = true;
-        } else if let Some(code) = invite_code {
-            // Optional redeem when registration is open.
-            db::assert_invite_redeemable(&state.pool, code, &req.email).await?;
-            must_consume_invite = true;
-        }
-    }
-    let user = db::create_user(
+    let user = db::create_user_gated(
         &state.pool,
         &req.email,
         Some(&req.password),
         req.display_name.as_deref(),
         None,
         None,
+        db::SignupGate {
+            enforce: true,
+            invite_code,
+            bootstrap_token_ok: state.cfg.bootstrap_token_ok(req.bootstrap_token.as_deref()),
+        },
     )
     .await?;
-    if must_consume_invite {
-        if let Some(code) = invite_code {
-            if let Err(e) =
-                db::consume_registration_invite(&state.pool, code, &req.email, user.id).await
-            {
-                tracing::warn!(user_id = %user.id, error = %e, "invite consume failed after register");
-                return Err(e.into());
-            }
-        }
-    }
     let share_token = req.share_token.as_deref().map(str::trim);
     if let Some(share_token) = share_token.filter(|t| !t.is_empty()) {
         match db::claim_pending_share_invite(&state.pool, share_token, &req.email, user.id).await {

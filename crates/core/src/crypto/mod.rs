@@ -82,6 +82,11 @@ pub fn random_bytes(len: usize) -> Vec<u8> {
     buf
 }
 
+/// Compares two secrets without stopping at the first differing byte.
+pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
 pub fn hash_token(token: &str) -> String {
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();

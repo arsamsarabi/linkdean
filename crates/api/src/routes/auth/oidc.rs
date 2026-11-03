@@ -11,6 +11,7 @@ use crate::state::AppState;
 use axum::extract::{Query, State};
 use axum::http::{header, HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
+use linkdean_core::crypto::constant_time_eq;
 use linkdean_core::{Error, User};
 use linkdean_db::{self as db};
 use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
@@ -254,13 +255,6 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
         }
         return Ok(user);
     }
-    if db::count_users(&state.pool).await? > 0
-        && !db::get_platform_settings(&state.pool)
-            .await?
-            .registration_open
-    {
-        return Err(Error::Forbidden);
-    }
     // Known issue: Someone who registers a local account with a victim's email first blocks the
     // victim's first OIDC sign-in. Fix: email verification, or an approved account-link flow.
     if db::find_user_by_email(&state.pool, &email).await?.is_some() {
@@ -268,13 +262,20 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
             "email already registered; sign in with your password".into(),
         ));
     }
-    let created = db::create_user(
+    // A provider sign-in cannot carry the bootstrap token, so with one set the first account
+    // must register with a password.
+    let created = db::create_user_gated(
         &state.pool,
         &email,
         None,
         name.as_deref(),
         Some(sub.as_str()),
         Some(&s.issuer),
+        db::SignupGate {
+            enforce: true,
+            invite_code: None,
+            bootstrap_token_ok: state.cfg.bootstrap_token_ok(None),
+        },
     )
     .await?;
     if email_verified == Some(true) {
@@ -346,10 +347,6 @@ fn set_cookie(res: &mut Response, cookie: &str) -> Result<(), Error> {
         HeaderValue::from_str(cookie).map_err(|e| Error::msg(e.to_string()))?,
     );
     Ok(())
-}
-
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 #[cfg(test)]

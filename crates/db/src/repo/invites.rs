@@ -4,7 +4,7 @@ use linkdean_core::{
     CreateRegistrationInvite, CreateRegistrationInviteResponse, Error, RegistrationInvite,
     RegistrationInviteView, Result,
 };
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 const TOKEN_PREFIX: &str = "ldi_";
@@ -108,85 +108,8 @@ pub async fn revoke_registration_invite(pool: &PgPool, id: Uuid) -> Result<()> {
     Ok(())
 }
 
-/// Validate a pending invite for registration. Returns invite id on success.
-// Known issue: Concurrent registrations can all pass the redeemable check before one consumes the
-// invite, and the user row survives a failed consume, so one invite can create several accounts.
-// Fix: claim the invite and insert the user in one transaction.
-pub async fn consume_registration_invite(
-    pool: &PgPool,
-    code: &str,
-    email: &str,
-    user_id: Uuid,
-) -> Result<Uuid> {
-    let code = code.trim();
-    if code.is_empty() {
-        return Err(Error::BadRequest("invite code required".into()));
-    }
-    let code_hash = hash_token(code);
-    let row = sqlx::query_as::<_, RegistrationInvite>(
-        r#"
-        SELECT * FROM registration_invites
-        WHERE code_hash = $1
-        "#,
-    )
-    .bind(&code_hash)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?
-    .ok_or_else(|| Error::BadRequest("invalid invite code".into()))?;
-
-    if row.revoked_at.is_some() {
-        return Err(Error::BadRequest("invite revoked".into()));
-    }
-    if row.used_at.is_some() {
-        return Err(Error::BadRequest("invite already used".into()));
-    }
-    if row.expires_at <= Utc::now() {
-        return Err(Error::BadRequest("invite expired".into()));
-    }
-    if let Some(bound) = row.email.as_deref() {
-        if bound != email.trim().to_ascii_lowercase() {
-            return Err(Error::BadRequest("invite email mismatch".into()));
-        }
-    }
-
-    let updated = sqlx::query_as::<_, RegistrationInvite>(
-        r#"
-        UPDATE registration_invites
-        SET used_at = now(), used_by_user_id = $2
-        WHERE id = $1 AND used_at IS NULL AND revoked_at IS NULL
-        RETURNING *
-        "#,
-    )
-    .bind(row.id)
-    .bind(user_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?
-    .ok_or_else(|| Error::BadRequest("invite already used".into()))?;
-
-    Ok(updated.id)
-}
-
-/// Validate invite for register without consuming (fast-fail before user create).
-pub async fn assert_invite_redeemable(pool: &PgPool, code: &str, email: &str) -> Result<()> {
-    let code = code.trim();
-    if code.is_empty() {
-        return Err(Error::BadRequest("invite code required".into()));
-    }
-    let code_hash = hash_token(code);
-    let row = sqlx::query_as::<_, RegistrationInvite>(
-        r#"
-        SELECT * FROM registration_invites
-        WHERE code_hash = $1
-        "#,
-    )
-    .bind(&code_hash)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?
-    .ok_or_else(|| Error::BadRequest("invalid invite code".into()))?;
-
+/// Why an invite cannot be redeemed for `email`, if it cannot.
+fn check_redeemable(row: &RegistrationInvite, email: &str) -> Result<()> {
     if row.revoked_at.is_some() {
         return Err(Error::BadRequest("invite revoked".into()));
     }
@@ -202,4 +125,37 @@ pub async fn assert_invite_redeemable(pool: &PgPool, code: &str, email: &str) ->
         }
     }
     Ok(())
+}
+
+/// Marks an invite used by `user_id`, inside the sign-up transaction that inserts that user.
+/// `FOR UPDATE` makes a second sign-up with the same code wait for this one, then see it used;
+/// if the sign-up fails, the rollback leaves the invite unused. Returns the invite id.
+pub(crate) async fn claim_registration_invite(
+    tx: &mut Transaction<'_, Postgres>,
+    code: &str,
+    email: &str,
+    user_id: Uuid,
+) -> Result<Uuid> {
+    let code = code.trim();
+    if code.is_empty() {
+        return Err(Error::BadRequest("invite code required".into()));
+    }
+    let row = sqlx::query_as::<_, RegistrationInvite>(
+        "SELECT * FROM registration_invites WHERE code_hash = $1 FOR UPDATE",
+    )
+    .bind(hash_token(code))
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or_else(|| Error::BadRequest("invalid invite code".into()))?;
+    check_redeemable(&row, email)?;
+    sqlx::query(
+        "UPDATE registration_invites SET used_at = now(), used_by_user_id = $2 WHERE id = $1",
+    )
+    .bind(row.id)
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(row.id)
 }

@@ -22,6 +22,9 @@ pub struct Config {
     pub trust_forwarded_for: bool,
     /// Bearer token for `GET /api/metrics`. Unset turns the route off.
     pub metrics_token: Option<String>,
+    /// When set, the first account (the admin) must present it, so whoever finds a fresh
+    /// install first cannot claim it.
+    pub bootstrap_token: Option<String>,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
@@ -108,6 +111,10 @@ impl Config {
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
+            bootstrap_token: std::env::var("BOOTSTRAP_TOKEN")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),
@@ -123,6 +130,15 @@ impl Config {
         self.oidc_issuer.is_some()
             && self.oidc_client_id.is_some()
             && self.oidc_client_secret.is_some()
+    }
+
+    /// `None` when no bootstrap token is configured, else whether `given` matches it.
+    pub fn bootstrap_token_ok(&self, given: Option<&str>) -> Option<bool> {
+        self.bootstrap_token.as_deref().map(|expected| {
+            given.is_some_and(|g| {
+                linkdean_core::crypto::constant_time_eq(g.trim().as_bytes(), expected.as_bytes())
+            })
+        })
     }
 
     pub fn cookie_secure(&self) -> bool {

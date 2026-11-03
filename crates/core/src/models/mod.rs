@@ -1015,6 +1015,9 @@ pub struct RegisterRequest {
     /// From a share invite's claim link.
     #[serde(default)]
     pub share_token: Option<String>,
+    /// The server's `BOOTSTRAP_TOKEN`, needed for the first account when one is set.
+    #[serde(default)]
+    pub bootstrap_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

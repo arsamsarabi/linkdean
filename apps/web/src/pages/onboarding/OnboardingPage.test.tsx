@@ -67,6 +67,7 @@ describe('OnboardingPage', () => {
     setToken(null)
     mocked.bootstrap.mockResolvedValue({
       needs_bootstrap: true,
+      bootstrap_token_required: false,
       oidc_enabled: false,
       registration_open: true,
     })
@@ -88,6 +89,25 @@ describe('OnboardingPage', () => {
     expect(screen.getByLabelText(/^vault passphrase/i)).toBeInTheDocument()
   })
 
+  it('asks for the setup token when the server has one', async (): Promise<void> => {
+    mocked.bootstrap.mockResolvedValue({
+      needs_bootstrap: true,
+      bootstrap_token_required: true,
+      oidc_enabled: false,
+      registration_open: true,
+    })
+    const person = userEvent.setup()
+    render(wrap(<OnboardingPage />))
+
+    await person.click(await screen.findByRole('button', { name: /get started/i }))
+    await person.type(screen.getByLabelText(/^setup token/i), ' s3cret ')
+    await createAdmin(person)
+
+    await vi.waitFor(() =>
+      expect(mocked.register).toHaveBeenCalledWith(expect.objectContaining({ bootstrap_token: 's3cret' }))
+    )
+  })
+
   it('shows the setup steps for the first account', async (): Promise<void> => {
     render(wrap(<OnboardingPage />))
 
@@ -100,6 +120,7 @@ describe('OnboardingPage', () => {
     setToken('tok')
     mocked.bootstrap.mockResolvedValue({
       needs_bootstrap: false,
+      bootstrap_token_required: false,
       oidc_enabled: false,
       registration_open: true,
     })

@@ -59,7 +59,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - In-memory rate limits (`crates/api/src/rate_limit.rs`) on login, registration and vault passphrase checks (unlock, recovery, recovery key replacement, global unlock and turning the global passphrase off) → `429`. Counters reset on restart. Client address comes from the TCP peer, or from the last `X-Forwarded-For` entry when `TRUST_FORWARDED_FOR=true`
 - Argon2 work runs on a blocking pool, at most 4 at once (`crates/db/src/repo/blocking.rs`)
 - Startup refuses published secrets unless `ALLOW_DEFAULT_SECRETS=true` (dev only)
-- First install uses `/onboarding` (admin account, optional vault, optional import)
+- First install uses `/onboarding` (admin account, optional vault, optional import). Sign-ups run under the `user_signup` advisory lock in one transaction, so only one account can become the first admin and a registration invite is claimed (`FOR UPDATE`) with the user insert. With `BOOTSTRAP_TOKEN` set, the first account must present it; OIDC cannot, so it is refused until an admin exists
 - OIDC: Authorization Code with discovery, PKCE, state and nonce against `OIDC_*` env; callback `/api/auth/oidc/callback`. State, nonce and verifier ride in a 10 minute HttpOnly `linkdean_oidc` cookie scoped to `/api/auth/oidc`. The ID token is validated (signature, issuer, audience, expiry, nonce); userinfo fills in a missing email. Users are keyed by issuer and subject, never by email. New identities obey closed registration. The callback always redirects: home with a session cookie, or `/login?oidc_error=…`
 - Profile (`/profile`) and settings (`/settings`); header avatar menu
 - Avatars: client crop, server resize to 256×256 WebP under `AVATAR_DIR`
@@ -73,7 +73,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - `GET /api/metrics` needs `Authorization: Bearer $METRICS_TOKEN` and is off when the token is unset. Labels use the route template, not the raw path. `GET /api/ready` returns booleans only
 - Hourly maintenance (`crates/api/src/maintenance.rs`): trash retention, with search and preview cleanup for purged bookmarks, the expired-session purge, and removal of unused tags more than an hour old
 
-Operator-facing limits and behaviour: [self-host.md](./self-host.md#limits-and-behaviour-operators-should-know).
+Operator-facing limits and behaviour: [SELF_HOSTED.md](./SELF_HOSTED.md#limits-and-behaviour-operators-should-know).
 
 ## Hidden vs vault
 
@@ -103,7 +103,7 @@ Linkdean JSON is versioned (`EXPORT_VERSION` in `crates/core/src/import_export/m
 
 ## Local dev
 
-`deploy/docker/docker-compose.dev.yml` runs everything with live reload on `:5173`. `deploy/docker/docker-compose.yml` is the production stack and needs `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET` (see [self-host.md](./self-host.md#production-deployment)). The dev stack uses published secrets with `ALLOW_DEFAULT_SECRETS=true`. Both use the same project name and volumes, so run one at a time.
+`deploy/docker/docker-compose.dev.yml` runs everything with live reload on `:5173`. `deploy/docker/docker-compose.yml` is the production stack and needs `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET` (see [SELF_HOSTED.md](./SELF_HOSTED.md#production-deployment)). The dev stack uses published secrets with `ALLOW_DEFAULT_SECRETS=true`. Both use the same project name and volumes, so run one at a time.
 
 ```bash
 docker compose -f deploy/docker/docker-compose.dev.yml up --build
@@ -118,4 +118,4 @@ cargo run -p linkdean-api
 cd apps/web && pnpm dev   # :5173 proxies /api → :8080
 ```
 
-See also [FEATURES.md](./FEATURES.md), [self-host.md](./self-host.md), and [ROADMAP.md](./ROADMAP.md).
+See also [FEATURES.md](./FEATURES.md), [SELF_HOSTED.md](./SELF_HOSTED.md), and [ROADMAP.md](./ROADMAP.md).

@@ -30,6 +30,10 @@ const SETUP_STEP_COUNT = 2
 
 type Props = {
   firstAccount: boolean
+  /** Show the setup token field: the server has a BOOTSTRAP_TOKEN. */
+  needsBootstrapToken: boolean
+  bootstrapToken: string
+  onBootstrapToken: (v: string) => void
   step: number
   busy: boolean
   displayName: string
@@ -60,6 +64,9 @@ type Props = {
 
 export function OnboardingSteps({
   firstAccount,
+  needsBootstrapToken,
+  bootstrapToken,
+  onBootstrapToken,
   step,
   busy,
   displayName,
@@ -109,6 +116,15 @@ export function OnboardingSteps({
         <Stepper.Step label="Admin" description="Your account">
           <Paper p="xl" mt="md" withBorder>
             <Stack>
+              {needsBootstrapToken ? (
+                <PasswordInput
+                  label="Setup token"
+                  description="The BOOTSTRAP_TOKEN this server was started with. Only the first account needs it."
+                  required
+                  value={bootstrapToken}
+                  onChange={(e) => onBootstrapToken(e.currentTarget.value)}
+                />
+              ) : null}
               <TextInput
                 label="Display name"
                 placeholder="Ada"
@@ -151,7 +167,7 @@ export function OnboardingSteps({
                 leftSection={<IconUserPlus {...iconSm} />}
                 loading={busy}
                 onClick={onCreateAdmin}
-                disabled={!email || !password}
+                disabled={!email || !password || (needsBootstrapToken && !bootstrapToken.trim())}
               >
                 Create admin account
               </Button>

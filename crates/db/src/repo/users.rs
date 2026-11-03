@@ -18,6 +18,20 @@ pub async fn count_users(pool: &PgPool) -> Result<i64> {
     Ok(n.0)
 }
 
+/// Who may sign up, checked inside the sign-up transaction.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SignupGate<'a> {
+    /// After the first account, require open registration or a valid invite. Off for tests and
+    /// tools that create users directly.
+    pub enforce: bool,
+    /// Claimed in the same transaction as the insert, so one invite makes one account.
+    pub invite_code: Option<&'a str>,
+    /// `None` when no `BOOTSTRAP_TOKEN` is set; otherwise whether the request presented it. Only
+    /// the first account, which becomes admin, needs it.
+    pub bootstrap_token_ok: Option<bool>,
+}
+
+/// Creates a user with no sign-up checks. The first user still becomes admin.
 pub async fn create_user(
     pool: &PgPool,
     email: &str,
@@ -26,6 +40,30 @@ pub async fn create_user(
     oidc_subject: Option<&str>,
     oidc_issuer: Option<&str>,
 ) -> Result<User> {
+    create_user_gated(
+        pool,
+        email,
+        password,
+        display_name,
+        oidc_subject,
+        oidc_issuer,
+        SignupGate::default(),
+    )
+    .await
+}
+
+/// Creates a user under `gate`. Sign-ups are serialised by an advisory lock, so only one
+/// account can see an empty instance and become admin, and the invite is claimed in the same
+/// transaction as the insert.
+pub async fn create_user_gated(
+    pool: &PgPool,
+    email: &str,
+    password: Option<&str>,
+    display_name: Option<&str>,
+    oidc_subject: Option<&str>,
+    oidc_issuer: Option<&str>,
+    gate: SignupGate<'_>,
+) -> Result<User> {
     let password_hash = match password {
         Some(p) => {
             let p = p.to_string();
@@ -33,7 +71,31 @@ pub async fn create_user(
         }
         None => None,
     };
-    let is_first = count_users(pool).await? == 0;
+    let email = email.trim().to_ascii_lowercase();
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtext('user_signup'))")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    let is_first = count == 0;
+    if is_first {
+        if gate.bootstrap_token_ok == Some(false) {
+            return Err(Error::Forbidden);
+        }
+    } else if gate.enforce && gate.invite_code.is_none() {
+        let (open,): (bool,) =
+            sqlx::query_as("SELECT registration_open FROM platform_settings WHERE id = TRUE")
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| Error::msg(e.to_string()))?;
+        if !open {
+            return Err(Error::Forbidden);
+        }
+    }
     let user = sqlx::query_as::<_, User>(
         r#"
         INSERT INTO users (
@@ -44,14 +106,14 @@ pub async fn create_user(
         RETURNING *
         "#,
     )
-    .bind(email.trim().to_ascii_lowercase())
+    .bind(&email)
     .bind(display_name)
     .bind(password_hash)
     .bind(oidc_subject)
     .bind(oidc_issuer)
     .bind(is_first) // first user = admin
     .bind(false) // onboarding starts incomplete for new admins
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
         if e.to_string().contains("duplicate") || e.to_string().contains("unique") {
@@ -60,6 +122,12 @@ pub async fn create_user(
             Error::msg(e.to_string())
         }
     })?;
+    if gate.enforce && !is_first {
+        if let Some(code) = gate.invite_code {
+            super::invites::claim_registration_invite(&mut tx, code, &email, user.id).await?;
+        }
+    }
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
     ensure_user_settings(pool, user.id).await?;
     Ok(user)
 }

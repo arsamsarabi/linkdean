@@ -74,6 +74,7 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-false}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
+      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:-}
     ports:
       - "8080:8080"
     volumes:

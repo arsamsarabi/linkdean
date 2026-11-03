@@ -65,6 +65,7 @@ import {
   type BanView,
   type BlockRelation,
   type Bookmark,
+  type BootstrapStatus,
   type Category,
   type CategoryPublicLink,
   type CategoryShare,
@@ -114,8 +115,7 @@ import { req } from './client'
 const bookmarksSchema = z.array(bookmarkSchema)
 
 export const api = {
-  bootstrap: (): Promise<{ needs_bootstrap: boolean; oidc_enabled: boolean; registration_open: boolean }> =>
-    req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
+  bootstrap: (): Promise<BootstrapStatus> => req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
 
   getPlatformSettings: (): Promise<{ settings: PlatformSettings }> =>
     req('/admin/platform-settings', {}, platformSettingsEnvelopeSchema),
@@ -245,6 +245,7 @@ export const api = {
     password: string
     display_name?: string
     invite_code?: string
+    bootstrap_token?: string
     share_token?: string
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/register', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
