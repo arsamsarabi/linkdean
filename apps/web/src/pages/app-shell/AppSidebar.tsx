@@ -133,9 +133,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
           ))}
         </Group>
 
-        <Group label="Folders">
-          <SidebarFolders activeFolder={folder} onNavigate={closeNav} />
-        </Group>
+        <SidebarFolders activeFolder={folder} onNavigate={closeNav} />
 
         <Group label="Library health">
           <NavLink

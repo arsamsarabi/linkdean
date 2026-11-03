@@ -57,7 +57,10 @@ function renderSidebar(opts: { vaultUnlocked?: boolean; pathname?: string; searc
 
 describe('AppSidebar', () => {
   beforeEach(() => useShellUi.setState({ brokenOpen: false, dupesOpen: false, historyOpen: false, navOpen: true }))
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    localStorage.clear()
+  })
 
   it('links to Vaults while a vault is open', () => {
     renderSidebar({ vaultUnlocked: true })
@@ -87,8 +90,9 @@ describe('AppSidebar', () => {
     expect(useShellUi.getState().historyOpen).toBe(true)
   })
 
-  it('lists folders with Unsorted first, nests children, and leaves vault folders out', () => {
+  it('lists folders with Unsorted first, nests children, and leaves vault folders out', async () => {
     renderSidebar({ pathname: '/library', search: { folder: 'f2' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Folders' }))
     expect(screen.getByRole('link', { name: 'Unsorted' }).getAttribute('href')).toBe(
       '/library?folder=uncategorized&category=uncategorized'
     )
@@ -112,5 +116,24 @@ describe('AppSidebar', () => {
     const hrefs = screen.getAllByRole('link', { name: /Shared/ }).map((a) => a.getAttribute('href'))
     expect(hrefs).toContain('/shared')
     expect(screen.getByLabelText('1 invites waiting')).toBeTruthy()
+  })
+
+  it('starts collapsed, showing recent folders and the open one', () => {
+    renderSidebar({ pathname: '/library', search: { folder: 'f2' } })
+    expect(screen.getByRole('button', { name: 'Folders' }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getByRole('link', { name: 'Unsorted' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Fonts' }).hasAttribute('data-active')).toBe(true)
+    expect(screen.queryByRole('textbox', { name: 'Filter folders' })).toBeNull()
+  })
+
+  it('filters folders by name when expanded', async () => {
+    renderSidebar()
+    await userEvent.click(screen.getByRole('button', { name: 'Folders' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Filter folders' }), 'fon')
+    expect(screen.getByRole('link', { name: /Fonts/ }).getAttribute('href')).toBe('/library?folder=f2')
+    expect(screen.getByText('Design / Fonts')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Unsorted' })).toBeNull()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Filter folders' }), 'zzz')
+    expect(screen.getByText('No folders match.')).toBeTruthy()
   })
 })

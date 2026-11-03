@@ -151,6 +151,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in
 - Shared page (sidebar → Shared, with a count of invites waiting): accept or decline invites, open folders and dashboards others share with you, and see what you share and with whom; `/?board=<id>` opens a given dashboard
 - Config options: sections (General, Categories, Import / Export, Vault, API keys, Admin) listed down the side on wide screens and as a scrolling row on phones; `?tab=` opens one
+- Sidebar Folders section collapses: collapsed it shows Unsorted, the 3 most recently updated folders and the open folder; expanded it shows the whole tree with a filter field (matches at any depth, with their path). The choice is remembered per browser
 - Phone tab bar: Home, Library, Add (into the open folder), Search (command palette) and Me; the burger keeps the full sidebar
 - An open folder titles the library page, with a breadcrumb back to the whole library; an empty folder offers Add bookmark here
 - Header search field opens the command palette (which can also add a bookmark); the library page's Add bookmark button, the phone tab bar's Add and paste-to-add open the new-bookmark form

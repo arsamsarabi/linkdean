@@ -62,3 +62,32 @@
 .tabAdd {
   color: var(--mantine-color-violet-filled);
 }
+
+.groupToggle {
+  display: block;
+  width: 100%;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.groupToggle:hover {
+  background: var(--mantine-color-default-hover);
+}
+
+.groupChevron {
+  color: var(--mantine-color-dimmed);
+  transform: rotate(-90deg);
+  transition: transform 150ms ease;
+}
+
+.groupChevron[data-expanded] {
+  transform: none;
+}
+
+.moreFolders {
+  padding: 4px var(--mantine-spacing-sm) 4px calc(var(--mantine-spacing-sm) + 30px);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.moreFolders:hover {
+  background: var(--mantine-color-default-hover);
+}
