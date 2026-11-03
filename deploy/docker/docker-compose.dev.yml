@@ -9,6 +9,7 @@ name: linkdean
 services:
   db:
     image: postgres:16-alpine
+    networks: [data]
     environment:
       POSTGRES_USER: linkdean
       POSTGRES_PASSWORD: linkdean
@@ -25,6 +26,7 @@ services:
 
   meilisearch:
     image: getmeili/meilisearch:v1.11
+    networks: [data]
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev_master_key_change_me}
       MEILI_ENV: development
@@ -39,28 +41,45 @@ services:
       retries: 10
 
   chrome:
-    image: zenika/alpine-chrome:124
+    # Pinned. Chrome renders untrusted pages, so bump this with each stable release.
+    image: chromedp/headless-shell:156.0.8078.36
     restart: unless-stopped
+    # Chrome's own sandbox is on: it runs as nobody with no capabilities, and the seccomp
+    # profile is Docker's default plus the namespace calls the sandbox needs. The image's
+    # entrypoint would add --no-sandbox, so this runs Chrome directly. Newer Chrome only binds
+    # DevTools to localhost; socat exposes it on 9222.
+    user: "65534:65534"
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    environment:
+      HOME: /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=./chrome-seccomp.json
     shm_size: 256mb
+    mem_limit: 1g
+    pids_limit: 512
     ports:
       - "127.0.0.1:9222:9222"
+    # Same split as production: no route to the database or search.
+    networks: [browser]
+    entrypoint: ["sh", "-c"]
     command:
-      # Known issue: Chrome runs without its sandbox, and unlike production this dev stack does not
-      # isolate it from the database and search. Fix: the same networks as production, and a
-      # maintained Chrome image.
-      - --no-sandbox
-      - --disable-gpu
-      - --disable-dev-shm-usage
-      - --remote-debugging-address=0.0.0.0
-      - --remote-debugging-port=9222
-      - --hide-scrollbars
-      - --font-render-hinting=none
+      - >-
+        socat TCP4-LISTEN:9222,fork TCP4:127.0.0.1:9223 &
+        exec /headless-shell/headless-shell
+        --use-gl=angle --use-angle=swiftshader
+        --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223
+        --hide-scrollbars --font-render-hinting=none
 
   # Rebuilds and restarts on changes under crates/ and migrations/.
   api:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    networks: [data, browser, web]
     environment:
       DATABASE_URL: postgres://linkdean:linkdean@db:5432/linkdean
       MEILI_URL: http://meilisearch:7700
@@ -96,6 +115,7 @@ services:
   # this Alpine image needs different native binaries from the host.
   web:
     image: node:22-alpine
+    networks: [web]
     working_dir: /web
     environment:
       API_PROXY_TARGET: http://api:8080
@@ -107,6 +127,11 @@ services:
     volumes:
       - ../../apps/web:/web
       - web_node_modules:/web/node_modules
+
+networks:
+  data:
+  browser:
+  web:
 
 volumes:
   pgdata:

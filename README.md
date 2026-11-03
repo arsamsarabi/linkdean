@@ -96,7 +96,7 @@ Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/r
 | `api` | Linkdean API + static SPA | `8080` |
 | `db` | Postgres 16 | Internal only (dev: host `5433`) |
 | `meilisearch` | Search index | Internal only (dev: `7700`) |
-| `chrome` | Optional CDP for page previews | Internal only (dev: `127.0.0.1:9222`) |
+| `chrome` | Optional CDP for page previews. Sandboxed, non-root, off the data network | Internal only (dev: `127.0.0.1:9222`) |
 
 See [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
 

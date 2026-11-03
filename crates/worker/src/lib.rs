@@ -1113,7 +1113,8 @@ mod tests {
     #[tokio::test]
     #[ignore = "needs the dev stack's Chrome and network access"]
     async fn capture_keeps_working_with_the_request_guard() {
-        let chrome = "http://127.0.0.1:9222";
+        let chrome =
+            &std::env::var("CHROME_URL").unwrap_or_else(|_| "http://127.0.0.1:9222".into());
         let jpeg = super::capture_screenshot(chrome, "https://example.com").await;
         assert!(jpeg.expect("public capture").len() > 1000);
         let page = "data:text/html,<img src='http://169.254.169.254/x'>";

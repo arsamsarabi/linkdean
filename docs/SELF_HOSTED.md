@@ -59,6 +59,9 @@ Only enable it when the proxy is the sole route to the API, and make sure the pr
 - The API image runs as an unprivileged user, `linkdean` (UID/GID 10001). It owns `/app/data/avatars` and `/app/data/previews`; the binary and static files stay read-only to it.
 - Every service uses `restart: unless-stopped`, so the stack comes back after a crash or host reboot.
 - Only `api` publishes a port (`8080`). Postgres, Meilisearch and Chrome stay on the Compose network.
+- Chrome (`chromedp/headless-shell`, pinned) takes page screenshots for bookmark previews, so it opens every page users save. It sits on its own `browser` network with the API and has no route to Postgres or Meilisearch. It runs as `nobody` with a read-only filesystem, no capabilities, `no-new-privileges`, 1 GB of memory and 512 processes, and with Chrome's own sandbox on.
+- That sandbox needs user namespaces, which Docker's default seccomp profile blocks. `deploy/docker/chrome-seccomp.json` is Docker's default profile plus `clone`, `unshare`, `setns` and `chroot`, and must sit next to the compose file. Some hosts also restrict unprivileged user namespaces through AppArmor (Ubuntu 23.10 and later). There Chrome exits with `No usable sandbox!` in its logs, and bookmarks fall back to OG images and favicons. Allow it with `sysctl kernel.apparmor_restrict_unprivileged_userns=0`, or leave `BROWSER_WS_URL` unset to run without screenshots.
+- Update the Chrome image tag with each stable Chrome release.
 
 ### Limits and behaviour operators should know
 
