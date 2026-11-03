@@ -198,9 +198,6 @@ async fn find_blockers(
     Ok(out)
 }
 
-// Known issue: The move reads payloads before its transaction and takes no row lock, so an edit
-// saved in between is lost or, in the worst case, lands as plaintext. Fix: lock the rows `FOR
-// UPDATE` and re-read inside the transaction.
 async fn write_encrypted(
     tx: &mut Transaction<'_, Postgres>,
     id: Uuid,
@@ -368,12 +365,37 @@ async fn write_plain(
     Ok(())
 }
 
+/// How many times a move restarts when a bookmark changes under it before giving up.
+const MOVE_ATTEMPTS: usize = 3;
+
+/// Moves categories and bookmarks into a vault, between vaults, or out (`None`).
+///
+/// Payloads are read and encrypted before the transaction, to keep it short. Inside it the
+/// bookmark rows are locked and checked against what was read; if an edit landed in between,
+/// the move starts over with fresh content, so the edit is neither lost nor left in plaintext.
 pub async fn move_to_vault(
     pool: &PgPool,
     user_id: Uuid,
     req: MoveToVaultRequest,
     keyring: &VaultKeyring,
 ) -> Result<VaultMoveOutcome> {
+    for _ in 0..MOVE_ATTEMPTS {
+        if let Some(outcome) = try_move_to_vault(pool, user_id, &req, keyring).await? {
+            return Ok(outcome);
+        }
+    }
+    Err(Error::Conflict(
+        "bookmarks kept changing during the move; try again".into(),
+    ))
+}
+
+/// One move attempt. `None` means a bookmark changed after it was read; nothing was written.
+async fn try_move_to_vault(
+    pool: &PgPool,
+    user_id: Uuid,
+    req: &MoveToVaultRequest,
+    keyring: &VaultKeyring,
+) -> Result<Option<VaultMoveOutcome>> {
     let destination = req.destination_vault_id;
     if let Some(id) = destination {
         get_user_vault(pool, user_id, id).await?;
@@ -402,7 +424,7 @@ pub async fn move_to_vault(
 
     let blockers = find_blockers(pool, &categories, &loaded, destination.is_some()).await?;
     if !blockers.is_empty() {
-        return Ok(VaultMoveOutcome::Blocked(blockers));
+        return Ok(Some(VaultMoveOutcome::Blocked(blockers)));
     }
 
     // Keep the transaction short: encrypt before it opens.
@@ -428,6 +450,26 @@ pub async fn move_to_vault(
 
     let mut tx = pool.begin().await.map_err(db_err)?;
 
+    // Edits take the same row lock (`update_bookmark`), so after this nothing changes underneath.
+    let mut ids: Vec<Uuid> = loaded.iter().map(|(b, _)| b.id).collect();
+    ids.sort_unstable();
+    let current: Vec<(Uuid, chrono::DateTime<chrono::Utc>, Option<Uuid>)> = sqlx::query_as(
+        "SELECT id, updated_at, vault_id FROM bookmarks WHERE id = ANY($1) ORDER BY id FOR UPDATE",
+    )
+    .bind(&ids)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(db_err)?;
+    let unchanged = current.len() == loaded.len()
+        && loaded.iter().all(|(b, _)| {
+            current
+                .iter()
+                .any(|(id, at, vault)| *id == b.id && *at == b.updated_at && *vault == b.vault_id)
+        });
+    if !unchanged {
+        return Ok(None);
+    }
+
     for category in &categories {
         let keeps_parent = category
             .parent_id
@@ -451,6 +493,31 @@ pub async fn move_to_vault(
         .execute(&mut *tx)
         .await
         .map_err(db_err)?;
+    }
+
+    // The folders are locked now, so `apply_categories` cannot file anything new in them. A
+    // bookmark filed in one after the read above would be left behind; start over to take it.
+    if !category_ids.is_empty() {
+        let joined: bool = sqlx::query_scalar(
+            r#"
+            SELECT EXISTS (
+                SELECT 1 FROM bookmark_categories bc
+                JOIN bookmarks b ON b.id = bc.bookmark_id
+                WHERE bc.category_id = ANY($1)
+                  AND b.vault_id IS DISTINCT FROM $2
+                  AND NOT (b.id = ANY($3))
+            )
+            "#,
+        )
+        .bind(&category_ids)
+        .bind(destination)
+        .bind(&ids)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(db_err)?;
+        if joined {
+            return Ok(None);
+        }
     }
 
     let mut freed_tags = Vec::new();
@@ -502,8 +569,8 @@ pub async fn move_to_vault(
     } else {
         Vec::new()
     };
-    Ok(VaultMoveOutcome::Moved {
+    Ok(Some(VaultMoveOutcome::Moved {
         left_search,
         joined_search,
-    })
+    }))
 }

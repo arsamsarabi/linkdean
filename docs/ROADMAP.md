@@ -12,7 +12,6 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 1. **Close the release-blocking known issues** (M). These let one person take over or break an instance, or leak vault plaintext:
    - Chrome 124 runs with `--no-sandbox`, and the dev stack does not isolate it from the database. Use a maintained image, the sandbox where possible, memory and pid limits, and the production networks in dev.
-   - A vault move takes no row lock, so a concurrent edit can land as plaintext in a vault row (`write_encrypted`).
    - The session token in localStorage undoes the cookie's `HttpOnly`. Rely on the cookie in the browser.
 
 2. **Outbound email** (M–L). SMTP config with [react-email](https://www.npmjs.com/package/react-email) templates. Unlocks the features below, which a public instance needs.

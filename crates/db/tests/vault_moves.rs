@@ -563,3 +563,44 @@ async fn a_profile_listed_folder_turns_private_in_a_vault() {
         vec!["private".to_string(), "private".to_string()]
     );
 }
+
+#[tokio::test]
+async fn an_edit_saved_during_a_move_is_moved_not_lost() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let id = bookmark(&s, "https://edit-race.example/", vec![], vec![]).await;
+
+    // An edit holds the row lock, as `update_bookmark` does, and is not committed yet, so the
+    // move reads the old content and then waits on the lock.
+    let mut edit = s.pool.begin().await.expect("begin");
+    sqlx::query("SELECT 1 FROM bookmarks WHERE id = $1 FOR UPDATE")
+        .bind(id)
+        .execute(&mut *edit)
+        .await
+        .expect("lock");
+    sqlx::query("UPDATE bookmarks SET title = 'Edited mid-move', updated_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(&mut *edit)
+        .await
+        .expect("edit");
+
+    let (pool, owner, keyring) = (s.pool.clone(), s.owner.id, s.keyring.clone());
+    let req = request(vec![], vec![id], Some(s.vault));
+    let mover = tokio::spawn(async move { db::move_to_vault(&pool, owner, req, &keyring).await });
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    edit.commit().await.expect("commit edit");
+
+    let outcome = mover.await.expect("join").expect("move");
+    assert!(matches!(outcome, VaultMoveOutcome::Moved { .. }));
+    let raw = db::get_bookmark_raw(&s.pool, s.owner.id, id)
+        .await
+        .expect("raw");
+    assert!(raw.is_vault);
+    assert_eq!(raw.title, "", "no plaintext left in the row");
+    let view = db::bookmark_to_view(&s.pool, raw, &s.keyring, s.owner.id)
+        .await
+        .expect("view")
+        .expect("visible");
+    assert_eq!(view.title, "Edited mid-move");
+}

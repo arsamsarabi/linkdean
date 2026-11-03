@@ -478,11 +478,36 @@ async fn plan_bookmark_categories(
     Ok(CategoryPlan { links, primary })
 }
 
+/// Files a bookmark in `plan`'s folders. The folders' vault was checked before the caller's
+/// transaction; a vault move may have changed it since. Locking the folders `FOR SHARE` waits
+/// for such a move, and the bookmark must still be on the same side as every folder, so a
+/// plaintext bookmark never joins a folder that just became a vault (or the reverse).
 async fn apply_categories(
     conn: &mut sqlx::PgConnection,
     bookmark_id: Uuid,
     plan: &CategoryPlan,
 ) -> Result<()> {
+    if !plan.links.is_empty() {
+        let bookmark_vault: Option<Uuid> =
+            sqlx::query_scalar("SELECT vault_id FROM bookmarks WHERE id = $1")
+                .bind(bookmark_id)
+                .fetch_one(&mut *conn)
+                .await
+                .map_err(db_err)?;
+        let folder_vaults: Vec<Option<Uuid>> =
+            sqlx::query_scalar("SELECT vault_id FROM categories WHERE id = ANY($1) FOR SHARE")
+                .bind(&plan.links)
+                .fetch_all(&mut *conn)
+                .await
+                .map_err(db_err)?;
+        if folder_vaults.len() != plan.links.len()
+            || folder_vaults.iter().any(|v| *v != bookmark_vault)
+        {
+            return Err(Error::Conflict(
+                "a folder moved into or out of a vault while saving; try again".into(),
+            ));
+        }
+    }
     sqlx::query("DELETE FROM bookmark_categories WHERE bookmark_id = $1")
         .bind(bookmark_id)
         .execute(&mut *conn)
