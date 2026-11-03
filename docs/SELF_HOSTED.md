@@ -13,7 +13,7 @@ printf 'POSTGRES_PASSWORD=%s\nMEILI_MASTER_KEY=%s\nSESSION_SECRET=%s\n' \
 docker compose --env-file deploy/docker/.env -f deploy/docker/docker-compose.yml up -d --build
 ```
 
-Open `http://localhost:8080`. The first registered user becomes admin.
+Open `http://localhost:8080`. The first registered user becomes admin. Set `BOOTSTRAP_TOKEN` (see [First account](#first-account)) when the server is reachable by others before you register.
 
 1. Create `deploy/docker/.env` with the [required secrets](#required-secrets) and set `APP_URL`. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true` (see [Reverse proxy](#reverse-proxy)).
 2. Compose up (command above).
@@ -38,6 +38,12 @@ The production Compose file refuses to start unless all three are set:
 Without one of them, `docker compose up` stops with `set POSTGRES_PASSWORD` (or the matching name).
 
 The API also refuses to start when a secret is a value published in this repository: the `.env.example` and dev Compose defaults for `SESSION_SECRET` and `MEILI_MASTER_KEY`, and the `linkdean:linkdean` database login. Generate your own values. `ALLOW_DEFAULT_SECRETS=true` turns this check off; it exists for local development only and must never be set in production.
+
+### First account
+
+The first account on an empty instance becomes admin. Sign-ups are serialised, so two people registering at once cannot both become admin, but without a token whoever registers first owns the instance.
+
+Set `BOOTSTRAP_TOKEN` to a long random string (`openssl rand -hex 32`) to require it for that first account. The setup page asks for it. With a token set, the first account must register with a password: an OIDC sign-in cannot carry the token and is refused until an admin exists. Once any account exists the token is ignored and you can remove it.
 
 ### Reverse proxy
 
