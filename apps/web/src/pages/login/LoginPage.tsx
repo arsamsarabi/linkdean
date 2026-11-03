@@ -76,6 +76,7 @@ export function LoginPage(): ReactElement {
 
   const oidc = bootstrap.data?.oidc_enabled ?? false
   const registrationOpen = bootstrap.data?.registration_open ?? true
+  const mailEnabled = bootstrap.data?.mail_enabled ?? false
 
   return (
     <Stack maw={420} mx="auto" mt={80} px="md" pb={48} gap="lg" className={motion.fadeIn}>
@@ -112,6 +113,22 @@ export function LoginPage(): ReactElement {
             onChange={(e) => setPassword(e.currentTarget.value)}
             onKeyDown={(e) => e.key === 'Enter' && void submit()}
           />
+          {mailEnabled ? (
+            <Anchor
+              component="button"
+              type="button"
+              size="sm"
+              ta="right"
+              mt={-8}
+              onClick={() => void nav({ to: '/forgot-password' })}
+            >
+              Forgot password?
+            </Anchor>
+          ) : (
+            <Text size="sm" c="dimmed" mt={-8}>
+              Forgot your password? Ask your admin for a reset link.
+            </Text>
+          )}
           <Button leftSection={<IconLogin {...iconSm} />} loading={login.isPending} onClick={() => void submit()}>
             Sign in
           </Button>

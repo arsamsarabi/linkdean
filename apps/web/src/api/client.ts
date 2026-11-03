@@ -43,6 +43,8 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/register' ||
     pathname === '/onboarding' ||
     pathname === '/banned' ||
+    pathname === '/forgot-password' ||
+    pathname === '/reset-password' ||
     pathname.startsWith('/l/')
   )
 }

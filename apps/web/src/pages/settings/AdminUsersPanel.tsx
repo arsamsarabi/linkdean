@@ -6,6 +6,7 @@ import { QueryErrorAlert } from '@/components'
 import { useAdminUsers, useLiftBans, useMe, useUpdateAdminUser } from '@/hooks'
 import type { AdminUserSummary } from '@/schemas'
 import { banEndLabel } from '@/services'
+import { AdminResetLinkModal } from './AdminResetLinkModal'
 import { BanUserModal } from './BanUserModal'
 import { SettingsSkeleton } from './SettingsSkeleton'
 
@@ -27,6 +28,7 @@ export function AdminUsersPanel(): ReactElement {
   const me = useMe()
   const lift = useLiftBans()
   const [banTarget, setBanTarget] = useState<{ id: string; label: string } | null>(null)
+  const [resetTarget, setResetTarget] = useState<{ id: string; label: string } | null>(null)
 
   const filteredUsers = useMemo(() => allUsers.filter((u) => matchesAdminUser(u, userQuery)), [allUsers, userQuery])
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ADMIN_USERS_PAGE_SIZE))
@@ -46,6 +48,7 @@ export function AdminUsersPanel(): ReactElement {
   return (
     <Paper p="xl" withBorder>
       {banTarget ? <BanUserModal user={banTarget} onClose={() => setBanTarget(null)} /> : null}
+      {resetTarget ? <AdminResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} /> : null}
       <Stack gap="md">
         <div>
           <Text fw={500}>Accounts</Text>
@@ -88,20 +91,31 @@ export function AdminUsersPanel(): ReactElement {
                   {u.email}
                 </Text>
               </div>
-              {u.banned ? (
-                <Button size="xs" variant="default" disabled={lift.isPending} onClick={() => unban(u.id)}>
-                  Unban
-                </Button>
-              ) : u.id !== me.data?.user.id ? (
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  color="red"
-                  onClick={() => setBanTarget({ id: u.id, label: u.display_name?.trim() || u.email })}
-                >
-                  Ban
-                </Button>
-              ) : null}
+              <Group gap="xs" wrap="nowrap">
+                {u.has_password ? (
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    onClick={() => setResetTarget({ id: u.id, label: u.display_name?.trim() || u.email })}
+                  >
+                    Reset link
+                  </Button>
+                ) : null}
+                {u.banned ? (
+                  <Button size="xs" variant="default" disabled={lift.isPending} onClick={() => unban(u.id)}>
+                    Unban
+                  </Button>
+                ) : u.id !== me.data?.user.id ? (
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    onClick={() => setBanTarget({ id: u.id, label: u.display_name?.trim() || u.email })}
+                  >
+                    Ban
+                  </Button>
+                ) : null}
+              </Group>
             </Group>
             <Switch
               label="Admin"

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   activityEventsEnvelopeSchema,
   adminReindexSchema,
+  adminResetLinkSchema,
   adminUserEnvelopeSchema,
   adminUsersEnvelopeSchema,
   apiKeysEnvelopeSchema,
@@ -29,6 +30,7 @@ import {
   exposedContentEnvelopeSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
+  forgotPasswordResponseSchema,
   forkCategoryResultSchema,
   globalPassphraseSchema,
   importResultSchema,
@@ -61,6 +63,7 @@ import {
   type ActivityAction,
   type ActivityEvent,
   type ActivitySubjectType,
+  type AdminResetLink,
   type AdminUserSummary,
   type ApiKey,
   type BanDurationBody,
@@ -87,6 +90,7 @@ import {
   type ExposedContent,
   type FollowRelation,
   type FollowUser,
+  type ForgotPasswordResponse,
   type ForkCategoryResult,
   type ModerateItem,
   type ModerateOutcome,
@@ -137,6 +141,9 @@ export const api = {
     body: { api_keys_enabled?: boolean; is_admin?: boolean }
   ): Promise<{ user: AdminUserSummary }> =>
     req(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, adminUserEnvelopeSchema),
+
+  createResetLink: (id: string): Promise<AdminResetLink> =>
+    req(`/admin/users/${id}/reset-link`, { method: 'POST' }, adminResetLinkSchema),
 
   listBans: (): Promise<{ bans: BanView[] }> => req('/admin/bans', {}, bansEnvelopeSchema),
 
@@ -260,6 +267,16 @@ export const api = {
 
   login: (body: { email: string; password: string }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/login', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
+
+  forgotPassword: (email: string): Promise<ForgotPasswordResponse> =>
+    req('/auth/password/forgot', { method: 'POST', body: JSON.stringify({ email }) }, forgotPasswordResponseSchema),
+
+  resetPassword: (body: {
+    token: string
+    password: string
+    revoke_api_keys: boolean
+  }): Promise<{ user: UserPublic; token: string }> =>
+    req('/auth/password/reset', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 
   logout: (): Promise<{ ok: boolean }> => req('/auth/logout', { method: 'POST' }, okSchema),
 

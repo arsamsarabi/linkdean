@@ -43,6 +43,8 @@ export const bootstrapStatusSchema = z.object({
   bootstrap_token_required: z.boolean().default(false),
   oidc_enabled: z.boolean(),
   registration_open: z.boolean().default(true),
+  /** Outbound mail is on, so a forgotten password can be reset by email. */
+  mail_enabled: z.boolean().default(false),
 })
 
 export const platformSettingsSchema = z.object({
@@ -82,6 +84,8 @@ export const adminUserSummarySchema = z.object({
   created_at: z.string(),
   banned: z.boolean().default(false),
   banned_until: z.string().nullish(),
+  /** False for SSO-only accounts, which cannot get a reset link. */
+  has_password: z.boolean().default(true),
 })
 
 export const adminUsersEnvelopeSchema = z.object({
@@ -125,6 +129,17 @@ export const authTokenResponseSchema = z.object({
   token: z.string(),
 })
 
+export const forgotPasswordResponseSchema = z.object({
+  ok: z.boolean(),
+  /** How long the emailed link works. */
+  minutes: z.number(),
+})
+
+export const adminResetLinkSchema = z.object({
+  url: z.string(),
+  expires_in_hours: z.number(),
+})
+
 export const userEnvelopeSchema = z.object({
   user: userPublicSchema,
 })
@@ -146,5 +161,7 @@ export type PlatformSettings = z.infer<typeof platformSettingsSchema>
 export type ApiKey = z.infer<typeof apiKeySchema>
 export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>
+export type ForgotPasswordResponse = z.infer<typeof forgotPasswordResponseSchema>
+export type AdminResetLink = z.infer<typeof adminResetLinkSchema>
 export type RegistrationInvite = z.infer<typeof registrationInviteSchema>
 export type CreateRegistrationInviteResponse = z.infer<typeof createRegistrationInviteResponseSchema>

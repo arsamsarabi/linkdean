@@ -70,6 +70,7 @@ describe('OnboardingPage', () => {
       bootstrap_token_required: false,
       oidc_enabled: false,
       registration_open: true,
+      mail_enabled: false,
     })
     mocked.me.mockResolvedValue({ user, settings: {} } as unknown as MeResponse)
     mocked.register.mockResolvedValue({ token: 'tok', user } as never)
@@ -95,6 +96,7 @@ describe('OnboardingPage', () => {
       bootstrap_token_required: true,
       oidc_enabled: false,
       registration_open: true,
+      mail_enabled: false,
     })
     const person = userEvent.setup()
     render(wrap(<OnboardingPage />))
@@ -123,6 +125,7 @@ describe('OnboardingPage', () => {
       bootstrap_token_required: false,
       oidc_enabled: false,
       registration_open: true,
+      mail_enabled: false,
     })
     mocked.me.mockResolvedValue({
       user: { is_admin: false, onboarding_completed: false },
