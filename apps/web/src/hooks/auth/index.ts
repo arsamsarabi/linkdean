@@ -9,3 +9,4 @@ export {
   useSetEmailVerified,
   useAdminChangeEmail,
 } from './useEmailVerification'
+export { usePendingOidcLink, useDisconnectSso } from './useSso'

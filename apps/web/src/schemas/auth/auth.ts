@@ -15,6 +15,10 @@ export const userPublicSchema = z.object({
   api_keys_enabled: z.boolean().default(true),
   /** Older servers have no verification, so treat a missing flag as verified. */
   email_verified: z.boolean().default(true),
+  /** Whether a single sign-on identity is attached. */
+  sso_connected: z.boolean().default(false),
+  /** The host of the attached identity's issuer, for display. */
+  sso_provider: z.string().nullish(),
 })
 
 export const userSettingsSchema = z.object({
@@ -133,6 +137,18 @@ export const createRegistrationInviteResponseSchema = z.object({
 export const authTokenResponseSchema = z.object({
   user: userPublicSchema,
   token: z.string(),
+  /** Present when this sign-in attached a pending single sign-on link. */
+  sso_connected: z.boolean().optional(),
+})
+
+/** A single sign-on waiting for a password sign-in; the provider's address comes masked. */
+export const pendingOidcLinkSchema = z.object({
+  email: z.string(),
+})
+
+export const okUserEnvelopeSchema = z.object({
+  ok: z.boolean(),
+  user: userPublicSchema,
 })
 
 export const forgotPasswordResponseSchema = z.object({
@@ -187,6 +203,7 @@ export type UserSettings = z.infer<typeof userSettingsSchema>
 export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
+export type PendingOidcLink = z.infer<typeof pendingOidcLinkSchema>
 export type PlatformSettings = z.infer<typeof platformSettingsSchema>
 export type ApiKey = z.infer<typeof apiKeySchema>
 export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>

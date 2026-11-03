@@ -45,6 +45,8 @@ import {
   notificationEnvelopeSchema,
   notificationsEnvelopeSchema,
   okSchema,
+  okUserEnvelopeSchema,
+  pendingOidcLinkSchema,
   pendingShareInviteSchema,
   platformSettingsEnvelopeSchema,
   profileBookmarksPageSchema,
@@ -72,6 +74,7 @@ import {
   type AdminResetLink,
   type AdminUserSummary,
   type ApiKey,
+  type AuthTokenResponse,
   type BanDurationBody,
   type BanView,
   type BlockRelation,
@@ -105,6 +108,7 @@ import {
   type MuteRelation,
   type Notification,
   type PatchDashboard,
+  type PendingOidcLink,
   type PendingShareInvite,
   type PlatformSettings,
   type Profile,
@@ -289,8 +293,15 @@ export const api = {
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/register', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 
-  login: (body: { email: string; password: string }): Promise<{ user: UserPublic; token: string }> =>
+  login: (body: { email: string; password: string }): Promise<AuthTokenResponse> =>
     req('/auth/login', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
+
+  /** The single sign-on this browser holds waiting for a password sign-in; 404 when there is none. */
+  pendingOidcLink: (): Promise<PendingOidcLink> => req('/auth/oidc/pending-link', {}, pendingOidcLinkSchema),
+
+  /** Detaches single sign-on; needs the account's password. A wrong one is a 401 that keeps the session. */
+  disconnectSso: (password: string): Promise<{ ok: boolean; user: UserPublic }> =>
+    req('/auth/oidc/disconnect', { method: 'POST', body: JSON.stringify({ password }) }, okUserEnvelopeSchema),
 
   forgotPassword: (email: string): Promise<ForgotPasswordResponse> =>
     req('/auth/password/forgot', { method: 'POST', body: JSON.stringify({ email }) }, forgotPasswordResponseSchema),

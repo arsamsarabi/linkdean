@@ -1,7 +1,8 @@
-import { useRef, useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { Group, Skeleton, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconUser } from '@tabler/icons-react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   AvatarCropModal,
   FollowListModal,
@@ -23,11 +24,13 @@ import {
 import type { ProfileVisibility } from '@/schemas'
 import { validatePasswordPair } from '@/services'
 import { ChangeEmailModal } from './ChangeEmailModal'
+import { DisconnectSsoModal } from './DisconnectSsoModal'
 import { ProfileAboutCard } from './ProfileAboutCard'
 import { ProfileBlocksCard } from './ProfileBlocksCard'
 import { ProfileDeclinedInvitesCard } from './ProfileDeclinedInvitesCard'
 import { ProfileEditDrawer } from './ProfileEditDrawer'
 import { ProfilePasswordCard } from './ProfilePasswordCard'
+import { ProfileSsoCard } from './ProfileSsoCard'
 
 function ProfileSkeleton(): ReactElement {
   return (
@@ -53,10 +56,25 @@ export function ProfilePage(): ReactElement {
   const deleteAvatar = useDeleteAvatar()
 
   const profile = useProfile(user?.id ?? '', !!user)
-  const mailEnabled = useBootstrap(!!user).data?.mail_enabled ?? false
+  const bootstrap = useBootstrap(!!user).data
+  const mailEnabled = bootstrap?.mail_enabled ?? false
+  const oidcEnabled = bootstrap?.oidc_enabled ?? false
   const [changeEmailOpen, setChangeEmailOpen] = useState(false)
+  const [disconnectOpen, setDisconnectOpen] = useState(false)
 
-  const [editOpen, setEditOpen] = useState(false)
+  // Back from a Connect: the callback says how it went. Keep the outcome, then clean the URL.
+  const nav = useNavigate()
+  const search = useSearch({ from: '/_app/profile' })
+  const [ssoError, setSsoError] = useState<string | null>(search.oidc_error ?? null)
+  const ssoReturnHandled = useRef(false)
+  useEffect(() => {
+    if (ssoReturnHandled.current || (!search.sso && !search.oidc_error)) return
+    ssoReturnHandled.current = true
+    if (search.sso === 'connected') notifications.show({ message: 'Single sign-on connected' })
+    void nav({ to: '/profile', search: {}, replace: true })
+  }, [search.sso, search.oidc_error, nav])
+
+  const [editOpen, setEditOpen] = useState(() => !!search.sso || !!search.oidc_error)
   const [list, setList] = useState<FollowListKind | null>(null)
   const [visibility, setVisibility] = useState<ProfileVisibility>('hidden')
   const [displayName, setDisplayName] = useState('')
@@ -230,6 +248,17 @@ export function ProfilePage(): ReactElement {
                 )
               }}
             />
+
+            {oidcEnabled ? (
+              <ProfileSsoCard
+                connected={!!user.sso_connected}
+                provider={user.sso_provider}
+                hasPassword={!!user.has_password}
+                error={ssoError}
+                onDismissError={() => setSsoError(null)}
+                onDisconnect={() => setDisconnectOpen(true)}
+              />
+            ) : null}
           </ProfileEditDrawer>
         </>
       )}
@@ -237,6 +266,8 @@ export function ProfilePage(): ReactElement {
       {changeEmailOpen && user ? (
         <ChangeEmailModal currentEmail={user.email} onClose={() => setChangeEmailOpen(false)} />
       ) : null}
+
+      {disconnectOpen ? <DisconnectSsoModal onClose={() => setDisconnectOpen(false)} /> : null}
 
       <AvatarCropModal
         opened={cropOpen}

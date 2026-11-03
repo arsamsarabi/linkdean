@@ -19,7 +19,7 @@ import { IconLogin, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { LogoMark, QueryErrorAlert } from '@/components'
-import { useBootstrap, useLogin } from '@/hooks'
+import { useBootstrap, useLogin, usePendingOidcLink } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import motion from '@/styles/motion.module.css'
 
@@ -31,7 +31,8 @@ export function LoginPage(): ReactElement {
   const [password, setPassword] = useState('')
   const bootstrap = useBootstrap()
   const login = useLogin()
-  const { oidc_error: oidcError } = useSearch({ from: '/login' })
+  const { oidc_error: oidcError, link } = useSearch({ from: '/login' })
+  const pendingLink = usePendingOidcLink(!!link)
 
   useEffect(() => {
     if (bootstrap.data?.needs_bootstrap) {
@@ -43,6 +44,9 @@ export function LoginPage(): ReactElement {
     if (login.isPending) return
     try {
       const res = await login.mutateAsync({ email, password })
+      if (res.sso_connected) {
+        notifications.show({ message: 'Single sign-on connected' })
+      }
       if (!res.user.onboarding_completed) {
         void nav({ to: '/onboarding' })
         return
@@ -95,6 +99,16 @@ export function LoginPage(): ReactElement {
             <Alert color="red" variant="light" title="Single sign-on failed">
               {oidcError}
             </Alert>
+          ) : null}
+          {pendingLink.data && !login.isError ? (
+            <Stack gap={4}>
+              <Alert color="violet" variant="light">
+                An account already uses {pendingLink.data.email}. Sign in with its password to connect single sign-on.
+              </Alert>
+              <Text size="sm" c="dimmed">
+                Don&apos;t know this account&apos;s password? Ask your admin.
+              </Text>
+            </Stack>
           ) : null}
           {login.isError ? (
             <Alert color="red" variant="light">
