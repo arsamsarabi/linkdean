@@ -80,10 +80,13 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - Separate storage volume and a background job queue.
     - Deploy: archive worker and volume mount convention.
 
-13. **Teams** (L). Shared spaces for households and small groups, beyond sharing single folders.
-    - Create a team; invite and remove members.
-    - View a team, its members, bookmarks, lists and dashboards.
-    - Team activity, comments and likes.
+13. **Organizations and teams** (L). Organizations own shared content in team spaces, with owner, admin, member and guest roles, team roles, restricted folders, email invites, lifecycle rules and a basic audit log. Personal libraries stay private and unchanged. Requirements: [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md). Needs outbound email parts B and C first. After v1:
+    - Invite links (role, expiry, use limit; off by default).
+    - Verified domains (DNS TXT proof), then auto-join for matching verified addresses.
+    - SSO (SAML / per-organization OIDC) and SCIM provisioning.
+    - Team vaults: shared keys, rotation when members leave, recovery.
+    - Audit log: every content edit and restricted-folder view, configurable retention, SIEM or webhook streaming, hash-chained tamper evidence.
+    - Custom roles and a Billing manager role, when a customer needs them.
 
 14. **Localization** (M). i18n-ready strings first, then locale packs.
 
@@ -99,6 +102,7 @@ Revisit once the stages above are done.
 - **Managed service** (L). Linkdean stays self-hosted first, with an optional hosted offering:
   - Hosted on a cloud provider (GCP, AWS or similar), starting as a thin, cheap layer that scales up with demand.
   - A marketing landing page: what the app is, links to the docs and GitHub, membership tiers and pricing.
+  - Plans as set out in the organizations and teams design (Free, Pro, Team, Business, Enterprise; self-hosted ungated). Decide pricing models and whether there are one or several paid personal plans.
 - **Native mobile apps** (L). iOS and Android, separate from the responsive web app and PWA.
 - **Desktop app** (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
 - **Gamification** (M). Points and badges on top of likes and ratings.
