@@ -71,6 +71,7 @@ Only enable it when the proxy is the sole route to the API, and make sure the pr
 | Account lockout | 50 failed logins on one account from any address lock that account for 15 minutes, **including the correct password**. Someone who knows a user's email can trigger this on purpose |
 | Registration | 10 attempts per address per 15 minutes, counted whether or not they succeed |
 | Email verification and change | Emails: 3 per account and 10 per client IP. Link uses: 10 per client IP. Each per 15 minutes |
+| Share invite emails | 20 per owner per hour. Past that the share is still created without an email, and the owner is told none was sent |
 | Vault unlock, recovery, global unlock, recovery key replacement, global passphrase off | 10 failed attempts per user per 15 minutes, shared across all of these |
 | Limit storage | Counters live in API memory. Restarting the API resets them, and several API replicas would each keep their own |
 | Not limited yet | Password change and global vault passphrase change |
@@ -140,6 +141,13 @@ Email verification:
 - **Require verified email** under **Settings → Admin** holds unverified accounts at a verify screen with **Resend email** and **Sign out**, and the API answers `403` with `{"code":"email_unverified"}` on every route outside `/api/auth/`. It can only be turned on while mail is on, and it never applies to admins, so it cannot lock everyone out. If you turn mail off while it is on, the gate stops applying until mail is back.
 - Each account can send 3 verification or email change emails per 15 minutes, and each client IP 10. Each client IP can try 10 verification or email change links per 15 minutes.
 - **Upgrading:** every account that exists when you upgrade counts as verified (migration `042`). If you do not trust an account's address, remove its verification under **Settings → Admin → Accounts**.
+
+Share invites and notifications:
+
+- With mail on, sharing a folder or dashboard emails the invitee. A verified account gets an invite that links to Linkdean's Shared page. An address with no account, or an unverified one, gets the claim link (`APP_URL/register?share=…`), which also works while signed in. The owner still sees that link to copy. Nothing is emailed for an access change, or to someone who declined an earlier invite from the same owner.
+- Each owner can send 20 invite emails per hour. Past that the share is still created, and the owner is told no email was sent and to copy the link instead. The count lives in API memory, like the other limits, so a restart resets it.
+- People choose which notifications they also get by email under **Settings → Notifications**. Share invites and moderation changes to their public content are on by default; access changes, revoked shares, edits in shared folders, likes, comments, ratings and new followers are off. Only verified addresses get them, the in-app block and mute rules still apply, and every email ends with a link to that settings page. There are no digests or one-click unsubscribe links yet.
+- With mail off, notifications stay in the app only and nothing waits to be sent: turning mail on later does not send old notifications. The settings tab says email notifications need outbound email.
 
 ### Single sign-on
 

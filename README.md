@@ -61,7 +61,7 @@ Linkdean is a small, self-hosted bookmarks server: Postgres, optional Meilisearc
 | **Dashboards** | Multi-board glance home; shareable layouts |
 | **Search** | Meilisearch full-text for non-vault bookmarks |
 | **Vault** | Passphrase-protected categories; plaintext never indexed |
-| **Sharing** | Same-instance folder / dashboard ACL; likes, comments, ratings |
+| **Sharing** | Same-instance folder / dashboard ACL; invite and notification emails; likes, comments, ratings |
 | **Auth** | Local password, password reset, email verification, optional OIDC with account linking, admin accounts, API keys |
 | **Import / export** | Netscape, JSON, Pocket, Raindrop |
 | **Ops** | Compose healthchecks, ready probe, backup recipe, admin reindex, optional SMTP email |
@@ -226,7 +226,7 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 
 ## Roadmap
 
-**Next up:** browser extension (save tab / file to category). Backlog includes public list URLs, email invites, search filters, password reset by email, PWA, and more. Far out: native apps, archive/downloads, gamification.
+**Next up:** browser extension (save tab / file to category). Backlog includes search filters, notification digests, PWA, and more. Far out: native apps, archive/downloads, gamification.
 
 - Capabilities: [docs/FEATURES.md](docs/FEATURES.md)
 - Plan: [docs/ROADMAP.md](docs/ROADMAP.md)

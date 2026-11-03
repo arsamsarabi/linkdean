@@ -74,6 +74,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Share folders with invitees: **read** or **write** ACL
 - Pending email invites: share with an address that has no account yet, or whose account has not verified it; the invite waits until an account verifies the address, and access starts when they accept
 - Invite claim links also work while signed in, for the account whose address the invite was sent to
+- Invite emails (needs mail): sharing with a verified account emails it an invite to open Linkdean, and sharing with an address emails the claim link. The share drawer says "We emailed them an invite." For an address the owner still sees the claim link to copy. No email for a declined invitee or an access change. Each owner can send 20 invite emails an hour; past that the share is still saved and the drawer says no email was sent
 - Accept or decline shares from the notifications drawer; nothing appears in your library until you accept. Declining is silent and stops repeat invites until you restore it from Profile
 - Collaborative edit on write-shared collections
 - Save a shared bookmark into your own library (⋮ → Save to my library; lands in Unsorted)
@@ -92,6 +93,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - In-app notifications: share invite / access change / revoke, shared edits
 - Bell + drawer in the app shell (unread count)
+- Notification emails (needs mail): **Settings → Notifications** has an email switch per kind. Share invites and moderation changes are on by default; access changes, revoked shares, shared edits, likes, comments, ratings and new followers are off. The same block and mute rules apply, and each email links back to that settings tab. With mail off the tab says email needs outbound mail and the switches are disabled
 - Likes, comments, and 1–5 ratings on **shared** bookmarks, lists, and dashboards
 - Follow / unfollow users (⋮ on shared bookmarks; lists on Profile; notifies the followee)
 - Block / unblock users (⋮ on shared bookmarks; list on Profile): removes follows and shares both ways without telling them, and hides each other's social activity and notifications
