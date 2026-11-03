@@ -45,6 +45,32 @@ describe('banned responses', () => {
   })
 })
 
+describe('unverified email responses', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const unverified = { error: 'email_unverified', code: 'email_unverified' }
+
+  function stubLocation(pathname: string) {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { pathname, assign })
+    return assign
+  }
+
+  it('sends the hard gate 403 to the verify email page', async () => {
+    const assign = stubLocation('/library')
+    respond(403, unverified)
+    await expect(req('/bookmarks')).rejects.toThrow('email_unverified')
+    expect(assign).toHaveBeenCalledWith('/verify-email')
+  })
+
+  it('stays put on the verify email page', async () => {
+    const assign = stubLocation('/verify-email')
+    respond(403, unverified)
+    await expect(req('/bookmarks')).rejects.toThrow()
+    expect(assign).not.toHaveBeenCalled()
+  })
+})
+
 describe('credentials', () => {
   afterEach(() => vi.unstubAllGlobals())
 

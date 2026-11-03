@@ -4,11 +4,12 @@ import { notifications } from '@mantine/notifications'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { AvatarCropModal, QueryErrorAlert } from '@/components'
-import { useBootstrap, useRegister, useSyncDuringRender, useUploadAvatar } from '@/hooks'
+import { useBootstrap, useRegister, useSessionCheck, useSyncDuringRender, useUploadAvatar } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import { RegisterForm } from './RegisterForm'
 import { RegisterInviteGate } from './RegisterInviteGate'
+import { ShareClaimSignedIn } from './ShareClaimSignedIn'
 
 export function RegisterPage(): ReactElement {
   const nav = useNavigate()
@@ -25,6 +26,8 @@ export function RegisterPage(): ReactElement {
   const bootstrap = useBootstrap()
   const register = useRegister()
   const uploadAvatar = useUploadAvatar()
+  // An invite link opened while signed in is claimed for this account instead.
+  const session = useSessionCheck(!!search.share)
 
   useSyncDuringRender([search.invite], () => {
     if (search.invite) setInviteCode(search.invite)
@@ -68,7 +71,11 @@ export function RegisterPage(): ReactElement {
     }
   }
 
-  if (bootstrap.isLoading) {
+  if (search.share && session.isSuccess) {
+    return <ShareClaimSignedIn token={search.share} />
+  }
+
+  if (bootstrap.isLoading || (search.share && session.isLoading)) {
     return (
       <Center mih="70vh">
         <Loader color="violet" type="dots" />

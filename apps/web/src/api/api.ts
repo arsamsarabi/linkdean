@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import {
   activityEventsEnvelopeSchema,
+  adminEmailChangeResponseSchema,
+  adminEmailVerifiedResponseSchema,
   adminReindexSchema,
   adminResetLinkSchema,
   adminUserEnvelopeSchema,
@@ -26,6 +28,7 @@ import {
   dashboardSharesEnvelopeSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
+  emailChangeResponseSchema,
   emailStatusSchema,
   exposedContentEnvelopeSchema,
   followEnvelopeSchema,
@@ -50,6 +53,7 @@ import {
   publicListSchema,
   recoveryKeySchema,
   registrationInvitesEnvelopeSchema,
+  resendVerificationResponseSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
   shareInvitesEnvelopeSchema,
@@ -63,6 +67,8 @@ import {
   type ActivityAction,
   type ActivityEvent,
   type ActivitySubjectType,
+  type AdminEmailChangeResponse,
+  type AdminEmailVerifiedResponse,
   type AdminResetLink,
   type AdminUserSummary,
   type ApiKey,
@@ -86,6 +92,7 @@ import {
   type DashboardSharesEnvelope,
   type DashboardSummary,
   type DuplicateGroup,
+  type EmailChangeResponse,
   type EmailStatus,
   type ExposedContent,
   type FollowRelation,
@@ -107,6 +114,7 @@ import {
   type PublicList,
   type PutDashboardLayout,
   type RegistrationInvite,
+  type ResendVerificationResponse,
   type ShareAccess,
   type ShareInvite,
   type SocialSubjectType,
@@ -131,6 +139,7 @@ export const api = {
   updatePlatformSettings: (body: {
     registration_open?: boolean
     api_keys_enabled?: boolean
+    require_verified_email?: boolean
   }): Promise<{ settings: PlatformSettings }> =>
     req('/admin/platform-settings', { method: 'PATCH', body: JSON.stringify(body) }, platformSettingsEnvelopeSchema),
 
@@ -144,6 +153,21 @@ export const api = {
 
   createResetLink: (id: string): Promise<AdminResetLink> =>
     req(`/admin/users/${id}/reset-link`, { method: 'POST' }, adminResetLinkSchema),
+
+  setEmailVerified: (id: string, verified: boolean): Promise<AdminEmailVerifiedResponse> =>
+    req(
+      `/admin/users/${id}/email-verified`,
+      { method: 'POST', body: JSON.stringify({ verified }) },
+      adminEmailVerifiedResponseSchema
+    ),
+
+  /** Applies at once and marks the address verified: the admin vouches for it. */
+  adminChangeEmail: (id: string, email: string): Promise<AdminEmailChangeResponse> =>
+    req(
+      `/admin/users/${id}/email`,
+      { method: 'POST', body: JSON.stringify({ email }) },
+      adminEmailChangeResponseSchema
+    ),
 
   listBans: (): Promise<{ bans: BanView[] }> => req('/admin/bans', {}, bansEnvelopeSchema),
 
@@ -278,6 +302,23 @@ export const api = {
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/password/reset', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 
+  resendVerification: (): Promise<ResendVerificationResponse> =>
+    req('/auth/email/resend', { method: 'POST' }, resendVerificationResponseSchema),
+
+  verifyEmail: (token: string): Promise<{ ok: boolean }> =>
+    req('/auth/email/verify', { method: 'POST', body: JSON.stringify({ token }) }, okSchema),
+
+  /** Sends a link to the new address; the email stays the same until it is opened. */
+  changeEmail: (body: { password: string; new_email: string }): Promise<EmailChangeResponse> =>
+    req('/auth/email/change', { method: 'POST', body: JSON.stringify(body) }, emailChangeResponseSchema),
+
+  confirmEmailChange: (token: string): Promise<{ ok: boolean }> =>
+    req('/auth/email/confirm-change', { method: 'POST', body: JSON.stringify({ token }) }, okSchema),
+
+  /** Claims an invite link sent to this account's own address while signed in. */
+  claimShareInvite: (token: string): Promise<{ ok: boolean }> =>
+    req('/shares/claim', { method: 'POST', body: JSON.stringify({ token }) }, okSchema),
+
   logout: (): Promise<{ ok: boolean }> => req('/auth/logout', { method: 'POST' }, okSchema),
 
   me: (): Promise<{
@@ -285,6 +326,7 @@ export const api = {
     settings: UserSettings
     vault_unlocked: boolean
     api_keys_allowed: boolean
+    require_verified_email: boolean
   }> => req('/auth/me', {}, meResponseSchema),
 
   completeOnboarding: (): Promise<{ user: UserPublic }> =>
@@ -294,7 +336,6 @@ export const api = {
     display_name?: string | null
     bio?: string | null
     timezone?: string | null
-    email?: string
     profile_visibility?: ProfileVisibility
   }): Promise<{ user: UserPublic }> =>
     req('/users/me', { method: 'PATCH', body: JSON.stringify(body) }, userEnvelopeSchema),

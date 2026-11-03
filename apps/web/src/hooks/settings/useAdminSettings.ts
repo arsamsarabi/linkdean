@@ -28,7 +28,7 @@ export function usePlatformSettings(enabled = true): UseQueryResult<PlatformEnve
 export function useUpdatePlatformSettings(): UseMutationResult<
   PlatformEnvelope,
   Error,
-  { registration_open?: boolean; api_keys_enabled?: boolean }
+  { registration_open?: boolean; api_keys_enabled?: boolean; require_verified_email?: boolean }
 > {
   const qc = useQueryClient()
   return useMutation({

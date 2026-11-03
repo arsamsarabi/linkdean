@@ -11,6 +11,7 @@ import {
   type FollowListKind,
 } from '@/components'
 import {
+  useBootstrap,
   useChangePassword,
   useDeleteAvatar,
   useMe,
@@ -21,6 +22,7 @@ import {
 } from '@/hooks'
 import type { ProfileVisibility } from '@/schemas'
 import { validatePasswordPair } from '@/services'
+import { ChangeEmailModal } from './ChangeEmailModal'
 import { ProfileAboutCard } from './ProfileAboutCard'
 import { ProfileBlocksCard } from './ProfileBlocksCard'
 import { ProfileDeclinedInvitesCard } from './ProfileDeclinedInvitesCard'
@@ -51,6 +53,8 @@ export function ProfilePage(): ReactElement {
   const deleteAvatar = useDeleteAvatar()
 
   const profile = useProfile(user?.id ?? '', !!user)
+  const mailEnabled = useBootstrap(!!user).data?.mail_enabled ?? false
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false)
 
   const [editOpen, setEditOpen] = useState(false)
   const [list, setList] = useState<FollowListKind | null>(null)
@@ -58,7 +62,6 @@ export function ProfilePage(): ReactElement {
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
   const [timezone, setTimezone] = useState<string | null>(null)
-  const [email, setEmail] = useState('')
   const [currentPw, setCurrentPw] = useState('')
   const [revokeKeys, setRevokeKeys] = useState(false)
   const [newPw, setNewPw] = useState('')
@@ -73,7 +76,6 @@ export function ProfilePage(): ReactElement {
     setDisplayName(user.display_name || '')
     setBio(user.bio || '')
     setTimezone(user.timezone || null)
-    setEmail(user.email)
     setVisibility(user.profile_visibility)
   }
 
@@ -153,13 +155,15 @@ export function ProfilePage(): ReactElement {
               displayName={displayName}
               bio={bio}
               timezone={timezone}
-              email={email}
+              email={user.email}
+              hasPassword={!!user.has_password}
+              mailEnabled={mailEnabled}
               saving={saveProfile.isPending}
               resetRef={resetRef}
               onDisplayName={setDisplayName}
               onBio={setBio}
               onTimezone={setTimezone}
-              onEmail={setEmail}
+              onChangeEmail={() => setChangeEmailOpen(true)}
               onPickAvatar={(f) => {
                 if (f) {
                   setCropFile(f)
@@ -181,7 +185,6 @@ export function ProfilePage(): ReactElement {
                     display_name: displayName || null,
                     bio: bio || null,
                     timezone: timezone || null,
-                    email,
                     profile_visibility: visibility,
                   },
                   {
@@ -230,6 +233,10 @@ export function ProfilePage(): ReactElement {
           </ProfileEditDrawer>
         </>
       )}
+
+      {changeEmailOpen && user ? (
+        <ChangeEmailModal currentEmail={user.email} onClose={() => setChangeEmailOpen(false)} />
+      ) : null}
 
       <AvatarCropModal
         opened={cropOpen}

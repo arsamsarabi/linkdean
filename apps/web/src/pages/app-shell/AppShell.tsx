@@ -13,6 +13,7 @@ import {
   QueryErrorAlert,
 } from '@/components'
 import {
+  useBootstrap,
   useLogout,
   usePasteToAdd,
   usePrefsHydration,
@@ -21,10 +22,12 @@ import {
   useUnreadNotificationCount,
 } from '@/hooks'
 import { resolveDefaultLanding } from '@/lib'
+import { isGated } from '@/services'
 import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
 import { AppSidebar } from './AppSidebar'
 import { MobileTabBar } from './MobileTabBar'
+import { VerifyEmailBanner } from './VerifyEmailBanner'
 
 export function AppShell(): ReactElement {
   const nav = useNavigate()
@@ -36,12 +39,14 @@ export function AppShell(): ReactElement {
   const shell = useShellUi()
   const unread = useUnreadNotificationCount(!!me.data)
   const invites = useShareInvites(!!me.data)
+  const mailEnabled = useBootstrap(!!me.data).data?.mail_enabled ?? false
   const pendingInvites = invites.data?.invites.filter((i) => !i.rejected_at).length ?? 0
 
   useEffect(() => {
-    if (me.data && !me.data.user.onboarding_completed) {
-      void nav({ to: '/onboarding' })
-    }
+    if (!me.data) return
+    // `/auth/me` is open under the hard gate, so check it here before other calls answer 403.
+    if (isGated(me.data)) void nav({ to: '/verify-email', replace: true })
+    else if (!me.data.user.onboarding_completed) void nav({ to: '/onboarding' })
   }, [me.data, nav])
 
   useHotkeys([
@@ -103,6 +108,7 @@ export function AppShell(): ReactElement {
           {me.isError ? (
             <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} title="Failed to load account" />
           ) : null}
+          <VerifyEmailBanner unverified={user ? !user.email_verified : false} mailEnabled={mailEnabled} />
           {loading ? (
             <Group justify="center" py={80}>
               <Loader color="violet" type="dots" />

@@ -1,6 +1,6 @@
 import { type ReactElement, type RefObject } from 'react'
 import { Button, Divider, Fieldset, FileButton, Group, Paper, Select, Stack, Textarea, TextInput } from '@mantine/core'
-import { IconDeviceFloppy, IconPhoto, IconTrash } from '@tabler/icons-react'
+import { IconDeviceFloppy, IconMailCog, IconPhoto, IconTrash } from '@tabler/icons-react'
 import { UserAvatar } from '@/components'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -17,12 +17,16 @@ type Props = {
   bio: string
   timezone: string | null
   email: string
+  /** SSO-only accounts have no password; their identity provider owns the address. */
+  hasPassword: boolean
+  /** A change needs a confirmation email, so with mail off only an admin can change it. */
+  mailEnabled: boolean
   saving: boolean
   resetRef: RefObject<(() => void) | null>
   onDisplayName: (v: string) => void
   onBio: (v: string) => void
   onTimezone: (v: string | null) => void
-  onEmail: (v: string) => void
+  onChangeEmail: () => void
   onPickAvatar: (f: File | null) => void
   onRemoveAvatar: () => void
   onSave: () => void
@@ -36,12 +40,14 @@ export function ProfileAboutCard({
   bio,
   timezone,
   email,
+  hasPassword,
+  mailEnabled,
   saving,
   resetRef,
   onDisplayName,
   onBio,
   onTimezone,
-  onEmail,
+  onChangeEmail,
   onPickAvatar,
   onRemoveAvatar,
   onSave,
@@ -78,7 +84,26 @@ export function ProfileAboutCard({
             />
             <Textarea label="Bio" value={bio} onChange={(e) => onBio(e.currentTarget.value)} minRows={2} autosize />
             <Select label="Timezone" searchable clearable data={TIMEZONES} value={timezone} onChange={onTimezone} />
-            <TextInput label="Email" value={email} onChange={(e) => onEmail(e.currentTarget.value)} />
+            <Group gap="sm" align="flex-end" wrap="nowrap">
+              <TextInput
+                label="Email"
+                value={email}
+                readOnly
+                flex={1}
+                description={
+                  !hasPassword
+                    ? "Your identity provider manages this account's email."
+                    : !mailEnabled
+                      ? 'Ask your admin to change it.'
+                      : undefined
+                }
+              />
+              {hasPassword && mailEnabled ? (
+                <Button variant="default" leftSection={<IconMailCog {...iconSm} />} onClick={onChangeEmail}>
+                  Change email
+                </Button>
+              ) : null}
+            </Group>
           </Stack>
         </Fieldset>
 

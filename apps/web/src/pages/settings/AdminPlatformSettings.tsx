@@ -3,7 +3,7 @@ import { Button, Paper, Stack, Switch, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconRefresh } from '@tabler/icons-react'
 import { QueryErrorAlert, TwoColumnLayout } from '@/components'
-import { usePlatformSettings, useReindexSearch, useUpdatePlatformSettings } from '@/hooks'
+import { useBootstrap, usePlatformSettings, useReindexSearch, useUpdatePlatformSettings } from '@/hooks'
 import { AdminEmailPanel } from './AdminEmailPanel'
 import { AdminInvitesPanel } from './AdminInvitesPanel'
 import { AdminUsersPanel } from './AdminUsersPanel'
@@ -14,6 +14,7 @@ export function AdminPlatformSettings(): ReactElement {
   const platform = usePlatformSettings(true)
   const save = useUpdatePlatformSettings()
   const reindex = useReindexSearch()
+  const mailEnabled = useBootstrap().data?.mail_enabled ?? false
 
   if (platform.isError) {
     return (
@@ -31,6 +32,7 @@ export function AdminPlatformSettings(): ReactElement {
 
   const open = platform.data.settings.registration_open
   const apiKeysOn = platform.data.settings.api_keys_enabled
+  const requireVerified = platform.data.settings.require_verified_email
 
   return (
     <TwoColumnLayout
@@ -63,6 +65,23 @@ export function AdminPlatformSettings(): ReactElement {
                   const api_keys_enabled = e.currentTarget.checked
                   save.mutate(
                     { api_keys_enabled },
+                    {
+                      onSuccess: () => notifications.show({ message: 'Platform settings saved' }),
+                      onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+                    }
+                  )
+                }}
+              />
+              <Switch
+                label="Require verified email"
+                description="Unverified accounts can only verify or sign out. Needs outbound email."
+                checked={requireVerified}
+                // Turning it off stays possible with mail off, so the gate never traps anyone.
+                disabled={save.isPending || (!mailEnabled && !requireVerified)}
+                onChange={(e) => {
+                  const require_verified_email = e.currentTarget.checked
+                  save.mutate(
+                    { require_verified_email },
                     {
                       onSuccess: () => notifications.show({ message: 'Platform settings saved' }),
                       onError: (err) => notifications.show({ color: 'red', message: String(err) }),

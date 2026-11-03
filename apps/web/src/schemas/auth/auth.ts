@@ -13,6 +13,8 @@ export const userPublicSchema = z.object({
   is_admin: z.boolean(),
   onboarding_completed: z.boolean(),
   api_keys_enabled: z.boolean().default(true),
+  /** Older servers have no verification, so treat a missing flag as verified. */
+  email_verified: z.boolean().default(true),
 })
 
 export const userSettingsSchema = z.object({
@@ -35,6 +37,8 @@ export const meResponseSchema = z.object({
   settings: userSettingsSchema,
   vault_unlocked: z.boolean(),
   api_keys_allowed: z.boolean().default(true),
+  /** The hard gate: unverified accounts that are not admins can only verify or sign out. */
+  require_verified_email: z.boolean().default(false),
 })
 
 export const bootstrapStatusSchema = z.object({
@@ -50,6 +54,7 @@ export const bootstrapStatusSchema = z.object({
 export const platformSettingsSchema = z.object({
   registration_open: z.boolean(),
   api_keys_enabled: z.boolean().default(true),
+  require_verified_email: z.boolean().default(false),
   updated_at: z.string(),
 })
 
@@ -86,6 +91,7 @@ export const adminUserSummarySchema = z.object({
   banned_until: z.string().nullish(),
   /** False for SSO-only accounts, which cannot get a reset link. */
   has_password: z.boolean().default(true),
+  email_verified: z.boolean().default(true),
 })
 
 export const adminUsersEnvelopeSchema = z.object({
@@ -140,6 +146,30 @@ export const adminResetLinkSchema = z.object({
   expires_in_hours: z.number(),
 })
 
+export const resendVerificationResponseSchema = z.object({
+  ok: z.boolean(),
+  /** True when the address was already verified, so nothing was sent. */
+  verified: z.boolean(),
+  /** How long the emailed link works; absent when nothing was sent. */
+  hours: z.number().optional(),
+})
+
+export const emailChangeResponseSchema = z.object({
+  ok: z.boolean(),
+  hours: z.number(),
+})
+
+export const adminEmailVerifiedResponseSchema = z.object({
+  ok: z.boolean(),
+  email_verified: z.boolean(),
+})
+
+export const adminEmailChangeResponseSchema = z.object({
+  ok: z.boolean(),
+  email: z.string(),
+  email_verified: z.boolean(),
+})
+
 export const userEnvelopeSchema = z.object({
   user: userPublicSchema,
 })
@@ -163,5 +193,9 @@ export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>
 export type ForgotPasswordResponse = z.infer<typeof forgotPasswordResponseSchema>
 export type AdminResetLink = z.infer<typeof adminResetLinkSchema>
+export type ResendVerificationResponse = z.infer<typeof resendVerificationResponseSchema>
+export type EmailChangeResponse = z.infer<typeof emailChangeResponseSchema>
+export type AdminEmailVerifiedResponse = z.infer<typeof adminEmailVerifiedResponseSchema>
+export type AdminEmailChangeResponse = z.infer<typeof adminEmailChangeResponseSchema>
 export type RegistrationInvite = z.infer<typeof registrationInviteSchema>
 export type CreateRegistrationInviteResponse = z.infer<typeof createRegistrationInviteResponseSchema>

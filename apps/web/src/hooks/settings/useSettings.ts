@@ -62,7 +62,6 @@ type ProfileBody = {
   display_name?: string | null
   bio?: string | null
   timezone?: string | null
-  email?: string
   profile_visibility?: ProfileVisibility
 }
 

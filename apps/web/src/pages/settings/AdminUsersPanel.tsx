@@ -3,9 +3,10 @@ import { Badge, Button, Divider, Group, Pagination, Paper, Stack, Switch, Text, 
 import { notifications } from '@mantine/notifications'
 import { IconSearch } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
-import { useAdminUsers, useLiftBans, useMe, useUpdateAdminUser } from '@/hooks'
+import { useAdminUsers, useLiftBans, useMe, useSetEmailVerified, useUpdateAdminUser } from '@/hooks'
 import type { AdminUserSummary } from '@/schemas'
 import { banEndLabel } from '@/services'
+import { AdminChangeEmailModal } from './AdminChangeEmailModal'
 import { AdminResetLinkModal } from './AdminResetLinkModal'
 import { BanUserModal } from './BanUserModal'
 import { SettingsSkeleton } from './SettingsSkeleton'
@@ -29,6 +30,8 @@ export function AdminUsersPanel(): ReactElement {
   const lift = useLiftBans()
   const [banTarget, setBanTarget] = useState<{ id: string; label: string } | null>(null)
   const [resetTarget, setResetTarget] = useState<{ id: string; label: string } | null>(null)
+  const [emailTarget, setEmailTarget] = useState<{ id: string; label: string; email: string } | null>(null)
+  const setVerified = useSetEmailVerified()
 
   const filteredUsers = useMemo(() => allUsers.filter((u) => matchesAdminUser(u, userQuery)), [allUsers, userQuery])
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ADMIN_USERS_PAGE_SIZE))
@@ -45,10 +48,22 @@ export function AdminUsersPanel(): ReactElement {
     })
   }
 
+  function toggleVerified(u: AdminUserSummary): void {
+    const verified = !u.email_verified
+    setVerified.mutate(
+      { id: u.id, verified },
+      {
+        onSuccess: () => notifications.show({ message: verified ? 'Marked verified' : 'Verification removed' }),
+        onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+      }
+    )
+  }
+
   return (
     <Paper p="xl" withBorder>
       {banTarget ? <BanUserModal user={banTarget} onClose={() => setBanTarget(null)} /> : null}
       {resetTarget ? <AdminResetLinkModal user={resetTarget} onClose={() => setResetTarget(null)} /> : null}
+      {emailTarget ? <AdminChangeEmailModal user={emailTarget} onClose={() => setEmailTarget(null)} /> : null}
       <Stack gap="md">
         <div>
           <Text fw={500}>Accounts</Text>
@@ -86,6 +101,11 @@ export function AdminUsersPanel(): ReactElement {
                       Banned {banEndLabel(u.banned_until)}
                     </Badge>
                   ) : null}
+                  {!u.email_verified ? (
+                    <Badge color="yellow" variant="light" size="sm" tt="none">
+                      Unverified
+                    </Badge>
+                  ) : null}
                 </Group>
                 <Text size="xs" c="dimmed">
                   {u.email}
@@ -116,6 +136,18 @@ export function AdminUsersPanel(): ReactElement {
                   </Button>
                 ) : null}
               </Group>
+            </Group>
+            <Group gap="xs">
+              <Button size="xs" variant="subtle" disabled={setVerified.isPending} onClick={() => toggleVerified(u)}>
+                {u.email_verified ? 'Remove verification' : 'Mark verified'}
+              </Button>
+              <Button
+                size="xs"
+                variant="subtle"
+                onClick={() => setEmailTarget({ id: u.id, label: u.display_name?.trim() || u.email, email: u.email })}
+              >
+                Change email
+              </Button>
             </Group>
             <Switch
               label="Admin"

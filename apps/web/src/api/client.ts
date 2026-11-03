@@ -31,6 +31,11 @@ export function banFromBody(body: unknown): BanNotice | null {
   return banNoticeSchema.safeParse((body as { ban?: unknown }).ban).data ?? null
 }
 
+/** The hard gate's 403: this account must verify its email before using the app. */
+export function isEmailUnverified(body: unknown): boolean {
+  return !!body && typeof body === 'object' && (body as { code?: unknown }).code === 'email_unverified'
+}
+
 /** A wrong password is also a 401, so only this code means the session has gone. */
 function sessionExpired(body: unknown): boolean {
   return !!body && typeof body === 'object' && (body as { code?: unknown }).code === 'session_expired'
@@ -45,6 +50,7 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/banned' ||
     pathname === '/forgot-password' ||
     pathname === '/reset-password' ||
+    pathname === '/verify-email' ||
     pathname.startsWith('/l/')
   )
 }
@@ -75,6 +81,9 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
     }
     if (res.status === 403 && banFromBody(body) && location.pathname !== '/banned') {
       location.assign('/banned')
+    }
+    if (res.status === 403 && isEmailUnverified(body) && location.pathname !== '/verify-email') {
+      location.assign('/verify-email')
     }
     if (res.status === 401 && sessionExpired(body) && (isSignedIn() || !isPublicPath(location.pathname))) {
       // A full page load also drops the signed-out user's cached data.
