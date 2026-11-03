@@ -37,7 +37,14 @@ impl Mailer {
         let to: Mailbox = to
             .parse()
             .map_err(|e| format!("invalid recipient {to}: {e}"))?;
+        // Some servers add no Message-ID, and spam filters score its absence.
+        let message_id = format!(
+            "<{}@{}>",
+            uuid::Uuid::new_v4().simple(),
+            self.from.email.domain()
+        );
         let message = Message::builder()
+            .message_id(Some(message_id))
             .from(self.from.clone())
             .to(to)
             .subject(mail.subject.clone())

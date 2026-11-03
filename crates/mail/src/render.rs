@@ -1,6 +1,7 @@
 use minijinja::{AutoEscape, Environment, UndefinedBehavior};
 use serde::Serialize;
 use serde_json::Value;
+use std::fmt::Write;
 
 /// One email: its MJML body, subject line and sample data, embedded at compile time.
 struct Template {
@@ -92,6 +93,25 @@ pub fn render(name: &str, data: &Value, site: &Site) -> Result<Rendered, RenderE
             AutoEscape::Html
         }
     });
+    // minijinja escapes `/` as `&#x2f;`; HTML does not need it, and encoded URLs look like obfuscation to filters.
+    env.set_formatter(
+        |out, state, value| match (state.auto_escape(), value.as_str()) {
+            (AutoEscape::Html, Some(s)) if !value.is_safe() => {
+                for c in s.chars() {
+                    match c {
+                        '&' => out.write_str("&amp;")?,
+                        '<' => out.write_str("&lt;")?,
+                        '>' => out.write_str("&gt;")?,
+                        '"' => out.write_str("&quot;")?,
+                        '\'' => out.write_str("&#x27;")?,
+                        c => out.write_char(c)?,
+                    }
+                }
+                Ok(())
+            }
+            _ => minijinja::escape_formatter(out, state, value),
+        },
+    );
     env.add_template("layout.mjml", LAYOUT).map_err(fail)?;
     env.add_template("macros.mjml", MACROS).map_err(fail)?;
     env.add_template(t.file, t.body).map_err(fail)?;
@@ -128,7 +148,11 @@ pub fn render(name: &str, data: &Value, site: &Site) -> Result<Rendered, RenderE
         .element
         .render(&options)
         .map_err(|e| mjml_err(e.to_string()))?;
-    let text = html2text::from_read(html.as_bytes(), 78).map_err(|e| mjml_err(e.to_string()))?;
+    // Raw mode reads MJML's layout tables as one column: no borders, no cell padding.
+    let text = html2text::config::plain()
+        .raw_mode(true)
+        .string_from_read(html.as_bytes(), 78)
+        .map_err(|e| mjml_err(e.to_string()))?;
     Ok(Rendered {
         subject,
         html,
@@ -177,6 +201,27 @@ mod tests {
         assert!(r.html.contains("ada@example.com"));
         assert!(r.html.contains("Open Linkdean"));
         assert!(r.text.contains("https://links.example.com"));
+        assert!(r.html.contains(r#"href="https://links.example.com""#));
+    }
+
+    #[test]
+    fn plain_text_has_no_table_borders_or_trailing_spaces() {
+        for name in template_names() {
+            let r = render(name, &sample(name).unwrap(), &site()).unwrap();
+            assert!(!r.text.contains('─'), "{name} text has table borders");
+            for line in r.text.lines() {
+                assert_eq!(line, line.trim_end(), "{name} trailing spaces: {line:?}");
+            }
+            assert!(r.text.contains("https://links.example.com"), "{name} url");
+        }
+    }
+
+    #[test]
+    fn every_sample_is_valid_json() {
+        for t in TEMPLATES {
+            serde_json::from_str::<Value>(t.sample)
+                .unwrap_or_else(|e| panic!("{}.sample.json: {e}", t.name));
+        }
     }
 
     #[test]
@@ -189,8 +234,7 @@ mod tests {
     fn values_are_html_escaped() {
         let r = render("test", &json!({ "recipient": "<b>x</b>" }), &site()).unwrap();
         assert!(!r.html.contains("<b>x</b>"));
-        // minijinja also escapes `/` (as `&#x2f;`), so only the opening tag is checked.
-        assert!(r.html.contains("&lt;b&gt;x"));
+        assert!(r.html.contains("&lt;b&gt;x&lt;/b&gt;"));
     }
 
     #[test]

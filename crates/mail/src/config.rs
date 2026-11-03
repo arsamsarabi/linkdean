@@ -164,6 +164,16 @@ mod tests {
     }
 
     #[test]
+    fn debug_output_hides_the_password() {
+        let mut vars = BASE.to_vec();
+        vars.extend([("SMTP_USERNAME", "bot"), ("SMTP_PASSWORD", "s3cret")]);
+        let cfg = parse(&vars).unwrap().unwrap();
+        let printed = format!("{cfg:?}");
+        assert!(printed.contains("bot"));
+        assert!(!printed.contains("s3cret"), "{printed}");
+    }
+
+    #[test]
     fn refuses_half_configurations() {
         assert!(refusal(&[("SMTP_HOST", "smtp.example.com")]).contains("MAIL_FROM"));
         assert!(refusal(&[("MAIL_FROM", "a@example.com")]).contains("SMTP_HOST"));
@@ -204,7 +214,9 @@ mod tests {
         ] {
             assert!(none(host).unwrap().is_some(), "{host} should be allowed");
         }
-        let err = none("smtp.example.com").err().expect("refused").to_string();
-        assert!(err.contains("SMTP_TLS"));
+        for host in ["smtp.example.com", "8.8.8.8", "::ffff:127.0.0.1"] {
+            let err = none(host).err().expect("refused").to_string();
+            assert!(err.contains("SMTP_TLS"), "{host}: {err}");
+        }
     }
 }

@@ -43,6 +43,8 @@ async fn delivers_html_and_text_from_the_configured_sender() {
     let msg = &list["messages"][0];
     assert_eq!(msg["From"]["Address"], "linkdean@example.com");
     assert_eq!(msg["Subject"], "Test email from localhost");
+    let message_id = msg["MessageID"].as_str().expect("Message-ID");
+    assert!(message_id.ends_with("@example.com"), "{message_id}");
     let id = msg["ID"].as_str().expect("message id");
     let full: Value = reqwest::get(format!("{api}/api/v1/message/{id}"))
         .await

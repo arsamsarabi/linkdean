@@ -20,7 +20,7 @@
     <mj-section padding="24px 0 32px">
       <mj-column>
         <mj-text align="center" font-size="12px" line-height="1.5" color="#636772">
-          Sent by <a href="{{ site.app_url }}" style="color:#636772">{{ site.instance }}</a>, a Linkdean instance.<br />
+          Sent by {{ site.instance }} (<a href="{{ site.app_url }}" style="color:#636772">{{ site.app_url }}</a>), a Linkdean instance.<br />
           {% block why %}{% endblock %}
         </mj-text>
       </mj-column>
