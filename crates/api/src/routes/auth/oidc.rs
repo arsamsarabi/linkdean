@@ -4,15 +4,25 @@
 //! OIDC routes, so the API keeps no per-login state. The callback checks the state against the
 //! cookie (login CSRF), sends the verifier (code interception), and validates the ID token's
 //! signature, issuer, audience, expiry and nonce (replay) before trusting its subject.
+//!
+//! A sign-in whose address belongs to a password account does not sign in. It leaves a pending
+//! link, bound to the browser by the `linkdean_oidc_link` cookie, that the next password
+//! sign-in to that account attaches. In connect mode a signed-in user attaches the identity to
+//! their own account directly.
 
-use super::session_cookie;
-use crate::error::ApiResult;
+use super::email_verification::mask_email;
+use super::{bearer_or_cookie, session_cookie};
+use crate::auth::AuthUser;
+use crate::error::{ApiError, ApiResult};
+use crate::mail::enqueue;
+use crate::rate_limit::{client_ip, login_limits};
 use crate::state::AppState;
-use axum::extract::{Query, State};
+use axum::extract::{ConnectInfo, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
+use axum::Json;
 use linkdean_core::crypto::constant_time_eq;
-use linkdean_core::{Error, User};
+use linkdean_core::{issuer_host, Error, User};
 use linkdean_db::{self as db};
 use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
 use openidconnect::{
@@ -20,11 +30,21 @@ use openidconnect::{
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse,
 };
 use serde::Deserialize;
+use serde_json::{json, Value};
+use std::net::SocketAddr;
 use std::time::Duration;
+use uuid::Uuid;
 
 const FLOW_COOKIE: &str = "linkdean_oidc";
 const FLOW_COOKIE_PATH: &str = "/api/auth/oidc";
 const FLOW_MAX_AGE_SECS: u32 = 600;
+/// Holds the token of a pending link. Scoped to `/api/auth`, so the password sign-in and the
+/// pending-link lookup both see it.
+const LINK_COOKIE: &str = "linkdean_oidc_link";
+const LINK_COOKIE_PATH: &str = "/api/auth";
+const LINK_MAX_AGE_SECS: u32 = (db::PENDING_OIDC_LINK_MINUTES * 60) as u32;
+/// Where a connect-mode flow returns: the profile page holds the account's sign-in settings.
+const CONNECT_RETURN: &str = "/profile";
 
 struct OidcSettings {
     issuer: String,
@@ -76,7 +96,31 @@ async fn discover(
         })
 }
 
-pub(super) async fn start(State(state): State<AppState>) -> ApiResult<Response> {
+#[derive(Deserialize)]
+pub(super) struct StartQuery {
+    mode: Option<String>,
+}
+
+/// `?mode=connect` attaches the provider identity to the signed-in account instead of signing
+/// in; it needs a session.
+pub(super) async fn start(
+    State(state): State<AppState>,
+    Query(q): Query<StartQuery>,
+    auth: Result<AuthUser, ApiError>,
+) -> ApiResult<Response> {
+    let mode = match q.mode.as_deref() {
+        None | Some("") | Some("signin") => FlowMode::SignIn,
+        Some("connect") => match auth {
+            Ok(AuthUser(user)) => FlowMode::Connect(user.id),
+            Err(_) => {
+                return Ok(error_redirect(
+                    "/login",
+                    "sign in first to connect single sign-on",
+                ))
+            }
+        },
+        Some(_) => return Err(Error::BadRequest("unknown sign-in mode".into()).into()),
+    };
     let s = settings(&state)?;
     let http = http_client()?;
     let meta = discover(&s, &http).await?;
@@ -102,6 +146,7 @@ pub(super) async fn start(State(state): State<AppState>) -> ApiResult<Response> 
         state: csrf.secret().clone(),
         nonce: nonce.secret().clone(),
         verifier: verifier.secret().clone(),
+        mode,
     };
     let mut res = Redirect::to(url.as_str()).into_response();
     set_cookie(
@@ -118,62 +163,100 @@ pub(super) struct CallbackQuery {
     error: Option<String>,
 }
 
-/// Always redirects: home with a session, or the login page with a reason.
+/// What a sign-in-mode callback ends in.
+enum SignInOutcome {
+    Session(User),
+    /// A password account holds the provider's address: the token of its pending link.
+    PendingLink(String),
+}
+
+/// The provider identity from a validated ID token (and userinfo when needed).
+struct Identity {
+    issuer: String,
+    subject: String,
+    email: String,
+    email_verified: bool,
+    name: Option<String>,
+}
+
+/// Always redirects: home with a session, the login page with a pending link or a reason, or
+/// back to the profile page in connect mode.
 pub(super) async fn callback(
     State(state): State<AppState>,
     headers: HeaderMap,
     Query(q): Query<CallbackQuery>,
 ) -> ApiResult<Response> {
     let secure = state.cfg.cookie_secure();
-    let mut res = match sign_in(&state, &headers, q).await {
-        Ok(user) => {
-            let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
-            let settings = db::get_user_settings(&state.pool, user.id).await?;
-            let dest = if settings.default_landing.as_str() == "/library" {
-                "/library"
-            } else {
-                "/"
-            };
-            let mut res = Redirect::to(dest).into_response();
-            set_cookie(
-                &mut res,
-                &session_cookie(&token, state.cfg.session_days, secure),
-            )?;
-            res
-        }
-        Err(e) => {
-            let reason = match &e {
-                Error::BadRequest(m) | Error::Conflict(m) => m.clone(),
-                Error::Forbidden => "registration is closed".to_string(),
-                Error::Banned { .. } => "this account is banned".to_string(),
-                other => {
-                    tracing::error!(error = %other, "OIDC sign-in failed");
-                    "sign-in failed".to_string()
-                }
-            };
-            let q: String = url::form_urlencoded::Serializer::new(String::new())
-                .append_pair("oidc_error", &reason)
-                .finish();
-            Redirect::to(&format!("/login?{q}")).into_response()
-        }
+    let flow = read_flow_cookie(&headers);
+    let mode = flow.as_ref().map_or(FlowMode::SignIn, |f| f.mode);
+    let mut res = match mode {
+        FlowMode::SignIn => match sign_in(&state, flow, q).await {
+            Ok(SignInOutcome::Session(user)) => {
+                let token =
+                    db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
+                let settings = db::get_user_settings(&state.pool, user.id).await?;
+                let dest = if settings.default_landing.as_str() == "/library" {
+                    "/library"
+                } else {
+                    "/"
+                };
+                let mut res = Redirect::to(dest).into_response();
+                set_cookie(
+                    &mut res,
+                    &session_cookie(&token, state.cfg.session_days, secure),
+                )?;
+                res
+            }
+            Ok(SignInOutcome::PendingLink(token)) => {
+                let mut res = Redirect::to("/login?link=1").into_response();
+                set_cookie(&mut res, &link_cookie(&token, LINK_MAX_AGE_SECS, secure))?;
+                res
+            }
+            Err(e) => error_redirect("/login", &reason(&e)),
+        },
+        FlowMode::Connect(user_id) => match connect(&state, &headers, user_id, flow, q).await {
+            Ok(()) => Redirect::to(&format!("{CONNECT_RETURN}?sso=connected")).into_response(),
+            Err(e) => error_redirect(CONNECT_RETURN, &reason(&e)),
+        },
     };
     // The flow cookie is single use, whatever the outcome.
-    res.headers_mut().append(
-        header::SET_COOKIE,
-        HeaderValue::from_str(&flow_cookie("", 0, secure))
-            .map_err(|e| Error::msg(e.to_string()))?,
-    );
+    set_cookie(&mut res, &flow_cookie("", 0, secure))?;
     Ok(res)
 }
 
-async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Result<User, Error> {
+/// The message shown for a failed callback. Internal errors stay in the log.
+fn reason(e: &Error) -> String {
+    match e {
+        Error::BadRequest(m) | Error::Conflict(m) => m.clone(),
+        Error::Forbidden => "registration is closed".to_string(),
+        Error::Banned { .. } => "this account is banned".to_string(),
+        other => {
+            tracing::error!(error = %other, "OIDC sign-in failed");
+            "sign-in failed".to_string()
+        }
+    }
+}
+
+/// Redirect to the web page `path` with `oidc_error` set.
+fn error_redirect(path: &str, reason: &str) -> Response {
+    let q: String = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("oidc_error", reason)
+        .finish();
+    Redirect::to(&format!("{path}?{q}")).into_response()
+}
+
+/// Check the flow and the provider's answer, and return the identity it vouches for.
+async fn provider_identity(
+    state: &AppState,
+    flow: Option<FlowCookie>,
+    q: CallbackQuery,
+) -> Result<Identity, Error> {
     if let Some(err) = q.error {
         return Err(Error::BadRequest(format!(
             "provider refused sign-in: {err}"
         )));
     }
-    let flow = read_flow_cookie(headers)
-        .ok_or_else(|| Error::BadRequest("sign-in expired; try again".into()))?;
+    let flow = flow.ok_or_else(|| Error::BadRequest("sign-in expired; try again".into()))?;
     let returned = q.state.unwrap_or_default();
     if !constant_time_eq(returned.as_bytes(), flow.state.as_bytes()) {
         return Err(Error::BadRequest(
@@ -183,7 +266,6 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
     let code = q
         .code
         .ok_or_else(|| Error::BadRequest("missing code".into()))?;
-
     let s = settings(state)?;
     let http = http_client()?;
     let meta = discover(&s, &http).await?;
@@ -245,8 +327,24 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
     }
     let email = email.ok_or_else(|| Error::BadRequest("provider sent no email".into()))?;
 
+    Ok(Identity {
+        issuer: s.issuer,
+        subject: sub.as_str().to_string(),
+        email,
+        email_verified: email_verified == Some(true),
+        name,
+    })
+}
+
+async fn sign_in(
+    state: &AppState,
+    flow: Option<FlowCookie>,
+    q: CallbackQuery,
+) -> Result<SignInOutcome, Error> {
+    let id = provider_identity(state, flow, q).await?;
+
     // Never auto-login by email alone (account takeover). Match the OIDC subject or create.
-    if let Some(user) = db::find_user_by_oidc(&state.pool, &s.issuer, sub.as_str()).await? {
+    if let Some(user) = db::find_user_by_oidc(&state.pool, &id.issuer, &id.subject).await? {
         if let Some(ban) = db::active_ban(&state.pool, user.id).await? {
             return Err(Error::Banned {
                 reason: ban.reason,
@@ -255,29 +353,48 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
         }
         // The provider vouches for the address now, so an unverified account catches up.
         if user.email_verified_at.is_none()
-            && email_verified == Some(true)
-            && email.trim().eq_ignore_ascii_case(&user.email)
+            && id.email_verified
+            && id.email.trim().eq_ignore_ascii_case(&user.email)
         {
             mark_verified(state, user.id).await;
         }
-        return Ok(user);
+        return Ok(SignInOutcome::Session(user));
     }
-    // Known issue: Someone who registers a local account with a victim's email first blocks the
-    // victim's first OIDC sign-in. Fix: email verification, or an approved account-link flow.
-    if db::find_user_by_email(&state.pool, &email).await?.is_some() {
-        return Err(Error::Conflict(
-            "email already registered; sign in with your password".into(),
-        ));
+    if let Some(holder) = db::find_user_by_email(&state.pool, &id.email).await? {
+        // Only the account's password can approve attaching this identity to it.
+        if holder.password_hash.is_none() {
+            return Err(Error::Conflict(
+                "email already registered to an account with a different single sign-on; \
+                 ask your admin"
+                    .into(),
+            ));
+        }
+        if holder.oidc_subject.is_some() {
+            return Err(Error::Conflict(
+                "email already registered to an account connected to a different single \
+                 sign-on; sign in with your password"
+                    .into(),
+            ));
+        }
+        let token = db::create_pending_oidc_link(
+            &state.pool,
+            &id.issuer,
+            &id.subject,
+            &id.email,
+            id.email_verified,
+        )
+        .await?;
+        return Ok(SignInOutcome::PendingLink(token));
     }
     // A provider sign-in cannot carry the bootstrap token, so with one set the first account
     // must register with a password.
     let created = db::create_user_gated(
         &state.pool,
-        &email,
+        &id.email,
         None,
-        name.as_deref(),
-        Some(sub.as_str()),
-        Some(&s.issuer),
+        id.name.as_deref(),
+        Some(&id.subject),
+        Some(&id.issuer),
         db::SignupGate {
             enforce: true,
             invite_code: None,
@@ -285,10 +402,102 @@ async fn sign_in(state: &AppState, headers: &HeaderMap, q: CallbackQuery) -> Res
         },
     )
     .await?;
-    if email_verified == Some(true) {
+    if id.email_verified {
         mark_verified(state, created.id).await;
     }
-    Ok(created)
+    Ok(SignInOutcome::Session(created))
+}
+
+/// Connect mode: attach the identity to the account that started the flow, which must still be
+/// the one signed in. The account's address stays as it is, even when the provider's differs.
+async fn connect(
+    state: &AppState,
+    headers: &HeaderMap,
+    user_id: Uuid,
+    flow: Option<FlowCookie>,
+    q: CallbackQuery,
+) -> Result<(), Error> {
+    // The flow cookie is not signed, so the session decides whose account this is.
+    let user = match bearer_or_cookie(headers) {
+        Some(token) => db::user_from_token(&state.pool, &token).await?,
+        None => None,
+    }
+    .filter(|u| u.id == user_id)
+    .ok_or_else(|| Error::BadRequest("you were signed out; sign in and try again".into()))?;
+    if let Some(ban) = db::active_ban(&state.pool, user.id).await? {
+        return Err(Error::Banned {
+            reason: ban.reason,
+            ends_at: ban.ends_at,
+        });
+    }
+    let id = provider_identity(state, flow, q).await?;
+    let already = user.oidc_issuer.as_deref() == Some(id.issuer.as_str())
+        && user.oidc_subject.as_deref() == Some(id.subject.as_str());
+    db::link_oidc_identity(&state.pool, user.id, &id.issuer, &id.subject).await?;
+    if user.email_verified_at.is_none()
+        && id.email_verified
+        && id.email.trim().eq_ignore_ascii_case(&user.email)
+    {
+        mark_verified(state, user.id).await;
+    }
+    if !already {
+        tracing::info!(user_id = %user.id, "single sign-on connected");
+        notify_sso_connected(state, user.id, &user.email, &id.issuer).await;
+    }
+    Ok(())
+}
+
+/// Tell the account's address that single sign-on was connected. Best effort.
+pub(super) async fn notify_sso_connected(
+    state: &AppState,
+    user_id: Uuid,
+    email: &str,
+    issuer: &str,
+) {
+    let data = json!({ "provider": issuer_host(issuer) });
+    if let Err(e) = enqueue(state, email, "sso_connected", &data).await {
+        tracing::warn!(%user_id, error = %e, "sso connected email failed");
+    }
+}
+
+/// The masked provider address of the browser's pending link, for the login prompt. 404 when
+/// there is none or it expired or was used.
+pub(super) async fn pending_link(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    let token = read_link_cookie(&headers).ok_or(Error::NotFound)?;
+    let link = db::peek_pending_oidc_link(&state.pool, &token)
+        .await?
+        .ok_or(Error::NotFound)?;
+    Ok(Json(json!({ "email": mask_email(&link.email) })))
+}
+
+#[derive(Deserialize)]
+pub(super) struct DisconnectRequest {
+    password: String,
+}
+
+/// Detach single sign-on after a password check. Accounts without a password cannot, so they
+/// keep a way to sign in. Wrong passwords count against the sign-in limits.
+pub(super) async fn disconnect(
+    State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    AuthUser(user): AuthUser,
+    Json(req): Json<DisconnectRequest>,
+) -> ApiResult<Json<Value>> {
+    let ip = client_ip(&headers, peer.ip(), state.cfg.trust_forwarded_for);
+    let limits = login_limits(ip, &user.email);
+    state.limiter.check(&limits)?;
+    let result = db::unlink_oidc_identity(&state.pool, user.id, &req.password).await;
+    state.limiter.settle(&limits, result)?;
+    tracing::info!(user_id = %user.id, "single sign-on disconnected");
+    let user = db::find_user_by_id(&state.pool, user.id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    let public = db::to_public(&state.pool, &user).await?;
+    Ok(Json(json!({ "ok": true, "user": public })))
 }
 
 /// Mark the account verified, which also attaches invites waiting for its address. Best
@@ -303,45 +512,79 @@ async fn mark_verified(state: &AppState, user_id: uuid::Uuid) {
     }
 }
 
+/// What the flow is for: signing in, or attaching the identity to the signed-in account.
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum FlowMode {
+    SignIn,
+    Connect(Uuid),
+}
+
 #[derive(Debug, PartialEq)]
 struct FlowCookie {
     state: String,
     nonce: String,
     verifier: String,
+    mode: FlowMode,
 }
 
 impl FlowCookie {
-    /// The three values are URL-safe base64, so `.` cannot occur inside one.
+    /// `state.nonce.verifier`, plus `.connect.<user id>` in connect mode. The three values are
+    /// URL-safe base64 and a UUID has no `.`, so `.` cannot occur inside a part.
     fn encode(&self) -> String {
-        format!("{}.{}.{}", self.state, self.nonce, self.verifier)
+        let base = format!("{}.{}.{}", self.state, self.nonce, self.verifier);
+        match self.mode {
+            FlowMode::SignIn => base,
+            FlowMode::Connect(id) => format!("{base}.connect.{id}"),
+        }
     }
 
     fn decode(raw: &str) -> Option<Self> {
-        let mut parts = raw.split('.');
-        let (state, nonce, verifier) = (parts.next()?, parts.next()?, parts.next()?);
-        if parts.next().is_some() || [state, nonce, verifier].iter().any(|p| p.is_empty()) {
+        let parts: Vec<&str> = raw.split('.').collect();
+        let mode = match parts.as_slice() {
+            [_, _, _] => FlowMode::SignIn,
+            [_, _, _, "connect", id] => FlowMode::Connect(id.parse().ok()?),
+            _ => return None,
+        };
+        let (state, nonce, verifier) = (parts[0], parts[1], parts[2]);
+        if [state, nonce, verifier].iter().any(|p| p.is_empty()) {
             return None;
         }
         Some(Self {
             state: state.into(),
             nonce: nonce.into(),
             verifier: verifier.into(),
+            mode,
         })
     }
 }
 
-fn read_flow_cookie(headers: &HeaderMap) -> Option<FlowCookie> {
+/// The value of cookie `name`, if the request has it.
+fn read_cookie(headers: &HeaderMap, name: &str) -> Option<String> {
+    let prefix = format!("{name}=");
     headers
         .get_all(header::COOKIE)
         .iter()
         .filter_map(|v| v.to_str().ok())
         .flat_map(|c| c.split(';'))
-        .find_map(|part| {
-            part.trim()
-                .strip_prefix(&format!("{FLOW_COOKIE}=")[..])
-                .map(str::to_string)
-        })
-        .and_then(|v| FlowCookie::decode(&v))
+        .find_map(|part| part.trim().strip_prefix(&prefix[..]).map(str::to_string))
+}
+
+fn read_flow_cookie(headers: &HeaderMap) -> Option<FlowCookie> {
+    read_cookie(headers, FLOW_COOKIE).and_then(|v| FlowCookie::decode(&v))
+}
+
+/// The pending-link token the browser holds, if any.
+pub(super) fn read_link_cookie(headers: &HeaderMap) -> Option<String> {
+    read_cookie(headers, LINK_COOKIE).filter(|v| !v.is_empty())
+}
+
+/// The pending-link cookie; an empty value with `max_age` 0 expires it.
+pub(super) fn link_cookie(value: &str, max_age: u32, secure: bool) -> String {
+    let secure_flag = if secure { "; Secure" } else { "" };
+    // Lax: the callback that sets it is the end of a top-level redirect from the provider.
+    format!(
+        "{LINK_COOKIE}={value}; Path={LINK_COOKIE_PATH}; HttpOnly; SameSite=Lax; Max-Age={max_age}{secure_flag}"
+    )
 }
 
 fn flow_cookie(value: &str, max_age: u32, secure: bool) -> String {
@@ -370,8 +613,63 @@ mod tests {
             state: "s-_1".into(),
             nonce: "n".into(),
             verifier: "v".into(),
+            mode: FlowMode::SignIn,
+        };
+        assert_eq!(flow.encode(), "s-_1.n.v");
+        assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
+    }
+
+    #[test]
+    fn connect_flow_cookie_carries_the_user() {
+        let id = Uuid::new_v4();
+        let flow = FlowCookie {
+            state: "s".into(),
+            nonce: "n".into(),
+            verifier: "v".into(),
+            mode: FlowMode::Connect(id),
         };
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
+        for raw in [
+            "s.n.v.connect".to_string(),
+            "s.n.v.connect.not-a-uuid".to_string(),
+            format!("s.n.v.other.{id}"),
+            format!("s.n.v.connect.{id}.x"),
+            format!(".n.v.connect.{id}"),
+        ] {
+            assert_eq!(FlowCookie::decode(&raw), None, "{raw}");
+        }
+    }
+
+    #[test]
+    fn link_cookie_is_scoped_to_auth_and_http_only() {
+        let c = link_cookie("tok", 600, false);
+        assert!(c.starts_with("linkdean_oidc_link=tok;"));
+        assert!(c.contains("Path=/api/auth;"));
+        assert!(c.contains("HttpOnly"));
+        assert!(c.contains("SameSite=Lax"));
+        assert!(c.contains("Max-Age=600"));
+        assert!(!c.contains("Secure"));
+        assert!(link_cookie("", 0, true).ends_with("Max-Age=0; Secure"));
+    }
+
+    #[test]
+    fn reads_the_link_cookie_but_not_the_flow_cookie_as_it() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::COOKIE,
+            HeaderValue::from_static("linkdean_oidc=s.n.v; linkdean_oidc_link=abc"),
+        );
+        assert_eq!(read_link_cookie(&headers).as_deref(), Some("abc"));
+        assert_eq!(
+            read_flow_cookie(&headers).map(|f| f.state).as_deref(),
+            Some("s")
+        );
+        let mut only_flow = HeaderMap::new();
+        only_flow.insert(
+            header::COOKIE,
+            HeaderValue::from_static("linkdean_oidc=s.n.v"),
+        );
+        assert_eq!(read_link_cookie(&only_flow), None);
     }
 
     #[test]

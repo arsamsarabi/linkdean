@@ -38,6 +38,8 @@ pub fn router() -> Router<AppState> {
         .route("/auth/onboarding/complete", post(complete_onboarding))
         .route("/auth/oidc/start", get(oidc::start))
         .route("/auth/oidc/callback", get(oidc::callback))
+        .route("/auth/oidc/pending-link", get(oidc::pending_link))
+        .route("/auth/oidc/disconnect", post(oidc::disconnect))
         .route("/auth/config", get(auth_config))
 }
 
@@ -134,18 +136,49 @@ async fn login(
     let limits = login_limits(ip, &req.email);
     state.limiter.check(&limits)?;
     let result = db::authenticate_local(&state.pool, &req.email, &req.password).await;
-    let user = state.limiter.settle(&limits, result)?;
+    let mut user = state.limiter.settle(&limits, result)?;
+    // A pending single sign-on link from this browser attaches now, if this account holds the
+    // provider's address. Linking never fails the sign-in.
+    let link_token = oidc::read_link_cookie(&headers);
+    let mut sso_connected = false;
+    if let Some(link_token) = &link_token {
+        match db::consume_pending_oidc_link(&state.pool, link_token, user.id).await {
+            Ok(Some(link)) => {
+                sso_connected = true;
+                tracing::info!(user_id = %user.id, "single sign-on linked at sign-in");
+                oidc::notify_sso_connected(&state, user.id, &user.email, &link.issuer).await;
+                if let Ok(Some(fresh)) = db::find_user_by_id(&state.pool, user.id).await {
+                    user = fresh;
+                }
+            }
+            Ok(None) => tracing::info!(user_id = %user.id, "pending single sign-on link not used"),
+            Err(e) => {
+                tracing::warn!(user_id = %user.id, error = %e, "pending single sign-on link refused")
+            }
+        }
+    }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let public = db::to_public(&state.pool, &user).await?;
-    Ok(session_response(
-        AuthResponse {
-            user: public,
-            token: token.clone(),
-        },
-        &token,
-        state.cfg.session_days,
-        state.cfg.cookie_secure(),
-    ))
+    let mut body = serde_json::to_value(AuthResponse {
+        user: public,
+        token: token.clone(),
+    })
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if sso_connected {
+        body["sso_connected"] = json!(true);
+    }
+    let secure = state.cfg.cookie_secure();
+    let mut res = session_response(body, &token, state.cfg.session_days, secure);
+    if link_token.is_some() {
+        // Used or not, the link is done with once the browser signs in.
+        match HeaderValue::from_str(&oidc::link_cookie("", 0, secure)) {
+            Ok(v) => {
+                res.headers_mut().append(axum::http::header::SET_COOKIE, v);
+            }
+            Err(_) => tracing::error!("failed to expire the pending link cookie"),
+        }
+    }
+    Ok(res)
 }
 
 async fn logout(
@@ -199,7 +232,7 @@ async fn complete_onboarding(
     Ok(Json(json!({ "user": public })))
 }
 
-fn session_response(body: AuthResponse, token: &str, days: i64, secure: bool) -> Response {
+fn session_response(body: impl serde::Serialize, token: &str, days: i64, secure: bool) -> Response {
     let cookie = session_cookie(token, days, secure);
     let mut res = Json(body).into_response();
     if let Ok(v) = HeaderValue::from_str(&cookie) {

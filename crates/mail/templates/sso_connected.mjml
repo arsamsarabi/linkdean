@@ -1,0 +1,15 @@
+{% extends "layout.mjml" %}
+{% block title %}Single sign-on was connected{% endblock %}
+{% block preview %}Single sign-on ({{ provider }}) was connected to your {{ site.instance }} account.{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">Single sign-on was connected</mj-text>
+    <mj-text>Single sign-on ({{ provider }}) was connected to your account. You can now sign in with it or with your password.</mj-text>
+    <mj-text>Not you? Reset your password from the sign-in page and tell your admin.</mj-text>
+    {{ action(site.app_url ~ "/login", "Sign in") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because single sign-on was connected to your account.{% endblock %}

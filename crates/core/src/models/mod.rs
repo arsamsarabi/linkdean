@@ -26,6 +26,16 @@ pub struct User {
     pub email_verified_at: Option<DateTime<Utc>>,
 }
 
+impl User {
+    /// The issuer host of the attached single sign-on identity, if any.
+    pub fn sso_provider(&self) -> Option<String> {
+        match (&self.oidc_issuer, &self.oidc_subject) {
+            (Some(issuer), Some(_)) => Some(issuer_host(issuer)),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserPublic {
     pub id: Uuid,
@@ -41,6 +51,19 @@ pub struct UserPublic {
     pub onboarding_completed: bool,
     pub api_keys_enabled: bool,
     pub email_verified: bool,
+    /// Whether a single sign-on identity is attached.
+    pub sso_connected: bool,
+    /// The host of the attached identity's issuer, for display.
+    pub sso_provider: Option<String>,
+}
+
+/// The host of an OIDC issuer URL, for display: `https://id.example.com/realms/x` →
+/// `id.example.com`. Falls back to the issuer itself when it does not parse.
+pub fn issuer_host(issuer: &str) -> String {
+    url::Url::parse(issuer)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_string))
+        .unwrap_or_else(|| issuer.to_string())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -1633,5 +1656,20 @@ mod patch_tests {
             serde_json::from_str(&serde_json::to_string(&patch).unwrap()).unwrap();
         assert_eq!(again.icon, Some(None));
         assert_eq!(again.parent_id, None);
+    }
+}
+
+#[cfg(test)]
+mod issuer_host_tests {
+    use super::issuer_host;
+
+    #[test]
+    fn keeps_only_the_host() {
+        assert_eq!(
+            issuer_host("https://id.example.com/realms/links"),
+            "id.example.com"
+        );
+        assert_eq!(issuer_host("http://127.0.0.1:18090/default"), "127.0.0.1");
+        assert_eq!(issuer_host("not a url"), "not a url");
     }
 }

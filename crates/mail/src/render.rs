@@ -36,6 +36,7 @@ const TEMPLATES: &[Template] = &[
     template!("verify_email"),
     template!("email_change_verify"),
     template!("email_change_notice"),
+    template!("sso_connected"),
 ];
 const LAYOUT: &str = include_str!("../templates/layout.mjml");
 const MACROS: &str = include_str!("../templates/macros.mjml");
@@ -284,6 +285,21 @@ mod tests {
         .unwrap();
         assert_eq!(r.subject, "Your links.example.com email is being changed");
         assert!(r.text.contains("n•••@example.com"), "{}", r.text);
+        assert!(r.html.contains(r#"href="https://links.example.com/login""#));
+    }
+
+    #[test]
+    fn sso_connected_names_the_provider() {
+        let r = render("sso_connected", &sample("sso_connected").unwrap(), &site()).unwrap();
+        assert_eq!(
+            r.subject,
+            "Single sign-on was connected to your links.example.com account"
+        );
+        assert!(
+            r.text.contains("Single sign-on (id.example.com)"),
+            "{}",
+            r.text
+        );
         assert!(r.html.contains(r#"href="https://links.example.com/login""#));
     }
 
