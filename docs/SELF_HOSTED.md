@@ -70,6 +70,7 @@ Only enable it when the proxy is the sole route to the API, and make sure the pr
 | Failed logins | 10 per address per account, 50 per address, 50 per account, each per 15 minutes. Past a limit the API returns `429` until the window ends. A successful login clears only the per-address-per-account counter |
 | Account lockout | 50 failed logins on one account from any address lock that account for 15 minutes, **including the correct password**. Someone who knows a user's email can trigger this on purpose |
 | Registration | 10 attempts per address per 15 minutes, counted whether or not they succeed |
+| Email verification and change | Emails: 3 per account and 10 per client IP. Link uses: 10 per client IP. Each per 15 minutes |
 | Vault unlock, recovery, global unlock, recovery key replacement, global passphrase off | 10 failed attempts per user per 15 minutes, shared across all of these |
 | Limit storage | Counters live in API memory. Restarting the API resets them, and several API replicas would each keep their own |
 | Not limited yet | Password change and global vault passphrase change |
@@ -128,6 +129,18 @@ Password reset:
 - Accounts that sign in only with OIDC have no password to reset. They get an email saying so, and the admin link is refused for them.
 - Each email address can request 3 links per 15 minutes, and each client IP 10. Each client IP can try 10 links per 15 minutes.
 
+Email verification:
+
+- Verification needs mail. With mail on, a password registration sends a link to the new address, and unverified accounts see a banner with **Resend email**. The link works once, for 24 hours, and a new one voids the previous one. Opening it verifies the address without signing in.
+- OIDC accounts count as verified when the identity provider reports the address as verified.
+- A folder or dashboard share to an unverified account does not reach it. The invite waits for the address and attaches when the account verifies, after which the account still accepts it as usual.
+- With mail off, new accounts stay unverified, there is no banner, and invites to them wait as pending invites. The invite's claim link still works, now also while signed in, when the signed-in account's address matches the invite. An admin can also mark the account verified.
+- People change their own address under **Profile → Edit profile → Change email**, with their current password. The link goes to the new address and the old one gets a notice; the address only changes when the link is opened. Accounts that sign in only with OIDC cannot change it here. With mail off the option says to ask an admin.
+- **Settings → Admin → Accounts** has **Mark verified**, **Remove verification** and **Change email** for each account. An admin email change applies at once and counts as verified. Removing verification keeps shares already accepted; only new invites wait.
+- **Require verified email** under **Settings → Admin** holds unverified accounts at a verify screen with **Resend email** and **Sign out**, and the API answers `403` with `{"code":"email_unverified"}` on every route outside `/api/auth/`. It can only be turned on while mail is on, and it never applies to admins, so it cannot lock everyone out. If you turn mail off while it is on, unverified accounts stay held until you turn it off or mark them verified.
+- Each account can send 3 verification or email change emails per 15 minutes, and each client IP 10. Each client IP can try 10 verification or email change links per 15 minutes.
+- **Upgrading:** every account that exists when you upgrade counts as verified (migration `042`). If you do not trust an account's address, remove its verification under **Settings → Admin → Accounts**.
+
 ### API clients
 
 `PATCH` bodies distinguish a missing field from `null`:
@@ -157,7 +170,7 @@ Earlier builds ran as root with a default database password. Before upgrading pa
      chown -R 10001:10001 /avatars /previews
    ```
 
-4. **Migrations** run on API start. Migration `034` caps trash retention at 3,650 days and clamps larger values. Migration `035` removes decrypted vault titles from old activity entries.
+4. **Migrations** run on API start. Migration `034` caps trash retention at 3,650 days and clamps larger values. Migration `035` removes decrypted vault titles from old activity entries. Migration `042` marks every existing account's email verified; see [Email](#email).
 5. **Reverse proxy.** Set `TRUST_FORWARDED_FOR=true` if you run behind one.
 
 ## Development setup

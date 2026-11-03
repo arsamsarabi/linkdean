@@ -10,9 +10,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Now: before the first public release
 
-1. **Outbound email** (M–L). The mail foundation (SMTP, MJML templates, outbox, Admin panel) and password reset ship. Still to build on it:
-   - Verify email addresses at registration and on email change, before the address can receive share invites. See the known-issue note on `create_share` in `crates/db/src/repo/shares.rs`.
-   - Until an address is verified, invites to it wait as pending invites for the address rather than going to the unverified account.
+1. **Outbound email** (M–L). The mail foundation (SMTP, MJML templates, outbox, Admin panel), password reset and email verification ship. Still to build on it:
    - An approved link flow, so a local account with someone's email cannot block their first OIDC sign-in.
    - Email delivery for invites and notifications.
 

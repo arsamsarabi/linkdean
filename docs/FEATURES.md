@@ -72,7 +72,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Sharing (same instance)
 
 - Share folders with invitees: **read** or **write** ACL
-- Pending email invites: share with an address that has no account yet; the invite waits for them to register, and access starts when they accept
+- Pending email invites: share with an address that has no account yet, or whose account has not verified it; the invite waits until an account verifies the address, and access starts when they accept
+- Invite claim links also work while signed in, for the account whose address the invite was sent to
 - Accept or decline shares from the notifications drawer; nothing appears in your library until you accept. Declining is silent and stops repeat invites until you restore it from Profile
 - Collaborative edit on write-shared collections
 - Save a shared bookmark into your own library (⋮ → Save to my library; lands in Unsorted)
@@ -118,8 +119,12 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Open registration toggle (Admin)
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
 - Optional `BOOTSTRAP_TOKEN`: the first account (the admin) must enter it on the setup page. Racing sign-ups cannot make two first admins or redeem one invite twice
-- Profile: display name, bio, avatar, password change. A new password signs out every other session, and can revoke all API keys too
+- Profile: display name, bio, avatar, password change, email change. A new password signs out every other session, and can revoke all API keys too
 - Password reset: with mail on, **Forgot password?** emails a single-use link that works for 30 minutes; admins can make a 24-hour link to hand over, the only way back in when mail is off. A reset signs out every session, can revoke all API keys, and leaves vaults locked
+- Email verification (needs mail): a password registration emails a 24-hour, single-use link, and unverified accounts see a banner with **Resend email**. Opening the link verifies the address without signing in. OIDC accounts are verified when the provider reports the address as verified. Accounts that existed before verification shipped count as verified
+- Email change: **Profile → Edit profile → Change email** with the current password sends a link to the new address and a notice to the old one; the address changes only when the link is opened. Not for SSO-only accounts; with mail off it says to ask an admin
+- Admin verification controls: an **Unverified** badge in the accounts list, **Mark verified**, **Remove verification**, and **Change email** applied at once
+- **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts
