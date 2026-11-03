@@ -60,4 +60,14 @@ describe('BannedPage', () => {
     render(ui())
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true }))
   })
+
+  it('offers Try again and Sign out when the check fails', async () => {
+    me.mockRejectedValueOnce(new ApiError('server error', 500, null))
+    render(ui())
+    expect(await screen.findByText('Could not load your account')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy()
+    me.mockRejectedValueOnce(banned(null))
+    screen.getByRole('button', { name: 'Try again' }).click()
+    expect(await screen.findByText('Spam')).toBeTruthy()
+  })
 })

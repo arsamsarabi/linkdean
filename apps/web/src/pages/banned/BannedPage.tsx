@@ -1,14 +1,13 @@
 import { useEffect, type ReactElement } from 'react'
-import { Button, Center, Loader, Paper, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Center, Group, Loader, Paper, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api, ApiError, banFromBody } from '@/api'
 import { useLogout } from '@/hooks'
 
-/** Asks the API whether the ban still holds, so an ended ban leaves this page. */
-// Known issue: On a 5xx or network failure this shows a spinner forever with no way to sign out.
-// Fix: an error state with retry and Sign out.
+/** Asks the API whether the ban still holds, so an ended ban leaves this page. A failed check
+ * (server error, network) offers Try again and Sign out instead of spinning. */
 export function BannedPage(): ReactElement {
   const nav = useNavigate()
   const logout = useLogout()
@@ -30,6 +29,28 @@ export function BannedPage(): ReactElement {
       return
     }
     await nav({ to: '/login' })
+  }
+
+  if (check.isError && !ban && !signedOut) {
+    return (
+      <Center mih="100vh" p="md">
+        <Paper p="xl" withBorder maw={480} w="100%">
+          <Stack>
+            <Alert color="red" variant="light" title="Could not load your account">
+              {check.error.message}
+            </Alert>
+            <Group>
+              <Button loading={check.isFetching} onClick={() => void check.refetch()}>
+                Try again
+              </Button>
+              <Button variant="default" loading={logout.isPending} onClick={() => void signOut()}>
+                Sign out
+              </Button>
+            </Group>
+          </Stack>
+        </Paper>
+      </Center>
+    )
   }
 
   if (!ban) {
