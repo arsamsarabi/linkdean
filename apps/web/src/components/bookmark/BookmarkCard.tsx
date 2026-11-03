@@ -233,7 +233,7 @@ export function BookmarkCard({
         rowLayout
       ) : (
         <Card withBorder padding="sm" radius="md" h="100%" className={cardClass}>
-          {selectBox}
+          {/* The section must be the card's first child, or Card keeps padding above the image. */}
           <Card.Section>
             <BookmarkCardPreview
               url={b.url}
@@ -267,6 +267,7 @@ export function BookmarkCard({
 
             {badges}
           </Stack>
+          {selectBox}
         </Card>
       )}
       {socialEnabled ? (

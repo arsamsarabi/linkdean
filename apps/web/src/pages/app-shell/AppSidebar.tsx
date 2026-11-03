@@ -71,7 +71,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
 
   return (
     <>
-      <AppShell.Section grow component={ScrollArea} px="sm" py="md">
+      <AppShell.Section grow component={ScrollArea} py="md">
         <Stack gap={2}>
           <NavLink
             component={Link}
@@ -159,7 +159,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
         </Group>
       </AppShell.Section>
 
-      <AppShell.Section px="sm" py="sm" className={classes.footer}>
+      <AppShell.Section py="sm" className={classes.footer}>
         <Stack gap={2}>
           <NavLink
             component={Link}
