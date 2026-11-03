@@ -132,6 +132,15 @@ describe('expired sessions', () => {
     expect(assign).toHaveBeenCalledWith('/login')
   })
 
+  it('stays on the verify email page, which shows its result with a sign-in button', async () => {
+    markSignedIn(true)
+    const assign = stubLocation('/verify-email')
+    respond(401, expired)
+    await expect(req('/auth/me')).rejects.toThrow('session expired')
+    expect(isSignedIn()).toBe(false)
+    expect(assign).not.toHaveBeenCalled()
+  })
+
   it('does not loop on the login page', async () => {
     markSignedIn(true)
     const assign = stubLocation('/login')

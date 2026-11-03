@@ -55,6 +55,15 @@ function isPublicPath(pathname: string): boolean {
   )
 }
 
+/**
+ * Pages that show their own signed-out state instead of being sent to login. `/verify-email` has
+ * already spent its link by the time it asks about the session, so it shows the result with a
+ * Sign in button.
+ */
+function handlesSignOut(pathname: string): boolean {
+  return pathname === '/login' || pathname === '/verify-email'
+}
+
 export async function req<T>(path: string, init: RequestInit = {}, schema?: z.ZodType<T>): Promise<T> {
   const headers = new Headers(init.headers)
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
@@ -88,7 +97,7 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
     if (res.status === 401 && sessionExpired(body) && (isSignedIn() || !isPublicPath(location.pathname))) {
       // A full page load also drops the signed-out user's cached data.
       markSignedIn(false)
-      if (location.pathname !== '/login') location.assign('/login')
+      if (!handlesSignOut(location.pathname)) location.assign('/login')
     }
     throw new ApiError(msg, res.status, body)
   }
