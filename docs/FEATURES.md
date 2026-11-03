@@ -156,7 +156,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Config options: sections (General, Categories, Import / Export, Vault, API keys, Admin) listed down the side on wide screens and as a scrolling row on phones; `?tab=` opens one
 - Sidebar Folders section collapses: collapsed it shows Unsorted, then the 3 folders with the latest activity (a bookmark added or changed in them, or the folder itself made or renamed) and the open folder; expanded it shows the whole tree with a filter field (matches at any depth, with their path). The choice is remembered per browser
 - Phone tab bar: Home, Library, Add (into the open folder), Search (command palette) and Me; the burger keeps the full sidebar
-- An open folder titles the library page, with a breadcrumb back to the whole library; an empty folder offers Add bookmark here
+- An open folder titles the library page, with a breadcrumb back to the whole library (Unsorted included); an empty folder offers Add bookmark here
+- The page, drawers and modals keep their scrollbar space reserved, so content does not shift sideways when a scrollbar appears or a panel opens
 - Header search field opens the command palette (which can also add a bookmark); the library page's Add bookmark button, the phone tab bar's Add and paste-to-add open the new-bookmark form
 - Editing a shared bookmark: the side panel has Details and Discussion tabs, so likes, rating and comments sit next to the edit form (the card menu's Likes & comments still opens them on their own)
 - Paste a web address anywhere outside a text field to open the new-bookmark form with it filled in (in the open folder when on the library)

@@ -27,8 +27,6 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
    - Batch the access checks for bookmarks shared with the viewer, which still run one at a time.
 
 3. **Final UI/UX and mobile pass** (L). Before the public release, review the whole UI with a strong UI/UX skill and reimagine it where needed. Make every page responsive and usable on phones, not only the nav.
-   - Content must not shift sideways when a drawer or page grows a vertical scrollbar. Reserve the gutter (`scrollbar-gutter: stable`) wherever content scrolls.
-   - The Unsorted folder shows the same "Library /" breadcrumb above its name as every other folder.
    - Mascot art (`brand/graphics`) in moment screens only: empty library, empty folder, no search results, empty Deleted items, nothing shared yet, the 404 page, first-run setup, the sign-in side panel on wide screens, and success modals. Never in the header, sidebar, cards, dashboards or settings. One character per screen at most, behind the main action. WebP at 2× display size, lazy-loaded, `alt=""`, a soft light backdrop so the dark robe reads on the dark theme. Security emails stay plain; a welcome email may carry the small avatar badge, embedded in the email rather than linked.
 
 4. **Structured logs** (S–M). Write activity and errors as structured JSON (`LOG_FORMAT=json`), to stdout and optionally to a file, with a request ID on every line and in an `X-Request-Id` response header. Today logs are plain text on stdout only, which makes self-hosted problems hard to report and debug.

@@ -12,7 +12,7 @@ import {
   IconStar,
 } from '@tabler/icons-react'
 import type { LibraryViewMode } from '@/hooks'
-import { FOLDER_ALL, type FlagFilter } from '@/services'
+import { FOLDER_ALL, FOLDER_UNCATEGORIZED, type FlagFilter } from '@/services'
 import styles from './LibraryPage.module.css'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
@@ -67,11 +67,14 @@ export function LibraryPageHeader(): ReactElement {
   const lib = useLibraryPageModel()
   const { loading, viewMode, searching, selectMode, canCreateInContext: canCreate } = lib
   const listCount = lib.list.length
+  const unsorted = lib.folderId === FOLDER_UNCATEGORIZED
+  const scopeName = lib.scope === 'vault' ? 'Vaults' : 'Library'
+  const title = lib.folderCat?.name ?? (unsorted ? 'Unsorted' : scopeName)
 
   return (
     <Group justify="space-between" align="flex-end" wrap="wrap" gap="md">
       <Stack gap={4}>
-        {lib.folderCat ? (
+        {lib.folderCat || unsorted ? (
           <Text size="sm" c="dimmed">
             <Anchor
               component="button"
@@ -80,12 +83,12 @@ export function LibraryPageHeader(): ReactElement {
               c="dimmed"
               onClick={() => lib.setLibrarySearch({ folder: FOLDER_ALL })}
             >
-              {lib.scope === 'vault' ? 'Vaults' : 'Library'}
+              {scopeName}
             </Anchor>{' '}
             /
           </Text>
         ) : null}
-        <Title order={2}>{lib.folderCat?.name ?? (lib.scope === 'vault' ? 'Vaults' : 'Library')}</Title>
+        <Title order={2}>{title}</Title>
         <Text size="sm" c="dimmed" aria-live="polite" className={styles.countLine}>
           {!loading && viewMode !== 'explorer'
             ? `${listCount} bookmark${listCount === 1 ? '' : 's'}${searching ? ' matched' : ''}`

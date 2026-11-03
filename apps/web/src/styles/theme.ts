@@ -175,12 +175,17 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
     pageMaxWidth: 1440,
   },
   components: {
+    // The page keeps its scrollbar gutter (styles.css), so locking scroll needs no padding
+    // to make up for a vanishing scrollbar; that padding would shift the page instead.
     Modal: {
-      defaultProps: { centered: true },
+      defaultProps: { centered: true, removeScrollProps: { removeScrollBar: false } },
     },
     Drawer: {
       // Side panels keep the page behind them readable, so you can see what you are editing.
-      defaultProps: { overlayProps: { backgroundOpacity: 0.2, blur: 0 } },
+      defaultProps: {
+        overlayProps: { backgroundOpacity: 0.2, blur: 0 },
+        removeScrollProps: { removeScrollBar: false },
+      },
     },
     Tooltip: {
       defaultProps: { withArrow: true, openDelay: 400 },
