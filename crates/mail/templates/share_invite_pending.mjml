@@ -1,0 +1,15 @@
+{% extends "layout.mjml" %}
+{% block title %}{{ owner }} shared a {{ subject_kind }} with you{% endblock %}
+{% block preview %}{{ owner }} shared the {{ subject_kind }} “{{ name }}” with you ({{ access }}).{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">{{ owner }} shared a {{ subject_kind }} with you</mj-text>
+    <mj-text>{{ owner }} shared the {{ subject_kind }} “{{ name }}” with you ({{ access }}).</mj-text>
+    <mj-text>Create an account, or sign in, with this address to accept.</mj-text>
+    {{ action(claim_url, "Accept the invite") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because someone shared a {{ subject_kind }} on {{ site.instance }} with this address. If you do not want it, ignore this email.{% endblock %}

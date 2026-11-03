@@ -1320,6 +1320,39 @@ pub enum NotificationKind {
 }
 
 impl NotificationKind {
+    /// Every kind, in the order settings lists them.
+    pub const ALL: [Self; 9] = [
+        Self::ShareInvite,
+        Self::ShareAccessChanged,
+        Self::ShareRevoked,
+        Self::SharedEdit,
+        Self::SocialLike,
+        Self::SocialComment,
+        Self::SocialRating,
+        Self::UserFollowed,
+        Self::ModerationChanges,
+    ];
+
+    /// Whether this kind is emailed when the user has not chosen.
+    pub fn email_by_default(self) -> bool {
+        matches!(self, Self::ShareInvite | Self::ModerationChanges)
+    }
+
+    /// What settings and the email footer call this kind.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::ShareInvite => "Share invites",
+            Self::ShareAccessChanged => "Share access changes",
+            Self::ShareRevoked => "Revoked shares",
+            Self::SharedEdit => "Edits in shared folders",
+            Self::SocialLike => "Likes",
+            Self::SocialComment => "Comments",
+            Self::SocialRating => "Ratings",
+            Self::UserFollowed => "New followers",
+            Self::ModerationChanges => "Moderation changes",
+        }
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Self::ShareInvite => "share_invite",

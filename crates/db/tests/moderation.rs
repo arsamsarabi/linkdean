@@ -537,6 +537,9 @@ async fn every_action_applies_is_audited_and_notifies_once() {
         action("bookmark_private", None, s.bookmark),
         action("removed_to_trash", Some("category"), s.root),
     ];
+    db::mark_email_verified(&s.pool, s.owner.id)
+        .await
+        .expect("verify");
     let done = moderate(&s, actions.clone()).await.expect("moderate");
     assert_eq!((done.applied, done.skipped), (7, 0));
 
@@ -576,6 +579,17 @@ async fn every_action_applies_is_audited_and_notifies_once() {
     .await
     .expect("count");
     assert_eq!(told, 1, "a repeat with nothing to do tells nobody");
+    let email_state: String = sqlx::query_scalar(
+        "SELECT email_state FROM notifications WHERE recipient_user_id = $1 AND kind = 'moderation_changes'",
+    )
+    .bind(s.owner.id)
+    .fetch_one(&s.pool)
+    .await
+    .expect("email state");
+    assert_eq!(
+        email_state, "pending",
+        "moderation changes are emailed by default"
+    );
 
     let invitee: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM notifications WHERE recipient_user_id = $1 AND kind = 'share_revoked'",

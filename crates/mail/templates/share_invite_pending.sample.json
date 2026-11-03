@@ -1,0 +1,7 @@
+{
+  "owner": "Ada Lovelace",
+  "subject_kind": "dashboard",
+  "name": "Team links",
+  "access": "read-write",
+  "claim_url": "https://links.example.com/register?share=abc123"
+}

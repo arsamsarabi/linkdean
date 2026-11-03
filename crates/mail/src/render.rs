@@ -37,6 +37,9 @@ const TEMPLATES: &[Template] = &[
     template!("email_change_verify"),
     template!("email_change_notice"),
     template!("sso_connected"),
+    template!("share_invite"),
+    template!("share_invite_pending"),
+    template!("notification"),
 ];
 const LAYOUT: &str = include_str!("../templates/layout.mjml");
 const MACROS: &str = include_str!("../templates/macros.mjml");
@@ -301,6 +304,91 @@ mod tests {
             r.text
         );
         assert!(r.html.contains(r#"href="https://links.example.com/login""#));
+    }
+
+    #[test]
+    fn share_invite_names_the_owner_folder_and_access() {
+        let r = render("share_invite", &sample("share_invite").unwrap(), &site()).unwrap();
+        assert_eq!(r.subject, "Ada Lovelace shared a folder with you");
+        assert!(
+            r.text
+                .contains("Ada Lovelace shared the folder “Reading list” with you (read-only)."),
+            "{}",
+            r.text
+        );
+        assert!(r
+            .html
+            .contains(r#"href="https://links.example.com/shared""#));
+        assert!(r.html.contains("Open Linkdean"));
+    }
+
+    #[test]
+    fn share_invite_pending_links_the_claim() {
+        let r = render(
+            "share_invite_pending",
+            &sample("share_invite_pending").unwrap(),
+            &site(),
+        )
+        .unwrap();
+        assert_eq!(r.subject, "Ada Lovelace shared a dashboard with you");
+        assert!(r
+            .text
+            .contains("Create an account, or sign in, with this address to accept."));
+        let url = "https://links.example.com/register?share=abc123";
+        assert!(r.html.contains(&format!(r#"href="{url}""#)));
+        assert!(r.text.contains(url));
+        assert!(r.html.contains("Accept the invite"));
+    }
+
+    #[test]
+    fn notification_says_why_and_links_the_settings() {
+        let r = render("notification", &sample("notification").unwrap(), &site()).unwrap();
+        assert_eq!(r.subject, "New comment on links.example.com");
+        assert!(
+            r.text.contains("Ada commented on “Rust book”"),
+            "{}",
+            r.text
+        );
+        assert!(
+            r.text
+                .contains("You got this because email for Comments is on."),
+            "{}",
+            r.text
+        );
+        assert!(r
+            .html
+            .contains(r#"href="https://links.example.com/settings?tab=notifications""#));
+        assert!(r.html.contains(r#"href="https://links.example.com/b/1""#));
+    }
+
+    #[test]
+    fn names_in_invites_and_notifications_are_text_not_markup() {
+        let name = "<b>bold</b>";
+        let invite = json!({
+            "owner": name, "subject_kind": "folder", "name": name,
+            "access": "read-only", "url": "https://links.example.com/shared",
+        });
+        let pending = json!({
+            "owner": name, "subject_kind": "folder", "name": name,
+            "access": "read-only", "claim_url": "https://links.example.com/register?share=x",
+        });
+        let notification = json!({
+            "heading": name, "message": name, "url": "https://links.example.com/",
+            "kind_label": name, "settings_url": "https://links.example.com/settings",
+        });
+        for (template, data) in [
+            ("share_invite", invite),
+            ("share_invite_pending", pending),
+            ("notification", notification),
+        ] {
+            let r = render(template, &data, &site()).unwrap();
+            assert!(!r.html.contains("<b>"), "{template} html");
+            assert!(
+                r.html.contains("&lt;b&gt;bold&lt;/b&gt;"),
+                "{template} html"
+            );
+            assert!(r.text.contains(name), "{template} text: {}", r.text);
+        }
     }
 
     #[test]

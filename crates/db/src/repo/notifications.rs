@@ -86,26 +86,29 @@ async fn insert_notification(
             return Ok(());
         }
     }
-    sqlx::query(
+    let sql = format!(
         r#"
         INSERT INTO notifications (
             recipient_user_id, actor_user_id, kind, subject_type, subject_id,
-            subject_title, body, payload
+            subject_title, body, payload, email_state
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, {})
         "#,
-    )
-    .bind(recipient_user_id)
-    .bind(actor_user_id)
-    .bind(kind.as_str())
-    .bind(subject_type.as_str())
-    .bind(subject_id)
-    .bind(subject_title)
-    .bind(body)
-    .bind(payload)
-    .execute(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+        super::notification_email::email_state_sql("$1", "$3", "$9"),
+    );
+    sqlx::query(&sql)
+        .bind(recipient_user_id)
+        .bind(actor_user_id)
+        .bind(kind.as_str())
+        .bind(subject_type.as_str())
+        .bind(subject_id)
+        .bind(subject_title)
+        .bind(body)
+        .bind(payload)
+        .bind(kind.email_by_default())
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
     Ok(())
 }
 

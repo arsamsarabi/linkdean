@@ -1,0 +1,14 @@
+{% extends "layout.mjml" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block preview %}{{ message }}{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">{{ heading }}</mj-text>
+    <mj-text>{{ message }}</mj-text>
+    {{ action(url, "Open Linkdean") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this because email for {{ kind_label }} is on. Turn it off in <a href="{{ settings_url }}" style="color:#636772">Settings → Notifications</a>.{% endblock %}

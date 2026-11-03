@@ -2,7 +2,7 @@ use chrono::{DateTime, Duration, Utc};
 use linkdean_core::{
     BanView, ChangeBans, CreateBan, Error, ExposedBookmark, ExposedCategory, ExposedComment,
     ExposedContent, ExposedShare, LiftBans, ModerateAction, ModerateOutcome, ModerateRequest,
-    ModerationActionView, Result, UserBan,
+    ModerationActionView, NotificationKind, Result, UserBan,
 };
 use serde_json::json;
 use sqlx::{PgConnection, PgPool};
@@ -819,23 +819,27 @@ pub async fn moderate_content(
         .await?;
     }
     if outcome.applied > 0 {
-        sqlx::query(
+        let sql = format!(
             r#"
             INSERT INTO notifications
-                (recipient_user_id, actor_user_id, kind, subject_type, subject_id, body, payload)
-            VALUES ($1, $2, 'moderation_changes', 'user', $1, $3, $4)
+                (recipient_user_id, actor_user_id, kind, subject_type, subject_id, body, payload,
+                 email_state)
+            VALUES ($1, $2, 'moderation_changes', 'user', $1, $3, $4, {})
             "#,
-        )
-        .bind(user_id)
-        .bind(admin_id)
-        .bind(format!(
-            "An admin changed {} of your items: {reason}",
-            outcome.applied
-        ))
-        .bind(json!({ "counts": counts }))
-        .execute(&mut *tx)
-        .await
-        .map_err(db_err)?;
+            super::notification_email::email_state_sql("$1", "'moderation_changes'", "$5"),
+        );
+        sqlx::query(&sql)
+            .bind(user_id)
+            .bind(admin_id)
+            .bind(format!(
+                "An admin changed {} of your items: {reason}",
+                outcome.applied
+            ))
+            .bind(json!({ "counts": counts }))
+            .bind(NotificationKind::ModerationChanges.email_by_default())
+            .execute(&mut *tx)
+            .await
+            .map_err(db_err)?;
     }
     tx.commit().await.map_err(db_err)?;
 
