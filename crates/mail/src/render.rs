@@ -81,6 +81,9 @@ pub fn sample(name: &str) -> Option<Value> {
     serde_json::from_str(t.sample).ok()
 }
 
+/// Wide enough that html2text never wraps a line of the plain-text part.
+const TEXT_WIDTH: usize = 10_000;
+
 pub fn render(name: &str, data: &Value, site: &Site) -> Result<Rendered, RenderError> {
     let t = TEMPLATES
         .iter()
@@ -154,12 +157,13 @@ pub fn render(name: &str, data: &Value, site: &Site) -> Result<Rendered, RenderE
         .element
         .render(&options)
         .map_err(|e| mjml_err(e.to_string()))?;
-    // Raw mode reads MJML's layout tables as one column: no borders, no cell padding. Links stay
-    // on one line, so a long reset link still works when copied from the text part.
+    // Raw mode reads MJML's layout tables as one column: no borders, no cell padding. Lines are not
+    // wrapped (mail clients wrap plain text themselves), so a long reset link printed in the body
+    // still works when copied; lettre encodes any over-long line for SMTP.
     let text = html2text::config::plain()
         .raw_mode(true)
         .no_link_wrapping()
-        .string_from_read(html.as_bytes(), 78)
+        .string_from_read(html.as_bytes(), TEXT_WIDTH)
         .map_err(|e| mjml_err(e.to_string()))?;
     Ok(Rendered {
         subject,
@@ -239,7 +243,10 @@ mod tests {
             &site(),
         )
         .unwrap();
-        assert!(r.text.contains(&url), "{}", r.text);
+        // The body copy ("open this link") and the link footnotes are all whole.
+        for line in r.text.lines().filter(|l| l.contains("token=")) {
+            assert!(line.contains(&url), "wrapped link: {line:?}\n{}", r.text);
+        }
     }
 
     #[test]
