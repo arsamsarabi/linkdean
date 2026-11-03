@@ -29,16 +29,33 @@ function isSpentLink(e: unknown): boolean {
  * Without a token this is the hard gate's screen for an unverified account.
  */
 export function VerifyEmailPage(): ReactElement {
-  const [link] = useState(linkFromHash)
+  const [link, setLink] = useState(linkFromHash)
 
-  // Drop the token from the address bar once it has been read.
+  // Drop the token from the address bar once it has been read. A link pasted into this tab
+  // (say, on the gate screen) changes only the fragment, so the page does not reload: read it.
   useEffect(() => {
-    if (!window.location.hash) return
-    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+    function clearHash(): void {
+      if (!window.location.hash) return
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+    }
+    function onHashChange(): void {
+      const next = linkFromHash()
+      clearHash()
+      if (next.token) setLink(next)
+    }
+    clearHash()
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
   if (!link.token) return <VerifyEmailGate />
-  return <VerifyEmailLink token={link.token} change={link.change} />
+  return (
+    <VerifyEmailLink
+      key={`${link.change ? 'change' : 'verify'}:${link.token}`}
+      token={link.token}
+      change={link.change}
+    />
+  )
 }
 
 type Outcome = { state: 'pending' } | { state: 'done' } | { state: 'failed'; error: unknown }

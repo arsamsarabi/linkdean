@@ -142,6 +142,18 @@ describe('VerifyEmailPage as the hard gate', () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true }))
   })
 
+  it('takes a link pasted into the gate tab, which changes only the fragment', async () => {
+    api.me.mockResolvedValue(meResponse())
+    api.verifyEmail.mockResolvedValue({ ok: true })
+    render(ui())
+    expect(await screen.findByText('Verify your email')).toBeTruthy()
+    window.location.hash = '#token=tok_pasted'
+    expect(await screen.findByText('Email verified')).toBeTruthy()
+    expect(api.verifyEmail).toHaveBeenCalledTimes(1)
+    expect(api.verifyEmail).toHaveBeenCalledWith('tok_pasted')
+    expect(window.location.hash).toBe('')
+  })
+
   it('goes to sign in when there is no session', async () => {
     api.me.mockRejectedValue(signedOut)
     render(ui())
