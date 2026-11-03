@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::rate_limit::{Limiter, WINDOW};
+use crate::rate_limit::{Limiter, INVITE_EMAIL_WINDOW, WINDOW};
 use crate::vault_keys::{idle_limit, VaultKeyStore, VaultSession};
 use anyhow::Context;
 use linkdean_core::VaultKeyring;
@@ -17,6 +17,8 @@ pub struct AppState {
     /// Unlocked vaults per login session (memory only; lost on restart).
     pub vault_keys: Arc<VaultKeyStore>,
     pub limiter: Arc<Limiter>,
+    /// Share invite emails per owner, over an hour rather than `limiter`'s 15 minutes.
+    pub invite_limiter: Arc<Limiter>,
     pub mail: Option<Arc<crate::mail::Mail>>,
 }
 
@@ -49,6 +51,7 @@ impl AppState {
             cfg,
             vault_keys: Arc::new(VaultKeyStore::default()),
             limiter: Arc::new(Limiter::new(WINDOW)),
+            invite_limiter: Arc::new(Limiter::new(INVITE_EMAIL_WINDOW)),
             mail,
         })
     }

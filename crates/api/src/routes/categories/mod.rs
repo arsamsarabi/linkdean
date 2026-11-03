@@ -1,5 +1,6 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
+use crate::notification_mail::{self, InviteEmail};
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{Path, Query, State};
@@ -149,9 +150,16 @@ async fn create_share(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
     Json(req): Json<CreateCategoryShare>,
-) -> ApiResult<Json<CreateCategoryShareOutcome>> {
+) -> ApiResult<Json<Value>> {
+    let since = notification_mail::invite_clock(&state).await;
     let outcome = db::create_share(&state.pool, user.id, id, req).await?;
-    Ok(Json(outcome))
+    let email = match &outcome {
+        CreateCategoryShareOutcome::Pending { invite } => {
+            notification_mail::invite_email(&state, &user, invite, since).await
+        }
+        CreateCategoryShareOutcome::Active { .. } => InviteEmail::default(),
+    };
+    Ok(Json(notification_mail::with_invite_email(&outcome, email)))
 }
 
 async fn update_share(

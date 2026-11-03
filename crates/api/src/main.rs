@@ -4,6 +4,7 @@ mod error;
 mod mail;
 mod maintenance;
 mod metrics;
+mod notification_mail;
 mod rate_limit;
 mod routes;
 mod state;

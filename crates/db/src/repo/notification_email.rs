@@ -217,3 +217,54 @@ pub async fn discard_pending_notification_emails(pool: &PgPool, limit: i64) -> R
     .map_err(db_err)?;
     Ok(res.rows_affected())
 }
+
+/// The database's clock, for comparing with `created_at` of rows inserted after this call.
+pub async fn database_now(pool: &PgPool) -> Result<DateTime<Utc>> {
+    let (now,): (DateTime<Utc>,) = sqlx::query_as("SELECT clock_timestamp()")
+        .fetch_one(pool)
+        .await
+        .map_err(db_err)?;
+    Ok(now)
+}
+
+/// The share invite notification `actor_user_id` created for this subject at or after `since`,
+/// when it is to be emailed (pending or already queued). Lets the share routes tell whether the
+/// share they just made will send an invite email.
+pub async fn find_new_share_invite_email(
+    pool: &PgPool,
+    actor_user_id: Uuid,
+    subject_type: NotificationSubjectType,
+    subject_id: Uuid,
+    since: DateTime<Utc>,
+) -> Result<Option<Uuid>> {
+    let row: Option<(Uuid,)> = sqlx::query_as(
+        r#"
+        SELECT id FROM notifications
+        WHERE actor_user_id = $1 AND kind = $2 AND subject_type = $3 AND subject_id = $4
+          AND created_at >= $5 AND email_state IN ('pending', 'queued')
+        ORDER BY created_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(actor_user_id)
+    .bind(NotificationKind::ShareInvite.as_str())
+    .bind(subject_type.as_str())
+    .bind(subject_id)
+    .bind(since)
+    .fetch_optional(pool)
+    .await
+    .map_err(db_err)?;
+    Ok(row.map(|(id,)| id))
+}
+
+/// Stops a notification from being emailed. False when the mailer already claimed it.
+pub async fn cancel_notification_email(pool: &PgPool, id: Uuid) -> Result<bool> {
+    let res = sqlx::query(
+        "UPDATE notifications SET email_state = 'none' WHERE id = $1 AND email_state = 'pending'",
+    )
+    .bind(id)
+    .execute(pool)
+    .await
+    .map_err(db_err)?;
+    Ok(res.rows_affected() == 1)
+}

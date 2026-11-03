@@ -320,3 +320,73 @@ async fn an_unverified_address_or_discarded_backlog_is_not_emailed() {
         .iter()
         .all(|p| p.recipient_user_id != other.id));
 }
+
+#[tokio::test]
+async fn a_new_share_invite_email_can_be_found_and_cancelled() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _turn = SERIAL.lock().await;
+    let owner = user(&pool, "finder", true).await;
+    let invitee = user(&pool, "found", true).await;
+    let cat = db::create_category(
+        &pool,
+        owner.id,
+        CreateCategory {
+            name: format!("Find-{}", Uuid::new_v4()),
+            parent_id: None,
+            is_hidden: false,
+            vault_id: None,
+            icon: None,
+        },
+    )
+    .await
+    .expect("cat");
+    let share = || {
+        db::create_share(
+            &pool,
+            owner.id,
+            cat.id,
+            CreateCategoryShare {
+                email: invitee.email.clone(),
+                access: ShareAccess::Read,
+            },
+        )
+    };
+
+    let since = db::database_now(&pool).await.expect("now");
+    share().await.expect("share");
+    let found = db::find_new_share_invite_email(
+        &pool,
+        owner.id,
+        NotificationSubjectType::Category,
+        cat.id,
+        since,
+    )
+    .await
+    .expect("find")
+    .expect("an invite email");
+
+    // Sharing again sends no second invite, so nothing new is found.
+    let again = db::database_now(&pool).await.expect("now");
+    share().await.expect("share again");
+    assert!(db::find_new_share_invite_email(
+        &pool,
+        owner.id,
+        NotificationSubjectType::Category,
+        cat.id,
+        again,
+    )
+    .await
+    .expect("find")
+    .is_none());
+
+    assert!(db::cancel_notification_email(&pool, found)
+        .await
+        .expect("cancel"));
+    assert!(!db::cancel_notification_email(&pool, found)
+        .await
+        .expect("cancel twice"));
+    let s = states(&pool, invitee.id, NotificationKind::ShareInvite).await;
+    assert_eq!(s, [(found, "none".to_string())]);
+}

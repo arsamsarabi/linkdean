@@ -1,4 +1,4 @@
-//! In-memory limits on credential guessing. They reset when the API restarts.
+//! In-memory limits on credential guessing and email floods. They reset when the API restarts.
 
 use axum::http::HeaderMap;
 use linkdean_core::{Error, Result};
@@ -29,6 +29,11 @@ const VERIFY_RESEND_ACCOUNT: u32 = 3;
 const VERIFY_RESEND_ADDRESS: u32 = 10;
 /// Attempts to use a verification or email change link, from one address.
 const VERIFY_ATTEMPT_ADDRESS: u32 = 10;
+
+/// Invite emails one owner may send per hour, so a compromised account cannot use the instance
+/// to spam addresses. Counted in memory, in its own limiter with an hour-long window.
+pub const INVITE_EMAIL_WINDOW: Duration = Duration::from_secs(60 * 60);
+const INVITE_EMAIL_OWNER: u32 = 20;
 
 /// A counter and the attempts it allows per window.
 pub type Limit = (String, u32);
@@ -75,6 +80,11 @@ pub fn verify_resend_limits(user_id: uuid::Uuid, ip: IpAddr) -> [Limit; 2] {
 
 pub fn verify_attempt_limit(ip: IpAddr) -> [Limit; 1] {
     [(format!("verify-attempt:{ip}"), VERIFY_ATTEMPT_ADDRESS)]
+}
+
+/// Share invite emails sent by one owner, in `AppState::invite_limiter`.
+pub fn invite_email_limit(owner_id: uuid::Uuid) -> [Limit; 1] {
+    [(format!("invite-email:{owner_id}"), INVITE_EMAIL_OWNER)]
 }
 
 pub fn vault_limit(user_id: uuid::Uuid) -> [Limit; 1] {

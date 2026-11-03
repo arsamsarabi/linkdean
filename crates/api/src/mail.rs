@@ -64,15 +64,21 @@ pub async fn enqueue(
     Ok(Queued::Queued)
 }
 
-/// Deliver due email until the process ends. Returns at once when mail is off.
+/// Deliver due email until the process ends. Each tick first turns pending notification emails
+/// into outbox rows, so they go out in the same tick. With mail off, each tick discards pending
+/// notification emails instead, so turning mail on later sends no backlog.
 pub async fn run_sender(state: AppState) {
-    let Some(mail) = state.mail.clone() else {
-        return;
-    };
     let mut tick = tokio::time::interval(POLL);
     tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    let Some(mail) = state.mail.clone() else {
+        loop {
+            tick.tick().await;
+            crate::notification_mail::discard_notification_emails(&state.pool).await;
+        }
+    };
     loop {
         tick.tick().await;
+        crate::notification_mail::queue_notification_emails(&state).await;
         deliver_due(&state.pool, &mail.mailer).await;
     }
 }

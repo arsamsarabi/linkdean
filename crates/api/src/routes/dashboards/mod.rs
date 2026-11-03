@@ -1,5 +1,6 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
+use crate::notification_mail::{self, InviteEmail};
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{Path, State};
@@ -143,9 +144,16 @@ async fn create_share(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
     Json(req): Json<CreateDashboardShare>,
-) -> ApiResult<Json<CreateDashboardShareOutcome>> {
+) -> ApiResult<Json<Value>> {
+    let since = notification_mail::invite_clock(&state).await;
     let outcome = db::create_dashboard_share(&state.pool, user.id, id, req).await?;
-    Ok(Json(outcome))
+    let email = match &outcome {
+        CreateDashboardShareOutcome::Pending { invite } => {
+            notification_mail::invite_email(&state, &user, invite, since).await
+        }
+        CreateDashboardShareOutcome::Active { .. } => InviteEmail::default(),
+    };
+    Ok(Json(notification_mail::with_invite_email(&outcome, email)))
 }
 
 async fn update_share(

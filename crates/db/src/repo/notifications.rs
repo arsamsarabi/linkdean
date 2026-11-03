@@ -332,7 +332,7 @@ async fn actor_label(pool: &PgPool, actor_user_id: Uuid) -> String {
     }
 }
 
-fn access_label(access: ShareAccess) -> &'static str {
+pub fn access_label(access: ShareAccess) -> &'static str {
     match access {
         ShareAccess::Read => "read-only",
         ShareAccess::Write => "read-write",
