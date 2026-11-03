@@ -24,6 +24,7 @@ pub fn router() -> Router<AppState> {
         .route("/admin/users", get(list_users))
         .route("/admin/users/{id}", axum::routing::patch(patch_user))
         .route("/admin/users/{id}/ban", post(ban_user))
+        .route("/admin/users/{id}/reset-link", post(create_reset_link))
         .route(
             "/admin/users/{id}/moderation-actions",
             get(moderation_actions),
@@ -77,6 +78,42 @@ async fn patch_user(
 ) -> ApiResult<Json<Value>> {
     let user = db::update_admin_user(&state.pool, id, req).await?;
     Ok(Json(json!({ "user": user })))
+}
+
+/// How long an admin-made link works: long enough to hand it over.
+const ADMIN_LINK_HOURS: i64 = 24;
+
+/// A reset link to hand over privately; the only way back in when mail is off.
+async fn create_reset_link(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    let user = db::find_user_by_id(&state.pool, id)
+        .await?
+        .ok_or(linkdean_core::Error::NotFound)?;
+    if user.password_hash.is_none() {
+        return Err(linkdean_core::Error::BadRequest(
+            "this account signs in with SSO and has no password".into(),
+        )
+        .into());
+    }
+    let token = db::create_reset_token(
+        &state.pool,
+        id,
+        chrono::Duration::hours(ADMIN_LINK_HOURS),
+        Some(admin.id),
+    )
+    .await?;
+    if let Err(e) =
+        crate::mail::enqueue(&state, &user.email, "password_reset_admin", &json!({})).await
+    {
+        tracing::warn!(error = %e, "admin reset notice email failed");
+    }
+    let url = crate::routes::auth::reset_url(&state.cfg.app_url, &token);
+    Ok(Json(
+        json!({ "url": url, "expires_in_hours": ADMIN_LINK_HOURS }),
+    ))
 }
 
 async fn ban_user(

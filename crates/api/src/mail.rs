@@ -31,7 +31,6 @@ impl Mail {
     }
 }
 
-#[allow(dead_code)] // First used by password reset (outbound email part B).
 #[derive(Debug, PartialEq, Eq)]
 pub enum Queued {
     Queued,
@@ -40,7 +39,6 @@ pub enum Queued {
 }
 
 /// Render `template` with `data` and queue it for `to`. Never sends inline.
-#[allow(dead_code)] // First used by password reset (outbound email part B).
 pub async fn enqueue(
     state: &AppState,
     to: &str,

@@ -19,6 +19,11 @@ const LOGIN_ACCOUNT: u32 = 50;
 const LOGIN_ADDRESS: u32 = 50;
 const REGISTER_ADDRESS: u32 = 10;
 const VAULT_USER: u32 = 10;
+/// Reset link requests for one address, so nobody floods an inbox.
+const RESET_REQUEST_ACCOUNT: u32 = 3;
+const RESET_REQUEST_ADDRESS: u32 = 10;
+/// Attempts to use a reset link, from one address.
+const RESET_ATTEMPT_ADDRESS: u32 = 10;
 
 /// A counter and the attempts it allows per window.
 pub type Limit = (String, u32);
@@ -34,6 +39,22 @@ pub fn login_limits(ip: IpAddr, email: &str) -> [Limit; 3] {
 
 pub fn register_limit(ip: IpAddr) -> [Limit; 1] {
     [(format!("register:{ip}"), REGISTER_ADDRESS)]
+}
+
+/// Every request counts, known address or not, so the limit says nothing about accounts.
+pub fn reset_request_limits(ip: IpAddr, email: &str) -> [Limit; 2] {
+    let email = email.trim().to_ascii_lowercase();
+    [
+        (
+            format!("reset-request-account:{email}"),
+            RESET_REQUEST_ACCOUNT,
+        ),
+        (format!("reset-request-address:{ip}"), RESET_REQUEST_ADDRESS),
+    ]
+}
+
+pub fn reset_attempt_limit(ip: IpAddr) -> [Limit; 1] {
+    [(format!("reset-attempt:{ip}"), RESET_ATTEMPT_ADDRESS)]
 }
 
 pub fn vault_limit(user_id: uuid::Uuid) -> [Limit; 1] {
@@ -212,6 +233,50 @@ mod tests {
             login_limits(ip, " Bob@X.com "),
             login_limits(ip, "bob@x.com")
         );
+    }
+
+    #[test]
+    fn reset_request_keys_ignore_email_case_and_differ_per_email_and_address() {
+        let ip: IpAddr = "203.0.113.9".parse().unwrap();
+        let other: IpAddr = "203.0.113.10".parse().unwrap();
+        assert_eq!(
+            reset_request_limits(ip, " Bob@X.com "),
+            reset_request_limits(ip, "bob@x.com")
+        );
+        let [bob_account, bob_address] = reset_request_limits(ip, "bob@x.com");
+        let [amy_account, amy_address] = reset_request_limits(ip, "amy@x.com");
+        assert_ne!(bob_account, amy_account);
+        assert_eq!(bob_address, amy_address, "one counter per address");
+        let [elsewhere_account, elsewhere_address] = reset_request_limits(other, "bob@x.com");
+        assert_eq!(bob_account, elsewhere_account, "one counter per email");
+        assert_ne!(bob_address, elsewhere_address);
+        assert_eq!(bob_account.1, 3);
+        assert_eq!(bob_address.1, 10);
+    }
+
+    #[test]
+    fn reset_attempt_key_differs_per_address() {
+        let a: IpAddr = "203.0.113.9".parse().unwrap();
+        let b: IpAddr = "203.0.113.10".parse().unwrap();
+        assert_ne!(reset_attempt_limit(a), reset_attempt_limit(b));
+        assert_eq!(reset_attempt_limit(a)[0].1, 10);
+    }
+
+    #[test]
+    fn the_fourth_reset_request_for_one_email_is_refused() {
+        let limiter = Limiter::new(WINDOW);
+        let ip: IpAddr = "203.0.113.9".parse().unwrap();
+        for _ in 0..3 {
+            let limits = reset_request_limits(ip, "bob@x.com");
+            assert!(limiter.check(&limits).is_ok());
+            limiter.record(&limits);
+        }
+        assert!(limiter
+            .check(&reset_request_limits(ip, "BOB@x.com"))
+            .is_err());
+        assert!(limiter
+            .check(&reset_request_limits(ip, "amy@x.com"))
+            .is_ok());
     }
 
     #[test]

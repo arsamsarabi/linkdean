@@ -1,4 +1,7 @@
 mod oidc;
+mod password_reset;
+
+pub(crate) use password_reset::reset_url;
 
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
@@ -20,6 +23,8 @@ pub fn router() -> Router<AppState> {
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
         .route("/auth/logout", post(logout))
+        .route("/auth/password/forgot", post(password_reset::forgot))
+        .route("/auth/password/reset", post(password_reset::reset))
         .route("/auth/me", get(me))
         .route("/auth/bootstrap-status", get(bootstrap_status))
         .route("/auth/onboarding/complete", post(complete_onboarding))
@@ -36,6 +41,7 @@ async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value
         "bootstrap_token_required": count == 0 && state.cfg.bootstrap_token.is_some(),
         "oidc_enabled": state.cfg.oidc_enabled(),
         "registration_open": platform.registration_open,
+        "mail_enabled": state.mail.is_some(),
     })))
 }
 
@@ -45,6 +51,7 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
         "oidc_enabled": state.cfg.oidc_enabled(),
         "app_url": state.cfg.app_url,
         "registration_open": platform.registration_open,
+        "mail_enabled": state.mail.is_some(),
     })))
 }
 

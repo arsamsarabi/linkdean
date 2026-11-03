@@ -2,7 +2,7 @@ mod activity;
 mod admin;
 mod api_keys;
 mod assets;
-mod auth;
+pub(crate) mod auth;
 mod bookmarks;
 mod categories;
 mod dashboards;

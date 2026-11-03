@@ -4,8 +4,8 @@ use crate::state::AppState;
 use std::path::Path;
 use std::time::Duration;
 
-/// How often trash retention, the session purge, the unused tag reap, the old email purge and the
-/// vault key sweep run.
+/// How often trash retention, the session purge, the unused tag reap, the old email purge, the old
+/// reset link purge and the vault key sweep run.
 const INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 /// Run housekeeping now, then every [`INTERVAL`], for the life of the process.
@@ -57,6 +57,12 @@ async fn run_once(state: &AppState) {
         Ok(0) => {}
         Ok(n) => tracing::info!(emails = n, "purged old outbox email"),
         Err(e) => tracing::warn!(error = %e, "outbox purge failed"),
+    }
+
+    match linkdean_db::purge_old_reset_tokens(&state.pool).await {
+        Ok(0) => {}
+        Ok(n) => tracing::info!(tokens = n, "purged old password reset links"),
+        Err(e) => tracing::warn!(error = %e, "password reset link purge failed"),
     }
 
     // Vault keys of sessions that ended or sat idle past the owner's auto-lock time.
