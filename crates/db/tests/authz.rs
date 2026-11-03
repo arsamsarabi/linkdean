@@ -55,6 +55,9 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
     )
     .await
     .expect("create user a");
+    db::mark_email_verified(&pool, user_a.id)
+        .await
+        .expect("verify email");
     let user_b = db::create_user(
         &pool,
         &unique_email("b"),
@@ -65,6 +68,9 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
     )
     .await
     .expect("create user b");
+    db::mark_email_verified(&pool, user_b.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -193,6 +199,9 @@ async fn share_read_and_write_membership() {
     )
     .await
     .expect("create user a");
+    db::mark_email_verified(&pool, user_a.id)
+        .await
+        .expect("verify email");
     let user_b = db::create_user(
         &pool,
         &unique_email("share-b"),
@@ -203,6 +212,9 @@ async fn share_read_and_write_membership() {
     )
     .await
     .expect("create user b");
+    db::mark_email_verified(&pool, user_b.id)
+        .await
+        .expect("verify email");
     let user_c = db::create_user(
         &pool,
         &unique_email("share-c"),
@@ -213,6 +225,9 @@ async fn share_read_and_write_membership() {
     )
     .await
     .expect("create user c");
+    db::mark_email_verified(&pool, user_c.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -464,6 +479,9 @@ async fn cannot_share_vault_category() {
     )
     .await
     .expect("user a");
+    db::mark_email_verified(&pool, user_a.id)
+        .await
+        .expect("verify email");
     let user_b = db::create_user(
         &pool,
         &unique_email("vault-b"),
@@ -474,6 +492,9 @@ async fn cannot_share_vault_category() {
     )
     .await
     .expect("user b");
+    db::mark_email_verified(&pool, user_b.id)
+        .await
+        .expect("verify email");
 
     let (vault, _, _) = db::create_vault(&pool, user_a.id, "Vault", "vault-passphrase")
         .await
@@ -545,6 +566,9 @@ async fn public_list_slug_is_unlisted_and_revocable() {
     )
     .await
     .expect("user a");
+    db::mark_email_verified(&pool, user_a.id)
+        .await
+        .expect("verify email");
     let user_b = db::create_user(
         &pool,
         &unique_email("pub-b"),
@@ -555,6 +579,9 @@ async fn public_list_slug_is_unlisted_and_revocable() {
     )
     .await
     .expect("user b");
+    db::mark_email_verified(&pool, user_b.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -696,6 +723,9 @@ async fn pending_share_invite_claims_on_register() {
     )
     .await
     .expect("user a");
+    db::mark_email_verified(&pool, user_a.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -740,9 +770,10 @@ async fn pending_share_invite_claims_on_register() {
     .await
     .expect("user b");
 
-    let claimed = db::link_pending_share_invites(&pool, &pending_email, user_b.id)
+    // Verifying the address attaches the invite waiting for it.
+    let claimed = db::mark_email_verified(&pool, user_b.id)
         .await
-        .expect("claim");
+        .expect("verify email");
     assert_eq!(claimed, 1);
     accept_invites(&pool, user_b.id).await;
 
@@ -779,6 +810,9 @@ async fn public_list_owner_without_a_name_shows_no_email() {
     )
     .await
     .expect("user");
+    db::mark_email_verified(&pool, owner.id)
+        .await
+        .expect("verify email");
     let cat = db::create_category(
         &pool,
         owner.id,

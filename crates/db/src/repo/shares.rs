@@ -256,9 +256,8 @@ pub async fn list_shares_for_category(
     rows.into_iter().map(to_view).collect()
 }
 
-// Known issue: Email addresses are never verified, so whoever registers an address first, or
-// changes their email to it, receives invites sent to that address. Fix with email verification,
-// planned under SMTP in docs/ROADMAP.md.
+/// Share a folder by email. Access starts only when the invitee accepts. An address with no
+/// verified account gets an address-only invite, which attaches once an account verifies it.
 pub async fn create_share(
     pool: &PgPool,
     owner_user_id: Uuid,
@@ -300,6 +299,9 @@ pub async fn create_share(
         .await?
         .is_some();
     if !existed {
+        // Until the account proves it controls the address, the invite waits for the address
+        // like one to an unknown address, and attaches when the account verifies.
+        let invitee_user_id = invitee.email_verified_at.is_some().then_some(invitee.id);
         let (invite, created) = super::pending_shares::upsert_pending_share_invite(
             pool,
             owner_user_id,
@@ -307,10 +309,10 @@ pub async fn create_share(
             category_id,
             &email,
             req.access,
-            Some(invitee.id),
+            invitee_user_id,
         )
         .await?;
-        if created {
+        if created && invitee_user_id.is_some() {
             super::notifications::notify_category_share_invite(
                 pool,
                 owner_user_id,

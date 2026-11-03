@@ -25,7 +25,7 @@ async fn user(pool: &sqlx::PgPool) -> (Uuid, String) {
 
 async fn live_tokens(pool: &sqlx::PgPool, uid: Uuid) -> i64 {
     let (n,): (i64,) = sqlx::query_as(
-        "SELECT count(*) FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL",
+        "SELECT count(*) FROM account_tokens WHERE user_id = $1 AND used_at IS NULL",
     )
     .bind(uid)
     .fetch_one(pool)
@@ -122,7 +122,7 @@ async fn an_expired_token_is_refused() {
         .await
         .unwrap();
     sqlx::query(
-        "UPDATE password_reset_tokens SET expires_at = now() - interval '1 second' WHERE user_id = $1",
+        "UPDATE account_tokens SET expires_at = now() - interval '1 second' WHERE user_id = $1",
     )
     .bind(uid)
     .execute(&pool)
@@ -252,19 +252,18 @@ async fn old_tokens_are_purged() {
         .await
         .unwrap();
     sqlx::query(
-        "UPDATE password_reset_tokens SET expires_at = now() - interval '2 days' WHERE user_id = $1",
+        "UPDATE account_tokens SET expires_at = now() - interval '2 days' WHERE user_id = $1",
     )
     .bind(uid)
     .execute(&pool)
     .await
     .unwrap();
-    assert!(db::purge_old_reset_tokens(&pool).await.unwrap() >= 1);
-    let (n,): (i64,) =
-        sqlx::query_as("SELECT count(*) FROM password_reset_tokens WHERE user_id = $1")
-            .bind(uid)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    assert!(db::purge_old_account_tokens(&pool).await.unwrap() >= 1);
+    let (n,): (i64,) = sqlx::query_as("SELECT count(*) FROM account_tokens WHERE user_id = $1")
+        .bind(uid)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(n, 0);
 }
 

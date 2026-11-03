@@ -37,7 +37,7 @@ fn email(prefix: &str) -> String {
 }
 
 async fn user(pool: &PgPool, prefix: &str, display_name: Option<&str>) -> User {
-    db::create_user(
+    let user = db::create_user(
         pool,
         &email(prefix),
         Some("password-long"),
@@ -46,7 +46,11 @@ async fn user(pool: &PgPool, prefix: &str, display_name: Option<&str>) -> User {
         None,
     )
     .await
-    .expect("user")
+    .expect("user");
+    db::mark_email_verified(pool, user.id)
+        .await
+        .expect("verify email");
+    user
 }
 
 async fn category(pool: &PgPool, owner: &User) -> CategoryView {

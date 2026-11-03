@@ -24,9 +24,13 @@ async fn pool_or_skip() -> Option<PgPool> {
 
 async fn user(pool: &PgPool, prefix: &str) -> User {
     let email = format!("{prefix}-{}@invites.test", Uuid::new_v4());
-    db::create_user(pool, &email, Some("password-long"), None, None, None)
+    let user = db::create_user(pool, &email, Some("password-long"), None, None, None)
         .await
-        .expect("user")
+        .expect("user");
+    db::mark_email_verified(pool, user.id)
+        .await
+        .expect("verify email");
+    user
 }
 
 async fn category(pool: &PgPool, owner: &User) -> Uuid {
@@ -537,7 +541,7 @@ async fn inviting_again_replaces_the_claim_link() {
 }
 
 #[tokio::test]
-async fn inviting_again_reaches_someone_who_registered_without_the_link() {
+async fn inviting_again_reaches_someone_who_registered_without_the_link_once_verified() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
@@ -547,10 +551,21 @@ async fn inviting_again_reaches_someone_who_registered_without_the_link() {
     pending_claim(&pool, &owner, cat, &email).await;
     let friend = register(&pool, &email).await;
 
+    // Registering proves nothing about the address, so the invite keeps waiting.
     invite(&pool, &owner, cat, &email)
         .await
         .expect("invite again");
+    assert!(db::list_share_invites(&pool, friend.id)
+        .await
+        .expect("inbox")
+        .is_empty());
 
+    db::mark_email_verified(&pool, friend.id)
+        .await
+        .expect("verify email");
+    invite(&pool, &owner, cat, &email)
+        .await
+        .expect("invite after verifying");
     assert_eq!(
         db::list_share_invites(&pool, friend.id)
             .await

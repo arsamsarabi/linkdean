@@ -8,6 +8,7 @@ use linkdean_core::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use super::account_tokens::TokenPurpose;
 use super::moderation::{active_ban_windows, BanWindow};
 
 pub async fn count_users(pool: &PgPool) -> Result<i64> {
@@ -224,6 +225,7 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
         is_admin: user.is_admin,
         onboarding_completed: user.onboarding_completed,
         api_keys_enabled: user.api_keys_enabled,
+        email_verified: user.email_verified_at.is_some(),
     })
 }
 
@@ -231,6 +233,7 @@ fn admin_summary(user: User, ban: Option<&BanWindow>) -> AdminUserSummary {
     AdminUserSummary {
         id: user.id,
         has_password: user.password_hash.is_some(),
+        email_verified: user.email_verified_at.is_some(),
         email: user.email,
         display_name: user.display_name,
         is_admin: user.is_admin,
@@ -496,19 +499,15 @@ pub async fn update_profile(pool: &PgPool, user_id: Uuid, patch: &UpdateProfile)
         Some(v) => v.clone(),
         None => user.timezone.clone(),
     };
-    let email = match &patch.email {
-        Some(e) => {
-            let e = e.trim().to_ascii_lowercase();
-            if e.is_empty() {
-                return Err(Error::BadRequest("email required".into()));
-            }
-            if e != user.email && find_user_by_email(pool, &e).await?.is_some() {
-                return Err(Error::Conflict("email already registered".into()));
-            }
-            e
+    // The address changes only through a confirmation link (or an admin), so an unverified
+    // address can never take over invites. Sending the current one back is fine.
+    if let Some(e) = &patch.email {
+        if e.trim().to_ascii_lowercase() != user.email {
+            return Err(Error::BadRequest(
+                "change your email from Settings → Account".into(),
+            ));
         }
-        None => user.email.clone(),
-    };
+    }
 
     let profile_visibility = patch
         .profile_visibility
@@ -521,8 +520,7 @@ pub async fn update_profile(pool: &PgPool, user_id: Uuid, patch: &UpdateProfile)
             display_name = $2,
             bio = $3,
             timezone = $4,
-            email = $5,
-            profile_visibility = $6,
+            profile_visibility = $5,
             updated_at = now()
         WHERE id = $1
         RETURNING *
@@ -532,7 +530,6 @@ pub async fn update_profile(pool: &PgPool, user_id: Uuid, patch: &UpdateProfile)
     .bind(display_name)
     .bind(bio)
     .bind(timezone)
-    .bind(email)
     .bind(profile_visibility)
     .fetch_one(pool)
     .await
@@ -597,7 +594,8 @@ pub async fn change_password(
     } else {
         0
     };
-    super::password_resets::void_reset_tokens(&mut tx, user_id).await?;
+    super::account_tokens::void_account_tokens(&mut tx, user_id, TokenPurpose::PasswordReset)
+        .await?;
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
     Ok((sessions, keys))
 }

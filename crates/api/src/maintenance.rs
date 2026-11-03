@@ -59,10 +59,10 @@ async fn run_once(state: &AppState) {
         Err(e) => tracing::warn!(error = %e, "outbox purge failed"),
     }
 
-    match linkdean_db::purge_old_reset_tokens(&state.pool).await {
+    match linkdean_db::purge_old_account_tokens(&state.pool).await {
         Ok(0) => {}
-        Ok(n) => tracing::info!(tokens = n, "purged old password reset links"),
-        Err(e) => tracing::warn!(error = %e, "password reset link purge failed"),
+        Ok(n) => tracing::info!(tokens = n, "purged old account links"),
+        Err(e) => tracing::warn!(error = %e, "account link purge failed"),
     }
 
     // Vault keys of sessions that ended or sat idle past the owner's auto-lock time.

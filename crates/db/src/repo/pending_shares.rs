@@ -274,8 +274,9 @@ pub async fn revoke_pending_share_invite(
 
 /// Attach invites sent to this email. Access still needs acceptance.
 ///
-/// Only for an address the identity provider has verified. A password registration proves
-/// nothing about its address: use [`claim_pending_share_invite`].
+/// Only for an address the account has verified (a link, an admin, or the identity provider).
+/// A password registration alone proves nothing about its address: use
+/// [`claim_pending_share_invite`].
 pub async fn link_pending_share_invites(pool: &PgPool, email: &str, user_id: Uuid) -> Result<u32> {
     let email = normalize_email(email)?;
     let rows = sqlx::query_as::<_, PendingShareInvite>(
@@ -339,6 +340,19 @@ pub async fn claim_pending_share_invite(
         return Ok(false);
     }
     attach_invitee(pool, &row, user_id).await
+}
+
+/// [`claim_pending_share_invite`] for a signed-in account, with its own address: the invite
+/// must have been sent to the address the account has now.
+pub async fn claim_pending_share_invite_signed_in(
+    pool: &PgPool,
+    token: &str,
+    user_id: Uuid,
+) -> Result<bool> {
+    let user = find_user_by_id(pool, user_id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    claim_pending_share_invite(pool, token, &user.email, user_id).await
 }
 
 async fn attach_invitee(pool: &PgPool, row: &PendingShareInvite, user_id: Uuid) -> Result<bool> {

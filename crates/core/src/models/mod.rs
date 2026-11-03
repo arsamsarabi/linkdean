@@ -22,6 +22,8 @@ pub struct User {
     pub profile_visibility: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// When the account proved it controls `email`. `None` until then.
+    pub email_verified_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +40,7 @@ pub struct UserPublic {
     pub is_admin: bool,
     pub onboarding_completed: bool,
     pub api_keys_enabled: bool,
+    pub email_verified: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -86,6 +89,8 @@ pub struct UpdateProfile {
         skip_serializing_if = "Option::is_none"
     )]
     pub timezone: Option<Option<String>>,
+    /// Accepted only when it matches the current address. An address changes through an
+    /// emailed confirmation link, or by an instance admin.
     pub email: Option<String>,
     #[serde(default)]
     pub profile_visibility: Option<ProfileVisibility>,
@@ -118,6 +123,7 @@ pub struct UpdateSettings {
 pub struct PlatformSettings {
     pub registration_open: bool,
     pub api_keys_enabled: bool,
+    pub require_verified_email: bool,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -125,6 +131,7 @@ pub struct PlatformSettings {
 pub struct UpdatePlatformSettings {
     pub registration_open: Option<bool>,
     pub api_keys_enabled: Option<bool>,
+    pub require_verified_email: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -176,6 +183,7 @@ pub struct AdminUserSummary {
     pub banned_until: Option<DateTime<Utc>>,
     /// False for accounts that only sign in with SSO.
     pub has_password: bool,
+    pub email_verified: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

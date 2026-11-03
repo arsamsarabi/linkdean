@@ -50,6 +50,9 @@ async fn category_share_emits_invite_access_revoke() {
     )
     .await
     .expect("owner");
+    db::mark_email_verified(&pool, owner.id)
+        .await
+        .expect("verify email");
     let invitee = db::create_user(
         &pool,
         &email("inv"),
@@ -60,6 +63,9 @@ async fn category_share_emits_invite_access_revoke() {
     )
     .await
     .expect("invitee");
+    db::mark_email_verified(&pool, invitee.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -157,6 +163,9 @@ async fn shared_bookmark_edit_notifies_owner() {
     )
     .await
     .expect("owner");
+    db::mark_email_verified(&pool, owner.id)
+        .await
+        .expect("verify email");
     let writer = db::create_user(
         &pool,
         &email("w2"),
@@ -167,6 +176,9 @@ async fn shared_bookmark_edit_notifies_owner() {
     )
     .await
     .expect("writer");
+    db::mark_email_verified(&pool, writer.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -253,6 +265,9 @@ async fn shared_dashboard_edit_notifies_owner() {
     )
     .await
     .expect("owner");
+    db::mark_email_verified(&pool, owner.id)
+        .await
+        .expect("verify email");
     let writer = db::create_user(
         &pool,
         &email("w3"),
@@ -263,6 +278,9 @@ async fn shared_dashboard_edit_notifies_owner() {
     )
     .await
     .expect("writer");
+    db::mark_email_verified(&pool, writer.id)
+        .await
+        .expect("verify email");
 
     let home = db::create_dashboard(
         &pool,

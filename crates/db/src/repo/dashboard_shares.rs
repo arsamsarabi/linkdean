@@ -329,6 +329,9 @@ pub async fn create_dashboard_share(
         .await?
         .is_some();
     if !existed {
+        // Until the account proves it controls the address, the invite waits for the address
+        // like one to an unknown address, and attaches when the account verifies.
+        let invitee_user_id = invitee.email_verified_at.is_some().then_some(invitee.id);
         let (invite, created) = super::pending_shares::upsert_pending_share_invite(
             pool,
             owner_user_id,
@@ -336,10 +339,10 @@ pub async fn create_dashboard_share(
             dashboard_id,
             &email,
             req.access,
-            Some(invitee.id),
+            invitee_user_id,
         )
         .await?;
-        if created {
+        if created && invitee_user_id.is_some() {
             super::notifications::notify_dashboard_share_invite(
                 pool,
                 owner_user_id,

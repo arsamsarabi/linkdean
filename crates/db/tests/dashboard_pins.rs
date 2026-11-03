@@ -35,9 +35,13 @@ async fn pool_or_skip() -> Option<PgPool> {
 
 async fn user(pool: &PgPool, prefix: &str) -> User {
     let email = format!("{prefix}-{}@pins.test", Uuid::new_v4());
-    db::create_user(pool, &email, Some("password-long"), None, None, None)
+    let user = db::create_user(pool, &email, Some("password-long"), None, None, None)
         .await
-        .expect("user")
+        .expect("user");
+    db::mark_email_verified(pool, user.id)
+        .await
+        .expect("verify email");
+    user
 }
 
 async fn shared_board(pool: &PgPool, owner: &User, invitee: &User, access: ShareAccess) -> Uuid {

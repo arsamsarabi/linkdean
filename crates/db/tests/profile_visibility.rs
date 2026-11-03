@@ -62,7 +62,7 @@ async fn mark_vault(pool: &PgPool, table: &str, id: Uuid) {
 }
 
 async fn user(pool: &PgPool, prefix: &str) -> User {
-    db::create_user(
+    let user = db::create_user(
         pool,
         &format!("{prefix}-{}@visibility.test", Uuid::new_v4()),
         Some("password-long"),
@@ -71,7 +71,11 @@ async fn user(pool: &PgPool, prefix: &str) -> User {
         None,
     )
     .await
-    .expect("user")
+    .expect("user");
+    db::mark_email_verified(pool, user.id)
+        .await
+        .expect("verify email");
+    user
 }
 
 async fn category(pool: &PgPool, owner: &User) -> Uuid {

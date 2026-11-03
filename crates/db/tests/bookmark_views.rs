@@ -26,6 +26,9 @@ async fn person(pool: &PgPool, prefix: &str, name: &str) -> User {
     let user = db::create_user(pool, &email, Some("password-long"), None, None, None)
         .await
         .expect("user");
+    db::mark_email_verified(pool, user.id)
+        .await
+        .expect("verify email");
     sqlx::query("UPDATE users SET display_name = $2 WHERE id = $1")
         .bind(user.id)
         .bind(name)

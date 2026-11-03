@@ -56,6 +56,9 @@ async fn default_dashboard_roundtrip_and_authz() {
     )
     .await
     .expect("create user a");
+    db::mark_email_verified(&pool, user_a.id)
+        .await
+        .expect("verify email");
     let user_b = db::create_user(
         &pool,
         &unique_email("b"),
@@ -66,6 +69,9 @@ async fn default_dashboard_roundtrip_and_authz() {
     )
     .await
     .expect("create user b");
+    db::mark_email_verified(&pool, user_b.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -208,6 +214,9 @@ async fn multi_dashboard_create_pin_delete() {
     )
     .await
     .expect("create user");
+    db::mark_email_verified(&pool, user.id)
+        .await
+        .expect("verify email");
 
     let home = db::get_default_dashboard(&pool, user.id, &VaultKeyring::default())
         .await
@@ -272,6 +281,9 @@ async fn dashboard_share_read_write_and_revoke() {
     )
     .await
     .expect("create a");
+    db::mark_email_verified(&pool, user_a.id)
+        .await
+        .expect("verify email");
     let user_b = db::create_user(
         &pool,
         &unique_email("share-b"),
@@ -282,6 +294,9 @@ async fn dashboard_share_read_write_and_revoke() {
     )
     .await
     .expect("create b");
+    db::mark_email_verified(&pool, user_b.id)
+        .await
+        .expect("verify email");
     let user_c = db::create_user(
         &pool,
         &unique_email("share-c"),
@@ -292,6 +307,9 @@ async fn dashboard_share_read_write_and_revoke() {
     )
     .await
     .expect("create c");
+    db::mark_email_verified(&pool, user_c.id)
+        .await
+        .expect("verify email");
 
     let cat = db::create_category(
         &pool,
@@ -453,6 +471,9 @@ async fn saving_a_layout_keeps_pins_the_editor_cannot_see() {
     )
     .await
     .expect("user");
+    db::mark_email_verified(&pool, owner.id)
+        .await
+        .expect("verify email");
     let (vault, key, _) = db::create_vault(&pool, owner.id, "Work", "work-passphrase")
         .await
         .expect("vault");
