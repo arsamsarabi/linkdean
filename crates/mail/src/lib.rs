@@ -6,4 +6,4 @@ mod send;
 
 pub use config::{MailConfig, TlsMode};
 pub use render::{render, sample, template_names, RenderError, Rendered, Site};
-// pub use send::Mailer;
+pub use send::Mailer;
