@@ -115,6 +115,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Local email / password accounts
 - Optional OIDC sign-in with any standard issuer (discovery, PKCE, nonce and ID token checks)
+- Single sign-on linking: an OIDC sign-in whose address belongs to a password account asks for that account's password once, then connects; the account gets a "Single sign-on was connected" email. **Profile → Edit profile → Single sign-on** shows the connected provider, with **Connect** (any provider address) and **Disconnect** (needs the password; not offered to SSO-only accounts)
 - First registered user becomes admin (bootstrap)
 - Open registration toggle (Admin)
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed

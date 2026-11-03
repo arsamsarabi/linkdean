@@ -18,7 +18,7 @@ Open `http://localhost:8080`. The first registered user becomes admin. Set `BOOT
 1. Create `deploy/docker/.env` with the [required secrets](#required-secrets) and set `APP_URL`. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true` (see [Reverse proxy](#reverse-proxy)).
 2. Compose up (command above).
 3. On first visit, register (bootstrap admin).
-4. Optional OIDC: set issuer, client id, and secret. `OIDC_ISSUER` is the provider's issuer exactly as its `/.well-known/openid-configuration` reports it, trailing slash included (Authentik: `https://auth.example.com/application/o/<slug>/`). Callback: `{APP_URL}/api/auth/oidc/callback`. OIDC sign-in obeys closed registration: an unknown identity gets no account unless registration is open.
+4. Optional OIDC: set issuer, client id, and secret. `OIDC_ISSUER` is the provider's issuer exactly as its `/.well-known/openid-configuration` reports it, trailing slash included (Authentik: `https://auth.example.com/application/o/<slug>/`). Callback: `{APP_URL}/api/auth/oidc/callback`. OIDC sign-in obeys closed registration: an unknown identity gets no account unless registration is open. See [Single sign-on](#single-sign-on) for how it meets existing password accounts.
 5. Avatars persist in the `avatars` volume (`AVATAR_DIR`); screenshots + favicon/OG binaries in `previews` (`PREVIEW_DIR`). Include both with Postgres backups.
 
 Secrets are injected via environment variables (or the operator's preferred secret store). No Infisical dependency. `deploy/docker/.env` is gitignored; keep it out of version control.
@@ -140,6 +140,23 @@ Email verification:
 - **Require verified email** under **Settings → Admin** holds unverified accounts at a verify screen with **Resend email** and **Sign out**, and the API answers `403` with `{"code":"email_unverified"}` on every route outside `/api/auth/`. It can only be turned on while mail is on, and it never applies to admins, so it cannot lock everyone out. If you turn mail off while it is on, the gate stops applying until mail is back.
 - Each account can send 3 verification or email change emails per 15 minutes, and each client IP 10. Each client IP can try 10 verification or email change links per 15 minutes.
 - **Upgrading:** every account that exists when you upgrade counts as verified (migration `042`). If you do not trust an account's address, remove its verification under **Settings → Admin → Accounts**.
+
+### Single sign-on
+
+Accounts are matched to the identity provider by issuer and subject, never by email alone. When an OIDC sign-in brings an address that a password account already uses:
+
+- The login page says "An account already uses x•••@example.com. Sign in with its password to connect single sign-on." Signing in with that account's password attaches the provider identity to it and shows **Single sign-on connected**. From then on the provider alone signs in.
+- The waiting link lives on the server for 10 minutes and is tied to the browser by an HttpOnly cookie (`linkdean_oidc_link`); nothing identifying goes in the URL. It is used up by the next password sign-in in that browser, whether or not it linked. Nothing links when the password is wrong, the link expired, or the password belongs to a different account than the one holding the provider's address. The usual login limits apply.
+- The account's address gets a "Single sign-on was connected" email (when mail is on), so a link nobody expected can be undone by resetting the password and telling the admin.
+- Linking marks the account verified only when the provider reports that same address as verified.
+- If the person does not know the account's password, the page says to ask the admin. An admin can reset that account's password, or change its address under **Settings → Admin → Accounts → Change email**, which frees the address for a normal single sign-on.
+- An account that signs in only with OIDC, or that is already connected to a different identity, is not linked: the login page says why.
+
+Signed-in people manage it under **Profile → Edit profile → Single sign-on** (shown when OIDC is configured):
+
+- **Connect** runs the provider sign-in and attaches that identity to the signed-in account, even when the provider's address differs. The account's address stays as it is.
+- **Disconnect** needs the current password and is only offered to accounts that have one, so nobody loses their only way to sign in. Wrong passwords count against the login limits.
+- One provider identity belongs to at most one account, and an account has at most one identity. Connecting an identity already attached elsewhere is refused: "This sign-in is already connected to another account."
 
 ### API clients
 
