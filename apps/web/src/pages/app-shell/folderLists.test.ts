@@ -19,6 +19,11 @@ describe('recentFolders', () => {
     expect(recentFolders(cats, undefined).map((c) => c.id)).toEqual(['Travel', 'Design', 'Recipes'])
   })
 
+  it('ranks by the latest bookmark activity when it is newer than the folder', () => {
+    const active = [...cats.slice(0, 4), { ...cats[4], last_bookmark_at: '2026-02-01' }]
+    expect(recentFolders(active, undefined).map((c) => c.id)).toEqual(['Work', 'Travel', 'Design'])
+  })
+
   it('adds the open folder when it is not among them', () => {
     expect(recentFolders(cats, 'Fonts').map((c) => c.id)).toEqual(['Travel', 'Design', 'Recipes', 'Fonts'])
     expect(recentFolders(cats, 'Design')).toHaveLength(3)

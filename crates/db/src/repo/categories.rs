@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use linkdean_core::crypto;
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
@@ -177,6 +178,25 @@ pub async fn list_categories(
                 super::users::owner_display_name_for_viewer(pool, view.owner_user_id, user_id)
                     .await?;
         }
+    }
+    let ids: Vec<Uuid> = out.iter().map(|v| v.id).collect();
+    let latest: HashMap<Uuid, DateTime<Utc>> = sqlx::query_as::<_, (Uuid, DateTime<Utc>)>(
+        r#"
+        SELECT bc.category_id, MAX(b.updated_at)
+        FROM bookmark_categories bc
+        JOIN bookmarks b ON b.id = bc.bookmark_id
+        WHERE bc.category_id = ANY($1) AND b.deleted_at IS NULL
+        GROUP BY bc.category_id
+        "#,
+    )
+    .bind(&ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .into_iter()
+    .collect();
+    for view in &mut out {
+        view.last_bookmark_at = latest.get(&view.id).copied();
     }
     out.sort_by(|a, b| {
         a.position

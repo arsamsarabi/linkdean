@@ -378,6 +378,10 @@ pub struct CategoryView {
     pub owner_display_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<DateTime<Utc>>,
+    /// When a live bookmark directly in this folder was last added or changed. Set by
+    /// `list_categories` only; the sidebar orders its recent folders by it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_bookmark_at: Option<DateTime<Utc>>,
 }
 
 impl CategoryView {
@@ -400,6 +404,7 @@ impl CategoryView {
             shared_with: Vec::new(),
             owner_display_name: None,
             deleted_at: cat.deleted_at,
+            last_bookmark_at: None,
         }
     }
 }
