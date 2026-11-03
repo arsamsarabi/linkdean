@@ -21,6 +21,7 @@ linkdean/
   crates/api/         # HTTP binary
   crates/core/        # domain, crypto, import/export
   crates/db/          # Postgres repos + migrations
+  crates/mail/        # email config, templates, SMTP
   crates/search/      # Meilisearch client
   crates/worker/      # metadata + favicon/OG disk cache
   migrations/         # sqlx migrations
@@ -37,6 +38,7 @@ Browser ──► Vite (dev) or static SPA
          linkdean-api (axum)
               ├── Postgres
               ├── Meilisearch
+              ├── SMTP (optional, email outbox sender)
               └── worker tasks (enrich title/favicon)
 ```
 
@@ -71,9 +73,21 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - Per-route body limits: import 20 MiB (10 MiB file content), avatar 6 MiB, preview 9 MiB. Uploaded images over 40 megapixels are refused from their header, each decode may allocate at most 160 MiB, and two decode at once.
 - Each Postgres statement times out after 30 s; migrations run on a separate connection without the limit
 - `GET /api/metrics` needs `Authorization: Bearer $METRICS_TOKEN` and is off when the token is unset. Labels use the route template, not the raw path. `GET /api/ready` returns booleans only
-- Hourly maintenance (`crates/api/src/maintenance.rs`): trash retention, with search and preview cleanup for purged bookmarks, the expired-session purge, and removal of unused tags more than an hour old
+- Hourly maintenance (`crates/api/src/maintenance.rs`): trash retention, with search and preview cleanup for purged bookmarks, the expired-session purge, removal of unused tags more than an hour old, and the email outbox purge
 
 Operator-facing limits and behaviour: [SELF_HOSTED.md](./SELF_HOSTED.md#limits-and-behaviour-operators-should-know).
+
+## Email
+
+- `crates/mail` owns config, rendering and delivery. `MailConfig::from_vars` reads `SMTP_*` and `MAIL_FROM`; mail is off unless `SMTP_HOST` and `MAIL_FROM` are both set, and half or unsafe settings stop startup (`SMTP_TLS=none` only for local hosts)
+- Templates live in `crates/mail/templates/` and are embedded at compile time: `<name>.mjml`, `<name>.subject` and `<name>.sample.json`, sharing `layout.mjml` and `macros.mjml`. minijinja (strict undefined, HTML autoescape) fills them, `mrml` turns the MJML into HTML, and `html2text` makes the plain-text part. Every template gets `site.app_url` and `site.instance`
+- `lettre` sends over SMTP with a 20 s timeout per step, a `Message-ID` on every message, and HTML plus plain-text alternatives
+- `email_outbox` (`migrations/040_email_outbox.sql`) stores rendered emails, so a later template change never alters a queued one. Handlers call `mail::enqueue` (`crates/api/src/mail.rs`), which returns `Disabled` when mail is off and never sends inline
+- The API runs a sender loop next to maintenance: every 5 s it claims up to 20 due emails under a five-minute lease (`FOR UPDATE SKIP LOCKED`), renews the lease before each send, and gives each send 60 s. A failure retries after 30 s, doubling to at most 1 h; an email still unsent 24 h after it was queued is marked failed. A crashed sender's claims come back when the lease expires
+- Delivery is at least once: if the process stops after the SMTP server accepted an email but before it is marked sent, it is sent again once the lease expires
+- Hourly maintenance deletes sent rows after 7 days and failed rows after 30
+- `GET /api/admin/email` (status, settings without credentials, 24 h counts, latest error) and `POST /api/admin/email/test` (direct send to the admin, 5 per admin per 15 minutes), both admin only
+- `/api/dev/emails` lists templates and `/api/dev/emails/{name}` renders one with its sample data (`?format=text` for the text part). Mounted only when `ALLOW_DEFAULT_SECRETS=true`. Dev Compose runs Mailpit, which catches all dev email (web UI on `127.0.0.1:8025`)
 
 ## Hidden vs vault
 

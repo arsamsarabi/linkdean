@@ -64,7 +64,7 @@ Linkdean is a small, self-hosted bookmarks server: Postgres, optional Meilisearc
 | **Sharing** | Same-instance folder / dashboard ACL; likes, comments, ratings |
 | **Auth** | Local password, optional OIDC, admin accounts, API keys |
 | **Import / export** | Netscape, JSON, Pocket, Raindrop |
-| **Ops** | Compose healthchecks, ready probe, backup recipe, admin reindex |
+| **Ops** | Compose healthchecks, ready probe, backup recipe, admin reindex, optional SMTP email |
 
 Full list: [docs/FEATURES.md](docs/FEATURES.md).
 
@@ -97,6 +97,7 @@ Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/r
 | `db` | Postgres 16 | Internal only (dev: host `5433`) |
 | `meilisearch` | Search index | Internal only (dev: `7700`) |
 | `chrome` | Optional CDP for page previews. Sandboxed, non-root, off the data network | Internal only (dev: `127.0.0.1:9222`) |
+| `mailpit` | Dev only: catches outgoing email | Dev: `127.0.0.1:8025` |
 
 See [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
 
@@ -122,6 +123,11 @@ Runtime configuration is environment variables only (see [`.env.example`](.env.e
 | `TRUST_FORWARDED_FOR` | Behind a proxy | Set `true` behind a reverse proxy, else all clients share one address for login limits. Leave unset when the API is reachable directly |
 | `BROWSER_WS_URL` | | Chrome CDP URL for screenshots |
 | `BOOTSTRAP_TOKEN` | | When set, the first account (the admin) must enter it on the setup page, and that account must use a password, not OIDC. Unset, whoever registers first becomes admin. Ignored once any account exists |
+| `SMTP_HOST` | | Mail server. Mail is on when this and `MAIL_FROM` are set; unset, nothing is emailed. See [Email](docs/SELF_HOSTED.md#email) |
+| `SMTP_PORT` | | Default `587`, or `465` with `SMTP_TLS=tls` |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | | Set both or neither |
+| `SMTP_TLS` | | `starttls` (default), `tls`, or `none` (local servers only) |
+| `MAIL_FROM` | | Sender, e.g. `Linkdean <no-reply@example.com>` |
 | `METRICS_TOKEN` | | Turns on `GET /api/metrics`, which then needs `Authorization: Bearer <token>`. Unset, the route returns `404` |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | | Optional OIDC. `OIDC_ISSUER` must match the issuer in the provider's discovery document exactly, trailing slash included. New identities get an account only while registration is open |
 
@@ -186,6 +192,7 @@ Browser ──► Vite (dev) or static SPA
 | Domain / crypto / import | `crates/core` |
 | SQL + migrations | `crates/db` + `migrations/` |
 | Search | `crates/search` |
+| Email (templates + SMTP) | `crates/mail` |
 | Enrichment | `crates/worker` |
 | SPA | `apps/web` |
 
@@ -219,7 +226,7 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 
 ## Roadmap
 
-**Next up:** browser extension (save tab / file to category). Backlog includes public list URLs, email invites, search filters, SMTP, PWA, and more. Far out: native apps, archive/downloads, gamification.
+**Next up:** browser extension (save tab / file to category). Backlog includes public list URLs, email invites, search filters, password reset by email, PWA, and more. Far out: native apps, archive/downloads, gamification.
 
 - Capabilities: [docs/FEATURES.md](docs/FEATURES.md)
 - Plan: [docs/ROADMAP.md](docs/ROADMAP.md)

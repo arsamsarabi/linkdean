@@ -149,6 +149,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Docker Compose stack (API, Postgres, Meilisearch, optional Chrome)
 - Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
+- Outbound email over SMTP (optional): an outbox with retries, Settings → Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
 - Avatars and preview volumes; backup recipe in [SELF_HOSTED.md](./SELF_HOSTED.md)
 - Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in. On wide screens the header's sidebar button (or ⌘B / Ctrl+B) hides and shows it, remembered per browser
 - Shared page (sidebar → Shared, with a count of invites waiting): accept or decline invites, open folders and dashboards others share with you, and see what you share and with whom; `/?board=<id>` opens a given dashboard

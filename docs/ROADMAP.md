@@ -10,7 +10,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Now: before the first public release
 
-1. **Outbound email** (M–L). SMTP config with [react-email](https://www.npmjs.com/package/react-email) templates. Unlocks the features below, which a public instance needs.
+1. **Outbound email** (M–L). The mail foundation ships (SMTP, MJML templates, outbox, Admin panel). Still to build on it:
    - Password reset by email. There is no way to recover a forgotten password today short of an admin.
    - Verify email addresses at registration and on email change, before the address can receive share invites. See the known-issue note on `create_share` in `crates/db/src/repo/shares.rs`.
    - Until an address is verified, invites to it wait as pending invites for the address rather than going to the unverified account.

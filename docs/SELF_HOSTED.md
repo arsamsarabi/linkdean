@@ -83,6 +83,43 @@ Only enable it when the proxy is the sole route to the API, and make sure the pr
 | Image decode (avatar, preview) | At most 40 megapixels and 160 MiB of decode memory per image; two decodes run at once and the rest wait |
 | Trash retention | User setting from 1 to 3,650 days, enforced by a database `CHECK` |
 
+### Email
+
+Mail is optional. Without it the instance runs as before and sends nothing. Set these on the `api` service (the production Compose file passes them through):
+
+| Variable | Notes |
+| --- | --- |
+| `SMTP_HOST` | Mail server. Mail is on when this and `MAIL_FROM` are both set |
+| `MAIL_FROM` | Sender, e.g. `Linkdean <no-reply@example.com>` |
+| `SMTP_TLS` | `starttls` (default), `tls` (implicit TLS) or `none` |
+| `SMTP_PORT` | Default `587`, or `465` with `SMTP_TLS=tls` |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | Set both or neither. The password is used as given, spaces included |
+
+The API refuses to start when:
+
+- only one of `SMTP_HOST` and `MAIL_FROM` is set
+- only one of `SMTP_USERNAME` and `SMTP_PASSWORD` is set
+- `SMTP_TLS` is not `starttls`, `tls` or `none`, or `SMTP_PORT` is not a port number
+- `MAIL_FROM` is not a valid mailbox
+- `SMTP_TLS=none` is set for a host that is not local. `none` sends mail unencrypted, so it is allowed only for `localhost`, loopback and private addresses, and single-label names such as `mailpit`. A single-label name can still resolve through your DNS search domain, so use `none` only on a network you control
+
+Examples:
+
+- **Gmail:** `SMTP_HOST=smtp.gmail.com`, port `587`, STARTTLS (the default). Use an app password, which needs 2-Step Verification on the account. `MAIL_FROM` must be the Gmail address or a verified alias.
+- **Fastmail:** `SMTP_HOST=smtp.fastmail.com`, `SMTP_TLS=tls` (port `465`), with an app password.
+- **Postmark:** `SMTP_HOST=smtp.postmarkapp.com`, port `587`. `SMTP_USERNAME` and `SMTP_PASSWORD` are both the server API token, and the `MAIL_FROM` address needs a verified sender signature.
+
+Check it works: **Settings → Admin → Email → Send test email**. The panel shows the settings in use (never the username or password), sent, queued and failed counts for the last 24 hours, and the latest error. The test goes straight to SMTP, skipping the queue, to the admin's own address, and shows the server's answer. Each admin can send 5 tests per 15 minutes.
+
+Delivery:
+
+- Email is queued in Postgres and sent in the background by the API. A failed send is retried after 30 seconds, then at doubling intervals up to an hour apart. An email still unsent a day after it was queued is marked failed.
+- Each SMTP step times out after 20 seconds, and a whole send after 60.
+- Sent emails are deleted after 7 days and failed ones after 30.
+- Delivery is at least once: if the API stops after the server accepted an email but before it was marked sent, it is sent again.
+
+SPF, DKIM and DMARC are set up with your mail provider and DNS, not in Linkdean.
+
 ### API clients
 
 `PATCH` bodies distinguish a missing field from `null`:
