@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import { bookmarkSchema } from '@/schemas/bookmarks'
-import { categoryAccessSchema, pendingShareInviteSchema, shareAccessSchema } from '@/schemas/categories'
+import {
+  categoryAccessSchema,
+  inviteEmailFields,
+  pendingShareInviteSchema,
+  shareAccessSchema,
+} from '@/schemas/categories'
 
 export const dashboardItemSchema = z.object({
   id: z.string(),
@@ -64,8 +69,8 @@ export const dashboardSharesEnvelopeSchema = z.object({
 })
 
 export const createDashboardShareOutcomeSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('active'), share: dashboardShareSchema }),
-  z.object({ status: z.literal('pending'), invite: pendingShareInviteSchema }),
+  z.object({ status: z.literal('active'), share: dashboardShareSchema, ...inviteEmailFields }),
+  z.object({ status: z.literal('pending'), invite: pendingShareInviteSchema, ...inviteEmailFields }),
 ])
 
 export const dashboardSummariesSchema = z.array(dashboardSummarySchema)

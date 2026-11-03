@@ -2,7 +2,15 @@ import { type ReactElement } from 'react'
 import { Group, Paper, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconArrowsExchange, IconFolder, IconKey, IconLock, IconSettings, IconShield } from '@tabler/icons-react'
+import {
+  IconArrowsExchange,
+  IconBell,
+  IconFolder,
+  IconKey,
+  IconLock,
+  IconSettings,
+  IconShield,
+} from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   ApiKeysPanel,
@@ -16,11 +24,12 @@ import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { AdminPlatformSettings } from './AdminPlatformSettings'
 import { GeneralSettingsPanel } from './GeneralSettingsPanel'
+import { NotificationEmailsPanel } from './NotificationEmailsPanel'
 import classes from './SettingsPage.module.css'
 import { SettingsSkeleton } from './SettingsSkeleton'
 import { VaultAutoLockSettings } from './VaultAutoLockSettings'
 
-const SETTINGS_TABS = ['general', 'categories', 'import', 'vault', 'api-keys', 'admin'] as const
+const SETTINGS_TABS = ['general', 'notifications', 'categories', 'import', 'vault', 'api-keys', 'admin'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function isSettingsTab(v: unknown): v is SettingsTab {
@@ -82,6 +91,9 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="general" leftSection={<IconSettings size={16} stroke={1.5} />}>
             General
           </Tabs.Tab>
+          <Tabs.Tab value="notifications" leftSection={<IconBell size={16} stroke={1.5} />}>
+            Notifications
+          </Tabs.Tab>
           <Tabs.Tab value="categories" leftSection={<IconFolder size={16} stroke={1.5} />}>
             Categories
           </Tabs.Tab>
@@ -103,6 +115,10 @@ export function SettingsPage(): ReactElement {
 
         <Tabs.Panel value="general">
           <GeneralSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="notifications">
+          <NotificationEmailsPanel />
         </Tabs.Panel>
 
         <Tabs.Panel value="categories">

@@ -48,3 +48,16 @@ export const markAllReadSchema = z.object({
 export type Notification = z.infer<typeof notificationSchema>
 export type NotificationKind = z.infer<typeof notificationKindSchema>
 export type NotificationSubjectType = z.infer<typeof notificationSubjectTypeSchema>
+
+export const notificationEmailPrefSchema = z.object({
+  kind: notificationKindSchema,
+  label: z.string(),
+  enabled: z.boolean(),
+  default: z.boolean(),
+})
+
+export const notificationEmailPrefsEnvelopeSchema = z.object({
+  prefs: z.array(notificationEmailPrefSchema),
+})
+
+export type NotificationEmailPref = z.infer<typeof notificationEmailPrefSchema>

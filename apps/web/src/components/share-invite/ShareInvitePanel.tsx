@@ -15,6 +15,7 @@ import {
 import { IconTrash } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import type { ShareAccess } from '@/schemas'
+import { INVITE_EMAIL_LIMITED, INVITE_EMAIL_SENT, type InviteEmailStatus } from '@/services'
 
 const SHARE_ACCESS_OPTIONS = [
   { value: 'read', label: 'Read-only' },
@@ -45,6 +46,8 @@ type Props = {
   invitePending: boolean
   /** Link for someone with no account yet. Shown once, after inviting them. */
   claimLink?: string | null
+  /** Whether the last invite was emailed. Shown once, after inviting. */
+  inviteEmail?: InviteEmailStatus
   sharesError: unknown
   onRetryShares: () => void
   sharesLoading: boolean
@@ -69,6 +72,7 @@ export function ShareInvitePanel({
   onInvite,
   invitePending,
   claimLink,
+  inviteEmail,
   sharesError,
   onRetryShares,
   sharesLoading,
@@ -106,6 +110,19 @@ export function ShareInvitePanel({
           Invite
         </Button>
       </Stack>
+
+      {inviteEmail === 'sent' ? (
+        <Text size="sm" role="status">
+          {INVITE_EMAIL_SENT}
+        </Text>
+      ) : null}
+      {inviteEmail === 'limited' ? (
+        <Alert color="yellow" role="status">
+          {claimLink
+            ? INVITE_EMAIL_LIMITED
+            : 'The invite was saved, but no email was sent: too many invites in the last hour. They still see it in Linkdean.'}
+        </Alert>
+      ) : null}
 
       {claimLink ? (
         <Alert color="violet" title="Send them this link">

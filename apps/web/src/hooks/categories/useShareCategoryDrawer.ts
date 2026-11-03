@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { notifications } from '@mantine/notifications'
 import type { ShareAccess } from '@/schemas'
-import { claimLinkFrom } from '@/services'
+import { claimLinkFrom, inviteEmailStatus, inviteToast, type InviteEmailStatus } from '@/services'
 import {
   useCategoryPublicLink,
   useDisableCategoryPublicLink,
@@ -46,6 +46,7 @@ export function useShareCategoryDrawer({ categoryId, opened, isVault }: Input) {
   const disablePublic = useDisableCategoryPublicLink()
 
   const [claimLink, setClaimLink] = useState<string | null>(null)
+  const [inviteEmail, setInviteEmail] = useState<InviteEmailStatus>(null)
 
   async function onInvite(): Promise<void> {
     if (!categoryId || !email.trim()) return
@@ -57,8 +58,10 @@ export function useShareCategoryDrawer({ categoryId, opened, isVault }: Input) {
       })
       setEmail('')
       const link = claimLinkFrom(outcome)
+      const emailed = inviteEmailStatus(outcome)
       setClaimLink(link)
-      notifications.show({ message: link ? 'Invite created. Send them the link.' : 'Invite sent' })
+      setInviteEmail(emailed)
+      notifications.show({ message: inviteToast(link, emailed) })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
@@ -111,6 +114,7 @@ export function useShareCategoryDrawer({ categoryId, opened, isVault }: Input) {
     publicBusy,
     onInvite,
     claimLink,
+    inviteEmail,
     onTogglePublic,
     onRotatePublic,
   }

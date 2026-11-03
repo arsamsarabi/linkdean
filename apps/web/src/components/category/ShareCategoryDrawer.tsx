@@ -45,6 +45,7 @@ export function ShareCategoryDrawer({
         onAccessChange={s.setAccess}
         onInvite={() => void s.onInvite()}
         claimLink={s.claimLink}
+        inviteEmail={s.inviteEmail}
         invitePending={s.create.isPending}
         sharesError={s.shares.isError ? s.shares.error : null}
         onRetryShares={() => void s.shares.refetch()}

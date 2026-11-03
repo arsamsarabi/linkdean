@@ -66,9 +66,15 @@ export const categorySharesEnvelopeSchema = z.object({
   pending: z.array(pendingShareInviteSchema).default([]),
 })
 
+/** Whether creating a share emailed the invitee. `email_limited` only when the owner hit the hourly limit. */
+export const inviteEmailFields = {
+  email_sent: z.boolean().optional(),
+  email_limited: z.boolean().optional(),
+}
+
 export const createCategoryShareOutcomeSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('active'), share: categoryShareSchema }),
-  z.object({ status: z.literal('pending'), invite: pendingShareInviteSchema }),
+  z.object({ status: z.literal('active'), share: categoryShareSchema, ...inviteEmailFields }),
+  z.object({ status: z.literal('pending'), invite: pendingShareInviteSchema, ...inviteEmailFields }),
 ])
 
 /** @deprecated Prefer categorySharesEnvelopeSchema */

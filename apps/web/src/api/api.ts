@@ -42,6 +42,8 @@ import {
   moderateOutcomeEnvelopeSchema,
   moderationActionsEnvelopeSchema,
   muteEnvelopeSchema,
+  notificationEmailPrefSchema,
+  notificationEmailPrefsEnvelopeSchema,
   notificationEnvelopeSchema,
   notificationsEnvelopeSchema,
   okSchema,
@@ -107,6 +109,8 @@ import {
   type ModerationAction,
   type MuteRelation,
   type Notification,
+  type NotificationEmailPref,
+  type NotificationKind,
   type PatchDashboard,
   type PendingOidcLink,
   type PendingShareInvite,
@@ -241,6 +245,16 @@ export const api = {
 
   markAllNotificationsRead: (): Promise<{ ok: boolean; updated?: number }> =>
     req('/notifications/read-all', { method: 'POST' }, markAllReadSchema),
+
+  notificationEmailPrefs: (): Promise<{ prefs: NotificationEmailPref[] }> =>
+    req('/users/me/notification-emails', {}, notificationEmailPrefsEnvelopeSchema),
+
+  setNotificationEmailPref: (kind: NotificationKind, enabled: boolean): Promise<NotificationEmailPref> =>
+    req(
+      `/users/me/notification-emails/${kind}`,
+      { method: 'PUT', body: JSON.stringify({ enabled }) },
+      notificationEmailPrefSchema
+    ),
 
   shareInvites: (): Promise<{ invites: ShareInvite[] }> => req('/share-invites', {}, shareInvitesEnvelopeSchema),
 

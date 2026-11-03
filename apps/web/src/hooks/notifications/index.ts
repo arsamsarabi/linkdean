@@ -3,4 +3,6 @@ export {
   useNotifications,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  useNotificationEmailPrefs,
+  useSetNotificationEmailPref,
 } from './useNotifications'
