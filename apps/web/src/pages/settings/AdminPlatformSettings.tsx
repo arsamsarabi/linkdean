@@ -4,6 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { IconRefresh } from '@tabler/icons-react'
 import { QueryErrorAlert, TwoColumnLayout } from '@/components'
 import { usePlatformSettings, useReindexSearch, useUpdatePlatformSettings } from '@/hooks'
+import { AdminEmailPanel } from './AdminEmailPanel'
 import { AdminInvitesPanel } from './AdminInvitesPanel'
 import { AdminUsersPanel } from './AdminUsersPanel'
 import { BannedUsersPanel } from './BannedUsersPanel'
@@ -100,6 +101,7 @@ export function AdminPlatformSettings(): ReactElement {
             </Stack>
           </Paper>
           <AdminInvitesPanel />
+          <AdminEmailPanel />
         </>
       }
       right={

@@ -9,8 +9,10 @@ import { api } from '@/api'
 import type {
   AdminUserSummary,
   CreateRegistrationInviteResponse,
+  EmailStatus,
   PlatformSettings,
   RegistrationInvite,
+  TestEmailResult,
 } from '@/schemas'
 
 type PlatformEnvelope = { settings: PlatformSettings }
@@ -97,5 +99,22 @@ export function useRevokeRegistrationInvite(): UseMutationResult<{ ok: boolean }
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'invites'] })
     },
+  })
+}
+
+export function useEmailStatus(enabled = true): UseQueryResult<EmailStatus> {
+  return useQuery({
+    queryKey: ['admin', 'email'],
+    queryFn: () => api.getEmailStatus(),
+    enabled,
+    refetchInterval: 30_000,
+  })
+}
+
+export function useSendTestEmail(): UseMutationResult<TestEmailResult, Error, void> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.sendTestEmail(),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ['admin', 'email'] }),
   })
 }

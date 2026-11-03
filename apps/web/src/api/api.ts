@@ -25,6 +25,7 @@ import {
   dashboardSharesEnvelopeSchema,
   dashboardSummariesSchema,
   duplicatesSchema,
+  emailStatusSchema,
   exposedContentEnvelopeSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
@@ -51,6 +52,7 @@ import {
   settingsEnvelopeSchema,
   shareInvitesEnvelopeSchema,
   socialEnvelopeSchema,
+  testEmailResultSchema,
   trashItemsSchema,
   trashPurgeResultSchema,
   unreadCountSchema,
@@ -81,6 +83,7 @@ import {
   type DashboardSharesEnvelope,
   type DashboardSummary,
   type DuplicateGroup,
+  type EmailStatus,
   type ExposedContent,
   type FollowRelation,
   type FollowUser,
@@ -104,6 +107,7 @@ import {
   type ShareInvite,
   type SocialSubjectType,
   type SocialSummary,
+  type TestEmailResult,
   type TrashItem,
   type TrashKind,
   type UserPublic,
@@ -156,6 +160,10 @@ export const api = {
 
   reindexSearch: (): Promise<{ ok: boolean; upserted: number; failed: number }> =>
     req('/admin/search/reindex', { method: 'POST' }, adminReindexSchema),
+
+  getEmailStatus: (): Promise<EmailStatus> => req('/admin/email', {}, emailStatusSchema),
+
+  sendTestEmail: (): Promise<TestEmailResult> => req('/admin/email/test', { method: 'POST' }, testEmailResultSchema),
 
   listRegistrationInvites: (): Promise<{ invites: RegistrationInvite[] }> =>
     req('/admin/invites', {}, registrationInvitesEnvelopeSchema),

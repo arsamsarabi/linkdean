@@ -7,6 +7,8 @@ export {
   useRegistrationInvites,
   useCreateRegistrationInvite,
   useRevokeRegistrationInvite,
+  useEmailStatus,
+  useSendTestEmail,
 } from './useAdminSettings'
 export {
   useApiKeys,
