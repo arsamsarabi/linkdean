@@ -54,6 +54,7 @@ export function AppShell(): ReactElement {
         shell.openPalette()
       },
     ],
+    ['mod+B', () => shell.toggleNavCollapsed()],
     [
       'mod+K',
       (e) => {
@@ -83,7 +84,7 @@ export function AppShell(): ReactElement {
   return (
     <MantineAppShell
       header={{ height: 64 }}
-      navbar={{ width: 248, breakpoint: 'sm', collapsed: { mobile: !shell.navOpen } }}
+      navbar={{ width: 248, breakpoint: 'sm', collapsed: { mobile: !shell.navOpen, desktop: shell.navCollapsed } }}
       footer={{ height: { base: 64, sm: 0 } }}
       padding="lg"
     >

@@ -49,6 +49,17 @@ describe('AppShellHeader', () => {
     expect(useShellUi.getState().paletteOpen).toBe(true)
   })
 
+  it('hides and shows the sidebar, and remembers the choice', async () => {
+    useShellUi.setState({ navCollapsed: false })
+    renderHeader(false)
+    await userEvent.click(screen.getByRole('button', { name: 'Hide sidebar' }))
+    expect(useShellUi.getState().navCollapsed).toBe(true)
+    expect(localStorage.getItem('linkdean-sidebar-collapsed')).toBe('true')
+    await userEvent.click(screen.getByRole('button', { name: 'Show sidebar' }))
+    expect(useShellUi.getState().navCollapsed).toBe(false)
+    expect(localStorage.getItem('linkdean-sidebar-collapsed')).toBe('false')
+  })
+
   it('leaves adding to the library page, the tab bar and the palette', () => {
     renderHeader(false)
     expect(screen.queryByRole('link', { name: /add/i })).toBeNull()

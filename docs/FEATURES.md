@@ -148,7 +148,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Avatars and preview volumes; backup recipe in [self-host.md](./self-host.md)
-- Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in
+- Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in. On wide screens the header's sidebar button (or ⌘B / Ctrl+B) hides and shows it, remembered per browser
 - Shared page (sidebar → Shared, with a count of invites waiting): accept or decline invites, open folders and dashboards others share with you, and see what you share and with whom; `/?board=<id>` opens a given dashboard
 - Config options: sections (General, Categories, Import / Export, Vault, API keys, Admin) listed down the side on wide screens and as a scrolling row on phones; `?tab=` opens one
 - Sidebar Folders section collapses: collapsed it shows Unsorted, the 3 most recently updated folders and the open folder; expanded it shows the whole tree with a filter field (matches at any depth, with their path). The choice is remembered per browser

@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react'
 import {
+  ActionIcon,
   Burger,
   Code,
   Group,
@@ -12,7 +13,15 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
-import { IconLogout, IconSearch, IconSettings, IconTrash, IconUser } from '@tabler/icons-react'
+import {
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+  IconLogout,
+  IconSearch,
+  IconSettings,
+  IconTrash,
+  IconUser,
+} from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { LogoMark, NotificationsBell, ThemeMenuSwitch, UserAvatar } from '@/components'
 import { useShellUi } from '@/stores'
@@ -45,6 +54,8 @@ export function AppShellHeader({
 }: Props): ReactElement {
   const navOpen = useShellUi((s) => s.navOpen)
   const toggleNav = useShellUi((s) => s.toggleNav)
+  const navCollapsed = useShellUi((s) => s.navCollapsed)
+  const toggleNavCollapsed = useShellUi((s) => s.toggleNavCollapsed)
   const openPalette = useShellUi((s) => s.openPalette)
   const openNotif = useShellUi((s) => s.openNotif)
 
@@ -52,6 +63,23 @@ export function AppShellHeader({
     <Group h="100%" px="md" justify="space-between" wrap="nowrap" gap="md">
       <Group gap="md" wrap="nowrap" className={classes.brand}>
         <Burger opened={navOpen} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Open navigation" />
+        <Tooltip label={navCollapsed ? 'Show sidebar (⌘B)' : 'Hide sidebar (⌘B)'} position="bottom">
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="lg"
+            onClick={toggleNavCollapsed}
+            visibleFrom="sm"
+            aria-label={navCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+            aria-expanded={!navCollapsed}
+          >
+            {navCollapsed ? (
+              <IconLayoutSidebarLeftExpand {...iconProps} />
+            ) : (
+              <IconLayoutSidebarLeftCollapse {...iconProps} />
+            )}
+          </ActionIcon>
+        </Tooltip>
         <UnstyledButton
           component={Link}
           to={landing}
