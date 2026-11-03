@@ -53,8 +53,12 @@ async fn main() -> anyhow::Result<()> {
     }
 
     metrics::init();
+    let mut api_routes = routes::router();
+    if cfg.dev_routes {
+        api_routes = api_routes.merge(routes::dev_router());
+    }
     let api = Router::new()
-        .merge(routes::router())
+        .merge(api_routes)
         .merge(metrics::router())
         // Without its own fallback, /api would inherit the app shell below.
         .fallback(api_not_found)

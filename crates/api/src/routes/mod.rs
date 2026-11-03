@@ -6,6 +6,7 @@ mod auth;
 mod bookmarks;
 mod categories;
 mod dashboards;
+mod dev;
 mod health;
 mod import_export;
 mod notifications;
@@ -20,6 +21,8 @@ mod vault;
 
 use crate::state::AppState;
 use axum::Router;
+
+pub use dev::router as dev_router;
 
 pub fn router() -> Router<AppState> {
     Router::new()

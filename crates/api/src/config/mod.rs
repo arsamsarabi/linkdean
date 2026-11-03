@@ -28,7 +28,6 @@ pub struct Config {
     /// SMTP settings. `None` keeps mail off and every feature that needs it on its fallback.
     pub mail: Option<linkdean_mail::MailConfig>,
     /// Development-only routes such as `/api/dev/emails`. On with `ALLOW_DEFAULT_SECRETS`.
-    #[allow(dead_code)] // Read once the dev routes land.
     pub dev_routes: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
