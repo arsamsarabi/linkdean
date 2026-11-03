@@ -1,0 +1,14 @@
+{% extends "layout.mjml" %}
+{% block title %}Linkdean test email{% endblock %}
+{% block preview %}Email from {{ site.instance }} works.{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">Email works</mj-text>
+    <mj-text>This test was sent to {{ recipient }} from the Admin settings of {{ site.instance }}. Nothing else is needed.</mj-text>
+    {{ action(site.app_url, "Open Linkdean") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because an admin sent a test from the Email settings.{% endblock %}

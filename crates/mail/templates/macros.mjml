@@ -1,0 +1,4 @@
+{% macro action(url, label) %}
+<mj-button href="{{ url }}">{{ label }}</mj-button>
+<mj-text font-size="13px" color="#636772">If the button does not work, open this link:<br /><a href="{{ url }}" style="color:#8458B3;word-break:break-all">{{ url }}</a></mj-text>
+{% endmacro %}
