@@ -32,7 +32,8 @@ export function LoginPage(): ReactElement {
   const bootstrap = useBootstrap()
   const login = useLogin()
   const { oidc_error: oidcError, link } = useSearch({ from: '/login' })
-  const pendingLink = usePendingOidcLink(!!link)
+  // Signing in spends the link and clears the cache, so stop asking once it starts.
+  const pendingLink = usePendingOidcLink(!!link && !login.isPending && !login.isSuccess)
 
   useEffect(() => {
     if (bootstrap.data?.needs_bootstrap) {

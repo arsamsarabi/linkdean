@@ -13,7 +13,9 @@ const state: {
   pending: Pending
   pendingEnabled: boolean | null
   login: ReturnType<typeof vi.fn>
+  loginStatus: { isPending: boolean; isSuccess: boolean }
 } = {
+  loginStatus: { isPending: false, isSuccess: false },
   search: {},
   pending: { isError: false },
   pendingEnabled: null,
@@ -29,7 +31,7 @@ const state: {
 
 vi.mock('@/hooks', () => ({
   useBootstrap: () => ({ data: state.bootstrap, isLoading: false, isError: false, error: null, refetch: vi.fn() }),
-  useLogin: () => ({ isPending: false, isError: false, error: null, mutateAsync: state.login }),
+  useLogin: () => ({ ...state.loginStatus, isError: false, error: null, mutateAsync: state.login }),
   usePendingOidcLink: (enabled: boolean) => {
     state.pendingEnabled = enabled
     return state.pending
@@ -77,6 +79,7 @@ describe('LoginPage single sign-on link', () => {
     state.pending = { isError: false }
     state.pendingEnabled = null
     state.login = vi.fn()
+    state.loginStatus = { isPending: false, isSuccess: false }
     notify.mockClear()
   })
   afterEach(cleanup)
@@ -97,6 +100,17 @@ describe('LoginPage single sign-on link', () => {
     state.pending = { isError: true }
     renderPage()
     expect(screen.queryByText(/already uses/)).toBeNull()
+  })
+
+  it('stops asking for the pending link once the sign-in spends it', () => {
+    state.search = { link: true }
+    state.loginStatus = { isPending: true, isSuccess: false }
+    renderPage()
+    expect(state.pendingEnabled).toBe(false)
+    cleanup()
+    state.loginStatus = { isPending: false, isSuccess: true }
+    renderPage()
+    expect(state.pendingEnabled).toBe(false)
   })
 
   it('does not look for a pending link without link=1', () => {
