@@ -88,13 +88,32 @@ pub async fn claim_due_emails(pool: &PgPool, limit: i64) -> Result<Vec<OutboxEma
     .map_err(db_err)
 }
 
+/// Extend this sender's claim on `id` by five minutes before it tries the email. `false` when
+/// the claim has lapsed (another sender may hold it now) or the email is no longer queued.
+pub async fn renew_email_claim(pool: &PgPool, id: Uuid) -> Result<bool> {
+    let row: Option<(Uuid,)> = sqlx::query_as(
+        r#"
+        UPDATE email_outbox
+        SET claimed_until = now() + interval '5 minutes', updated_at = now()
+        WHERE id = $1 AND status = 'queued' AND claimed_until > now()
+        RETURNING id
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .map_err(db_err)?;
+    Ok(row.is_some())
+}
+
+/// Mark a claimed email sent. Does nothing when the row is not claimed.
 pub async fn mark_email_sent(pool: &PgPool, id: Uuid) -> Result<()> {
     sqlx::query(
         r#"
         UPDATE email_outbox
         SET status = 'sent', attempts = attempts + 1, claimed_until = NULL,
             last_error = NULL, updated_at = now()
-        WHERE id = $1
+        WHERE id = $1 AND claimed_until IS NOT NULL
         "#,
     )
     .bind(id)
@@ -105,7 +124,7 @@ pub async fn mark_email_sent(pool: &PgPool, id: Uuid) -> Result<()> {
 }
 
 /// Schedule the next try (30 s, doubling, at most an hour apart), or give up once the email
-/// has waited a day.
+/// has waited a day. `NotFound` when the row is not claimed.
 pub async fn record_email_failure(pool: &PgPool, id: Uuid, error: &str) -> Result<EmailRetry> {
     let (status,): (String,) = sqlx::query_as(
         r#"
@@ -119,7 +138,7 @@ pub async fn record_email_failure(pool: &PgPool, id: Uuid, error: &str) -> Resul
                 make_interval(secs => 30 * power(2, LEAST(attempts, 10))),
                 interval '1 hour'
             )
-        WHERE id = $1
+        WHERE id = $1 AND claimed_until IS NOT NULL
         RETURNING status
         "#,
     )

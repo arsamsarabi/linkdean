@@ -43,11 +43,29 @@ async fn preview(
 ) -> ApiResult<Response> {
     let data = linkdean_mail::sample(&name).ok_or(Error::NotFound)?;
     let site = linkdean_mail::Site::new(&state.cfg.app_url);
-    let r =
-        linkdean_mail::render(&name, &data, &site).map_err(|e| Error::BadRequest(e.to_string()))?;
+    let r = linkdean_mail::render(&name, &data, &site).// The sample is ours, so a render failure is a bug, not a bad request.
+        map_err(|e| Error::msg(e.to_string()))?;
     Ok(if q.format.as_deref() == Some("text") {
         format!("Subject: {}\n\n{}", r.subject, r.text).into_response()
     } else {
         Html(r.html).into_response()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn index_lists_every_template() {
+        let Html(page) = index().await;
+        let mut names = linkdean_mail::template_names().peekable();
+        assert!(names.peek().is_some());
+        for name in names {
+            assert!(
+                page.contains(&format!(r#"href="/api/dev/emails/{name}""#)),
+                "{name} missing from {page}"
+            );
+        }
+    }
 }

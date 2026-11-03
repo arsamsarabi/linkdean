@@ -22,9 +22,17 @@ mod vault;
 use crate::state::AppState;
 use axum::Router;
 
-pub use dev::router as dev_router;
+/// Every `/api` route. The development-only pages join only when `dev_routes` is on.
+pub fn api_router(dev_routes: bool) -> Router<AppState> {
+    let routes = router();
+    if dev_routes {
+        routes.merge(dev::router())
+    } else {
+        routes
+    }
+}
 
-pub fn router() -> Router<AppState> {
+fn router() -> Router<AppState> {
     Router::new()
         .merge(health::router())
         .merge(auth::router())

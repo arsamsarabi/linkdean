@@ -145,7 +145,10 @@ async fn a_failure_backs_off_then_gives_up_after_a_day() {
     assert!(db::claim_due_emails(&pool, 5).await.unwrap().is_empty());
 
     // Later attempts double, capped at an hour.
-    sqlx::query("UPDATE email_outbox SET attempts = 9 WHERE id = $1")
+    // The sender claims the row again before each try.
+    sqlx::query(
+        "UPDATE email_outbox SET attempts = 9, claimed_until = now() + interval '5 minutes' WHERE id = $1",
+    )
         .bind(id)
         .execute(&pool)
         .await
@@ -166,7 +169,9 @@ async fn a_failure_backs_off_then_gives_up_after_a_day() {
     );
 
     // A day after it was queued, the next failure is final.
-    sqlx::query("UPDATE email_outbox SET created_at = now() - interval '25 hours' WHERE id = $1")
+    sqlx::query(
+        "UPDATE email_outbox SET created_at = now() - interval '25 hours', claimed_until = now() + interval '5 minutes' WHERE id = $1",
+    )
         .bind(id)
         .execute(&pool)
         .await
@@ -249,5 +254,89 @@ async fn old_rows_are_purged_by_status() {
         .await
         .unwrap();
     assert_eq!(left, 3);
+    fresh.drop_db().await;
+}
+
+async fn claimed_until(pool: &PgPool, id: Uuid) -> Option<f64> {
+    let (secs,): (Option<f64>,) = sqlx::query_as(
+        "SELECT EXTRACT(EPOCH FROM claimed_until - now())::float8 FROM email_outbox WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .unwrap();
+    secs
+}
+
+#[tokio::test]
+async fn renewing_an_expired_claim_fails() {
+    let Some(fresh) = fresh_db_or_skip().await else {
+        return;
+    };
+    let pool = fresh.pool.clone();
+    let id = db::enqueue_email(&pool, &email("d@example.com"))
+        .await
+        .unwrap();
+    // Never claimed.
+    assert!(!db::renew_email_claim(&pool, id).await.unwrap());
+    db::claim_due_emails(&pool, 5).await.unwrap();
+    sqlx::query(
+        "UPDATE email_outbox SET claimed_until = now() - interval '1 second' WHERE id = $1",
+    )
+    .bind(id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert!(!db::renew_email_claim(&pool, id).await.unwrap());
+    fresh.drop_db().await;
+}
+
+#[tokio::test]
+async fn renewing_a_live_claim_extends_it() {
+    let Some(fresh) = fresh_db_or_skip().await else {
+        return;
+    };
+    let pool = fresh.pool.clone();
+    let id = db::enqueue_email(&pool, &email("e@example.com"))
+        .await
+        .unwrap();
+    db::claim_due_emails(&pool, 5).await.unwrap();
+    sqlx::query(
+        "UPDATE email_outbox SET claimed_until = now() + interval '10 seconds' WHERE id = $1",
+    )
+    .bind(id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert!(db::renew_email_claim(&pool, id).await.unwrap());
+    let left = claimed_until(&pool, id).await.unwrap();
+    assert!(
+        (290.0..=301.0).contains(&left),
+        "renewed to five minutes, got {left}"
+    );
+    fresh.drop_db().await;
+}
+
+#[tokio::test]
+async fn settling_an_unclaimed_email_does_nothing() {
+    let Some(fresh) = fresh_db_or_skip().await else {
+        return;
+    };
+    let pool = fresh.pool.clone();
+    let id = db::enqueue_email(&pool, &email("f@example.com"))
+        .await
+        .unwrap();
+    db::mark_email_sent(&pool, id).await.unwrap();
+    assert!(matches!(
+        db::record_email_failure(&pool, id, "late").await,
+        Err(linkdean_core::Error::NotFound)
+    ));
+    let (status, attempts, last_error): (String, i32, Option<String>) =
+        sqlx::query_as("SELECT status, attempts, last_error FROM email_outbox WHERE id = $1")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!((status.as_str(), attempts, last_error), ("queued", 0, None));
     fresh.drop_db().await;
 }

@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::rate_limit::{Limiter, WINDOW};
 use crate::vault_keys::{idle_limit, VaultKeyStore, VaultSession};
+use anyhow::Context;
 use linkdean_core::VaultKeyring;
 use linkdean_db::{self as db};
 use linkdean_search::SearchClient;
@@ -30,7 +31,10 @@ impl AppState {
             tracing::warn!("meilisearch index setup: {e}");
         }
         let mail = match &cfg.mail {
-            Some(mail_cfg) => Some(Arc::new(crate::mail::Mail::new(mail_cfg, &cfg.app_url)?)),
+            Some(mail_cfg) => Some(Arc::new(
+                crate::mail::Mail::new(mail_cfg, &cfg.app_url)
+                    .context("building the mail transport from SMTP_HOST / SMTP_TLS")?,
+            )),
             None => None,
         };
         match &mail {

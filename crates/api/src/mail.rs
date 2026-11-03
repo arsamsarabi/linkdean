@@ -11,6 +11,9 @@ use std::time::Duration;
 const POLL: Duration = Duration::from_secs(5);
 /// How many emails one pass claims.
 const BATCH: i64 = 20;
+/// Longest one send may take. lettre's own timeout applies per SMTP step, so a stalled server
+/// could otherwise hold an email past its five-minute claim.
+const SEND_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub struct Mail {
     pub cfg: MailConfig,
@@ -86,12 +89,28 @@ pub async fn deliver_due(pool: &PgPool, mailer: &Mailer) -> usize {
         }
     };
     for email in &batch {
+        // The claim may have lapsed while earlier emails in the batch were sending; another
+        // sender could hold this one now.
+        match db::renew_email_claim(pool, email.id).await {
+            Ok(true) => {}
+            Ok(false) => {
+                tracing::info!(email_id = %email.id, "email claim lapsed, skipping");
+                continue;
+            }
+            Err(e) => {
+                tracing::warn!(email_id = %email.id, error = %e, "renewing email claim failed");
+                continue;
+            }
+        }
         let rendered = Rendered {
             subject: email.subject.clone(),
             html: email.html.clone(),
             text: email.text.clone(),
         };
-        match mailer.send(&email.recipient, &rendered).await {
+        let sent = tokio::time::timeout(SEND_TIMEOUT, mailer.send(&email.recipient, &rendered))
+            .await
+            .unwrap_or_else(|_| Err("SMTP send timed out after 60 s".into()));
+        match sent {
             Ok(()) => {
                 if let Err(e) = db::mark_email_sent(pool, email.id).await {
                     tracing::warn!(email_id = %email.id, error = %e, "marking email sent failed");
