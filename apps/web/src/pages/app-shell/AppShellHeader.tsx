@@ -1,8 +1,6 @@
 import { type ReactElement } from 'react'
 import {
-  Box,
   Burger,
-  Button,
   Code,
   Group,
   Indicator,
@@ -14,10 +12,9 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
-import { IconBookmarkPlus, IconLogout, IconSearch, IconSettings, IconTrash, IconUser } from '@tabler/icons-react'
+import { IconLogout, IconSearch, IconSettings, IconTrash, IconUser } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { LogoMark, NotificationsBell, ThemeMenuSwitch, UserAvatar } from '@/components'
-import { buildLibrarySearch } from '@/lib'
 import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
 
@@ -82,16 +79,6 @@ export function AppShellHeader({
         <Skeleton circle height={36} width={36} />
       ) : (
         <Group gap="xs" wrap="nowrap">
-          <Box visibleFrom="sm">
-            <Tooltip label="New bookmark (N in the library)" position="bottom">
-              <Button
-                renderRoot={(props) => <Link {...props} to="/library" search={buildLibrarySearch({ create: true })} />}
-                leftSection={<IconBookmarkPlus size={16} stroke={1.5} />}
-              >
-                Add
-              </Button>
-            </Tooltip>
-          </Box>
           <Indicator
             disabled={unreadCount < 1}
             label={unreadCount > 9 ? '9+' : unreadCount}

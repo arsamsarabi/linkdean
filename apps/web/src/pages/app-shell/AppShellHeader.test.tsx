@@ -49,9 +49,9 @@ describe('AppShellHeader', () => {
     expect(useShellUi.getState().paletteOpen).toBe(true)
   })
 
-  it('offers Add, which opens the new-bookmark form in the library', () => {
+  it('leaves adding to the library page, the tab bar and the palette', () => {
     renderHeader(false)
-    expect(screen.getByRole('link', { name: /add/i }).getAttribute('href')).toBe('/library')
+    expect(screen.queryByRole('link', { name: /add/i })).toBeNull()
   })
 
   it('keeps vault entries out of the user menu', async () => {
