@@ -55,7 +55,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Vault content never indexed in Meilisearch
 - Export never dumps vault bookmarks as plaintext
 - Unlocking a vault opens it for that login session only. Other devices, other sessions and API keys stay locked
-- Optional auto-lock after inactivity (Settings). The server enforces it too: unlocked keys it has not used for that long are dropped. Logging out, a password change or a ban locks them
+- Optional auto-lock after inactivity (Settings). The server enforces it too: unlocked keys it has not used for that long are dropped. Logging out, a password change or reset, or a ban locks them
 
 ---
 
@@ -119,6 +119,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
 - Optional `BOOTSTRAP_TOKEN`: the first account (the admin) must enter it on the setup page. Racing sign-ups cannot make two first admins or redeem one invite twice
 - Profile: display name, bio, avatar, password change. A new password signs out every other session, and can revoke all API keys too
+- Password reset: with mail on, **Forgot password?** emails a single-use link that works for 30 minutes; admins can make a 24-hour link to hand over, the only way back in when mail is off. A reset signs out every session, can revoke all API keys, and leaves vaults locked
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts

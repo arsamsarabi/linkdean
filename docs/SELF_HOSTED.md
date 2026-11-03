@@ -120,6 +120,14 @@ Delivery:
 
 SPF, DKIM and DMARC are set up with your mail provider and DNS, not in Linkdean.
 
+Password reset:
+
+- With mail on, the login page links to **Forgot password?**. The emailed link works once, for 30 minutes. Links are built from `APP_URL`, so set it to the address people open Linkdean at.
+- With mail off, the login page tells people to ask an admin. An admin opens **Settings → Admin → Accounts**, picks the user and chooses **Reset link**. The link is shown once, works once, for 24 hours, and must be sent privately: anyone with it can set the password. With mail on, the user is also told by email that an admin made one.
+- A new link voids the previous one, and so does a normal password change. A reset ends every session, signs in the browser that reset, and leaves every vault locked; vault passphrases do not change.
+- Accounts that sign in only with OIDC have no password to reset. They get an email saying so, and the admin link is refused for them.
+- Each email address can request 3 links per 15 minutes, and each client IP 10. Each client IP can try 10 links per 15 minutes.
+
 ### API clients
 
 `PATCH` bodies distinguish a missing field from `null`:

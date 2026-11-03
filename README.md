@@ -62,7 +62,7 @@ Linkdean is a small, self-hosted bookmarks server: Postgres, optional Meilisearc
 | **Search** | Meilisearch full-text for non-vault bookmarks |
 | **Vault** | Passphrase-protected categories; plaintext never indexed |
 | **Sharing** | Same-instance folder / dashboard ACL; likes, comments, ratings |
-| **Auth** | Local password, optional OIDC, admin accounts, API keys |
+| **Auth** | Local password, password reset, optional OIDC, admin accounts, API keys |
 | **Import / export** | Netscape, JSON, Pocket, Raindrop |
 | **Ops** | Compose healthchecks, ready probe, backup recipe, admin reindex, optional SMTP email |
 
