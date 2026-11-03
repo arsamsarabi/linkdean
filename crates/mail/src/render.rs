@@ -27,7 +27,13 @@ macro_rules! template {
 }
 
 /// Every email Linkdean sends. Add new templates here.
-const TEMPLATES: &[Template] = &[template!("test")];
+const TEMPLATES: &[Template] = &[
+    template!("test"),
+    template!("password_reset"),
+    template!("password_changed"),
+    template!("password_reset_sso"),
+    template!("password_reset_admin"),
+];
 const LAYOUT: &str = include_str!("../templates/layout.mjml");
 const MACROS: &str = include_str!("../templates/macros.mjml");
 
@@ -202,6 +208,21 @@ mod tests {
         assert!(r.html.contains("Open Linkdean"));
         assert!(r.text.contains("https://links.example.com"));
         assert!(r.html.contains(r#"href="https://links.example.com""#));
+    }
+
+    #[test]
+    fn password_reset_links_the_token_in_html_and_text() {
+        let url = "https://links.example.com/reset-password#token=abc123";
+        let r = render(
+            "password_reset",
+            &sample("password_reset").unwrap(),
+            &site(),
+        )
+        .unwrap();
+        assert_eq!(r.subject, "Reset your links.example.com password");
+        assert!(r.html.contains(&format!(r#"href="{url}""#)));
+        assert!(r.text.contains(url));
+        assert!(r.text.contains("30 minutes"));
     }
 
     #[test]
