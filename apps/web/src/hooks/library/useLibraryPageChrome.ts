@@ -3,6 +3,7 @@ import { useHotkeys, useWindowScroll } from '@mantine/hooks'
 import { useNavigate } from '@tanstack/react-router'
 import { buildLibrarySearch, type SortKey } from '@/lib'
 import type { ExplorerFolderId, FlagFilter, SinceFilter } from '@/services'
+import { isModalDialogOpen } from '../render'
 import type { LibraryPath, LibrarySearchParams } from './types'
 
 type Input = {
@@ -69,11 +70,10 @@ export function useLibraryPageChrome({
       },
     ],
     [
-      // Known issue: Esc in any dialog or drawer also clears the library selection. Fix: skip while
-      // a dialog is open, as `useDrawerClosesOnEscape` in hooks/render does.
+      // Esc in a dialog or drawer closes that, and leaves the library selection alone.
       'Escape',
       () => {
-        if (selectMode) exitSelectMode()
+        if (selectMode && !isModalDialogOpen()) exitSelectMode()
       },
     ],
   ])

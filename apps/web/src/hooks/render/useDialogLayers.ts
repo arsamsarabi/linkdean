@@ -28,6 +28,12 @@ export function useChildDialog(opened: boolean): void {
   }, [opened])
 }
 
+/** True while any modal dialog or drawer is on screen. Mantine renders both as `aria-modal`
+ * dialogs, so page-level Esc shortcuts can leave the key to them. */
+export function isModalDialogOpen(doc: Document = document): boolean {
+  return doc.querySelector('[role="dialog"][aria-modal="true"]') !== null
+}
+
 /** For a drawer's `closeOnEscape`: false while a dialog is open on top of it. */
 export function useDrawerClosesOnEscape(): boolean {
   return useSyncExternalStore(

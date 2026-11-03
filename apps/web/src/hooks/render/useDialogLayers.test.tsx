@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmModal } from '@/components/confirm-modal/ConfirmModal'
-import { useDrawerClosesOnEscape } from './useDialogLayers'
+import { isModalDialogOpen, useDrawerClosesOnEscape } from './useDialogLayers'
 
 function DrawerWithConfirm({ onDrawerClose }: { onDrawerClose: () => void }): ReactElement {
   const closeOnEscape = useDrawerClosesOnEscape()
@@ -48,5 +48,23 @@ describe('dialog layers', () => {
 
     await user.keyboard('{Escape}')
     expect(onDrawerClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('isModalDialogOpen', () => {
+  afterEach(cleanup)
+
+  it('sees an open Mantine drawer, and nothing once it is gone', () => {
+    expect(isModalDialogOpen()).toBe(false)
+    render(
+      <MantineProvider>
+        <Drawer opened onClose={() => undefined} title="Drawer" transitionProps={{ duration: 0 }}>
+          Body
+        </Drawer>
+      </MantineProvider>
+    )
+    expect(isModalDialogOpen()).toBe(true)
+    cleanup()
+    expect(isModalDialogOpen()).toBe(false)
   })
 })
