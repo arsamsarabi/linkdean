@@ -154,9 +154,11 @@ pub fn render(name: &str, data: &Value, site: &Site) -> Result<Rendered, RenderE
         .element
         .render(&options)
         .map_err(|e| mjml_err(e.to_string()))?;
-    // Raw mode reads MJML's layout tables as one column: no borders, no cell padding.
+    // Raw mode reads MJML's layout tables as one column: no borders, no cell padding. Links stay
+    // on one line, so a long reset link still works when copied from the text part.
     let text = html2text::config::plain()
         .raw_mode(true)
+        .no_link_wrapping()
         .string_from_read(html.as_bytes(), 78)
         .map_err(|e| mjml_err(e.to_string()))?;
     Ok(Rendered {
@@ -223,6 +225,21 @@ mod tests {
         assert!(r.html.contains(&format!(r#"href="{url}""#)));
         assert!(r.text.contains(url));
         assert!(r.text.contains("30 minutes"));
+    }
+
+    #[test]
+    fn long_links_are_not_wrapped_in_plain_text() {
+        let url = format!(
+            "https://links.example.com/reset-password#token={}",
+            "a".repeat(64)
+        );
+        let r = render(
+            "password_reset",
+            &serde_json::json!({ "reset_url": url, "minutes": 30 }),
+            &site(),
+        )
+        .unwrap();
+        assert!(r.text.contains(&url), "{}", r.text);
     }
 
     #[test]
