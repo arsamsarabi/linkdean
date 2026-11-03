@@ -1,0 +1,21 @@
+[package]
+name = "linkdean-mail"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+html2text.workspace = true
+lettre.workspace = true
+minijinja.workspace = true
+mrml.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+reqwest.workspace = true
+tokio.workspace = true
+uuid.workspace = true

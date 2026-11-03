@@ -4,6 +4,7 @@ members = [
     "crates/api",
     "crates/core",
     "crates/db",
+    "crates/mail",
     "crates/search",
     "crates/worker",
 ]
@@ -55,3 +56,8 @@ linkdean-core = { path = "crates/core" }
 linkdean-db = { path = "crates/db" }
 linkdean-search = { path = "crates/search" }
 linkdean-worker = { path = "crates/worker" }
+linkdean-mail = { path = "crates/mail" }
+html2text = "0.17.4"
+lettre = { version = "0.11.23", default-features = false, features = ["builder", "smtp-transport", "hostname", "tokio1", "tokio1-rustls-tls"] }
+minijinja = "2.24.0"
+mrml = "6.0.1"
