@@ -3,5 +3,7 @@
   "subject_kind": "folder",
   "name": "Reading list",
   "access": "read-only",
-  "url": "https://links.example.com/shared"
+  "url": "https://links.example.com/shared",
+  "kind_label": "Share invites",
+  "settings_url": "https://links.example.com/settings?tab=notifications"
 }

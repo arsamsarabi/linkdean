@@ -320,6 +320,15 @@ mod tests {
             .html
             .contains(r#"href="https://links.example.com/shared""#));
         assert!(r.html.contains("Open Linkdean"));
+        assert!(
+            r.text
+                .contains("You got this because email for Share invites is on."),
+            "{}",
+            r.text
+        );
+        assert!(r
+            .html
+            .contains(r#"href="https://links.example.com/settings?tab=notifications""#));
     }
 
     #[test]
@@ -367,6 +376,7 @@ mod tests {
         let invite = json!({
             "owner": name, "subject_kind": "folder", "name": name,
             "access": "read-only", "url": "https://links.example.com/shared",
+            "kind_label": name, "settings_url": "https://links.example.com/settings",
         });
         let pending = json!({
             "owner": name, "subject_kind": "folder", "name": name,

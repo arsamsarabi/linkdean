@@ -1706,3 +1706,31 @@ mod issuer_host_tests {
         assert_eq!(issuer_host("not a url"), "not a url");
     }
 }
+
+#[cfg(test)]
+mod notification_kind_tests {
+    use super::NotificationKind;
+
+    #[test]
+    fn every_notification_kind_is_listed_once() {
+        // A new variant fails to compile here until it is given a place in `ALL`.
+        fn position(k: NotificationKind) -> usize {
+            match k {
+                NotificationKind::ShareInvite => 0,
+                NotificationKind::ShareAccessChanged => 1,
+                NotificationKind::ShareRevoked => 2,
+                NotificationKind::SharedEdit => 3,
+                NotificationKind::SocialLike => 4,
+                NotificationKind::SocialComment => 5,
+                NotificationKind::SocialRating => 6,
+                NotificationKind::UserFollowed => 7,
+                NotificationKind::ModerationChanges => 8,
+            }
+        }
+        for (i, k) in NotificationKind::ALL.iter().enumerate() {
+            assert_eq!(position(*k), i);
+            assert_eq!(NotificationKind::parse(k.as_str()), Ok(*k));
+            assert!(!k.label().is_empty());
+        }
+    }
+}
