@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, ApiError } from '@/api'
-import { getToken, setToken, tokenStorageKey } from '@/lib'
+import { dropLegacyToken, isSignedIn, markSignedIn, sessionMarkerKey } from '@/lib'
 import { useLogin, useLogout, useSessionSync } from './useAuth'
 
 vi.mock('@/api', async (importOriginal) => {
@@ -23,9 +23,10 @@ function wrapper(qc: QueryClient) {
   }
 }
 
-beforeEach(() => setToken('old'))
+beforeEach(() => markSignedIn(true))
 afterEach(() => {
-  setToken(null)
+  markSignedIn(false)
+  localStorage.removeItem('linkdean_token')
   vi.unstubAllGlobals()
 })
 
@@ -36,7 +37,8 @@ describe('signing in', () => {
     const { result } = renderHook(() => useLogin(), { wrapper: wrapper(qc) })
     await act(() => result.current.mutateAsync({ email: 'a@b.c', password: 'password1' }))
     expect(qc.getQueryData(['bookmarks', true])).toBeUndefined()
-    expect(getToken()).toBe('new')
+    expect(isSignedIn()).toBe(true)
+    expect(localStorage.getItem('linkdean_token')).toBeNull()
   })
 })
 
@@ -47,7 +49,7 @@ describe('signing out', () => {
     qc.setQueryData(['me'], { user: {} })
     const { result } = renderHook(() => useLogout(), { wrapper: wrapper(qc) })
     await act(() => expect(result.current.mutateAsync()).rejects.toThrow('internal error'))
-    expect(getToken()).toBe('old')
+    expect(isSignedIn()).toBe(true)
     expect(qc.getQueryData(['me'])).toBeDefined()
   })
 
@@ -56,7 +58,7 @@ describe('signing out', () => {
     const qc = new QueryClient()
     const { result } = renderHook(() => useLogout(), { wrapper: wrapper(qc) })
     await act(() => result.current.mutateAsync())
-    expect(getToken()).toBeNull()
+    expect(isSignedIn()).toBe(false)
   })
 })
 
@@ -65,7 +67,7 @@ describe('other tabs', () => {
     const assign = vi.fn()
     vi.stubGlobal('location', { pathname: '/library', assign })
     renderHook(() => useSessionSync())
-    window.dispatchEvent(new StorageEvent('storage', { key: tokenStorageKey, newValue: null }))
+    window.dispatchEvent(new StorageEvent('storage', { key: sessionMarkerKey, newValue: null }))
     expect(assign).toHaveBeenCalledWith('/login')
   })
 
@@ -75,7 +77,17 @@ describe('other tabs', () => {
     renderHook(() => useSessionSync())
     window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated', newValue: 'x' }))
     expect(assign).not.toHaveBeenCalled()
-    window.dispatchEvent(new StorageEvent('storage', { key: tokenStorageKey, newValue: 'other' }))
+    window.dispatchEvent(new StorageEvent('storage', { key: sessionMarkerKey, newValue: '1' }))
     expect(assign).toHaveBeenCalledWith('/')
+  })
+})
+
+describe('upgrading from a stored token', () => {
+  it('forgets the token and keeps the browser signed in', () => {
+    markSignedIn(false)
+    localStorage.setItem('linkdean_token', 'old-secret')
+    dropLegacyToken()
+    expect(localStorage.getItem('linkdean_token')).toBeNull()
+    expect(isSignedIn()).toBe(true)
   })
 })

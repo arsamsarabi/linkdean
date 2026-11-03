@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
-import { getToken } from '@/lib'
 
 type Loaded = { src: string; url?: string }
 
 /**
- * Loads an `/api/` image with the page's own token. An `<img>` request only carries the
- * session cookie, which localhost ports share, so it can belong to another user or be gone.
- * Other URLs pass through unchanged.
+ * Loads an `/api/` image through `fetch` with the session cookie, so a failure shows as
+ * `failed` instead of a broken `<img>`. Other URLs pass through unchanged.
  */
 export function useApiImage(src: string | null | undefined): { src: string | undefined; failed: boolean } {
   const [loaded, setLoaded] = useState<Loaded | null>(null)
@@ -16,10 +14,8 @@ export function useApiImage(src: string | null | undefined): { src: string | und
     if (!src || !isApi) return
     let objectUrl: string | undefined
     let cancelled = false
-    const token = getToken()
     fetch(src, {
       credentials: 'include',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => {
         if (!r.ok) throw new Error('image')

@@ -5,12 +5,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
+import { dropLegacyToken } from '@/lib'
 import { routeTree } from '@/routeTree.gen'
 import { linkdeanCssVariables, linkdeanTheme } from '@/styles'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
 import '@/styles/fonts.css'
 import '@/styles/styles.css'
+
+// Older versions kept the session token in localStorage; the cookie is enough now.
+dropLegacyToken()
 
 const queryClient = new QueryClient()
 const router = createRouter({ routeTree, context: { queryClient } })

@@ -1,4 +1,4 @@
-export { ApiError, banFromBody, getToken, setToken, avatarUrl, req } from './client'
+export { ApiError, banFromBody, avatarUrl, req } from './client'
 export type {
   UserPublic,
   UserSettings,

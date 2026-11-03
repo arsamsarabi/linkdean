@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { getToken } from '@/lib'
 import { useSyncDuringRender } from '../render'
 
 // Known issue: For `me`, the browser can serve the previous account's avatar from HTTP cache for up
@@ -15,11 +14,9 @@ export function useAvatarImage(hasAvatar: boolean, bust?: number | string, userI
     let objectUrl: string | undefined
     let cancelled = false
     if (!hasAvatar) return
-    const token = getToken()
     const q = bust != null ? `?v=${bust}` : ''
     fetch(`/api/users/${userId}/avatar${q}`, {
       credentials: 'include',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => {
         if (!r.ok) throw new Error('avatar')

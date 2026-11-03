@@ -12,7 +12,7 @@ import {
   useRegister,
   useUploadAvatar,
 } from '@/hooks'
-import { getToken, resolveDefaultLanding } from '@/lib'
+import { isSignedIn, resolveDefaultLanding } from '@/lib'
 import { MIN_SECRET_LENGTH, validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
 import { OnboardingSteps } from './OnboardingSteps'
@@ -47,7 +47,7 @@ export function OnboardingPage(): ReactElement {
   const [file, setFile] = useState<File | null>(null)
 
   const bootstrap = useBootstrap()
-  const me = useMe(!!getToken())
+  const me = useMe(isSignedIn())
   const register = useRegister()
   const uploadAvatar = useUploadAvatar()
   const createVault = useCreateVault()
@@ -72,8 +72,7 @@ export function OnboardingPage(): ReactElement {
       return
     }
 
-    const token = getToken()
-    if (!token) {
+    if (!isSignedIn()) {
       void nav({ to: '/login' })
       return
     }

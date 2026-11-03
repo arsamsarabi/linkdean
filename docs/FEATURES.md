@@ -160,6 +160,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Editing a shared bookmark: the side panel has Details and Discussion tabs, so likes, rating and comments sit next to the edit form (the card menu's Likes & comments still opens them on their own)
 - Paste a web address anywhere outside a text field to open the new-bookmark form with it filled in (in the open folder when on the library)
 - PWA install: web manifest + service worker (standalone / “Add to Home Screen”)
+- Hardened before release: race-safe sign-up, invites and admin demotion; vault moves lock their rows; the browser session lives only in the `HttpOnly` cookie, with a client header guarding writes; Chrome runs sandboxed, non-root and off the data network; a `.dockerignore` keeps local files out of the image
 
 ---
 

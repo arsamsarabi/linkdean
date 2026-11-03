@@ -1,8 +1,6 @@
 import type { z } from 'zod'
-import { getToken, setToken } from '@/lib'
+import { CLIENT_HEADER, isSignedIn, markSignedIn } from '@/lib'
 import { banNoticeSchema, type BanNotice } from '@/schemas'
-
-export { getToken, setToken } from '@/lib'
 
 function parseWithSchema<T>(schema: z.ZodType<T>, data: unknown, path: string): T {
   const result = schema.safeParse(data)
@@ -54,8 +52,8 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
-  const token = getToken()
-  if (token) headers.set('Authorization', 'Bearer ' + token)
+  // The session rides in the HttpOnly cookie; this header marks the request as the app's own.
+  headers.set(CLIENT_HEADER, 'web')
   const res = await fetch(`/api${path}`, { ...init, headers, credentials: 'include' })
   if (!res.ok) {
     let msg = res.statusText
@@ -76,9 +74,9 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
     if (res.status === 403 && banFromBody(body) && location.pathname !== '/banned') {
       location.assign('/banned')
     }
-    if (res.status === 401 && sessionExpired(body) && (token || !isPublicPath(location.pathname))) {
+    if (res.status === 401 && sessionExpired(body) && (isSignedIn() || !isPublicPath(location.pathname))) {
       // A full page load also drops the signed-out user's cached data.
-      setToken(null)
+      markSignedIn(false)
       if (location.pathname !== '/login') location.assign('/login')
     }
     throw new ApiError(msg, res.status, body)

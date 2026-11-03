@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { banFromBody, getToken, req, setToken } from './client'
+import { isSignedIn, markSignedIn } from '@/lib'
+import { banFromBody, req } from './client'
 
 function respond(status: number, body: unknown): void {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })))
@@ -44,10 +45,25 @@ describe('banned responses', () => {
   })
 })
 
+describe('credentials', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('sends the cookie and the client header, never a bearer token', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await req('/bookmarks', { method: 'POST', body: '{}' })
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit
+    const headers = new Headers(init.headers)
+    expect(init.credentials).toBe('include')
+    expect(headers.get('X-Linkdean-Client')).toBe('web')
+    expect(headers.has('Authorization')).toBe(false)
+  })
+})
+
 describe('expired sessions', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
-    setToken(null)
+    markSignedIn(false)
   })
 
   function stubLocation(pathname: string) {
@@ -59,20 +75,20 @@ describe('expired sessions', () => {
   const expired = { error: 'session expired', code: 'session_expired' }
 
   it('signs out and goes to login', async () => {
-    setToken('stale')
+    markSignedIn(true)
     const assign = stubLocation('/library')
     respond(401, expired)
     await expect(req('/bookmarks')).rejects.toThrow('session expired')
-    expect(getToken()).toBeNull()
+    expect(isSignedIn()).toBe(false)
     expect(assign).toHaveBeenCalledWith('/login')
   })
 
   it('keeps the session on a wrong password', async () => {
-    setToken('good')
+    markSignedIn(true)
     const assign = stubLocation('/settings')
     respond(401, { error: 'unauthorized' })
     await expect(req('/users/me/password')).rejects.toThrow('unauthorized')
-    expect(getToken()).toBe('good')
+    expect(isSignedIn()).toBe(true)
     expect(assign).not.toHaveBeenCalled()
   })
 
@@ -91,11 +107,11 @@ describe('expired sessions', () => {
   })
 
   it('does not loop on the login page', async () => {
-    setToken('stale')
+    markSignedIn(true)
     const assign = stubLocation('/login')
     respond(401, expired)
     await expect(req('/auth/me')).rejects.toThrow()
-    expect(getToken()).toBeNull()
+    expect(isSignedIn()).toBe(false)
     expect(assign).not.toHaveBeenCalled()
   })
 })

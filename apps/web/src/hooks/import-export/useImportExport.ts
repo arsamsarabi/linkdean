@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
 import { api } from '@/api'
-import { getToken } from '@/lib'
 import type { ImportResult } from '@/schemas'
 
 type ImportVars = { format: string; content: string }
@@ -27,11 +26,7 @@ export function useExportBookmarks(): ExportState {
     setIsExporting(true)
     setExportError(null)
     try {
-      const token = getToken()
-      const headers: HeadersInit = {}
-      if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch(api.exportUrl(format), {
-        headers,
         credentials: 'include',
       })
       if (!res.ok) {

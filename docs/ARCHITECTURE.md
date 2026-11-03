@@ -54,8 +54,8 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 
 ## Auth & sessions
 
-- Register / login issues an opaque session token (cookie + `Authorization: Bearer`)
-- Expired or revoked session → `401 {"code":"session_expired"}`; the SPA clears its token and opens `/login`. A wrong password stays a plain `401`
+- Register / login issues an opaque session token: an `HttpOnly`, `SameSite=Lax` `linkdean_session` cookie, and the token in the response body for API clients. The web app keeps no token: it sends the cookie and an `X-Linkdean-Client: web` header, and stores only a non-secret signed-in marker. A cookie authorises a write (any method but GET, HEAD, OPTIONS) only with that header, which a cross-site page cannot add without a CORS preflight the API never grants with credentials. `Authorization: Bearer` (sessions and API keys) needs no header
+- Expired or revoked session → `401 {"code":"session_expired"}`; the SPA clears its signed-in marker and opens `/login`. A wrong password stays a plain `401`
 - In-memory rate limits (`crates/api/src/rate_limit.rs`) on login, registration and vault passphrase checks (unlock, recovery, recovery key replacement, global unlock and turning the global passphrase off) → `429`. Counters reset on restart. Client address comes from the TCP peer, or from the last `X-Forwarded-For` entry when `TRUST_FORWARDED_FOR=true`
 - Argon2 work runs on a blocking pool, at most 4 at once (`crates/db/src/repo/blocking.rs`)
 - Startup refuses published secrets unless `ALLOW_DEFAULT_SECRETS=true` (dev only)

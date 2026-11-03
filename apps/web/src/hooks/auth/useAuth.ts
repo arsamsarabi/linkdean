@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api, ApiError } from '@/api'
-import { setToken, tokenStorageKey } from '@/lib'
+import { markSignedIn, sessionMarkerKey } from '@/lib'
 import type { AuthTokenResponse, UserPublic } from '@/schemas'
 
 type LoginBody = { email: string; password: string }
@@ -18,10 +18,10 @@ export function useLogin(): UseMutationResult<AuthTokenResponse, Error, LoginBod
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: LoginBody) => api.login(body),
-    onSuccess: (res) => {
+    onSuccess: () => {
       // Another user may have been signed in on this tab: drop everything cached for them.
       qc.clear()
-      setToken(res.token)
+      markSignedIn(true)
     },
   })
 }
@@ -30,9 +30,9 @@ export function useRegister(): UseMutationResult<AuthTokenResponse, Error, Regis
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: RegisterBody) => api.register(body),
-    onSuccess: (res) => {
+    onSuccess: () => {
       qc.clear()
-      setToken(res.token)
+      markSignedIn(true)
     },
   })
 }
@@ -47,7 +47,7 @@ export function useLogout(): UseMutationResult<void, Error, void> {
       } catch (e) {
         if (!(e instanceof ApiError && e.status === 401)) throw e
       }
-      setToken(null)
+      markSignedIn(false)
     },
     onSuccess: () => {
       qc.clear()
@@ -59,7 +59,7 @@ export function useLogout(): UseMutationResult<void, Error, void> {
 export function useSessionSync(): void {
   useEffect(() => {
     function onStorage(e: StorageEvent): void {
-      if (e.key !== tokenStorageKey && e.key !== null) return
+      if (e.key !== sessionMarkerKey && e.key !== null) return
       location.assign(e.newValue ? '/' : '/login')
     }
     window.addEventListener('storage', onStorage)

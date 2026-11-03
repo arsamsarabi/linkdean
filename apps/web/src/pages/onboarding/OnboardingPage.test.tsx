@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '@/api'
-import { setToken } from '@/lib'
+import { markSignedIn } from '@/lib'
 import type { MeResponse } from '@/schemas'
 import { OnboardingPage } from './OnboardingPage'
 
@@ -64,7 +64,7 @@ describe('OnboardingPage', () => {
 
   beforeEach((): void => {
     vi.resetAllMocks()
-    setToken(null)
+    markSignedIn(false)
     mocked.bootstrap.mockResolvedValue({
       needs_bootstrap: true,
       bootstrap_token_required: false,
@@ -117,7 +117,7 @@ describe('OnboardingPage', () => {
   })
 
   it('shows members only the optional steps', async (): Promise<void> => {
-    setToken('tok')
+    markSignedIn(true)
     mocked.bootstrap.mockResolvedValue({
       needs_bootstrap: false,
       bootstrap_token_required: false,
