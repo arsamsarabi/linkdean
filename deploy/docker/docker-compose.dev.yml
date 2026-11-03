@@ -74,12 +74,20 @@ services:
         --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223
         --hide-scrollbars --font-render-hinting=none
 
+  # Catches every email the dev API sends; nothing leaves the machine.
+  # Web UI: http://127.0.0.1:8025
+  mailpit:
+    image: axllent/mailpit:v1.31.0
+    networks: [mail]
+    ports:
+      - "127.0.0.1:8025:8025"
+
   # Rebuilds and restarts on changes under crates/ and migrations/.
   api:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    networks: [data, browser, web]
+    networks: [data, browser, web, mail]
     environment:
       DATABASE_URL: postgres://linkdean:linkdean@db:5432/linkdean
       MEILI_URL: http://meilisearch:7700
@@ -92,6 +100,10 @@ services:
       AVATAR_DIR: /app/data/avatars
       PREVIEW_DIR: /app/data/previews
       BROWSER_WS_URL: http://chrome:9222
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_TLS: none
+      MAIL_FROM: Linkdean Dev <linkdean@dev.localhost>
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
@@ -109,6 +121,8 @@ services:
       meilisearch:
         condition: service_healthy
       chrome:
+        condition: service_started
+      mailpit:
         condition: service_started
 
   # Vite with hot module replacement. node_modules stays in a volume because
@@ -132,6 +146,7 @@ networks:
   data:
   browser:
   web:
+  mail:
 
 volumes:
   pgdata:

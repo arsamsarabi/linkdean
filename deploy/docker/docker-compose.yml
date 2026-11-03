@@ -89,6 +89,12 @@ services:
       TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-false}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
       BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_TLS: ${SMTP_TLS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     ports:
       - "8080:8080"
     volumes:
