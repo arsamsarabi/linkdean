@@ -128,6 +128,22 @@ volumes:
 
 Behind a reverse proxy on the same host, publish the port on loopback only: `"127.0.0.1:8080:8080"`.
 
+If `docker compose up` fails with `all predefined address pools have been fully subnetted`, the host has used up Docker's default network ranges (common on hosts with many stacks). Give the two networks fixed, unused subnets:
+
+```yaml
+networks:
+  data:
+    ipam:
+      config:
+        - subnet: 10.89.4.0/24
+  browser:
+    ipam:
+      config:
+        - subnet: 10.89.5.0/24
+```
+
+Pick ranges that `docker network inspect $(docker network ls -q) --format '{{.Name}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'` does not already list.
+
 ## 3. Start it
 
 ```bash
@@ -284,7 +300,36 @@ Chrome's sandbox needs user namespaces, which Docker's default seccomp profile b
 docker compose up -d
 ```
 
-Some hosts also block unprivileged user namespaces through AppArmor (Ubuntu 23.10 and later). Chrome then exits with `No usable sandbox!` in `docker compose logs chrome`, and cards fall back to Open Graph images and favicons. Allow it with `sudo sysctl kernel.apparmor_restrict_unprivileged_userns=0`, or remove the `chrome` service and `BROWSER_WS_URL` again.
+### Hosts that restrict user namespaces (Ubuntu 23.10 and later)
+
+Ubuntu 23.10 and later, including 24.04 LTS, block unprivileged user namespaces through AppArmor. Chrome's sandbox needs them, so Chrome exits with `No usable sandbox!` in `docker compose logs chrome`, and cards fall back to Open Graph images and favicons.
+
+Check the host:
+
+```bash
+sysctl kernel.apparmor_restrict_unprivileged_userns
+```
+
+`1` means restricted. To allow them, and keep the setting across reboots:
+
+```bash
+echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/60-userns-chrome.conf
+sudo sysctl --system | grep userns
+docker compose up -d chrome
+```
+
+The last `sysctl` line should read `kernel.apparmor_restrict_unprivileged_userns = 0`. Chrome's log should then show `DevTools listening on ...` and no `No usable sandbox!`.
+
+This is a host-wide trade-off: it lets every unprivileged process on the host create user namespaces again, not just Chrome. Ubuntu restricts them because they widen the kernel attack surface. If you don't want that on the host, skip screenshots instead.
+
+To undo it:
+
+```bash
+sudo rm /etc/sysctl.d/60-userns-chrome.conf
+sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1
+```
+
+Then remove the `chrome` service and `BROWSER_WS_URL`, or leave Chrome running without screenshots.
 
 ## Environment variables
 
