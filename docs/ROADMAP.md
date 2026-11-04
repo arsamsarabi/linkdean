@@ -95,6 +95,12 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - Apply-to-all shortcuts for large imports, so nobody clicks through hundreds of rows.
     - To explore: what counts as the same URL (Library health → Duplicates matches exact URLs only, so `https://a.com` and `https://a.com/` differ); whether Replace keeps the existing bookmark's ID, shares, pins and activity or swaps them for the imported one; vault bookmarks; and how the review step works with the import API, which today runs in one request.
 
+17. **Retry failed screenshots** (S). A screenshot that times out (common right after a large import, when Chrome gets a burst of pages) leaves the bookmark on its Open Graph image or favicon. Today the only retry is automatic: when the API starts, it retries failures older than 7 days (`list_bookmarks_needing_preview`), so in practice they wait for the next restart.
+    - A **Retry failed screenshots** button on the admin settings page, with the number of bookmarks that would be retried. It queues them through the existing backfill, which runs two screenshots at a time.
+    - A cooldown between retries so Chrome and the sites it visits are not hammered: the button is disabled, showing when it is next available, until the cooldown has passed since the last run. Default 24 hours, admin-configurable in platform settings.
+    - Retry only bookmarks whose last failure is older than the cooldown, so a manual run never retries a page that just failed.
+    - Make the 7-day automatic retry window admin-configurable in the same place, and run it on a schedule instead of only at API start.
+
 ---
 
 ## Far out
