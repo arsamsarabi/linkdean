@@ -89,6 +89,12 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 15. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
 
+16. **Duplicates on import** (M, explore first). Import adds every bookmark it reads, even when the library already has that URL, so importing the same file twice doubles the library. Let the person decide instead.
+    - Before anything is written, warn that the file has bookmarks whose URLs are already in the library, with the count.
+    - For each duplicate, show the existing bookmark next to the one being imported (title, URL, folder, tags, notes) and ask: **Replace** the existing one, **Skip** the imported one, or **Import anyway** as a second copy.
+    - Apply-to-all shortcuts for large imports, so nobody clicks through hundreds of rows.
+    - To explore: what counts as the same URL (exact match, or the normalization Library health → Duplicates uses); whether Replace keeps the existing bookmark's ID, shares, pins and activity or swaps them for the imported one; vault bookmarks; and how the review step works with the import API, which today runs in one request.
+
 ---
 
 ## Far out
