@@ -23,6 +23,8 @@ export function ShareClaimSignedIn({ token }: { token: string }): ReactElement {
         if (!live) return
         setOutcome({ state: 'done' })
         void qc.invalidateQueries({ queryKey: ['share-invites'] })
+        // An emailed link also verifies the address, so the verify banner must hear about it.
+        void qc.invalidateQueries({ queryKey: ['me'] })
       },
       (e: unknown) => {
         if (live) setOutcome({ state: 'failed', message: e instanceof Error ? e.message : String(e) })

@@ -17,11 +17,11 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   return { ...actual, useNavigate: () => vi.fn() }
 })
 
-function renderClaim(token: string): void {
+function renderClaim(token: string, qc = new QueryClient()): void {
   render(
     <StrictMode>
       <MantineProvider>
-        <QueryClientProvider client={new QueryClient()}>
+        <QueryClientProvider client={qc}>
           <ShareClaimSignedIn token={token} />
         </QueryClientProvider>
       </MantineProvider>
@@ -41,6 +41,15 @@ describe('ShareClaimSignedIn', () => {
     expect(await screen.findByText('Invite added')).toBeTruthy()
     expect(claim).toHaveBeenCalledTimes(1)
     expect(claim).toHaveBeenCalledWith('share_a')
+  })
+
+  it('refreshes the account, since an emailed link verifies the address', async () => {
+    claim.mockResolvedValue({ ok: true })
+    const qc = new QueryClient()
+    const invalidate = vi.spyOn(qc, 'invalidateQueries')
+    renderClaim('share_me', qc)
+    expect(await screen.findByText('Invite added')).toBeTruthy()
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['me'] })
   })
 
   it('shows why a claim failed', async () => {
