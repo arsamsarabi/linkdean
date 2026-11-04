@@ -1,6 +1,6 @@
 # Organizations and Teams: Phases
 
-Spec: [`docs/superpowers/specs/2026-11-03-organizations-and-teams-design.md`](../specs/2026-11-03-organizations-and-teams-design.md). Roadmap item 12 in [`docs/ROADMAP.md`](../../ROADMAP.md).
+Spec: [`docs/superpowers/specs/2026-11-03-organizations-and-teams-design.md`](../specs/2026-11-03-organizations-and-teams-design.md). Roadmap item **Organizations and teams** in [`docs/ROADMAP.md`](../../ROADMAP.md).
 
 The spec is too large for one plan. It ships in five phases. Each phase leaves `main` working, tested and documented, and each one is useful on its own. Only Phase 1 has a task-by-task plan so far: [`2026-11-03-organizations-phase-1.md`](./2026-11-03-organizations-phase-1.md). Write the plan for each later phase when the one before it has shipped, against the code as it is then.
 
