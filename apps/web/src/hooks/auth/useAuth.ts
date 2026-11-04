@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api, ApiError } from '@/api'
 import { isSignedIn, markSignedIn, sessionMarkerKey } from '@/lib'
-import type { AuthTokenResponse, UserPublic } from '@/schemas'
+import type { AuthTokenResponse, MeResponse, UserPublic } from '@/schemas'
 
 type LoginBody = { email: string; password: string }
 type RegisterBody = {
@@ -75,13 +75,17 @@ export function useSessionSync(): void {
   }, [])
 }
 
-// Known issue: Finishing onboarding can bounce back to it if the `me` refetch lands after
-// navigation. Not reproduced. Fix: write the returned user into the cache before navigating.
+/**
+ * Writes the onboarded user into the `me` cache before the mutation resolves. The app shell
+ * sends anyone whose cached user is not onboarded back to /onboarding, and callers navigate
+ * as soon as this resolves, long before a refetch would land.
+ */
 export function useCompleteOnboarding(): UseMutationResult<{ user: UserPublic }, Error, void> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.completeOnboarding(),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      qc.setQueryData(['me'], (old: MeResponse | undefined) => (old ? { ...old, user: res.user } : old))
       void qc.invalidateQueries({ queryKey: ['me'] })
     },
   })
