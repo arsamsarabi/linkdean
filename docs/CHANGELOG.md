@@ -6,6 +6,10 @@
 
 - Contributing guide, security policy, code of conduct and pull request template.
 
+### Fixed
+
+- Finishing onboarding no longer sends you straight back into it (vault setup and import again).
+
 ## [0.0.1] - 2026-11-04
 
 ### Added

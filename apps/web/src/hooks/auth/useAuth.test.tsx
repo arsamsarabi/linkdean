@@ -4,7 +4,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, ApiError } from '@/api'
 import { dropLegacyToken, isSignedIn, markSignedIn, sessionMarkerKey } from '@/lib'
-import { useDropSignedOutCache, useLogin, useLogout, useSessionSync } from './useAuth'
+import { useCompleteOnboarding, useDropSignedOutCache, useLogin, useLogout, useSessionSync } from './useAuth'
 
 vi.mock('@/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api')>()
@@ -13,6 +13,7 @@ vi.mock('@/api', async (importOriginal) => {
     api: {
       login: vi.fn().mockResolvedValue({ token: 'new', user: {} }),
       logout: vi.fn().mockResolvedValue({ ok: true }),
+      completeOnboarding: vi.fn().mockResolvedValue({ user: { id: 'u1', onboarding_completed: true } }),
     },
   }
 })
@@ -39,6 +40,24 @@ describe('signing in', () => {
     expect(qc.getQueryData(['bookmarks', true])).toBeUndefined()
     expect(isSignedIn()).toBe(true)
     expect(localStorage.getItem('linkdean_token')).toBeNull()
+  })
+})
+
+describe('finishing onboarding', () => {
+  // The app shell sends anyone whose cached user is not onboarded back to /onboarding, so the
+  // cache must say "onboarded" by the time callers navigate, not after a refetch lands.
+  it('marks the cached user onboarded before the mutation resolves', async () => {
+    const qc = new QueryClient()
+    qc.setQueryData(['me'], {
+      user: { id: 'u1', onboarding_completed: false },
+      settings: { default_landing: 'library' },
+    })
+    const { result } = renderHook(() => useCompleteOnboarding(), { wrapper: wrapper(qc) })
+    await act(() => result.current.mutateAsync())
+    expect(qc.getQueryData(['me'])).toEqual({
+      user: { id: 'u1', onboarding_completed: true },
+      settings: { default_landing: 'library' },
+    })
   })
 })
 
