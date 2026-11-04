@@ -93,7 +93,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - Before anything is written, warn that the file has bookmarks whose URLs are already in the library, with the count.
     - For each duplicate, show the existing bookmark next to the one being imported (title, URL, folder, tags, notes) and ask: **Replace** the existing one, **Skip** the imported one, or **Import anyway** as a second copy.
     - Apply-to-all shortcuts for large imports, so nobody clicks through hundreds of rows.
-    - To explore: what counts as the same URL (exact match, or the normalization Library health → Duplicates uses); whether Replace keeps the existing bookmark's ID, shares, pins and activity or swaps them for the imported one; vault bookmarks; and how the review step works with the import API, which today runs in one request.
+    - To explore: what counts as the same URL (Library health → Duplicates matches exact URLs only, so `https://a.com` and `https://a.com/` differ); whether Replace keeps the existing bookmark's ID, shares, pins and activity or swaps them for the imported one; vault bookmarks; and how the review step works with the import API, which today runs in one request.
 
 ---
 
