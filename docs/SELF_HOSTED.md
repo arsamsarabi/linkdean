@@ -23,6 +23,22 @@ Open `http://localhost:8080`. The first registered user becomes admin. Set `BOOT
 
 Secrets are injected via environment variables (or the operator's preferred secret store). No Infisical dependency. `deploy/docker/.env` is gitignored; keep it out of version control.
 
+### Prebuilt image
+
+Each `v*` tag publishes `ghcr.io/arsamsarabi/linkdean:<version>` (also `<major>.<minor>` and `latest`, `linux/amd64` only) and a GitHub release with `docker-compose.yml` and `chrome-seccomp.json` attached. To run a release without cloning or building:
+
+```bash
+mkdir linkdean && cd linkdean
+# Download docker-compose.yml and chrome-seccomp.json from the GitHub release into this folder.
+printf 'POSTGRES_PASSWORD=%s\nMEILI_MASTER_KEY=%s\nSESSION_SECRET=%s\nLINKDEAN_VERSION=0.0.1\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+
+docker compose pull
+docker compose up -d
+```
+
+`LINKDEAN_VERSION` picks the image tag; unset means `latest`. Pin it, then change it and run `docker compose pull && docker compose up -d` to upgrade. Migrations run when the API starts. While the GitHub repository is private, the image is private too: run `docker login ghcr.io` first with a personal access token that has `read:packages`.
+
 ## Production deployment
 
 ### Required secrets

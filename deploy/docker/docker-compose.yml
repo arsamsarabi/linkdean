@@ -67,6 +67,9 @@ services:
         --hide-scrollbars --font-render-hinting=none
 
   api:
+    # Release image from GitHub Actions. `docker compose pull` fetches it; `up --build` builds
+    # this checkout instead and tags it with the same name.
+    image: ghcr.io/arsamsarabi/linkdean:${LINKDEAN_VERSION:-latest}
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile

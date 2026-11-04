@@ -87,6 +87,8 @@ Open **http://localhost:8080**. The first registered user becomes admin. On a se
 
 Production Compose refuses to start without `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET`, and the API refuses the default values published in this repo. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`. Required secrets, proxy setup, limits and upgrade steps: [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md#production-deployment).
 
+To run a published release image instead of building, see [Prebuilt image](docs/SELF_HOSTED.md#prebuilt-image).
+
 Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
 
 ### Stack services
