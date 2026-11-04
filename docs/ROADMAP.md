@@ -120,7 +120,7 @@ Revisit once the stages above are done.
 
 - **AI features** (?). To explore: which features (for example auto-tagging, summaries, semantic search), a free tier with limited usage, and bring-your-own-key (BYOK), possibly for a discount on paid plans. Idea from `docs/IDEAS.md`.
 - **Client-held vault key** (L). True end-to-end encryption, where the server never sees the key. Makes vault search much harder.
-- **Managed service** (L). Linkdean stays self-hosted first, with an optional hosted offering:
+- **Managed service** (L). Linkdean stays self-hosted first, with an optional hosted offering. What it would take on GCP: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md).
   - Hosted on a cloud provider (GCP, AWS or similar), starting as a thin, cheap layer that scales up with demand.
   - A marketing landing page: what the app is, links to the docs and GitHub, membership tiers and pricing.
   - Plans as set out in the organizations and teams design (Free, Pro, Team, Business, Enterprise; self-hosted ungated). Decide pricing models and whether there are one or several paid personal plans.
