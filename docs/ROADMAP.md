@@ -101,6 +101,17 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - Retry only bookmarks whose last failure is older than the cooldown, so a manual run never retries a page that just failed.
     - Make the 7-day automatic retry window admin-configurable in the same place, and run it on a schedule instead of only at API start.
 
+18. **Auto-fill when adding a bookmark** (M). Title, description and images are fetched only after a bookmark is saved (`enrich_bookmark`), so the form starts empty and people type a title the server would have found anyway.
+    - An **Auto-fill** button below the URL field in the bookmark drawer, disabled until the URL is valid. It asks the API to fetch the page and fills the empty fields: title, description, and suggested tags if the page has keywords. Never overwrite what the person already typed.
+    - Loading state on the button and fields while it runs, and an inline error when the page cannot be fetched or times out; the form stays usable either way.
+    - The API reuses the worker's page fetch (plain HTTP and Open Graph first, headless Chrome only when the page needs JavaScript), with the same private-address blocking, a per-user rate limit and a short timeout.
+    - Vault bookmarks are never enriched today, so the URL never leaves the instance for them. Keep the button hidden or behind an explicit confirmation when the bookmark is going into the vault.
+
+19. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.
+    - Let the Categories field in the bookmark drawer create one: typing a name that matches nothing offers **Create "name"**, which creates it and selects it.
+    - Choose where it goes: at the top level by default, or under a parent picked inline.
+    - Only offered where the person can write, so not inside read-only shared folders.
+
 ---
 
 ## Far out
