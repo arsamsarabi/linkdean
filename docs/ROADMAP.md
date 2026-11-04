@@ -95,6 +95,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 Revisit once the stages above are done.
 
+- **AI features** (?). To explore: which features (for example auto-tagging, summaries, semantic search), a free tier with limited usage, and bring-your-own-key (BYOK), possibly for a discount on paid plans. Idea from `docs/IDEAS.md`.
 - **Client-held vault key** (L). True end-to-end encryption, where the server never sees the key. Makes vault search much harder.
 - **Managed service** (L). Linkdean stays self-hosted first, with an optional hosted offering:
   - Hosted on a cloud provider (GCP, AWS or similar), starting as a thin, cheap layer that scales up with demand.

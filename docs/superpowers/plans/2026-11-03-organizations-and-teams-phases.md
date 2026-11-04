@@ -170,7 +170,27 @@ Phase 2 touches every permission check: about 220 `owner_user_id` mentions in 16
 
 ---
 
-## Open questions for the product owner
+## Product owner answers (2026-11-04)
+
+These override any recommendation in this document that says otherwise.
+
+| # | Answer |
+| --- | --- |
+| 1 | Invites expire after 30 days; resend renews. As recommended. |
+| 2 | Only Owners grant Admin. As recommended. |
+| 3 | Members can join a team themselves only if they can see it and it is **open to joiners**. Each team has an "Open to joiners" setting that Maintainers change (default on; the default team is always joinable in effect, since members are on it). Members see the teams they are listed in plus open teams; closed teams they are not in are hidden from them (Owners and Admins see every team). Guests never join by themselves. |
+| 4 | Nobody but Guests leaves the default team; role change only. As recommended. |
+| 5 | The default team is named **"Default team"**, renamable. |
+| 6 | An invite to an address with no account while instance registration is closed must not fail silently. The invite is still saved, the invite response says `invitee_can_register: false`, and the invite dialog warns: "Registration is closed on this instance, so they can't create an account yet. Ask an instance admin to create one or open registration." The invite email to such an address says "Ask {{ inviter }} or your Linkdean admin for an account with this address" instead of "Create an account". Opening registration later lets the invite be accepted as normal. |
+| 7 | The invite email ignores the "Share invites" preference and counts on the inviter's 20-per-hour budget. As recommended. |
+| 8 | Members see names and roles; only Owners and Admins see emails. As recommended. |
+| 9 | Bookmarks added to a team folder are owned by the organization **and keep the user who created them** (`created_by_user_id`), shown as their author. |
+| 10 | Moving a shared personal folder into a team ends its shares after a warning; invitees are notified. As recommended. |
+| 11 | Editors and up see and restore a team's Deleted items; Maintainers, Admins and Owners purge. As recommended. |
+| 12 | Team → personal copy includes bookmarks and folder subtrees (title, URL, notes, tags), not dashboards or likes, comments and ratings. As recommended. |
+| 13 | Purging an organization also deletes its audit log; the server log records the purge. As recommended. |
+
+## Open questions for the product owner (answered above)
 
 These must be answered before the phase named. Each has my recommendation; Phase 1's plan assumes the recommendations for 1–8, so a different answer means editing that plan first.
 
