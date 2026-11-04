@@ -519,6 +519,8 @@ pub struct PendingShareInvite {
     pub rejected_at: Option<DateTime<Utc>>,
     #[serde(skip)]
     pub claim_token_hash: Option<String>,
+    #[serde(skip)]
+    pub email_claim_token_hash: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

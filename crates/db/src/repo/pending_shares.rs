@@ -121,7 +121,8 @@ pub async fn upsert_pending_share_invite(
         let row = sqlx::query_as::<_, PendingShareInvite>(
             r#"
             UPDATE pending_share_invites
-            SET access = $1, invitee_user_id = $3, claim_token_hash = $4, updated_at = now()
+            SET access = $1, invitee_user_id = $3, claim_token_hash = $4,
+                email_claim_token_hash = NULL, updated_at = now()
             WHERE id = $2
             RETURNING *
             "#,
@@ -153,6 +154,7 @@ pub async fn upsert_pending_share_invite(
             access = EXCLUDED.access,
             invited_by_user_id = EXCLUDED.invited_by_user_id,
             claim_token_hash = EXCLUDED.claim_token_hash,
+            email_claim_token_hash = NULL,
             updated_at = now()
         RETURNING *
         "#,
@@ -307,8 +309,42 @@ pub async fn link_pending_share_invites(pool: &PgPool, email: &str, user_id: Uui
     Ok(linked)
 }
 
+/// Give an invite the link that goes only into its email, and return that link's token.
+///
+/// `claim_token` is the owner's link from the same share. When the invite was shared again
+/// since (a new owner's link) or claimed, nothing is issued and this returns `None`. Inviting
+/// again clears the emailed link with the owner's link, and claiming with either clears both.
+pub async fn issue_email_claim_token(
+    pool: &PgPool,
+    invite_id: Uuid,
+    claim_token: &str,
+) -> Result<Option<String>> {
+    let token = new_claim_token();
+    let res = sqlx::query(
+        r#"
+        UPDATE pending_share_invites
+        SET email_claim_token_hash = $3, updated_at = now()
+        WHERE id = $1
+          AND claim_token_hash = $2
+          AND invitee_user_id IS NULL
+          AND claimed_at IS NULL
+          AND revoked_at IS NULL
+        "#,
+    )
+    .bind(invite_id)
+    .bind(hash_token(claim_token))
+    .bind(hash_token(&token))
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok((res.rows_affected() > 0).then_some(token))
+}
+
 /// Attach the invite behind a claim link. The link is single-use and only works for the
 /// address it was sent to, so a leaked link cannot be redeemed under another address.
+///
+/// The link from the invite email also verifies the account's address: opening it proves
+/// control of that inbox. The owner's copyable link does not, since the owner may pass it on.
 pub async fn claim_pending_share_invite(
     pool: &PgPool,
     token: &str,
@@ -316,17 +352,18 @@ pub async fn claim_pending_share_invite(
     user_id: Uuid,
 ) -> Result<bool> {
     let email = normalize_email(email)?;
+    let token_hash = hash_token(token);
     let row = sqlx::query_as::<_, PendingShareInvite>(
         r#"
         SELECT * FROM pending_share_invites
-        WHERE claim_token_hash = $1
+        WHERE (claim_token_hash = $1 OR email_claim_token_hash = $1)
           AND invitee_email = $2
           AND invitee_user_id IS NULL
           AND claimed_at IS NULL
           AND revoked_at IS NULL
         "#,
     )
-    .bind(hash_token(token))
+    .bind(&token_hash)
     .bind(&email)
     .fetch_optional(pool)
     .await
@@ -339,7 +376,23 @@ pub async fn claim_pending_share_invite(
         revoke_invite(pool, row.id).await?;
         return Ok(false);
     }
-    attach_invitee(pool, &row, user_id).await
+    if !attach_invitee(pool, &row, user_id).await? {
+        return Ok(false);
+    }
+    if row.email_claim_token_hash.as_deref() == Some(token_hash.as_str()) {
+        // The account must hold the invited address itself, not only have been given it here.
+        let account = find_user_by_id(pool, user_id)
+            .await?
+            .ok_or(Error::NotFound)?;
+        if account
+            .email
+            .trim()
+            .eq_ignore_ascii_case(&row.invitee_email)
+        {
+            super::email_verification::mark_email_verified(pool, user_id).await?;
+        }
+    }
+    Ok(true)
 }
 
 /// [`claim_pending_share_invite`] for a signed-in account, with its own address: the invite
@@ -359,7 +412,8 @@ async fn attach_invitee(pool: &PgPool, row: &PendingShareInvite, user_id: Uuid) 
     let res = sqlx::query(
         r#"
         UPDATE pending_share_invites
-        SET invitee_user_id = $2, claim_token_hash = NULL, updated_at = now()
+        SET invitee_user_id = $2, claim_token_hash = NULL, email_claim_token_hash = NULL,
+            updated_at = now()
         WHERE id = $1 AND invitee_user_id IS NULL
         "#,
     )

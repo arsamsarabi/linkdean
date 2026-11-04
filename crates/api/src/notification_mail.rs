@@ -274,12 +274,18 @@ async fn email_pending_invite(
         });
     }
     let (noun, name) = subject_name(&state.pool, owner.id, invite).await?;
+    // The email carries its own link, not the owner's: opening it proves control of the inbox
+    // and so also verifies the address, which the owner's copyable link must not do.
+    let Some(email_token) = db::issue_email_claim_token(&state.pool, invite.id, token).await?
+    else {
+        return Ok(InviteEmail::default());
+    };
     let data = json!({
         "owner": one_line(&owner_label(owner)),
         "subject_kind": noun,
         "name": name,
         "access": db::access_label(invite.access),
-        "claim_url": claim_url(app_url(state), token),
+        "claim_url": claim_url(app_url(state), &email_token),
     });
     let queued = enqueue(state, &invite.invitee_email, "share_invite_pending", &data).await?;
     Ok(InviteEmail {

@@ -87,7 +87,7 @@ async fn register(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
-    let user = db::create_user_gated(
+    let mut user = db::create_user_gated(
         &state.pool,
         &req.email,
         Some(&req.password),
@@ -104,14 +104,22 @@ async fn register(
     let share_token = req.share_token.as_deref().map(str::trim);
     if let Some(share_token) = share_token.filter(|t| !t.is_empty()) {
         match db::claim_pending_share_invite(&state.pool, share_token, &req.email, user.id).await {
-            Ok(true) => tracing::info!(user_id = %user.id, "claimed share invite"),
+            Ok(true) => {
+                tracing::info!(user_id = %user.id, "claimed share invite");
+                // The link from an invite email also verifies the address.
+                if let Ok(Some(fresh)) = db::find_user_by_id(&state.pool, user.id).await {
+                    user = fresh;
+                }
+            }
             Ok(false) => tracing::info!(user_id = %user.id, "share invite link did not match"),
             Err(e) => tracing::warn!(user_id = %user.id, error = %e, "share invite claim failed"),
         }
     }
     // Best effort: the account works unverified, and Resend sends another link.
-    if let Err(e) = email_verification::send_verify_email(&state, user.id, &user.email).await {
-        tracing::warn!(user_id = %user.id, error = %e, "verification email failed");
+    if user.email_verified_at.is_none() {
+        if let Err(e) = email_verification::send_verify_email(&state, user.id, &user.email).await {
+            tracing::warn!(user_id = %user.id, error = %e, "verification email failed");
+        }
     }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
     let public = db::to_public(&state.pool, &user).await?;
