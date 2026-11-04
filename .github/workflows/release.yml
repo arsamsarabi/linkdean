@@ -83,5 +83,13 @@ jobs:
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkdean:${GITHUB_REF_NAME#v}"
           prerelease=""
           case "$GITHUB_REF_NAME" in v0.*) prerelease="--prerelease" ;; esac
+          # A moved tag leaves its old release behind (as a draft once the tag is deleted).
+          # Remove it so this run's release replaces it.
+          gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq ".[] | select(.tag_name == \"$GITHUB_REF_NAME\") | .id" |
+            while read -r id; do
+              echo "Deleting existing release $id for $GITHUB_REF_NAME"
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+            done
           gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes $prerelease \
             --notes "Image: \`$image\`. Install and upgrade guide: [docs/INSTALL.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/docs/INSTALL.md)."
