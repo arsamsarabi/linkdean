@@ -172,6 +172,7 @@ Checks:
 
 ```bash
 cargo test --workspace
+cargo nextest run --workspace              # faster: parallel across test binaries, as CI runs it
 cargo test -p linkdean-db --test authz   # needs DATABASE_URL
 cd apps/web && pnpm lint:all && pnpm test
 ```

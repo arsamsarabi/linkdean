@@ -1,0 +1,13 @@
+# cargo-nextest runs every test in its own process, so the in-process mutexes some test files
+# use to take turns do not hold. These files change platform-wide settings or claim every
+# pending row in a shared table, so they run one test at a time, across all of them.
+[test-groups]
+db-global-state = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = "package(linkdean-db) & (binary(api_keys) | binary(email_outbox) | binary(email_verification) | binary(instance_races) | binary(notification_email))"
+test-group = "db-global-state"
+
+[profile.ci]
+# Report every failure, not just the first.
+fail-fast = false

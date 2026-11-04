@@ -22,7 +22,7 @@ jobs:
       - run: python3 deploy/scripts/sync_install_seccomp.py --check
 
   rust:
-    name: Rust (fmt, test)
+    name: Rust (fmt, nextest)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -48,8 +48,15 @@ jobs:
           toolchain: "1.89"
           components: rustfmt
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
       - run: cargo fmt --all -- --check
-      - run: cargo test --workspace --locked
+      # Runs tests in parallel across all test binaries; see .config/nextest.toml for the
+      # files that share global state and take turns.
+      - run: cargo nextest run --workspace --locked --profile ci
+      # nextest does not run doctests.
+      - run: cargo test --workspace --locked --doc
 
   web:
     name: Web (format, lint, types, test, build)

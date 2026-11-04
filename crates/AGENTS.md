@@ -187,6 +187,7 @@ If tradeoffs are required, follow that order. Security outranks convenience for 
 
 ```bash
 cargo test --workspace
+cargo nextest run --workspace   # what CI runs; .config/nextest.toml serializes tests that share global DB state
 cargo clippy --workspace --all-targets -- -D warnings   # when enforcing CI
 cargo fmt --all -- --check
 ```
