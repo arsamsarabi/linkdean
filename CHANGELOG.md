@@ -1,13 +1,13 @@
 # Changelog
 
-## [0.1.0] - 2026-11-04
+## [Unreleased]
 
 ### Added
 
-- Initial release
+- Contributing guide, security policy, code of conduct and pull request template.
 
-### Changed
+## [0.0.1] - 2026-11-04
 
-- Initial release
+### Added
 
-### Removed
+- Initial release: the Docker image `ghcr.io/arsamsarabi/linkdean:0.0.1` and the install guide in `docs/INSTALL.md`.
