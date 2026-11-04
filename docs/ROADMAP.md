@@ -10,7 +10,25 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Now: before the first public release
 
-1. **Page the library list** (L). `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load, and an import of thousands of bookmarks makes the app slow from day one.
+1. **Security hardening** (M). A public instance draws scanners and attackers from day one. Session and OIDC cookies are already `HttpOnly` and `SameSite`, and image routes send `nosniff` and a strict CSP, but the app itself sends no security headers.
+   - Security headers on every response: `Content-Security-Policy` for the web app, `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and `frame-ancestors` against clickjacking.
+   - Dependency audits in CI (`cargo deny` or `cargo audit`, and `pnpm audit`), plus Dependabot or Renovate for updates.
+   - A security review before launch: auth and session flows, sharing and public-list access checks, the page fetch and screenshot path (SSRF), import parsing, and upload handling.
+   - A `security.txt` and a working security contact, matching the security policy.
+
+2. **Sign-up protection** (S–M). Open registration on a public site invites bots and throwaway accounts. Registration attempts are already rate-limited per IP, email verification exists, and admins can switch to invite-only.
+   - An optional captcha on registration ([Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) fits a Cloudflare-fronted host), off unless configured, so self-hosted instances are unaffected.
+   - Require a verified email before an account can save anything, on the public instance.
+   - Optional blocking of disposable email domains.
+   - Decide whether the beta opens with invite codes (already built) or open registration.
+
+3. **Per-user quotas** (M). On a shared instance one account can use up the disk, Chrome or the database for everyone, and a home server has little headroom. Admins set defaults in platform settings; nothing is limited unless configured.
+   - Limits on bookmarks, stored images (avatars and previews), screenshots and page fetches per day, and import file size.
+   - Admin-set maximum sizes for uploaded images, below the built-in hard caps.
+   - A clear message when a limit is reached, and usage shown in Settings.
+   - The same limits become plan limits if the service ever charges.
+
+4. **Page the library list** (L). `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load, and an import of thousands of bookmarks makes the app slow from day one.
    - Use infinite scrolling, not numbered pages. The library is browsed and filtered rather than jumped through by page, and filters change the result set often.
    - Keyset pagination in the API (`cursor` + `limit`, ordered by the active sort key and `id`), so new or edited bookmarks do not shift or repeat rows the way `OFFSET` would.
    - Move folder, tag, flag, "since" and sort filters into the query, and return the total match count for headers and "select all".
@@ -19,68 +37,89 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
    - Vault search stays a Postgres scan of unlocked rows. Page it the same way.
    - Batch the access checks for bookmarks shared with the viewer, which still run one at a time.
 
-2. **Final UI/UX and mobile pass** (L). Before the public release, review the whole UI with a strong UI/UX skill and reimagine it where needed. Make every page responsive and usable on phones, not only the nav.
+5. **Account deletion and full export** (M). People can export bookmarks today, but cannot close their account themselves. Public users expect both, and privacy law (GDPR, UK GDPR) requires erasure on request.
+   - **Delete account** in Settings, confirmed with the password or a fresh OIDC sign-in, with a short grace period before data is purged.
+   - Deletion removes bookmarks, vaults, files, shares, sessions, API keys and search entries, and hands off or deletes shared folders the person owns.
+   - Export everything the person owns in one download, including vault items while the vault is unlocked.
+
+6. **Legal pages and beta notice** (S). A public service needs terms people agree to before sign-up.
+   - Terms of service, privacy policy (what is stored, where, for how long, who processes it, such as the email provider and Cloudflare) and an acceptable use policy.
+   - Sign-up records which version of the terms was accepted, and when.
+   - Only strictly necessary cookies are used today, so no consent banner is needed; say so in the privacy policy, and revisit if analytics are added.
+   - A visible beta notice: no uptime promise, export your data regularly.
+
+7. **Report abuse** (M). Public lists, profiles and comments are visible to everyone, and admins can ban users today, but nobody can report content.
+   - A **Report** action on public lists, profiles and comments, with a reason.
+   - A report queue in the admin moderation tools, with actions to hide the content, warn or ban, and dismiss.
+   - An abuse and takedown contact address on the marketing site and in the terms.
+
+8. **Final UI/UX and mobile pass** (L). Before the public release, review the whole UI with a strong UI/UX skill and reimagine it where needed. Make every page responsive and usable on phones, not only the nav.
    - Mascot art (`brand/graphics`) in moment screens only: empty library, empty folder, no search results, empty Deleted items, nothing shared yet, the 404 page, first-run setup, the sign-in side panel on wide screens, and success modals. Never in the header, sidebar, cards, dashboards or settings. One character per screen at most, behind the main action. WebP at 2× display size, lazy-loaded, `alt=""`, a soft light backdrop so the dark robe reads on the dark theme. Security emails stay plain; a welcome email may carry the small avatar badge, embedded in the email rather than linked.
 
-3. **Structured logs** (S–M). Write activity and errors as structured JSON (`LOG_FORMAT=json`), to stdout and optionally to a file, with a request ID on every line and in an `X-Request-Id` response header. Today logs are plain text on stdout only, which makes self-hosted problems hard to report and debug.
+9. **Structured logs** (S–M). Write activity and errors as structured JSON (`LOG_FORMAT=json`), to stdout and optionally to a file, with a request ID on every line and in an `X-Request-Id` response header. Today logs are plain text on stdout only, which makes self-hosted problems hard to report and debug.
+
+10. **Public beta hosting** (S). Run the public instance at `app.linkdean.app` as a stand-alone stack on a home server, with the marketing and documentation sites beside it. Plan and checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server).
+    - Cloudflare Tunnel instead of open ports, a firewall rule keeping Chrome off the LAN, a transactional email provider, off-site backups with a tested restore, and an external uptime check.
+
+11. **Marketing site** (M). A static site at `linkdean.app`: what Linkdean is, features, screenshots, a "self-host it for free" path to the install guide and GitHub, sign-up, and links to the legal pages and status.
+    - Static and cached at Cloudflare, so it costs the server nothing.
+    - Keep it in this repository (for example `apps/site`) so features and docs stay in step.
+
+12. **Documentation site** (M). A [Docusaurus](https://docusaurus.io/) site at `docs.linkdean.app`, built from the existing docs. Needed at launch so public users and self-hosters have one place to read:
+    - Self-hosting, with every environment variable and what it does.
+    - Development setup.
+    - Features list.
+    - API reference, from the OpenAPI spec in **API platform** (added once that ships).
+    - FAQ and code examples.
 
 ---
 
 ## Next: high value after release
 
-4. **Fast capture** (M). Saving a page is the core action of a bookmark manager, and today it means opening Linkdean and pasting a URL.
-   - Browser extension: save the current tab, and file it to a folder from the popup. Uses an API key.
-   - PWA share target, so "Share → Linkdean" works on phones once the app is installed.
-   - Bookmarklet as a zero-install fallback.
+13. **Fast capture** (M). Saving a page is the core action of a bookmark manager, and today it means opening Linkdean and pasting a URL.
+    - Browser extension: save the current tab, and file it to a folder from the popup. Uses an API key.
+    - PWA share target, so "Share → Linkdean" works on phones once the app is installed.
+    - Bookmarklet as a zero-install fallback.
 
-5. **Auto-fill when adding a bookmark** (M). Title, description and images are fetched only after a bookmark is saved, so the form starts empty and people type a title the server would have found anyway.
-   - An **Auto-fill** button below the URL field in the bookmark drawer, disabled until the URL is valid. It asks the API to fetch the page and fills the empty fields: title, description, and suggested tags if the page has keywords. Never overwrite what the person already typed.
-   - Loading state on the button and fields while it runs, and an inline error when the page cannot be fetched or times out; the form stays usable either way.
-   - The API reuses the worker's page fetch (plain HTTP and Open Graph first, headless Chrome only when the page needs JavaScript), with the same private-address blocking, a per-user rate limit and a short timeout.
-   - Vault bookmarks are never enriched today, so the URL never leaves the instance for them. Keep the button hidden or behind an explicit confirmation when the bookmark is going into the vault.
+14. **Auto-fill when adding a bookmark** (M). Title, description and images are fetched only after a bookmark is saved, so the form starts empty and people type a title the server would have found anyway.
+    - An **Auto-fill** button below the URL field in the bookmark drawer, disabled until the URL is valid. It asks the API to fetch the page and fills the empty fields: title, description, and suggested tags if the page has keywords. Never overwrite what the person already typed.
+    - Loading state on the button and fields while it runs, and an inline error when the page cannot be fetched or times out; the form stays usable either way.
+    - The API reuses the worker's page fetch (plain HTTP and Open Graph first, headless Chrome only when the page needs JavaScript), with the same private-address blocking, a per-user rate limit and a short timeout.
+    - Vault bookmarks are never enriched today, so the URL never leaves the instance for them. Keep the button hidden or behind an explicit confirmation when the bookmark is going into the vault.
 
-6. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.
-   - Let the Categories field in the bookmark drawer create one: typing a name that matches nothing offers **Create "name"**, which creates it and selects it.
-   - Choose where it goes: at the top level by default, or under a parent picked inline.
-   - Only offered where the person can write, so not inside read-only shared folders.
+15. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.
+    - Let the Categories field in the bookmark drawer create one: typing a name that matches nothing offers **Create "name"**, which creates it and selects it.
+    - Choose where it goes: at the top level by default, or under a parent picked inline.
+    - Only offered where the person can write, so not inside read-only shared folders.
 
-7. **Duplicates on import** (M, explore first). Import adds every bookmark it reads, even when the library already has that URL, so importing the same file twice doubles the library. Let the person decide instead.
-   - Before anything is written, warn that the file has bookmarks whose URLs are already in the library, with the count.
-   - For each duplicate, show the existing bookmark next to the one being imported (title, URL, folder, tags, notes) and ask: **Replace** the existing one, **Skip** the imported one, or **Import anyway** as a second copy.
-   - Apply-to-all shortcuts for large imports, so nobody clicks through hundreds of rows.
-   - To explore: what counts as the same URL (Library health → Duplicates matches exact URLs only, so `https://a.com` and `https://a.com/` differ); whether Replace keeps the existing bookmark's ID, shares, pins and activity or swaps them for the imported one; vault bookmarks; and how the review step works with the import API, which today runs in one request.
+16. **Duplicates on import** (M, explore first). Import adds every bookmark it reads, even when the library already has that URL, so importing the same file twice doubles the library. Let the person decide instead.
+    - Before anything is written, warn that the file has bookmarks whose URLs are already in the library, with the count.
+    - For each duplicate, show the existing bookmark next to the one being imported (title, URL, folder, tags, notes) and ask: **Replace** the existing one, **Skip** the imported one, or **Import anyway** as a second copy.
+    - Apply-to-all shortcuts for large imports, so nobody clicks through hundreds of rows.
+    - To explore: what counts as the same URL (Library health → Duplicates matches exact URLs only, so `https://a.com` and `https://a.com/` differ); whether Replace keeps the existing bookmark's ID, shares, pins and activity or swaps them for the imported one; vault bookmarks; and how the review step works with the import API, which today runs in one request.
 
-8. **Dashboard upgrades** (M). Make boards more useful at a glance.
-   - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
-   - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.
+17. **Dashboard upgrades** (M). Make boards more useful at a glance.
+    - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
+    - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.
 
-9. **More sign-in options** (M).
-   - Passkeys / WebAuthn.
-   - Preset SSO providers: Authentik, Google, Microsoft, GitHub. OIDC with any standard issuer already works; GitHub needs OAuth, not OIDC.
+18. **More sign-in options** (M).
+    - Passkeys / WebAuthn.
+    - Preset SSO providers: Authentik, Google, Microsoft, GitHub. OIDC with any standard issuer already works; GitHub needs OAuth, not OIDC.
 
-10. **Retry failed screenshots** (S). A screenshot that times out (common right after a large import, when Chrome gets a burst of pages) leaves the bookmark on its Open Graph image or favicon. Today the only retry is automatic: when the API starts, it retries failures older than 7 days, so in practice they wait for the next restart.
+19. **Retry failed screenshots** (S). A screenshot that times out (common right after a large import, when Chrome gets a burst of pages) leaves the bookmark on its Open Graph image or favicon. Today the only retry is automatic: when the API starts, it retries failures older than 7 days, so in practice they wait for the next restart.
     - A **Retry failed screenshots** button on the admin settings page, with the number of bookmarks that would be retried. It queues them through the existing backfill, which runs two screenshots at a time.
     - A cooldown between retries so Chrome and the sites it visits are not hammered: the button is disabled, showing when it is next available, until the cooldown has passed since the last run. Default 24 hours, admin-configurable in platform settings.
     - Retry only bookmarks whose last failure is older than the cooldown, so a manual run never retries a page that just failed.
     - Make the 7-day automatic retry window admin-configurable in the same place, and run it on a schedule instead of only at API start.
 
-11. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
+20. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
     - An OpenAPI spec generated from the routes, published as the API reference.
     - One error body shape (`code`, `message`, details) across every route.
     - `ETag` / `Cache-Control` on read endpoints that are safe to cache.
     - Optional OpenTelemetry tracing, tied to the request ID from **Structured logs**.
     - API tests per route for auth, authorization and error responses.
 
-12. **Documentation site** (M). A [Docusaurus](https://docusaurus.io/) site for people who find the project after release, built from the existing docs. Not needed until the app is closer to production:
-    - Self-hosting, with every environment variable and what it does.
-    - Development setup.
-    - Features list.
-    - API reference, from the OpenAPI spec in **API platform**.
-    - FAQ and code examples.
-
-13. **Admin-set upload limits** (S). Let admins set the maximum size of uploaded images (avatars, previews) in platform settings, below the built-in hard caps.
-
-14. **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
+21. **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
     - Aggregate counts only (active users, bookmarks saved, features used), no personal data, page content or URLs, and nothing per person.
     - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the tracing in **API platform**.
     - The managed service uses the same hooks with its own backend.
@@ -90,17 +129,17 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Later
 
-15. **Archive & downloads** (L). Protects against link rot, which is the main reason people keep bookmarks in a self-hosted app. Heavy infrastructure.
+22. **Archive & downloads** (L). Protects against link rot, which is the main reason people keep bookmarks in a self-hosted app. Heavy infrastructure.
     - Opt-in local cache of bookmarked pages.
     - Download / export: PDF, Markdown (reader mode), images, audio, video.
     - Separate storage volume and a background job queue.
     - Deploy: archive worker and volume mount convention.
 
-16. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
+23. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
     - A daily digest for the noisy kinds.
     - A one-click unsubscribe link per kind in every notification email, with the `List-Unsubscribe` and `List-Unsubscribe-Post` headers.
 
-17. **Organizations and teams** (L). Organizations own shared content in team spaces, with owner, admin, member and guest roles, team roles, restricted folders, email invites, lifecycle rules and a basic audit log. Personal libraries stay private and unchanged. Requirements: [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md). Needs outbound email parts B and C first. After v1:
+24. **Organizations and teams** (L). Organizations own shared content in team spaces, with owner, admin, member and guest roles, team roles, restricted folders, email invites, lifecycle rules and a basic audit log. Personal libraries stay private and unchanged. Requirements: [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md). Needs outbound email parts B and C first. After v1:
     - Invite links (role, expiry, use limit; off by default).
     - Verified domains (DNS TXT proof), then auto-join for matching verified addresses.
     - SSO (SAML / per-organization OIDC) and SCIM provisioning.
@@ -108,9 +147,9 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - Audit log: every content edit and restricted-folder view, configurable retention, SIEM or webhook streaming, hash-chained tamper evidence.
     - Custom roles and a Billing manager role, when a customer needs them.
 
-18. **Localization** (M). i18n-ready strings first, then locale packs.
+25. **Localization** (M). i18n-ready strings first, then locale packs.
 
-19. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
+26. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
 
 ---
 
