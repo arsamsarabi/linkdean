@@ -48,7 +48,7 @@ Linkdean is a multi-user web app that stores people's bookmarks, private vaults 
 
 Out of scope (report these as normal bugs unless you see a security angle I've missed):
 
-- Deployments that go against [docs/INSTALL.md](./docs/INSTALL.md) or [docs/SELF_HOSTED.md](./docs/SELF_HOSTED.md): for example, `ALLOW_DEFAULT_SECRETS` in production, `TRUST_FORWARDED_FOR=true` without a reverse proxy in front, or publishing Postgres or Meilisearch ports
+- Deployments that go against [docs/INSTALL.md](../docs/INSTALL.md) or [docs/SELF_HOSTED.md](../docs/SELF_HOSTED.md): for example, `ALLOW_DEFAULT_SECRETS` in production, `TRUST_FORWARDED_FOR=true` without a reverse proxy in front, or publishing Postgres or Meilisearch ports
 - Behavior the docs already describe as a known limitation, such as the account lockout that anyone who knows an email can trigger, or rate-limit counters that reset when the API restarts
 - What an instance admin can do by design
 - Attacks that need an already compromised host, browser or account

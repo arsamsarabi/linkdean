@@ -8,8 +8,8 @@ Linkdean is maintained by one person. Issues and pull requests are welcome, and 
 
 ## Before you start
 
-- Skim the [README](./README.md) so you know what Linkdean is (and isn't), and [docs/FEATURES.md](./docs/FEATURES.md) for what already ships.
-- Check [docs/ROADMAP.md](./docs/ROADMAP.md) and [existing issues](https://github.com/arsamsarabi/linkdean/issues) before starting something new.
+- Skim the [README](../README.md) so you know what Linkdean is (and isn't), and [docs/FEATURES.md](../docs/FEATURES.md) for what already ships.
+- Check [docs/ROADMAP.md](../docs/ROADMAP.md) and [existing issues](https://github.com/arsamsarabi/linkdean/issues) before starting something new.
 - For larger ideas, open an issue first so we can agree on the approach.
 
 ## Project layout
@@ -27,7 +27,7 @@ Linkdean is maintained by one person. Issues and pull requests are welcome, and 
 | `deploy/docker` | Production image, production and dev Compose files |
 | `docs` | Architecture, features, roadmap, install and self-hosting guides |
 
-More detail: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), [crates/AGENTS.md](./crates/AGENTS.md) and [apps/web/AGENTS.md](./apps/web/AGENTS.md).
+More detail: [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md), [crates/AGENTS.md](../crates/AGENTS.md) and [apps/web/AGENTS.md](../apps/web/AGENTS.md).
 
 ## Development setup
 
@@ -45,7 +45,7 @@ docker compose -f deploy/docker/docker-compose.dev.yml up --build
 
 Open http://localhost:5173. The dev stack needs no `.env`: it uses well-known development secrets and binds its ports to `127.0.0.1`. Web changes hot-reload, and the API rebuilds when `crates/` or `migrations/` change. The first run compiles the API, so give it a few minutes.
 
-To run the API and web app on the host instead, see [Development](./README.md#development) in the README.
+To run the API and web app on the host instead, see [Development](../README.md#development) in the README.
 
 ## Checks
 
@@ -76,7 +76,7 @@ DATABASE_URL=postgres://linkdean:linkdean@localhost:55432/linkdean_test cargo ne
 
 Tests apply migrations themselves. Check that no `skipping` line appears, not only that the run passed.
 
-nextest runs every test in its own process, in parallel. A test that changes instance-wide state (platform settings, or claiming every pending row in a shared table) must join the `db-global-state` group in [`.config/nextest.toml`](./.config/nextest.toml), or it will race other tests.
+nextest runs every test in its own process, in parallel. A test that changes instance-wide state (platform settings, or claiming every pending row in a shared table) must join the `db-global-state` group in [`.config/nextest.toml`](../.config/nextest.toml), or it will race other tests.
 
 ## How we like changes
 
@@ -86,12 +86,12 @@ nextest runs every test in its own process, in parallel. A test that changes ins
 - **Leave a check behind.** Non-trivial logic gets a test that fails if the behavior regresses: a Rust unit or `crates/db/tests` integration test, or a Vitest + React Testing Library test in the web app. Trivial one-liners don't need ceremony.
 - **Migrations are append-only.** Add a new numbered file in `migrations/` using the next free number. Never edit a migration that has already shipped.
 - **Docs move with the code.**
-  - A user-visible change adds or updates its bullet in [docs/FEATURES.md](./docs/FEATURES.md). If it finishes a roadmap item, move that item out of [docs/ROADMAP.md](./docs/ROADMAP.md).
-  - A new or changed environment variable, port, volume or deployment step updates [docs/INSTALL.md](./docs/INSTALL.md) and [docs/SELF_HOSTED.md](./docs/SELF_HOSTED.md). Every variable the docs mention must also reach the API in `deploy/docker/docker-compose.yml`.
+  - A user-visible change adds or updates its bullet in [docs/FEATURES.md](../docs/FEATURES.md). If it finishes a roadmap item, move that item out of [docs/ROADMAP.md](../docs/ROADMAP.md).
+  - A new or changed environment variable, port, volume or deployment step updates [docs/INSTALL.md](../docs/INSTALL.md) and [docs/SELF_HOSTED.md](../docs/SELF_HOSTED.md). Every variable the docs mention must also reach the API in `deploy/docker/docker-compose.yml`.
 - **Known defects live in the code.** If you find a problem you won't fix in your PR, leave a `Known issue:` comment above the code it concerns, describing the problem and a suggested fix.
 - **American spelling** in code, UI text, API fields and docs ("organization", "color").
 
-Note user-facing changes in [CHANGELOG.md](./CHANGELOG.md).
+Note user-facing changes in [CHANGELOG.md](../docs/CHANGELOG.md).
 
 ## Pull requests
 
@@ -108,7 +108,7 @@ CI must be green. I'll review as soon as I can, and feedback is about the code, 
 For maintainers:
 
 1. Set the new version in `Cargo.toml` (`[workspace.package]`) and `apps/web/package.json`, and refresh `Cargo.lock` with `cargo update -w`.
-2. Update `CHANGELOG.md`, commit and push to `main`.
+2. Update `docs/CHANGELOG.md`, commit and push to `main`.
 3. Tag and push: `git tag -a vX.Y.Z -m "Linkdean X.Y.Z" && git push origin vX.Y.Z`.
 
 The release workflow reruns CI, refuses a tag that doesn't match both versions, pushes `ghcr.io/arsamsarabi/linkdean:X.Y.Z` (plus `X.Y` and `latest`) and creates the GitHub release.
@@ -133,7 +133,7 @@ This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md). Be respec
 
 ## License
 
-By contributing, you agree that your contributions are licensed under the [MIT License](./LICENSE), the same as the rest of the project.
+By contributing, you agree that your contributions are licensed under the [MIT License](../LICENSE), the same as the rest of the project.
 
 ---
 

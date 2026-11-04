@@ -19,7 +19,7 @@
 - [ ] A test that changes instance-wide state is in the `db-global-state` group in `.config/nextest.toml`
 - [ ] User-visible change: `docs/FEATURES.md` updated (and `docs/ROADMAP.md` if it finishes an item)
 - [ ] New or changed env var, port, volume or deploy step: `docs/INSTALL.md`, `docs/SELF_HOSTED.md` and `deploy/docker/docker-compose.yml` updated
-- [ ] User-facing change noted in `CHANGELOG.md`
+- [ ] User-facing change noted in `docs/CHANGELOG.md`
 - [ ] Defects left unfixed are marked with a `Known issue:` comment
 
-<!-- Untick or delete items that don't apply. Security fixes: don't describe the vulnerability here; see SECURITY.md. -->
+<!-- Untick or delete items that don't apply. Security fixes: don't describe the vulnerability here; see .github/SECURITY.md. -->
