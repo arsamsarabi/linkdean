@@ -72,7 +72,11 @@ Full list: [docs/FEATURES.md](docs/FEATURES.md).
 
 ## Quick start
 
-### Docker Compose (recommended)
+### Released image (recommended)
+
+Run a published image from the GitHub Container Registry with a Compose file you write yourself, no checkout or build needed. [docs/INSTALL.md](docs/INSTALL.md) has the Compose file, optional Chrome screenshots, and every environment variable: which are required and what each does.
+
+### Build from source with Docker Compose
 
 ```bash
 git clone https://github.com/arsamsarabi/linkdean.git
@@ -86,8 +90,6 @@ docker compose --env-file deploy/docker/.env -f deploy/docker/docker-compose.yml
 Open **http://localhost:8080**. The first registered user becomes admin. On a server others can reach before you, set `BOOTSTRAP_TOKEN` so only you can create that account.
 
 Production Compose refuses to start without `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET`, and the API refuses the default values published in this repo. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`. Required secrets, proxy setup, limits and upgrade steps: [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md#production-deployment).
-
-To run a published release image instead of building, see [Prebuilt image](docs/SELF_HOSTED.md#prebuilt-image).
 
 Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
 
@@ -107,7 +109,7 @@ See [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
 
 ## Configuration
 
-Runtime configuration is environment variables only (see [`.env.example`](.env.example)).
+Runtime configuration is environment variables only. The full reference, with defaults and required ones marked, is in [docs/INSTALL.md](docs/INSTALL.md#environment-variables); local development uses [`.env.example`](.env.example).
 
 | Variable | Required | Description |
 | --- | --- | --- |

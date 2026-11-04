@@ -84,5 +84,4 @@ jobs:
           prerelease=""
           case "$GITHUB_REF_NAME" in v0.*) prerelease="--prerelease" ;; esac
           gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes $prerelease \
-            --notes "Image: \`$image\`" \
-            deploy/docker/docker-compose.yml deploy/docker/chrome-seccomp.json
+            --notes "Image: \`$image\`. Install and upgrade guide: [docs/INSTALL.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/docs/INSTALL.md)."

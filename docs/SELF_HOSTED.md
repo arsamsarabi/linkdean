@@ -1,6 +1,6 @@
 # Self-host Linkdean
 
-This page covers the production stack in `deploy/docker/docker-compose.yml`. For local development, see [Development setup](#development-setup) below and the README.
+This page covers the production stack in `deploy/docker/docker-compose.yml`. To install a released image instead, start with [INSTALL.md](INSTALL.md). For local development, see [Development setup](#development-setup) below and the README.
 
 ## Quick start
 
@@ -25,19 +25,7 @@ Secrets are injected via environment variables (or the operator's preferred secr
 
 ### Prebuilt image
 
-Each `v*` tag publishes `ghcr.io/arsamsarabi/linkdean:<version>` (also `<major>.<minor>` and `latest`, `linux/amd64` only) and a GitHub release with `docker-compose.yml` and `chrome-seccomp.json` attached. To run a release without cloning or building:
-
-```bash
-mkdir linkdean && cd linkdean
-# Download docker-compose.yml and chrome-seccomp.json from the GitHub release into this folder.
-printf 'POSTGRES_PASSWORD=%s\nMEILI_MASTER_KEY=%s\nSESSION_SECRET=%s\nLINKDEAN_VERSION=0.0.1\n' \
-  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
-
-docker compose pull
-docker compose up -d
-```
-
-`LINKDEAN_VERSION` picks the image tag; unset means `latest`. Pin it, then change it and run `docker compose pull && docker compose up -d` to upgrade. Migrations run when the API starts. While the GitHub repository is private, the image is private too: run `docker login ghcr.io` first with a personal access token that has `read:packages`.
+Each `v*` tag publishes `ghcr.io/arsamsarabi/linkdean:<version>` to the GitHub Container Registry. To run it without cloning or building, follow [INSTALL.md](INSTALL.md): it has the Compose file to copy, the optional Chrome setup and every environment variable.
 
 ## Production deployment
 
