@@ -22,12 +22,15 @@ export function RegisterPage(): ReactElement {
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const resetRef = useRef<() => void>(null)
   const bootstrap = useBootstrap()
   const register = useRegister()
   const uploadAvatar = useUploadAvatar()
   // An invite link opened while signed in is claimed for this account instead.
   const session = useSessionCheck(!!search.share)
+  const turnstileSiteKey = bootstrap.data?.turnstile_site_key ?? null
 
   useSyncDuringRender([search.invite], () => {
     if (search.invite) setInviteCode(search.invite)
@@ -45,6 +48,10 @@ export function RegisterPage(): ReactElement {
       notifications.show({ color: 'red', message: check.message })
       return
     }
+    if (turnstileSiteKey && !turnstileToken) {
+      notifications.show({ color: 'red', message: 'Complete the captcha to register' })
+      return
+    }
     try {
       const res = await register.mutateAsync({
         email,
@@ -52,6 +59,7 @@ export function RegisterPage(): ReactElement {
         display_name: displayName || undefined,
         invite_code: inviteCode.trim() || undefined,
         share_token: search.share,
+        turnstile_token: turnstileToken ?? undefined,
       })
       if (pendingAvatar) {
         try {
@@ -67,6 +75,8 @@ export function RegisterPage(): ReactElement {
       const { settings } = await api.getSettings()
       void nav({ to: resolveDefaultLanding(settings.default_landing) })
     } catch (e) {
+      setTurnstileToken(null)
+      setTurnstileResetKey((k) => k + 1)
       notifications.show({ color: 'red', message: String(e) })
     }
   }
@@ -125,6 +135,8 @@ export function RegisterPage(): ReactElement {
         password2={password2}
         pendingAvatar={pendingAvatar}
         registerPending={register.isPending}
+        turnstileSiteKey={turnstileSiteKey}
+        turnstileResetKey={turnstileResetKey}
         resetRef={resetRef}
         onInviteCode={setInviteCode}
         onDisplayName={setDisplayName}
@@ -141,6 +153,7 @@ export function RegisterPage(): ReactElement {
           setPendingAvatar(null)
           resetRef.current?.()
         }}
+        onTurnstileToken={setTurnstileToken}
         onSubmit={() => void submit()}
         onLogin={() => void nav({ to: '/login' })}
       />

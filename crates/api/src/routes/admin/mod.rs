@@ -45,8 +45,14 @@ async fn get_platform_settings(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
 ) -> ApiResult<Json<Value>> {
-    let settings = db::get_platform_settings(&state.pool).await?;
-    Ok(Json(json!({ "settings": settings })))
+    let mut settings = db::get_platform_settings(&state.pool).await?;
+    if state.cfg.require_verified_email {
+        settings.require_verified_email = true;
+    }
+    Ok(Json(json!({
+        "settings": settings,
+        "require_verified_email_forced": state.cfg.require_verified_email,
+    })))
 }
 
 async fn patch_platform_settings(
@@ -62,6 +68,12 @@ async fn patch_platform_settings(
         settings = db::set_api_keys_enabled(&state.pool, enabled).await?;
     }
     if let Some(on) = req.require_verified_email {
+        if state.cfg.require_verified_email {
+            return Err(linkdean_core::Error::BadRequest(
+                "REQUIRE_VERIFIED_EMAIL is set by the host; it cannot be changed here".into(),
+            )
+            .into());
+        }
         // Nobody could verify without mail, so every unverified account would be stuck.
         if on && state.mail.is_none() {
             return Err(linkdean_core::Error::BadRequest(
@@ -71,7 +83,13 @@ async fn patch_platform_settings(
         }
         settings = db::set_require_verified_email(&state.pool, on).await?;
     }
-    Ok(Json(json!({ "settings": settings })))
+    if state.cfg.require_verified_email {
+        settings.require_verified_email = true;
+    }
+    Ok(Json(json!({
+        "settings": settings,
+        "require_verified_email_forced": state.cfg.require_verified_email,
+    })))
 }
 
 #[derive(serde::Deserialize)]

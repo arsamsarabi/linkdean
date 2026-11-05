@@ -38,6 +38,8 @@ export function OnboardingPage(): ReactElement {
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const resetRef = useRef<() => void>(null)
 
   const [vaultPass, setVaultPass] = useState('')
@@ -47,6 +49,7 @@ export function OnboardingPage(): ReactElement {
   const [file, setFile] = useState<File | null>(null)
 
   const bootstrap = useBootstrap()
+  const turnstileSiteKey = bootstrap.data?.turnstile_site_key ?? null
   const me = useMe(isSignedIn())
   const register = useRegister()
   const uploadAvatar = useUploadAvatar()
@@ -98,6 +101,10 @@ export function OnboardingPage(): ReactElement {
       notifications.show({ color: 'red', message: check.message })
       return
     }
+    if (turnstileSiteKey && !turnstileToken) {
+      notifications.show({ color: 'red', message: 'Complete the captcha to register' })
+      return
+    }
     setBusy(true)
     try {
       const res = await register.mutateAsync({
@@ -105,6 +112,7 @@ export function OnboardingPage(): ReactElement {
         password,
         display_name: displayName || undefined,
         bootstrap_token: bootstrapToken.trim() || undefined,
+        turnstile_token: turnstileToken ?? undefined,
       })
       if (pendingAvatar) {
         try {
@@ -121,6 +129,8 @@ export function OnboardingPage(): ReactElement {
       })
       setStep(2)
     } catch (e) {
+      setTurnstileToken(null)
+      setTurnstileResetKey((k) => k + 1)
       notifications.show({ color: 'red', message: String(e) })
     } finally {
       setBusy(false)
@@ -207,6 +217,8 @@ export function OnboardingPage(): ReactElement {
         password={password}
         password2={password2}
         pendingAvatar={pendingAvatar}
+        turnstileSiteKey={turnstileSiteKey}
+        turnstileResetKey={turnstileResetKey}
         resetRef={resetRef}
         vaultPass={vaultPass}
         vaultPass2={vaultPass2}
@@ -227,6 +239,7 @@ export function OnboardingPage(): ReactElement {
           setPendingAvatar(null)
           resetRef.current?.()
         }}
+        onTurnstileToken={setTurnstileToken}
         onCreateAdmin={() => void createAdmin()}
         onVaultPass={setVaultPass}
         onVaultPass2={setVaultPass2}

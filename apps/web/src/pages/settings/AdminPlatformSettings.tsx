@@ -33,6 +33,7 @@ export function AdminPlatformSettings(): ReactElement {
   const open = platform.data.settings.registration_open
   const apiKeysOn = platform.data.settings.api_keys_enabled
   const requireVerified = platform.data.settings.require_verified_email
+  const requireForced = platform.data.require_verified_email_forced
 
   return (
     <TwoColumnLayout
@@ -74,10 +75,14 @@ export function AdminPlatformSettings(): ReactElement {
               />
               <Switch
                 label="Require verified email"
-                description="Unverified accounts can only verify or sign out. Needs outbound email."
+                description={
+                  requireForced
+                    ? 'Set by the host (REQUIRE_VERIFIED_EMAIL). Unverified accounts can only verify or sign out.'
+                    : 'Unverified accounts can only verify or sign out. Needs outbound email.'
+                }
                 checked={requireVerified}
-                // Turning it off stays possible with mail off, so the gate never traps anyone.
-                disabled={save.isPending || (!mailEnabled && !requireVerified)}
+                // Host force locks the toggle. Turning it off stays possible with mail off otherwise.
+                disabled={save.isPending || requireForced || (!mailEnabled && !requireVerified)}
                 onChange={(e) => {
                   const require_verified_email = e.currentTarget.checked
                   save.mutate(

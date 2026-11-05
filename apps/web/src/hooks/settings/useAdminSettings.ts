@@ -15,7 +15,10 @@ import type {
   TestEmailResult,
 } from '@/schemas'
 
-type PlatformEnvelope = { settings: PlatformSettings }
+type PlatformEnvelope = {
+  settings: PlatformSettings
+  require_verified_email_forced: boolean
+}
 
 export function usePlatformSettings(enabled = true): UseQueryResult<PlatformEnvelope> {
   return useQuery({

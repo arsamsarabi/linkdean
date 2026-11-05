@@ -16,6 +16,7 @@ vi.mock('@/hooks', () => ({
         require_verified_email: state.require,
         updated_at: '2026-01-01T00:00:00Z',
       },
+      require_verified_email_forced: false,
     },
   }),
   useUpdatePlatformSettings: () => ({ isPending: false, mutate: state.save }),

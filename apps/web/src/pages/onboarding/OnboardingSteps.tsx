@@ -21,6 +21,7 @@ import {
   IconUpload,
   IconUserPlus,
 } from '@tabler/icons-react'
+import { TurnstileWidget } from '@/components'
 import { MIN_SECRET_LENGTH } from '@/services'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -41,6 +42,8 @@ type Props = {
   password: string
   password2: string
   pendingAvatar: Blob | null
+  turnstileSiteKey: string | null
+  turnstileResetKey: number
   resetRef: RefObject<(() => void) | null>
   vaultPass: string
   vaultPass2: string
@@ -53,6 +56,7 @@ type Props = {
   onPassword2: (v: string) => void
   onPickAvatar: (f: File | null) => void
   onClearAvatar: () => void
+  onTurnstileToken: (token: string | null) => void
   onCreateAdmin: () => void
   onVaultPass: (v: string) => void
   onVaultPass2: (v: string) => void
@@ -74,6 +78,8 @@ export function OnboardingSteps({
   password,
   password2,
   pendingAvatar,
+  turnstileSiteKey,
+  turnstileResetKey,
   resetRef,
   vaultPass,
   vaultPass2,
@@ -86,6 +92,7 @@ export function OnboardingSteps({
   onPassword2,
   onPickAvatar,
   onClearAvatar,
+  onTurnstileToken,
   onCreateAdmin,
   onVaultPass,
   onVaultPass2,
@@ -163,6 +170,9 @@ export function OnboardingSteps({
                   </Button>
                 ) : null}
               </Group>
+              {turnstileSiteKey ? (
+                <TurnstileWidget key={turnstileResetKey} siteKey={turnstileSiteKey} onToken={onTurnstileToken} />
+              ) : null}
               <Button
                 leftSection={<IconUserPlus {...iconSm} />}
                 loading={busy}
