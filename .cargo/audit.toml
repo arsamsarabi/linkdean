@@ -1,0 +1,8 @@
+# cargo-audit config (CI: `cargo audit`). Revisit when openidconnect bumps rsa / crypto-bigint.
+[advisories]
+ignore = [
+    # openidconnect → rsa: Marvin timing sidechannel; no fixed rsa 0.9.x release yet
+    "RUSTSEC-2023-0071",
+    # openidconnect → p256/p384 → elliptic-curve → crypto-bigint 0.5; fixed in 0.7.6 via upstream bumps
+    "RUSTSEC-2026-0387",
+]

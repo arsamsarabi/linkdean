@@ -75,6 +75,11 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - Avatars: client crop, server resize to 256×256 WebP under `AVATAR_DIR`
 - Prefs in `user_settings` (show hidden, vault search mode, theme, auto-lock, landing `/`|`/library`)
 
+## HTTP security headers
+
+- Every response from the outer router (`crates/api/src/security.rs`) gets `Content-Security-Policy` (SPA-safe: `'self'` scripts, `'unsafe-inline'` styles for Mantine, `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/microphone/geolocation/payment/usb off), and `X-Frame-Options: DENY`. Optional `Strict-Transport-Security` when `HSTS_MAX_AGE` is set (seconds). Image asset routes keep their own sandbox CSP; the middleware does not replace an existing CSP
+- `GET /.well-known/security.txt` and `GET /security.txt` publish the project contact from [SECURITY.md](../.github/SECURITY.md)
+
 ## API conventions
 
 - `PATCH` bodies: an omitted field stays unchanged; `null` clears it (profile name/bio/timezone, bookmark description/notes/category, category parent/icon). Bookmark `add_tags` and `add_category_ids` add to what the bookmark holds instead of replacing it

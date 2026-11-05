@@ -354,6 +354,7 @@ The stack does not start without these. Generate each with `openssl rand -hex 32
 | `LINKDEAN_VERSION` | `latest` | Image tag to run. Pin a release such as `0.0.1` so upgrades happen only when you change it |
 | `APP_URL` | `http://localhost:8080` | Public address of the instance, with no trailing slash. Used for links in emails, the SSO callback and the allowed browser origin. An `https://` value also marks the session cookie `Secure`. Set it whenever the instance is reached by any other address |
 | `TRUST_FORWARDED_FOR` | `false` | Set `true` when a reverse proxy (Caddy, nginx, Traefik, a tunnel) is the only route to the API. Login and registration limits then count each client by the last `X-Forwarded-For` entry. Unset behind a proxy, every user shares the proxy's address and one person's failed logins can lock everyone out. Leave it unset when the API is reachable directly, because clients could forge the header |
+| `HSTS_MAX_AGE` | unset | When set to a number of seconds, every response includes `Strict-Transport-Security: max-age=<n>; includeSubDomains`. Leave unset on plain HTTP (including local Docker) so browsers are not stuck requiring HTTPS. On `linkdean.app` behind Cloudflare Tunnel you can also set HSTS at the edge instead |
 | `BOOTSTRAP_TOKEN` | unset | When set, the first account (the admin) must enter it on the setup page and must use a password, not SSO. Unset, whoever registers first owns the instance. Ignored once any account exists |
 
 `true`, `1`, `yes` and `on` all switch a true/false setting on. Anything else is off.

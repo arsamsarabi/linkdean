@@ -20,6 +20,9 @@ pub struct Config {
     pub cors_origins: Vec<String>,
     /// Behind a reverse proxy, read the client address from `X-Forwarded-For`.
     pub trust_forwarded_for: bool,
+    /// When set, send `Strict-Transport-Security` with this max-age in seconds.
+    /// Leave unset on plain HTTP so browsers are not stuck on HSTS for localhost.
+    pub hsts_max_age: Option<u64>,
     /// Bearer token for `GET /api/metrics`. Unset turns the route off.
     pub metrics_token: Option<String>,
     /// When set, the first account (the admin) must present it, so whoever finds a fresh
@@ -111,6 +114,15 @@ impl Config {
                 .filter(|s| !s.is_empty()),
             cors_origins,
             trust_forwarded_for: env_bool("TRUST_FORWARDED_FOR", false),
+            hsts_max_age: std::env::var("HSTS_MAX_AGE")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .map(|s| {
+                    s.parse::<u64>()
+                        .map_err(|_| anyhow::anyhow!("HSTS_MAX_AGE must be a number of seconds"))
+                })
+                .transpose()?,
             metrics_token: std::env::var("METRICS_TOKEN")
                 .ok()
                 .map(|s| s.trim().to_string())
