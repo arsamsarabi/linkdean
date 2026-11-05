@@ -374,6 +374,19 @@ Off unless both `SMTP_HOST` and `MAIL_FROM` are set. Without it the instance sen
 
 The API refuses to start when only one of a pair is set, `SMTP_TLS` or `SMTP_PORT` is invalid, or `MAIL_FROM` is not a valid mailbox.
 
+### Sign-up protection
+
+Off by default. Public beta hosts usually set all three with SMTP.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `TURNSTILE_SITE_KEY` | unset | Cloudflare Turnstile site key. With `TURNSTILE_SECRET_KEY`, password registration shows a captcha and the API checks the token with Siteverify. OIDC sign-in is unchanged |
+| `TURNSTILE_SECRET_KEY` | unset | Turnstile secret. Set together with `TURNSTILE_SITE_KEY`, or leave both unset |
+| `REQUIRE_VERIFIED_EMAIL` | `false` | When `true` and mail is on, the verified-email hard gate applies even if the admin toggle is off. The admin UI shows the toggle on and disabled |
+| `BLOCK_DISPOSABLE_EMAILS` | `false` | When `true`, registration and email-change refuse addresses on an embedded disposable-domain list (`400` "Use a lasting email address.") |
+
+The API refuses to start when only one Turnstile key is set.
+
 ### Single sign-on (OIDC)
 
 On when all three are set. Details and how SSO meets existing password accounts: [Single sign-on](SELF_HOSTED.md#single-sign-on).

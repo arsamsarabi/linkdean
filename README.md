@@ -133,6 +133,9 @@ Runtime configuration is environment variables only. The full reference, with de
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | | Set both or neither |
 | `SMTP_TLS` | | `starttls` (default), `tls`, or `none` (local servers only) |
 | `MAIL_FROM` | | Sender, e.g. `Linkdean <no-reply@example.com>` |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | | Optional Cloudflare Turnstile on password registration. Set both or neither |
+| `REQUIRE_VERIFIED_EMAIL` | | When `true` and mail is on, unverified non-admins are gated even if the admin toggle is off |
+| `BLOCK_DISPOSABLE_EMAILS` | | When `true`, registration and email-change refuse known throwaway domains |
 | `METRICS_TOKEN` | | Turns on `GET /api/metrics`, which then needs `Authorization: Bearer <token>`. Unset, the route returns `404` |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | | Optional OIDC. `OIDC_ISSUER` must match the issuer in the provider's discovery document exactly, trailing slash included. New identities get an account only while registration is open |
 
