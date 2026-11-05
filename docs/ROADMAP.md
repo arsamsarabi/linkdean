@@ -19,14 +19,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 3. **Per-user quotas** (M). **Done:** platform-default limits (null = unlimited) for bookmarks, stored image bytes, enrich actions per UTC day, import bytes, and upload image bytes. Enforced at create/import/upload/enrich; `resolve_limits` + period-keyed usage leave room for membership plans. Usage in Settings when any limit is set. No per-user overrides in v1.
 
-4. **Page the library list** (L). `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load, and an import of thousands of bookmarks makes the app slow from day one.
-   - Use infinite scrolling, not numbered pages. The library is browsed and filtered rather than jumped through by page, and filters change the result set often.
-   - Keyset pagination in the API (`cursor` + `limit`, ordered by the active sort key and `id`), so new or edited bookmarks do not shift or repeat rows the way `OFFSET` would.
-   - Move folder, tag, flag, "since" and sort filters into the query, and return the total match count for headers and "select all".
-   - Explorer loads one folder's contents at a time, rather than slicing the full list.
-   - Bulk actions on "select all" act on the server-side match (filters sent to the API), not only the rows loaded so far. Keep H21's rule: select all reaches only what the open folder or search shows.
-   - Vault search stays a Postgres scan of unlocked rows. Page it the same way.
-   - Batch the access checks for bookmarks shared with the viewer, which still run one at a time.
+4. **Page the library list** (L). **Done:** `GET /bookmarks` returns a keyset page (`items`, `next_cursor`, `total`) with folder / tag / flag / since / sort filters; `GET /bookmarks/ids` backs select-all. The SPA uses infinite scroll; Explorer loads the open folder's page. Remaining: push the keyset into SQL (today the filtered set is paged in memory — see `bookmark_page.rs`), and restore Explorer folder counts without a full fetch.
 
 5. **Account deletion and full export** (M). People can export bookmarks today, but cannot close their account themselves. Public users expect both, and privacy law (GDPR, UK GDPR) requires erasure on request.
    - **Delete account** in Settings, confirmed with the password or a fresh OIDC sign-in, with a short grace period before data is purged.

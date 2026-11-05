@@ -10,7 +10,7 @@ export function LibraryBulkBar(): ReactElement | null {
   const lib = useLibraryPageModel()
   if (!lib.selectMode) return null
 
-  const { selectedCount, allVisibleSelected, selectableIds } = lib
+  const { selectedCount, allSelected } = lib
 
   return (
     <Group justify="space-between" wrap="wrap" gap="sm" p="sm" className={`${styles.filterPanel} ${styles.bulkBar}`}>
@@ -21,10 +21,11 @@ export function LibraryBulkBar(): ReactElement | null {
         <Button
           size="compact-sm"
           variant="subtle"
-          onClick={() => lib.setSelectedIds(allVisibleSelected ? new Set() : new Set(selectableIds))}
-          disabled={selectableIds.length === 0}
+          onClick={() => void lib.toggleSelectAll()}
+          loading={lib.selectingAll}
+          disabled={lib.selectableIds.length === 0}
         >
-          {allVisibleSelected ? 'Clear all' : 'Select all'}
+          {allSelected ? 'Clear all' : `Select all${lib.matchFilter ? ` ${lib.total}` : ''}`}
         </Button>
       </Group>
       <Group gap="xs">
