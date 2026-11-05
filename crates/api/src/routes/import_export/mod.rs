@@ -39,17 +39,23 @@ fn default_format() -> String {
     "json".into()
 }
 
-const MAX_IMPORT_BYTES: usize = 10 * 1024 * 1024;
 /// JSON escaping can grow the file on the way in. The handler enforces the real limit.
-const MAX_IMPORT_BODY: usize = 2 * MAX_IMPORT_BYTES;
+const MAX_IMPORT_BODY: usize = 2 * crate::quotas::HARD_IMPORT_BYTES;
 
 async fn import(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Json(body): Json<ImportBody>,
 ) -> ApiResult<Json<Value>> {
-    if body.content.len() > MAX_IMPORT_BYTES {
-        return Err(Error::BadRequest("import too large (max 10 MiB)".into()).into());
+    let limits = crate::quotas::limits_for(&state.pool).await?;
+    let max_bytes = crate::quotas::effective_import_max(&limits);
+    if body.content.len() > max_bytes {
+        return Err(Error::QuotaExceeded {
+            meter: db::METER_IMPORT,
+            limit: max_bytes as i64,
+            used: body.content.len() as i64,
+        }
+        .into());
     }
     let format = body.format.to_ascii_lowercase();
     let content = body.content;
@@ -67,6 +73,9 @@ async fn import(
     let parsed = tokio::task::spawn_blocking(move || parser(&content))
         .await
         .map_err(|e| Error::msg(format!("import parse: {e}")))??;
+
+    // Refuse the whole import when the bookmark gauge would overflow.
+    db::refuse_bookmark_quota(&state.pool, user.id, &limits, parsed.bookmarks.len() as i64).await?;
 
     let job = db::create_import_job(&state.pool, user.id, &format).await?;
     let mut counts = db::ImportCounts::default();

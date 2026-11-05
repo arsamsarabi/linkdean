@@ -36,9 +36,20 @@ impl IntoResponse for ApiError {
             let body = json!({ "error": self.0.to_string(), "code": "session_expired" });
             return (StatusCode::UNAUTHORIZED, Json(body)).into_response();
         }
+        if let CoreError::QuotaExceeded { meter, limit, used } = &self.0 {
+            let body = json!({
+                "error": "quota_exceeded",
+                "code": "quota_exceeded",
+                "meter": meter,
+                "limit": limit,
+                "used": used,
+            });
+            return (StatusCode::FORBIDDEN, Json(body)).into_response();
+        }
         let (status, msg) = match &self.0 {
             CoreError::Banned { .. } => (StatusCode::FORBIDDEN, self.0.to_string()),
             CoreError::EmailUnverified => (StatusCode::FORBIDDEN, self.0.to_string()),
+            CoreError::QuotaExceeded { .. } => (StatusCode::FORBIDDEN, self.0.to_string()),
             CoreError::SessionExpired => (StatusCode::UNAUTHORIZED, self.0.to_string()),
             CoreError::Unauthorized => (StatusCode::UNAUTHORIZED, self.0.to_string()),
             CoreError::Forbidden => (StatusCode::FORBIDDEN, self.0.to_string()),

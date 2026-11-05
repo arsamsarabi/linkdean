@@ -147,7 +147,49 @@ pub struct PlatformSettings {
     pub registration_open: bool,
     pub api_keys_enabled: bool,
     pub require_verified_email: bool,
+    /// Max owned bookmarks (non-deleted). `None` = unlimited.
+    pub max_bookmarks: Option<i64>,
+    /// Max bytes for avatar + preview assets. `None` = unlimited.
+    pub max_stored_image_bytes: Option<i64>,
+    /// Max enrich actions (page/favicon/OG/screenshot) per UTC day. `None` = unlimited.
+    pub max_enrich_actions_per_day: Option<i64>,
+    /// Max import payload bytes (clamped to the hard 10 MiB cap). `None` = hard cap only.
+    pub max_import_bytes: Option<i64>,
+    /// Max uploaded image body bytes (clamped to avatar/preview hard caps). `None` = hard caps only.
+    pub max_upload_image_bytes: Option<i64>,
     pub updated_at: DateTime<Utc>,
+}
+
+/// Effective quotas for a user. Today = platform row; later may AND with a plan.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct ResolvedLimits {
+    pub max_bookmarks: Option<i64>,
+    pub max_stored_image_bytes: Option<i64>,
+    pub max_enrich_actions_per_day: Option<i64>,
+    pub max_import_bytes: Option<i64>,
+    pub max_upload_image_bytes: Option<i64>,
+}
+
+impl From<&PlatformSettings> for ResolvedLimits {
+    fn from(p: &PlatformSettings) -> Self {
+        Self {
+            max_bookmarks: p.max_bookmarks,
+            max_stored_image_bytes: p.max_stored_image_bytes,
+            max_enrich_actions_per_day: p.max_enrich_actions_per_day,
+            max_import_bytes: p.max_import_bytes,
+            max_upload_image_bytes: p.max_upload_image_bytes,
+        }
+    }
+}
+
+/// Usage snapshot for Settings. Limits mirror [`ResolvedLimits`]; used gauges/counters are filled in.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuotaUsageView {
+    pub limits: ResolvedLimits,
+    pub bookmarks: i64,
+    pub stored_image_bytes: i64,
+    pub enrich_actions_today: i64,
+    pub enrich_period_start: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,6 +197,26 @@ pub struct UpdatePlatformSettings {
     pub registration_open: Option<bool>,
     pub api_keys_enabled: Option<bool>,
     pub require_verified_email: Option<bool>,
+    /// `Some(None)` clears; `Some(Some(n))` sets; omit = no change.
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_bookmarks: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_stored_image_bytes: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_enrich_actions_per_day: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_import_bytes: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_upload_image_bytes: Option<Option<i64>>,
+}
+
+fn deserialize_option_option_i64<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<Option<i64>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Some(Option::<i64>::deserialize(deserializer)?))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

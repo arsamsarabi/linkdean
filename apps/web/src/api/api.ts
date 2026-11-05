@@ -55,6 +55,7 @@ import {
   profileSchema,
   profileSummariesEnvelopeSchema,
   publicListSchema,
+  quotaUsageSchema,
   recoveryKeySchema,
   registrationInvitesEnvelopeSchema,
   resendVerificationResponseSchema,
@@ -121,6 +122,7 @@ import {
   type ProfileVisibility,
   type PublicList,
   type PutDashboardLayout,
+  type QuotaUsage,
   type RegistrationInvite,
   type ResendVerificationResponse,
   type ShareAccess,
@@ -150,11 +152,18 @@ export const api = {
     registration_open?: boolean
     api_keys_enabled?: boolean
     require_verified_email?: boolean
+    max_bookmarks?: number | null
+    max_stored_image_bytes?: number | null
+    max_enrich_actions_per_day?: number | null
+    max_import_bytes?: number | null
+    max_upload_image_bytes?: number | null
   }): Promise<{
     settings: PlatformSettings
     require_verified_email_forced: boolean
   }> =>
     req('/admin/platform-settings', { method: 'PATCH', body: JSON.stringify(body) }, platformSettingsEnvelopeSchema),
+
+  getQuotaUsage: (): Promise<QuotaUsage> => req('/users/me/quota-usage', {}, quotaUsageSchema),
 
   listAdminUsers: (): Promise<{ users: AdminUserSummary[] }> => req('/admin/users', {}, adminUsersEnvelopeSchema),
 

@@ -123,6 +123,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
 - Optional Cloudflare Turnstile on password registration (`TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`); off when unset; OIDC uncapped by Turnstile
 - Optional disposable-email domain block at register and email-change (`BLOCK_DISPOSABLE_EMAILS`)
+- Per-user quotas (Admin platform settings; null = unlimited): max bookmarks, stored image bytes, enrich actions per UTC day, import size, upload image size (clamped to hard caps). Usage shown in Settings when a limit is set
 - Optional `BOOTSTRAP_TOKEN`: the first account (the admin) must enter it on the setup page. Racing sign-ups cannot make two first admins or redeem one invite twice
 - Profile: display name, bio, avatar, password change, email change. A new password signs out every other session, and can revoke all API keys too
 - Password reset: with mail on, **Forgot password?** emails a single-use link that works for 30 minutes; admins can make a 24-hour link to hand over, the only way back in when mail is off. A reset signs out every session, can revoke all API keys, and leaves vaults locked

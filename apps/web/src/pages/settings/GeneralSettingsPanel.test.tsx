@@ -8,6 +8,18 @@ import { GeneralSettingsPanel } from './GeneralSettingsPanel'
 vi.mock('@/hooks', () => ({
   useDashboards: () => ({ data: [] }),
   usePatchDashboard: () => ({ isPending: false, mutate: vi.fn() }),
+  // No limits → QuotaUsagePanel renders nothing.
+  useQuotaUsage: () => ({
+    data: {
+      limits: {},
+      bookmarks: 0,
+      stored_image_bytes: 0,
+      enrich_actions_today: 0,
+      enrich_period_start: '2026-01-01',
+    },
+    isLoading: false,
+    isError: false,
+  }),
 }))
 
 beforeAll(() => {
