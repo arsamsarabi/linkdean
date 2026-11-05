@@ -141,14 +141,19 @@ const bookmarksSchema = z.array(bookmarkSchema)
 export const api = {
   bootstrap: (): Promise<BootstrapStatus> => req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
 
-  getPlatformSettings: (): Promise<{ settings: PlatformSettings }> =>
-    req('/admin/platform-settings', {}, platformSettingsEnvelopeSchema),
+  getPlatformSettings: (): Promise<{
+    settings: PlatformSettings
+    require_verified_email_forced: boolean
+  }> => req('/admin/platform-settings', {}, platformSettingsEnvelopeSchema),
 
   updatePlatformSettings: (body: {
     registration_open?: boolean
     api_keys_enabled?: boolean
     require_verified_email?: boolean
-  }): Promise<{ settings: PlatformSettings }> =>
+  }): Promise<{
+    settings: PlatformSettings
+    require_verified_email_forced: boolean
+  }> =>
     req('/admin/platform-settings', { method: 'PATCH', body: JSON.stringify(body) }, platformSettingsEnvelopeSchema),
 
   listAdminUsers: (): Promise<{ users: AdminUserSummary[] }> => req('/admin/users', {}, adminUsersEnvelopeSchema),
@@ -304,6 +309,7 @@ export const api = {
     invite_code?: string
     bootstrap_token?: string
     share_token?: string
+    turnstile_token?: string
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/register', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 

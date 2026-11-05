@@ -119,15 +119,17 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Optional OIDC sign-in with any standard issuer (discovery, PKCE, nonce and ID token checks)
 - Single sign-on linking: an OIDC sign-in whose address belongs to a password account asks for that account's password once, then connects; the account gets a "Single sign-on was connected" email. **Profile → Edit profile → Single sign-on** shows the connected provider, with **Connect** (any provider address) and **Disconnect** (needs the password; not offered to SSO-only accounts)
 - First registered user becomes admin (bootstrap)
-- Open registration toggle (Admin)
+- Open registration toggle (Admin); public beta keeps registration open and relies on the protections below
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
+- Optional Cloudflare Turnstile on password registration (`TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`); off when unset; OIDC uncapped by Turnstile
+- Optional disposable-email domain block at register and email-change (`BLOCK_DISPOSABLE_EMAILS`)
 - Optional `BOOTSTRAP_TOKEN`: the first account (the admin) must enter it on the setup page. Racing sign-ups cannot make two first admins or redeem one invite twice
 - Profile: display name, bio, avatar, password change, email change. A new password signs out every other session, and can revoke all API keys too
 - Password reset: with mail on, **Forgot password?** emails a single-use link that works for 30 minutes; admins can make a 24-hour link to hand over, the only way back in when mail is off. A reset signs out every session, can revoke all API keys, and leaves vaults locked
 - Email verification (needs mail): a password registration emails a 24-hour, single-use link, and unverified accounts see a banner with **Resend email**. Opening the link verifies the address without signing in. OIDC accounts are verified when the provider reports the address as verified. Accounts that existed before verification shipped count as verified
 - Email change: **Profile → Edit profile → Change email** with the current password sends a link to the new address and a notice to the old one; the address changes only when the link is opened. Not for SSO-only accounts; with mail off it says to ask an admin
 - Admin verification controls: an **Unverified** badge in the accounts list, **Mark verified**, **Remove verification**, and **Change email** applied at once
-- **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held
+- **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate and locks the admin toggle
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts

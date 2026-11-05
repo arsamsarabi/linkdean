@@ -1,5 +1,6 @@
 export * from './activity'
 export * from './api-keys'
+export * from './auth'
 export * from './avatar'
 export * from './bookmark'
 export * from './category'

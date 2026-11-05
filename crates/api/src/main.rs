@@ -1,5 +1,6 @@
 mod auth;
 mod config;
+mod disposable_email;
 mod error;
 mod mail;
 mod maintenance;
@@ -9,6 +10,7 @@ mod rate_limit;
 mod routes;
 mod security;
 mod state;
+mod turnstile;
 mod vault_keys;
 
 use axum::http::{HeaderValue, Method};

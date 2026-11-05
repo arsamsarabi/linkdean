@@ -1053,6 +1053,9 @@ pub struct RegisterRequest {
     /// The server's `BOOTSTRAP_TOKEN`, needed for the first account when one is set.
     #[serde(default)]
     pub bootstrap_token: Option<String>,
+    /// Cloudflare Turnstile widget token; required when the server has Turnstile keys.
+    #[serde(default)]
+    pub turnstile_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

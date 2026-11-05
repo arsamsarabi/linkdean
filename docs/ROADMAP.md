@@ -15,11 +15,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 1. **Security hardening** (M). A public instance draws scanners and attackers from day one. Session and OIDC cookies are already `HttpOnly` and `SameSite`; image routes send `nosniff` and a sandbox CSP. **Done:** app-wide security headers (CSP with `frame-ancestors 'none'`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional HSTS via `HSTS_MAX_AGE`), `/.well-known/security.txt`, CI `cargo audit` and `pnpm audit --prod`, and Dependabot for Cargo, npm and Actions.
    - Still open: a security review before launch — auth and session flows, sharing and public-list access checks, the page fetch and screenshot path (SSRF), import parsing, and upload handling.
 
-2. **Sign-up protection** (S–M). Open registration on a public site invites bots and throwaway accounts. Registration attempts are already rate-limited per IP, email verification exists, and admins can switch to invite-only.
-   - An optional captcha on registration ([Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) fits a Cloudflare-fronted host), off unless configured, so self-hosted instances are unaffected.
-   - Require a verified email before an account can save anything, on the public instance.
-   - Optional blocking of disposable email domains.
-   - Decide whether the beta opens with invite codes (already built) or open registration.
+2. **Sign-up protection** (S–M). **Done:** public beta keeps **open registration**. Misuse controls: optional Cloudflare Turnstile on password registration (`TURNSTILE_*`), host-forced verified-email gate (`REQUIRE_VERIFIED_EMAIL`, ORs with the admin toggle), and optional disposable-domain blocking (`BLOCK_DISPOSABLE_EMAILS`). Invite-only remains an admin toggle. Registration rate limits and email verification were already in place.
 
 3. **Per-user quotas** (M). On a shared instance one account can use up the disk, Chrome or the database for everyone, and a home server has little headroom. Admins set defaults in platform settings; nothing is limited unless configured.
    - Limits on bookmarks, stored images (avatars and previews), screenshots and page fetches per day, and import file size.

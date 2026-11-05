@@ -30,6 +30,14 @@ pub struct Config {
     pub bootstrap_token: Option<String>,
     /// SMTP settings. `None` keeps mail off and every feature that needs it on its fallback.
     pub mail: Option<linkdean_mail::MailConfig>,
+    /// Cloudflare Turnstile site key (public). Both keys must be set or both unset.
+    pub turnstile_site_key: Option<String>,
+    /// Cloudflare Turnstile secret (server only).
+    pub turnstile_secret_key: Option<String>,
+    /// When true and mail is on, require verified email even if the platform setting is off.
+    pub require_verified_email: bool,
+    /// When true, refuse registration / email-change to known disposable domains.
+    pub block_disposable_emails: bool,
     /// Development-only routes such as `/api/dev/emails`. On with `ALLOW_DEFAULT_SECRETS`.
     pub dev_routes: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
@@ -132,6 +140,10 @@ impl Config {
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
             mail: linkdean_mail::MailConfig::from_vars(|k| std::env::var(k).ok())?,
+            turnstile_site_key: None,
+            turnstile_secret_key: None,
+            require_verified_email: env_bool("REQUIRE_VERIFIED_EMAIL", false),
+            block_disposable_emails: env_bool("BLOCK_DISPOSABLE_EMAILS", false),
             dev_routes: env_bool("ALLOW_DEFAULT_SECRETS", false),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
@@ -141,13 +153,26 @@ impl Config {
                 per_host_delay_ms: env_u64("LINK_CHECK_PER_HOST_DELAY_MS", 1_000),
                 recheck_days: env_i64("LINK_CHECK_RECHECK_DAYS", 7),
             },
-        })
+        }
+        .with_turnstile(optional_pair("TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY")?))
+    }
+
+    fn with_turnstile(mut self, keys: Option<(String, String)>) -> Self {
+        if let Some((site, secret)) = keys {
+            self.turnstile_site_key = Some(site);
+            self.turnstile_secret_key = Some(secret);
+        }
+        self
     }
 
     pub fn oidc_enabled(&self) -> bool {
         self.oidc_issuer.is_some()
             && self.oidc_client_id.is_some()
             && self.oidc_client_secret.is_some()
+    }
+
+    pub fn turnstile_enabled(&self) -> bool {
+        self.turnstile_site_key.is_some() && self.turnstile_secret_key.is_some()
     }
 
     /// `None` when no bootstrap token is configured, else whether `given` matches it.
@@ -166,6 +191,24 @@ impl Config {
 
 fn required(key: &str) -> anyhow::Result<String> {
     std::env::var(key).map_err(|_| anyhow::anyhow!("missing env {key}"))
+}
+
+/// Both set or both unset. One alone is a config error.
+fn optional_pair(a: &str, b: &str) -> anyhow::Result<Option<(String, String)>> {
+    let av = std::env::var(a)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let bv = std::env::var(b)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    match (av, bv) {
+        (Some(a), Some(b)) => Ok(Some((a, b))),
+        (None, None) => Ok(None),
+        (Some(_), None) => anyhow::bail!("{a} is set but {b} is missing"),
+        (None, Some(_)) => anyhow::bail!("{b} is set but {a} is missing"),
+    }
 }
 
 fn env_bool(key: &str, default: bool) -> bool {

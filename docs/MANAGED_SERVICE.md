@@ -39,7 +39,8 @@ Yes — plan on it. A public `linkdean.app` is a different threat model from per
 
 - **No open ports.** Publish through a Cloudflare Tunnel (`cloudflared`) instead of router port forwarding, so the home IP stays hidden and Cloudflare's DDoS protection and WAF sit in front. Cache the static sites at Cloudflare.
 - **Chrome kept off the LAN.** The app already refuses private addresses, for its own fetches and Chrome's. Add a host firewall rule so the Chrome container's network cannot reach the home LAN even if that check is bypassed.
-- **Email through a provider.** Mail from a home IP lands in spam. Send through a transactional provider's SMTP with SPF, DKIM and DMARC on `linkdean.app`, and require verified email for new accounts.
+- **Email through a provider.** Mail from a home IP lands in spam. Send through a transactional provider's SMTP with SPF, DKIM and DMARC on `linkdean.app`.
+- **Open registration with misuse controls.** Keep `registration_open` on for the free beta (invite-only is an admin escape hatch, not the default). Set `REQUIRE_VERIFIED_EMAIL=true` with SMTP, `BLOCK_DISPOSABLE_EMAILS=true`, and both Cloudflare Turnstile keys (`TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`).
 - **Backups off-site.** Nightly Postgres dump and the avatars and previews volume, copied off the host, with a restore tested end to end.
 - **Monitoring.** An external uptime check (the host's own dashboard cannot report that the host is down) and alerts to a phone.
 - **ISP terms.** Check the home broadband contract allows serving a public site.

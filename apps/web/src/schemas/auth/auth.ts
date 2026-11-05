@@ -53,6 +53,8 @@ export const bootstrapStatusSchema = z.object({
   registration_open: z.boolean().default(true),
   /** Outbound mail is on, so a forgotten password can be reset by email. */
   mail_enabled: z.boolean().default(false),
+  /** Cloudflare Turnstile site key; null when captcha is off. */
+  turnstile_site_key: z.string().nullish(),
 })
 
 export const platformSettingsSchema = z.object({
@@ -64,6 +66,8 @@ export const platformSettingsSchema = z.object({
 
 export const platformSettingsEnvelopeSchema = z.object({
   settings: platformSettingsSchema,
+  /** Host set REQUIRE_VERIFIED_EMAIL; the admin toggle cannot change it. */
+  require_verified_email_forced: z.boolean().default(false),
 })
 
 export const apiKeySchema = z.object({
