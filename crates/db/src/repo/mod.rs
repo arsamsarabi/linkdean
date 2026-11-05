@@ -1,3 +1,4 @@
+mod account_deletion;
 mod account_tokens;
 mod activity;
 mod api_keys;
@@ -31,6 +32,7 @@ mod vault;
 mod vault_global;
 mod vault_moves;
 
+pub use account_deletion::*;
 pub use account_tokens::*;
 pub use activity::*;
 pub use api_keys::*;

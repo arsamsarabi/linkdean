@@ -103,7 +103,9 @@ async fn json_export_restores_folders_flags_times_and_dashboards() {
     .await
     .expect("layout");
 
-    let (cats, bms, dashboards) = db::export_data(&pool, from.id).await.expect("export");
+    let (cats, bms, dashboards) = db::export_data(&pool, from.id, &VaultKeyring::default())
+        .await
+        .expect("export");
     let raw = serde_json::to_string(&build_linkdean_export(cats, bms, dashboards)).expect("json");
 
     let to = person(&pool, "to").await;

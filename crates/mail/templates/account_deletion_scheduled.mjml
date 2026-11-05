@@ -1,0 +1,15 @@
+{% extends "layout.mjml" %}
+{% block title %}Your account is scheduled for deletion{% endblock %}
+{% block preview %}Your {{ site.instance }} account will be deleted on {{ deletion_date }}.{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">Your account is scheduled for deletion</mj-text>
+    <mj-text>Your account and everything in it will be permanently deleted on {{ deletion_date }}.</mj-text>
+    <mj-text>Changed your mind? Sign in and choose Cancel deletion in Settings before then. You can also export your data from Settings until the deletion happens.</mj-text>
+    {{ action(site.app_url ~ "/settings", "Open Settings") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because someone asked to delete your account.{% endblock %}

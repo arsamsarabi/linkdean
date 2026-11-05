@@ -53,7 +53,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Settings for whether vault items also appear in the Library, and whether deleted vault items go to Trash or are removed immediately
 - Unlock from Settings or the command palette's Unlock vault command; locking clears decrypted data from the browser cache
 - Vault content never indexed in Meilisearch
-- Export never dumps vault bookmarks as plaintext
+- Export includes vault bookmarks as plaintext only while the vault is unlocked for that session; locked vaults stay out of the file
 - Unlocking a vault opens it for that login session only. Other devices, other sessions and API keys stay locked
 - Optional auto-lock after inactivity (Settings). The server enforces it too: unlocked keys it has not used for that long are dropped. Logging out, a password change or reset, or a ban locks them
 
@@ -133,6 +133,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate and locks the admin toggle
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
+- Delete account (Settings → General): confirm email (and password when the account has one), 7-day grace with cancel, then hard purge of owned data including shared folders; last admin cannot schedule
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts
 - Banned users list with bulk unban and bulk change of reason or duration
 - Moderation of a banned user's exposed content: turn off public links, set items private, hide the profile, revoke shares, delete comments, move items to the owner's Trash; private and vault content stay out of reach, and every action is recorded
@@ -152,7 +153,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Import: Netscape HTML, Linkdean JSON, Pocket CSV, Raindrop CSV
 - Imported bookmarks get metadata and previews in the background
-- Export: Netscape HTML, Linkdean JSON
+- Export: Netscape HTML, Linkdean JSON (full account export of owned folders, bookmarks and dashboards; vault items included while unlocked)
 - Linkdean JSON (version 2) keeps every folder of a bookmark, its favourite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
 - Netscape HTML lists a bookmark under each folder it is in, and reads `<DD>` descriptions on import
 

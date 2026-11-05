@@ -62,6 +62,7 @@ import {
   recoveryKeySchema,
   registrationInvitesEnvelopeSchema,
   resendVerificationResponseSchema,
+  scheduleDeletionResponseSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
   shareInvitesEnvelopeSchema,
@@ -130,6 +131,7 @@ import {
   type QuotaUsage,
   type RegistrationInvite,
   type ResendVerificationResponse,
+  type ScheduleDeletionResponse,
   type ShareAccess,
   type ShareInvite,
   type SocialSubjectType,
@@ -415,6 +417,12 @@ export const api = {
     new_password: string
     revoke_api_keys?: boolean
   }): Promise<{ ok: boolean }> => req('/users/me/password', { method: 'POST', body: JSON.stringify(body) }, okSchema),
+
+  /** Starts the 7-day grace period. Password accounts must send their password. */
+  scheduleAccountDeletion: (body: { confirm_email: string; password?: string }): Promise<ScheduleDeletionResponse> =>
+    req('/users/me/deletion', { method: 'POST', body: JSON.stringify(body) }, scheduleDeletionResponseSchema),
+
+  cancelAccountDeletion: (): Promise<{ ok: boolean }> => req('/users/me/deletion', { method: 'DELETE' }, okSchema),
 
   getSettings: (): Promise<{ settings: UserSettings }> => req('/users/me/settings', {}, settingsEnvelopeSchema),
 

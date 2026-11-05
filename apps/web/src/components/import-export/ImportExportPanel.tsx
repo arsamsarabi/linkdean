@@ -3,7 +3,7 @@ import { Alert, Button, FileInput, Group, Paper, Select, SimpleGrid, Stack, Them
 import { notifications } from '@mantine/notifications'
 import { IconDownload, IconFileExport, IconInfoCircle, IconUpload } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
-import { useExportBookmarks, useImportBookmarks } from '@/hooks'
+import { useExportBookmarks, useImportBookmarks, useMe } from '@/hooks'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -11,6 +11,7 @@ export function ImportExportPanel(): ReactElement {
   const [format, setFormat] = useState<string | null>('netscape')
   const [file, setFile] = useState<File | null>(null)
   const importMut = useImportBookmarks()
+  const vaultUnlocked = !!useMe().data?.vault_unlocked
   const { exportBookmarks, isExporting, exportError, clearExportError } = useExportBookmarks()
 
   async function doImport(): Promise<void> {
@@ -82,7 +83,9 @@ export function ImportExportPanel(): ReactElement {
             <Title order={4}>Export</Title>
           </Group>
           <Alert icon={<IconInfoCircle size={16} />} color="violet" variant="light">
-            Vault bookmarks skipped on export — ciphertext stays private.
+            {vaultUnlocked
+              ? 'Vault is unlocked, so vault items are included in the export as plain text. Keep the file safe.'
+              : 'Vault items are skipped while the vault is locked. Unlock it first to include them.'}
           </Alert>
           {exportError ? (
             <QueryErrorAlert

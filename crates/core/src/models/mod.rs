@@ -24,6 +24,8 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
     /// When the account proved it controls `email`. `None` until then.
     pub email_verified_at: Option<DateTime<Utc>>,
+    /// When the account is purged after a self-serve delete request. `None` when not scheduled.
+    pub deletion_scheduled_at: Option<DateTime<Utc>>,
 }
 
 impl User {
@@ -55,6 +57,19 @@ pub struct UserPublic {
     pub sso_connected: bool,
     /// The host of the attached identity's issuer, for display.
     pub sso_provider: Option<String>,
+    /// Set while the account is scheduled for deletion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletion_scheduled_at: Option<DateTime<Utc>>,
+}
+
+/// Body of `POST /users/me/deletion`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ScheduleAccountDeletion {
+    /// Must match the account email (case-insensitive).
+    pub confirm_email: String,
+    /// Required for accounts with a local password; ignored for single sign-on only accounts.
+    #[serde(default)]
+    pub password: Option<String>,
 }
 
 /// The host of an OIDC issuer URL, for display: `https://id.example.com/realms/x` →

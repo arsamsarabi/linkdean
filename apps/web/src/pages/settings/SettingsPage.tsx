@@ -23,6 +23,7 @@ import {
 import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { AdminPlatformSettings } from './AdminPlatformSettings'
+import { DeleteAccountCard } from './DeleteAccountCard'
 import { GeneralSettingsPanel } from './GeneralSettingsPanel'
 import { NotificationEmailsPanel } from './NotificationEmailsPanel'
 import classes from './SettingsPage.module.css'
@@ -114,7 +115,10 @@ export function SettingsPage(): ReactElement {
         </Tabs.List>
 
         <Tabs.Panel value="general">
-          <GeneralSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
+          <Stack gap="lg" maw={1100}>
+            <GeneralSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
+            <DeleteAccountCard user={me.data?.user} />
+          </Stack>
         </Tabs.Panel>
 
         <Tabs.Panel value="notifications">

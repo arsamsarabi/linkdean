@@ -17,3 +17,4 @@ export {
   useAdminChangeEmail,
 } from './useEmailVerification'
 export { usePendingOidcLink, useDisconnectSso } from './useSso'
+export { useScheduleAccountDeletion, useCancelAccountDeletion } from './useAccountDeletion'

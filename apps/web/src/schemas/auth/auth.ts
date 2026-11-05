@@ -19,6 +19,8 @@ export const userPublicSchema = z.object({
   sso_connected: z.boolean().default(false),
   /** The host of the attached identity's issuer, for display. */
   sso_provider: z.string().nullish(),
+  /** ISO time the account is purged; set while a delete is scheduled, so it can still be cancelled. */
+  deletion_scheduled_at: z.string().nullish(),
 })
 
 export const userSettingsSchema = z.object({
@@ -223,8 +225,13 @@ export const okSchema = z.object({
   ok: z.boolean(),
 })
 
+export const scheduleDeletionResponseSchema = z.object({
+  deletion_scheduled_at: z.string(),
+})
+
 export type UserPublic = z.infer<typeof userPublicSchema>
 export type UserSettings = z.infer<typeof userSettingsSchema>
+export type ScheduleDeletionResponse = z.infer<typeof scheduleDeletionResponseSchema>
 export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
