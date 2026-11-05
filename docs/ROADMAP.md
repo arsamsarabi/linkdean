@@ -17,11 +17,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 2. **Sign-up protection** (S–M). **Done:** public beta keeps **open registration**. Misuse controls: optional Cloudflare Turnstile on password registration (`TURNSTILE_*`), host-forced verified-email gate (`REQUIRE_VERIFIED_EMAIL`, ORs with the admin toggle), and optional disposable-domain blocking (`BLOCK_DISPOSABLE_EMAILS`). Invite-only remains an admin toggle. Registration rate limits and email verification were already in place.
 
-3. **Per-user quotas** (M). On a shared instance one account can use up the disk, Chrome or the database for everyone, and a home server has little headroom. Admins set defaults in platform settings; nothing is limited unless configured.
-   - Limits on bookmarks, stored images (avatars and previews), screenshots and page fetches per day, and import file size.
-   - Admin-set maximum sizes for uploaded images, below the built-in hard caps.
-   - A clear message when a limit is reached, and usage shown in Settings.
-   - The same limits become plan limits if the service ever charges.
+3. **Per-user quotas** (M). **Done:** platform-default limits (null = unlimited) for bookmarks, stored image bytes, enrich actions per UTC day, import bytes, and upload image bytes. Enforced at create/import/upload/enrich; `resolve_limits` + period-keyed usage leave room for membership plans. Usage in Settings when any limit is set. No per-user overrides in v1.
 
 4. **Page the library list** (L). `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load, and an import of thousands of bookmarks makes the app slow from day one.
    - Use infinite scrolling, not numbered pages. The library is browsed and filtered rather than jumped through by page, and filters change the result set often.

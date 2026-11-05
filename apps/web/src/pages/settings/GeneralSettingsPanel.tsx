@@ -3,6 +3,7 @@ import { NumberInput, Paper, Select, SimpleGrid, Stack, Switch, Text, Title } fr
 import { notifications } from '@mantine/notifications'
 import { useDashboards, usePatchDashboard } from '@/hooks'
 import type { UserSettings } from '@/schemas'
+import { QuotaUsagePanel } from './QuotaUsagePanel'
 import { SettingsSkeleton } from './SettingsSkeleton'
 
 type Props = {
@@ -167,6 +168,8 @@ export function GeneralSettingsPanel({ settings, saving, onPatch }: Props): Reac
           />
         </SettingsCard>
       </SimpleGrid>
+
+      <QuotaUsagePanel />
 
       {saving || pinDashboard.isPending ? (
         <Text size="xs" c="dimmed" aria-live="polite">

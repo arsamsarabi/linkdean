@@ -6,10 +6,26 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { ApiKey, CreateApiKeyResponse, MeResponse, ProfileVisibility, UserPublic, UserSettings } from '@/schemas'
+import type {
+  ApiKey,
+  CreateApiKeyResponse,
+  MeResponse,
+  ProfileVisibility,
+  QuotaUsage,
+  UserPublic,
+  UserSettings,
+} from '@/schemas'
 import { useUi } from '@/stores'
 
 type SettingsEnvelope = { settings: UserSettings }
+
+export function useQuotaUsage(enabled = true): UseQueryResult<QuotaUsage> {
+  return useQuery({
+    queryKey: ['quota-usage'],
+    queryFn: () => api.getQuotaUsage(),
+    enabled,
+  })
+}
 
 export function useApiKeys(enabled = true): UseQueryResult<{ keys: ApiKey[] }> {
   return useQuery({

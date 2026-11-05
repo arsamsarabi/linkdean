@@ -49,6 +49,18 @@ The first account on an empty instance becomes admin. Sign-ups are serialised, s
 
 Set `BOOTSTRAP_TOKEN` to a long random string (`openssl rand -hex 32`) to require it for that first account. The setup page asks for it. With a token set, the first account must register with a password: an OIDC sign-in cannot carry the token and is refused until an admin exists. Once any account exists the token is ignored and you can remove it.
 
+### Per-user quotas
+
+Under **Settings → Admin**, optional caps apply to every account (leave blank for unlimited):
+
+- Max bookmarks (owned, not deleted). An import that would exceed the cap is refused entirely.
+- Max stored image bytes (avatar + preview/favicon/OG files on disk).
+- Max enrich actions per UTC day (page HTML, favicon, OG and screenshot fetches).
+- Max import payload bytes (cannot exceed the 10 MiB hard cap).
+- Max uploaded image bytes (cannot exceed the avatar/preview hard caps).
+
+When a cap is hit the API answers `403` with `{"code":"quota_exceeded","meter":…}`. Users see current usage under **Settings → General** when any limit is set. Membership plans are not wired yet; limits go through one resolver so plans can plug in later.
+
 ### Reverse proxy
 
 Login, registration and vault-unlock limits count attempts per client address. By default the API uses the address of the TCP connection.

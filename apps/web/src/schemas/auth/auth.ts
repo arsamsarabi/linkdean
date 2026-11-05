@@ -61,6 +61,11 @@ export const platformSettingsSchema = z.object({
   registration_open: z.boolean(),
   api_keys_enabled: z.boolean().default(true),
   require_verified_email: z.boolean().default(false),
+  max_bookmarks: z.number().int().positive().nullish(),
+  max_stored_image_bytes: z.number().int().positive().nullish(),
+  max_enrich_actions_per_day: z.number().int().positive().nullish(),
+  max_import_bytes: z.number().int().positive().nullish(),
+  max_upload_image_bytes: z.number().int().positive().nullish(),
   updated_at: z.string(),
 })
 
@@ -68,6 +73,22 @@ export const platformSettingsEnvelopeSchema = z.object({
   settings: platformSettingsSchema,
   /** Host set REQUIRE_VERIFIED_EMAIL; the admin toggle cannot change it. */
   require_verified_email_forced: z.boolean().default(false),
+})
+
+export const resolvedLimitsSchema = z.object({
+  max_bookmarks: z.number().int().positive().nullish(),
+  max_stored_image_bytes: z.number().int().positive().nullish(),
+  max_enrich_actions_per_day: z.number().int().positive().nullish(),
+  max_import_bytes: z.number().int().positive().nullish(),
+  max_upload_image_bytes: z.number().int().positive().nullish(),
+})
+
+export const quotaUsageSchema = z.object({
+  limits: resolvedLimitsSchema,
+  bookmarks: z.number().int(),
+  stored_image_bytes: z.number().int(),
+  enrich_actions_today: z.number().int(),
+  enrich_period_start: z.string(),
 })
 
 export const apiKeySchema = z.object({
@@ -209,6 +230,7 @@ export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
 export type PendingOidcLink = z.infer<typeof pendingOidcLinkSchema>
 export type PlatformSettings = z.infer<typeof platformSettingsSchema>
+export type QuotaUsage = z.infer<typeof quotaUsageSchema>
 export type ApiKey = z.infer<typeof apiKeySchema>
 export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>

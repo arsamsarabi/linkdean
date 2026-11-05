@@ -14,6 +14,7 @@ export {
   useApiKeys,
   useCreateApiKey,
   useRevokeApiKey,
+  useQuotaUsage,
   useUpdateSettings,
   useUpdateProfile,
   useChangePassword,
