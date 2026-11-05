@@ -78,6 +78,19 @@ export const duplicatesSchema = z.object({
   groups: z.array(duplicateGroupSchema).default([]),
 })
 
+export const bookmarkListPageSchema = z.object({
+  items: z.array(bookmarkSchema),
+  next_cursor: z.string().nullable(),
+  total: z.number(),
+})
+
+export const bookmarkIdsSchema = z.object({ ids: z.array(z.string()) })
+
+/** `GET /tags` rows; the library filter only needs the names. */
+export const tagNamesSchema = z.array(z.object({ name: z.string() }))
+
+export type BookmarkListPage = z.infer<typeof bookmarkListPageSchema>
+export type BookmarkIdsResponse = z.infer<typeof bookmarkIdsSchema>
 export type CategoryRef = z.infer<typeof categoryRefSchema>
 export type Bookmark = z.infer<typeof bookmarkSchema>
 export type LinkCheckStatus = z.infer<typeof linkCheckStatusSchema>

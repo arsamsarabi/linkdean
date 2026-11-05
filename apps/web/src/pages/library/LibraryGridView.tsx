@@ -1,7 +1,13 @@
 import type { ReactElement } from 'react'
 import { Button, Group, SimpleGrid, Stack, Text } from '@mantine/core'
 import { IconBookmark, IconBookmarkPlus, IconFolder, IconSearch, IconX } from '@tabler/icons-react'
-import { BookmarkCard, BookmarkGridSkeleton, EmptyState, type BookmarkCardItem } from '@/components'
+import {
+  BookmarkCard,
+  BookmarkGridSkeleton,
+  EmptyState,
+  InfiniteScrollSentinel,
+  type BookmarkCardItem,
+} from '@/components'
 import { FOLDER_ALL } from '@/services'
 import { LibraryFilterPanel } from './LibraryFilterPanel'
 import { useLibraryPageModel } from './useLibraryPageModel'
@@ -133,6 +139,10 @@ export function LibraryGridView(): ReactElement {
           ))}
         </SimpleGrid>
       )}
+
+      {!lib.loading && lib.hasNextPage ? (
+        <InfiniteScrollSentinel loading={lib.isFetchingNextPage} onLoadMore={lib.fetchNextPage} />
+      ) : null}
     </Stack>
   )
 }

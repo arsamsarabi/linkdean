@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { Bookmark } from '@/schemas'
 import { FOLDER_ALL, FOLDER_UNCATEGORIZED } from './explorerLibrary'
-import { collectTagOptions, filterAndSortLibraryItems, scopeToFolder, sinceFilterToIso } from './libraryList'
+import {
+  collectTagOptions,
+  filterAndSortLibraryItems,
+  scopeToFolder,
+  sinceFilterToIso,
+  splitFolderFilter,
+} from './libraryList'
 import { mergeSearchWithLocalCatchUp } from './searchCatchUp'
 
 const base = {
@@ -266,5 +272,19 @@ describe('scopeToFolder', () => {
     expect(scopeToFolder([inWork, elsewhere], FOLDER_ALL)).toHaveLength(2)
     expect(scopeToFolder([inWork, elsewhere], FOLDER_UNCATEGORIZED)).toHaveLength(2)
     expect(scopeToFolder([inWork, elsewhere], null)).toHaveLength(2)
+  })
+})
+
+describe('splitFolderFilter', () => {
+  it('sends one category filter, or the folder, to the server', () => {
+    expect(splitFolderFilter(undefined, [])).toEqual({ folder: undefined, clientCats: [] })
+    expect(splitFolderFilter('all', ['c1'])).toEqual({ folder: 'c1', clientCats: [] })
+    expect(splitFolderFilter('f1', [])).toEqual({ folder: 'f1', clientCats: [] })
+    expect(splitFolderFilter('uncategorized', [])).toEqual({ folder: 'uncategorized', clientCats: [] })
+  })
+
+  it('leaves several categories, or one that differs from the folder, to the client', () => {
+    expect(splitFolderFilter(undefined, ['a', 'b'])).toEqual({ folder: undefined, clientCats: ['a', 'b'] })
+    expect(splitFolderFilter('f1', ['a'])).toEqual({ folder: 'f1', clientCats: ['a'] })
   })
 })

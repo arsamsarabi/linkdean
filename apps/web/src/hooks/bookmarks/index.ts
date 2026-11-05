@@ -1,6 +1,7 @@
 export {
   useBookmarks,
   useSearchBookmarks,
+  useTagNames,
   useCreateBookmark,
   useUpdateBookmark,
   useDeleteBookmark,

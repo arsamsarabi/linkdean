@@ -1,5 +1,5 @@
 import { type ReactElement } from 'react'
-import { LibraryExplorerView } from '@/components'
+import { InfiniteScrollSentinel, LibraryExplorerView } from '@/components'
 import { canWriteCategory } from '@/lib'
 import { LibraryGridView } from './LibraryGridView'
 import styles from './LibraryPage.module.css'
@@ -39,6 +39,10 @@ export function LibraryResults(): ReactElement {
           onToggleSelect={lib.toggleSelect}
           categoryMenuFor={lib.categoryMenuFor}
         />
+        {/* At All, Explorer lists folders only, so a further page would load unseen. */}
+        {lib.folderId && lib.hasNextPage ? (
+          <InfiniteScrollSentinel loading={lib.isFetchingNextPage} onLoadMore={lib.fetchNextPage} />
+        ) : null}
       </div>
     )
   }

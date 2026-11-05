@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
+import { api } from '@/api'
 import type { BookmarkDraft } from '@/components'
 import { useDeleteBookmark, useUpdateBookmark } from '@/hooks/bookmarks'
 import { useUnlockVault, useVaults } from '@/hooks/vault'
@@ -113,7 +114,14 @@ export function useLibraryBookmarkEditor({ bookmarks, searchHits, folderCat, vau
       openDrawer()
       return
     }
-    notifications.show({ color: 'red', message: 'Open the bookmark from the library to edit' })
+    // A search hit whose page is not loaded: the draft needs the full bookmark.
+    api
+      .bookmark(id)
+      .then((full) => {
+        setDraft(draftFromBookmark(full))
+        openDrawer()
+      })
+      .catch((e: unknown) => notifications.show({ color: 'red', message: String(e) }))
   }
 
   function onFlags(id: string, patch: Partial<{ is_favorite: boolean; is_unread: boolean; is_pinned: boolean }>): void {

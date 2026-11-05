@@ -1,8 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { api } from '@/api'
 import type { Bookmark } from '@/schemas'
+import type { LibraryPageFilter } from './useLibraryBookmarksInfinite'
 import { useLibrarySelection } from './useLibrarySelection'
 
+vi.mock('@/api', () => ({ api: { bookmarkIds: vi.fn() } }))
 vi.mock('@/hooks/bookmarks', () => {
   const idle = { isPending: false, mutateAsync: vi.fn() }
   return {
@@ -60,5 +63,36 @@ describe('library selection', () => {
     const { result } = renderHook(() => useLibrarySelection({ list }))
     act(() => result.current.toggleSelect('b', true))
     expect([...result.current.selectedIds]).toEqual(['b'])
+  })
+
+  it('select all takes every id the filter matches, beyond the loaded rows', async () => {
+    vi.mocked(api.bookmarkIds).mockResolvedValue(['a', 'b', 'far', 'ro'])
+    const list = [item('a'), item('b'), { ...item('ro'), can_write: false } as unknown as Bookmark]
+    const filter: LibraryPageFilter = { sort: 'updated_desc' }
+    const { result, rerender } = renderHook(({ f }) => useLibrarySelection({ list, matchFilter: f }), {
+      initialProps: { f: filter },
+    })
+    await act(() => result.current.toggleSelectAll())
+    expect(api.bookmarkIds).toHaveBeenCalledWith(filter)
+    expect([...result.current.selectedIds].sort()).toEqual(['a', 'b', 'far'])
+    expect(result.current.allSelected).toBe(true)
+
+    // Untick one: no longer everything.
+    act(() => result.current.toggleSelect('a'))
+    expect(result.current.allSelected).toBe(false)
+
+    // A new filter drops the match-all selection down to what is on screen.
+    await act(() => result.current.toggleSelectAll())
+    rerender({ f: { sort: 'title_asc' } })
+    expect([...result.current.selectedIds].sort()).toEqual(['a', 'b'])
+  })
+
+  it('select all falls back to the loaded rows when the screen is client-filtered', async () => {
+    const list = [item('a'), item('b')]
+    const { result } = renderHook(() => useLibrarySelection({ list, matchFilter: null }))
+    await act(() => result.current.toggleSelectAll())
+    expect([...result.current.selectedIds]).toEqual(['a', 'b'])
+    await act(() => result.current.toggleSelectAll())
+    expect(result.current.selectedCount).toBe(0)
   })
 })

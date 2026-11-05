@@ -15,11 +15,12 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)
 - Grid, compact list and explorer library views (preference persisted). The list shows each bookmark on one row: site icon, title, site and description, folders, badges and the same menu
+- Library list is keyset-paginated (infinite scroll); folder, tag, flag, created-within, vault-only and sort run on the server with a total match count
 - Unsorted / uncategorized filter
 - Library filters: category, tag, created-within (7d/30d/90d/year), vault-only
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
-- Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens
+- Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens. Select all asks the server for every id the current filter matches (not only loaded rows)
 - Duplicate detection and merge UI (sidebar → Library health → Duplicates)
 - Broken links in the sidebar's Library health group, opening a drawer where each link can be opened, edited, rechecked or removed (Remove bookmark moves it to Deleted items); red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
@@ -34,7 +35,6 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Meilisearch full-text search for **non-vault** bookmarks
 - Shared-folder visibility in search (owned + readable shared categories)
-- Wait/retry UX when Meili lags writes: local matches merged + retry banner
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot waits a week before the boot backfill retries it)
 - Admin reindex: rebuild Meili from Postgres (Settings → Admin)

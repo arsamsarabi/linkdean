@@ -10,7 +10,8 @@ import styles from './FolderTile.module.css'
 export type FolderTileProps = {
   id: string
   name: string
-  countLabel: string
+  /** Omitted when the count is unknown. */
+  countLabel?: string
   onOpen: (id: string) => void
   isVault?: boolean
   isHidden?: boolean
@@ -52,16 +53,18 @@ export function FolderTile({
         type="button"
         className={styles.tile}
         onClick={() => onOpen(id)}
-        aria-label={`Open folder ${name}, ${countLabel}`}
+        aria-label={countLabel ? `Open folder ${name}, ${countLabel}` : `Open folder ${name}`}
       >
         <CategoryIcon icon={icon} className={styles.icon} size={40} aria-hidden />
         <div className={styles.name}>
           <Text size="sm" fw={600} lineClamp={2}>
             {name}
           </Text>
-          <Text size="xs" c="dimmed" mt={2}>
-            {countLabel}
-          </Text>
+          {countLabel ? (
+            <Text size="xs" c="dimmed" mt={2}>
+              {countLabel}
+            </Text>
+          ) : null}
           {showBadges ? (
             <Group gap={4} justify="center" mt={6}>
               {shared ? <ShareBadge access={shared} ownerLabel={ownerDisplayName} /> : null}

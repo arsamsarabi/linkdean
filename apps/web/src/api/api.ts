@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { SortKey } from '@/lib'
 import {
   activityEventsEnvelopeSchema,
   adminEmailChangeResponseSchema,
@@ -11,6 +12,8 @@ import {
   authTokenResponseSchema,
   bansEnvelopeSchema,
   blockEnvelopeSchema,
+  bookmarkIdsSchema,
+  bookmarkListPageSchema,
   bookmarkSchema,
   bootstrapStatusSchema,
   categoriesSchema,
@@ -63,6 +66,7 @@ import {
   settingsEnvelopeSchema,
   shareInvitesEnvelopeSchema,
   socialEnvelopeSchema,
+  tagNamesSchema,
   testEmailResultSchema,
   trashItemsSchema,
   trashPurgeResultSchema,
@@ -82,6 +86,7 @@ import {
   type BanView,
   type BlockRelation,
   type Bookmark,
+  type BookmarkListPage,
   type BootstrapStatus,
   type Category,
   type CategoryPublicLink,
@@ -138,7 +143,32 @@ import {
 } from '@/schemas'
 import { req } from './client'
 
-const bookmarksSchema = z.array(bookmarkSchema)
+/** Filters shared by `/bookmarks` and `/bookmarks/ids`. `folder`: category uuid, `uncategorized`, or omit for all. */
+export type BookmarksListParams = {
+  folder?: string | null
+  limit?: number
+  cursor?: string | null
+  sort?: SortKey
+  tag?: readonly string[]
+  flag?: readonly string[]
+  since?: string | null
+  include_vault?: boolean
+  vault_only?: boolean
+}
+
+function bookmarksQuery(p: BookmarksListParams): URLSearchParams {
+  const q = new URLSearchParams()
+  if (p.folder) q.set('folder', p.folder)
+  if (p.limit) q.set('limit', String(p.limit))
+  if (p.cursor) q.set('cursor', p.cursor)
+  if (p.sort) q.set('sort', p.sort)
+  if (p.tag?.length) q.set('tag', p.tag.join(','))
+  if (p.flag?.length) q.set('flag', p.flag.join(','))
+  if (p.since) q.set('since', p.since)
+  if (p.include_vault) q.set('include_vault', 'true')
+  if (p.vault_only) q.set('vault_only', 'true')
+  return q
+}
 
 export const api = {
   bootstrap: (): Promise<BootstrapStatus> => req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
@@ -525,12 +555,30 @@ export const api = {
   publicList: (slug: string): Promise<PublicList> =>
     req(`/public/lists/${encodeURIComponent(slug)}`, {}, publicListSchema),
 
-  bookmarks: (category_id?: string | null, include_vault = false): Promise<Bookmark[]> => {
-    const q = new URLSearchParams()
-    if (category_id) q.set('category_id', category_id)
-    if (include_vault) q.set('include_vault', 'true')
-    return req(`/bookmarks?${q}`, {}, bookmarksSchema)
+  bookmarksPage: (params: BookmarksListParams): Promise<BookmarkListPage> =>
+    req(`/bookmarks?${bookmarksQuery(params)}`, {}, bookmarkListPageSchema),
+
+  bookmark: (id: string): Promise<Bookmark> => req(`/bookmarks/${id}`, {}, bookmarkSchema),
+
+  /** Ids matching the same filters as `bookmarksPage` (server caps at 10k). */
+  bookmarkIds: async (params: BookmarksListParams): Promise<string[]> =>
+    (await req(`/bookmarks/ids?${bookmarksQuery(params)}`, {}, bookmarkIdsSchema)).ids,
+
+  /** Every bookmark, for dashboard pickers. Walks pages. */
+  bookmarks: async (category_id?: string | null, include_vault = false): Promise<Bookmark[]> => {
+    const out: Bookmark[] = []
+    let cursor: string | undefined
+    // ponytail: 10k ceiling (matches /bookmarks/ids); upgrade is a server-searched picker.
+    while (out.length < 10_000) {
+      const page = await api.bookmarksPage({ folder: category_id, include_vault, limit: 100, cursor })
+      out.push(...page.items)
+      if (!page.next_cursor) break
+      cursor = page.next_cursor
+    }
+    return out
   },
+
+  tags: async (): Promise<string[]> => (await req('/tags', {}, tagNamesSchema)).map((t) => t.name),
 
   createBookmark: (body: {
     url: string
