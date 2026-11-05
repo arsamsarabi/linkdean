@@ -59,7 +59,7 @@ linkdean-worker = { path = "crates/worker" }
 linkdean-mail = { path = "crates/mail" }
 html2text = "0.17.4"
 lettre = { version = "0.11.23", default-features = false, features = ["builder", "smtp-transport", "hostname", "tokio1", "tokio1-rustls-tls"] }
-minijinja = "2.24.0"
+minijinja = "3.0.5"
 mrml = "6.0.1"
 
 # Tests and the dev stack build unoptimized, which makes each Argon2id hash (64 MiB, 3 passes)
