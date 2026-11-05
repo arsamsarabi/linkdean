@@ -160,6 +160,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Docker Compose stack (API, Postgres, Meilisearch, optional Chrome)
 - Release images: a `v*` tag runs CI, publishes `ghcr.io/arsamsarabi/linkdean:<version>` and creates a GitHub release; [INSTALL.md](INSTALL.md) gives operators a Compose file to copy, optional Chrome setup and the full environment variable reference
 - Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
+- Security headers on every response (`Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional `Strict-Transport-Security` via `HSTS_MAX_AGE`). Image routes keep their own sandbox CSP. `/.well-known/security.txt` and `/security.txt` point to the project security contact
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Outbound email over SMTP (optional): an outbox with retries, Settings → Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
 - Avatars and preview volumes; backup recipe in [SELF_HOSTED.md](./SELF_HOSTED.md)

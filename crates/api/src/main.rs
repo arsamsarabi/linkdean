@@ -7,6 +7,7 @@ mod metrics;
 mod notification_mail;
 mod rate_limit;
 mod routes;
+mod security;
 mod state;
 mod vault_keys;
 
@@ -65,11 +66,17 @@ async fn main() -> anyhow::Result<()> {
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "apps/web/dist".into());
     let index = format!("{static_dir}/index.html");
     let cors = build_cors(&cfg.cors_origins)?;
+    let hsts_max_age = cfg.hsts_max_age;
     let app = Router::new()
+        .merge(security::security_txt_router())
         .nest("/api", api)
         // Client routes such as /library are the app shell, with 200 like any page.
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)))
         .layer(cors)
+        .layer(axum::middleware::from_fn(move |req, next| {
+            let hsts = hsts_max_age;
+            async move { security::security_headers_middleware(hsts, req, next).await }
+        }))
         .layer(TraceLayer::new_for_http());
 
     let addr: SocketAddr = cfg.bind.parse()?;

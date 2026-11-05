@@ -53,7 +53,7 @@ Set `BOOTSTRAP_TOKEN` to a long random string (`openssl rand -hex 32`) to requir
 
 Login, registration and vault-unlock limits count attempts per client address. By default the API uses the address of the TCP connection.
 
-- **Behind a reverse proxy** (Caddy, nginx, Traefik, a tunnel): set `TRUST_FORWARDED_FOR=true`. Otherwise every request appears to come from the proxy, all users share one counter, and a few failed logins from anyone block logins for everyone.
+- **Behind a reverse proxy** (Caddy, nginx, Traefik, a tunnel): set `TRUST_FORWARDED_FOR=true`. Otherwise every request appears to come from the proxy, all users share one counter, and a few failed logins from anyone block logins for everyone. On HTTPS, set `HSTS_MAX_AGE` (for example `31536000`) or configure HSTS on the proxy/CDN; leave it unset on plain HTTP so browsers are not stuck requiring HTTPS for localhost.
 - **API reachable directly**: leave `TRUST_FORWARDED_FOR` unset. With it on, a client can forge `X-Forwarded-For` and pick any address, which defeats the per-address limits.
 
 Only enable it when the proxy is the sole route to the API, and make sure the proxy appends the client address to `X-Forwarded-For`. The API reads the last entry, the one your proxy wrote. With a chain of proxies, the last entry is the nearest proxy's view, so terminate the chain at a single proxy in front of the API.

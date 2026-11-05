@@ -1,14 +1,12 @@
 # Managed service
 
-Status: exploration. Nothing here is scheduled yet. It expands the **Managed service** item under Far out in [ROADMAP.md](./ROADMAP.md).
+Status: the near-term path is a **free public beta on the homelab**. A cheap VPS and a full GCP deployment are Far out in [ROADMAP.md](./ROADMAP.md). This document is the plan for all three.
 
-The self-hosted release is stable. This document covers what it would take to run Linkdean as a hosted service (SaaS) with a marketing site, deployed on Google Cloud with Terraform, and which GCP services to use for each part. Linkdean stays self-hosted first: the same image runs both, and everything SaaS-only is off unless configured.
-
-GCP is too expensive for the first users, so the hosted service starts as a **public beta on a home server** and moves to a VPS, then GCP, as usage grows. The beta needs no code changes for scaling: one server avoids every multi-instance problem listed under Moving to GCP.
+Linkdean stays self-hosted first: the same image runs both, and everything SaaS-only (billing, plan gates) is off unless configured. The homelab beta needs no code changes for scaling: one server avoids every multi-instance problem listed under Moving to GCP.
 
 ## Public beta on a home server
 
-Status: planning. Nothing is set up yet.
+Status: planning. Nothing is set up yet. Roadmap order: product readiness (items 1–9) → marketing site → documentation site → membership tiers and pricing (explore) → this deploy.
 
 **Shape.** A stand-alone Linkdean stack, separate from any personal instance, serving the whole `linkdean.app` domain:
 
@@ -20,18 +18,36 @@ Status: planning. Nothing is set up yet.
 
 **Capacity.** A modern mini PC (for example a Ryzen 7 with 16 threads, 27 GiB RAM and hundreds of GB free) runs a Linkdean stack in under 500 MiB at idle, with negligible CPU. The heaviest work is the screenshot burst after an import, which the worker throttles to two at a time. With 400–500 Mbps upload and Cloudflare caching static files, a home server should serve a free beta of dozens to low hundreds of active users. Those numbers are estimates, not load-tested.
 
-**What has to be true before it is public.**
+### Isolate from the rest of the homelab
 
-- **Isolated stack.** Its own Compose project, Docker networks, database, Meilisearch, Chrome, volumes and secrets. Nothing shared with other services on the host, and no host secrets mounted in. A separate VM on the host is better still.
+Yes — plan on it. A public `linkdean.app` is a different threat model from personal services behind Authentik or Tailscale.
+
+| Risk | What goes wrong if the stack shares the host with other services |
+| --- | --- |
+| Lateral movement | A bug or RCE in the API, or a compromised dependency, reaches other Compose projects on the same Docker bridge or host |
+| Chrome / SSRF | Headless Chrome fetches arbitrary URLs. App-level private-address blocking helps, but a bypass or misconfig that can hit the LAN (routers, NAS, admin UIs, other containers) is much worse if Chrome shares a network with them |
+| Secret bleed | Shared `.env` files, bind-mounted host paths, or a common secrets volume leak personal-instance credentials into the public stack (or the reverse) |
+| Resource contention | One user's import screenshot burst or Meilisearch rebuild starves Authentik, proxies, or a personal Linkdean on the same CPU, RAM or disk |
+| Blast radius | `docker compose down -v`, a bad migration, or disk fill takes down everything on the host, not only the public beta |
+| Abuse traffic | Scrapers and credential stuffing hit the public hostname; without isolation they also load the shared proxy, DNS and host firewall |
+
+**Minimum isolation.** Its own Compose project, Docker networks, database, Meilisearch, Chrome, volumes and secrets. Nothing shared with other services on the host, and no host secrets mounted in.
+
+**Better.** A separate VM (or equivalent) on the host, so a container escape still lands in an empty guest. Publish only through Cloudflare Tunnel; do not put the public stack on the same reverse-proxy routes as personal apps.
+
+### What else has to be true before it is public
+
 - **No open ports.** Publish through a Cloudflare Tunnel (`cloudflared`) instead of router port forwarding, so the home IP stays hidden and Cloudflare's DDoS protection and WAF sit in front. Cache the static sites at Cloudflare.
 - **Chrome kept off the LAN.** The app already refuses private addresses, for its own fetches and Chrome's. Add a host firewall rule so the Chrome container's network cannot reach the home LAN even if that check is bypassed.
 - **Email through a provider.** Mail from a home IP lands in spam. Send through a transactional provider's SMTP with SPF, DKIM and DMARC on `linkdean.app`, and require verified email for new accounts.
 - **Backups off-site.** Nightly Postgres dump and the avatars and previews volume, copied off the host, with a restore tested end to end.
 - **Monitoring.** An external uptime check (the host's own dashboard cannot report that the host is down) and alerts to a phone.
 - **ISP terms.** Check the home broadband contract allows serving a public site.
-- **Product readiness.** The Now stage of [ROADMAP.md](./ROADMAP.md): security hardening, sign-up protection, quotas, account deletion, legal pages, abuse reports and the rest.
+- **Product and launch readiness.** [ROADMAP.md](./ROADMAP.md) Now items 1–12: security hardening through membership tiers and pricing (explore), then this deploy.
 
-**When to move off the home server.** Any of: outages start to matter to users, upload bandwidth or CPU becomes the bottleneck, abuse traffic reaches the home connection, or the service starts charging. The next step is the same Compose stack on a single VPS (the same [INSTALL.md](./INSTALL.md) applies). GCP, as described below, is for when one server is no longer enough.
+### When to move off the home server
+
+Any of: outages start to matter to users, upload bandwidth or CPU becomes the bottleneck, abuse traffic reaches the home connection, or the service starts charging. The next step is the same Compose stack on a single cheap VPS (Far out in the roadmap; the same [INSTALL.md](./INSTALL.md) applies). GCP, as described below, is for when one server is no longer enough.
 
 ## Moving to GCP
 
