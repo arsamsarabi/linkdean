@@ -6,6 +6,7 @@ mod mail;
 mod maintenance;
 mod metrics;
 mod notification_mail;
+mod quotas;
 mod rate_limit;
 mod routes;
 mod security;

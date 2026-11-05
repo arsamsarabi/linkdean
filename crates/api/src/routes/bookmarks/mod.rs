@@ -190,6 +190,15 @@ async fn upload_preview(
         break;
     }
     let raw_bytes = bytes.ok_or_else(|| Error::BadRequest("missing preview file field".into()))?;
+    let limits = crate::quotas::limits_for(&state.pool).await?;
+    crate::quotas::refuse_upload(
+        &state,
+        user.id,
+        &limits,
+        raw_bytes.len(),
+        crate::quotas::HARD_PREVIEW_BODY,
+    )
+    .await?;
     let jpeg = tokio::task::spawn_blocking(move || process_bookmark_preview(&raw_bytes))
         .await
         .map_err(|e| Error::msg(e.to_string()))??;

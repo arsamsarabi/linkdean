@@ -73,24 +73,28 @@ pub async fn enrich_bookmark(
     };
 
     let mut metadata_ok = false;
-    let page = match client.get(&raw.url).send().await {
-        // Metadata sits in the head, so a long page is cut short rather than refused.
-        Ok(resp) if resp.status().is_success() => {
-            match read_capped(resp, MAX_PAGE_BYTES, true).await {
-                Ok(body) => Some(String::from_utf8_lossy(&body).into_owned()),
-                Err(e) => {
-                    warn!(%bookmark_id, "enrichment: read page body: {e}");
-                    None
+    let page = if !consume_enrich_or_skip(pool, user_id).await {
+        None
+    } else {
+        match client.get(&raw.url).send().await {
+            // Metadata sits in the head, so a long page is cut short rather than refused.
+            Ok(resp) if resp.status().is_success() => {
+                match read_capped(resp, MAX_PAGE_BYTES, true).await {
+                    Ok(body) => Some(String::from_utf8_lossy(&body).into_owned()),
+                    Err(e) => {
+                        warn!(%bookmark_id, "enrichment: read page body: {e}");
+                        None
+                    }
                 }
             }
-        }
-        Ok(resp) => {
-            warn!(%bookmark_id, status = %resp.status(), "enrichment: page fetch refused");
-            None
-        }
-        Err(e) => {
-            warn!(%bookmark_id, "enrichment: page fetch failed: {e}");
-            None
+            Ok(resp) => {
+                warn!(%bookmark_id, status = %resp.status(), "enrichment: page fetch refused");
+                None
+            }
+            Err(e) => {
+                warn!(%bookmark_id, "enrichment: page fetch failed: {e}");
+                None
+            }
         }
     };
     if let Some(body) = page {
@@ -117,6 +121,8 @@ pub async fn enrich_bookmark(
             .or_else(|| raw.favicon_url.clone().filter(|u| is_http_url(u)));
         let favicon = resolve_cached_asset(
             &client,
+            pool,
+            user_id,
             &opts.preview_dir,
             bookmark_id,
             AssetKind::Favicon,
@@ -132,6 +138,8 @@ pub async fn enrich_bookmark(
             .or_else(|| raw.preview_image_url.clone().filter(|u| is_http_url(u)));
         let preview = resolve_cached_asset(
             &client,
+            pool,
+            user_id,
             &opts.preview_dir,
             bookmark_id,
             AssetKind::Og,
@@ -165,31 +173,33 @@ pub async fn enrich_bookmark(
             });
     if wants_preview {
         if let Some(browser_url) = opts.browser_ws_url.as_deref() {
-            match capture_screenshot(browser_url, &raw.url).await {
-                Ok(jpeg) => {
-                    let path = preview_file(&opts.preview_dir, bookmark_id);
-                    if let Some(parent) = path.parent() {
-                        if let Err(e) = tokio::fs::create_dir_all(parent).await {
-                            warn!("preview dir: {e}");
-                        }
-                    }
-                    match tokio::fs::write(&path, &jpeg).await {
-                        Ok(()) => {
-                            if let Err(e) =
-                                db::set_bookmark_has_preview(pool, bookmark_id, true).await
-                            {
-                                warn!("has_preview update: {e}");
-                            } else {
-                                info!(%bookmark_id, "saved preview screenshot");
+            if consume_enrich_or_skip(pool, user_id).await {
+                match capture_screenshot(browser_url, &raw.url).await {
+                    Ok(jpeg) => {
+                        let path = preview_file(&opts.preview_dir, bookmark_id);
+                        if let Some(parent) = path.parent() {
+                            if let Err(e) = tokio::fs::create_dir_all(parent).await {
+                                warn!("preview dir: {e}");
                             }
                         }
-                        Err(e) => warn!("preview write: {e}"),
+                        match tokio::fs::write(&path, &jpeg).await {
+                            Ok(()) => {
+                                if let Err(e) =
+                                    db::set_bookmark_has_preview(pool, bookmark_id, true).await
+                                {
+                                    warn!("has_preview update: {e}");
+                                } else {
+                                    info!(%bookmark_id, "saved preview screenshot");
+                                }
+                            }
+                            Err(e) => warn!("preview write: {e}"),
+                        }
                     }
-                }
-                Err(e) => {
-                    warn!(%bookmark_id, "screenshot failed: {e}");
-                    if let Err(e) = db::record_preview_failure(pool, bookmark_id).await {
-                        warn!(%bookmark_id, "record screenshot failure: {e}");
+                    Err(e) => {
+                        warn!(%bookmark_id, "screenshot failed: {e}");
+                        if let Err(e) = db::record_preview_failure(pool, bookmark_id).await {
+                            warn!(%bookmark_id, "record screenshot failure: {e}");
+                        }
                     }
                 }
             }
@@ -310,8 +320,29 @@ impl AssetKind {
 }
 
 /// Cache remote image on disk; return local API URL (or remote fallback / None = no DB change).
+/// Consume one enrich action when a daily cap is set. Returns false when over quota.
+async fn consume_enrich_or_skip(pool: &PgPool, user_id: Uuid) -> bool {
+    let settings = match db::get_platform_settings(pool).await {
+        Ok(s) => s,
+        Err(e) => {
+            warn!(%user_id, error = %e, "enrich quota: platform settings");
+            return false;
+        }
+    };
+    let limits = db::resolve_limits(&settings);
+    match db::consume_enrich_action(pool, user_id, &limits).await {
+        Ok(()) => true,
+        Err(e) => {
+            info!(%user_id, error = %e, "enrichment skipped: quota");
+            false
+        }
+    }
+}
+
 async fn resolve_cached_asset(
     client: &reqwest::Client,
+    pool: &PgPool,
+    user_id: Uuid,
     dir: &Path,
     bookmark_id: Uuid,
     kind: AssetKind,
@@ -332,6 +363,10 @@ async fn resolve_cached_asset(
     let fetch_url = remote
         .filter(|u| is_fetchable(u))
         .or_else(|| existing.filter(|u| is_http_url(u)).map(|s| s.to_string()))?;
+
+    if !consume_enrich_or_skip(pool, user_id).await {
+        return existing.filter(|u| is_http_url(u)).map(|s| s.to_string());
+    }
 
     match fetch_and_store(client, &fetch_url, &path, &ct_path, kind).await {
         Ok(()) => Some(local),

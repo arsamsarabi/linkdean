@@ -28,6 +28,7 @@ pub fn router() -> Router<AppState> {
             "/users/me/settings",
             get(get_settings).patch(patch_settings),
         )
+        .route("/users/me/quota-usage", get(quota_usage))
         .route(
             "/users/me/avatar",
             get(get_avatar)
@@ -154,6 +155,14 @@ async fn patch_settings(
     Ok(Json(json!({ "settings": settings })))
 }
 
+async fn quota_usage(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    let usage = crate::quotas::usage_view(&state, user.id).await?;
+    Ok(Json(json!(usage)))
+}
+
 async fn upload_avatar(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -181,6 +190,15 @@ async fn upload_avatar(
         break;
     }
     let raw = bytes.ok_or_else(|| Error::BadRequest("missing avatar file field".into()))?;
+    let limits = crate::quotas::limits_for(&state.pool).await?;
+    crate::quotas::refuse_upload(
+        &state,
+        user.id,
+        &limits,
+        raw.len(),
+        crate::quotas::HARD_AVATAR_BODY,
+    )
+    .await?;
     let webp = tokio::task::spawn_blocking(move || process_avatar(&raw))
         .await
         .map_err(|e| Error::msg(e.to_string()))??;

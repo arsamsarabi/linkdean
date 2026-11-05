@@ -83,6 +83,22 @@ async fn patch_platform_settings(
         }
         settings = db::set_require_verified_email(&state.pool, on).await?;
     }
+    if req.max_bookmarks.is_some()
+        || req.max_stored_image_bytes.is_some()
+        || req.max_enrich_actions_per_day.is_some()
+        || req.max_import_bytes.is_some()
+        || req.max_upload_image_bytes.is_some()
+    {
+        settings = db::set_platform_quotas(
+            &state.pool,
+            req.max_bookmarks,
+            req.max_stored_image_bytes,
+            req.max_enrich_actions_per_day,
+            req.max_import_bytes,
+            req.max_upload_image_bytes,
+        )
+        .await?;
+    }
     if state.cfg.require_verified_email {
         settings.require_verified_email = true;
     }
