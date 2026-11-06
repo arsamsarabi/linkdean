@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8458B3?style=flat-square" alt="MIT License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20NC-8458B3?style=flat-square" alt="PolyForm Noncommercial License" /></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/backend-Rust%20%2B%20axum-dea584?style=flat-square&logo=rust&logoColor=white" alt="Rust" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" /></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/db-Postgres-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="Postgres" /></a>
@@ -259,7 +259,11 @@ Pull requests should stay focused:
 
 ## License
 
-[MIT](LICENSE) © Linkdean Contributors
+[PolyForm Noncommercial License 1.0.0](LICENSE) © Arsam Sarabi.
+
+Non-commercial use, modification, and redistribution (including forks) are allowed under that license. Commercial use — including selling Linkdean or derivatives — requires a separate license: **arsamsarabi@me.com**.
+
+Prior MIT-tagged releases remain MIT for those trees; current `main` is PolyForm Noncommercial.
 
 <p align="center">
   <img src="brand/exports/png/linkdean-symbol-color-256.png" alt="Linkdean symbol" width="64" />
