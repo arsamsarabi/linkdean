@@ -12,7 +12,7 @@ members = [
 [workspace.package]
 version = "0.0.1"
 edition = "2021"
-license = "MIT"
+license = "PolyForm-Noncommercial-1.0.0"
 authors = ["Linkdean Contributors"]
 repository = "https://github.com/arsamsarabi/linkdean"
 

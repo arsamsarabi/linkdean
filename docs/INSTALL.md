@@ -4,6 +4,10 @@ This guide runs a released Linkdean image from the GitHub Container Registry wit
 
 Published copy: [docs.linkdean.app](https://docs.linkdean.app/docs/self-hosting/install) (synced from this file). For operations detail (limits, reverse proxies, email providers, single sign-on, backups) see [SELF_HOSTED.md](SELF_HOSTED.md). To build the image from a checkout instead, see the README.
 
+## License
+
+Linkdean is [PolyForm Noncommercial License 1.0.0](https://github.com/arsamsarabi/linkdean/blob/main/LICENSE). You may self-host and fork for non-commercial purposes. Commercial use requires a separate license — contact [arsamsarabi@me.com](mailto:arsamsarabi@me.com).
+
 ## Requirements
 
 - Docker with the Compose plugin (`docker compose version` prints v2 or later).
