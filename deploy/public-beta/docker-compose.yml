@@ -1,0 +1,138 @@
+# Public beta stack for the LXD guest on Nova.
+# See README.md and docs/superpowers/specs/2026-11-06-public-beta-homelab-design.md
+name: linkdean-public
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: linkdean
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: linkdean
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkdean -d linkdean"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}
+      MEILI_ENV: production
+    volumes:
+      - meili:/meili_data
+    networks: [data]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chrome:
+    profiles: [chrome]
+    image: chromedp/headless-shell:156.0.8078.36
+    restart: unless-stopped
+    user: "65534:65534"
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    environment:
+      HOME: /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=../docker/chrome-seccomp.json
+    shm_size: 256mb
+    mem_limit: 1g
+    pids_limit: 512
+    networks: [browser]
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        socat TCP4-LISTEN:9222,fork TCP4:127.0.0.1:9223 &
+        exec /headless-shell/headless-shell
+        --use-gl=angle --use-angle=swiftshader
+        --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223
+        --hide-scrollbars --font-render-hinting=none
+
+  api:
+    image: ghcr.io/arsamsarabi/linkdean:${LINKDEAN_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://linkdean:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/linkdean
+      MEILI_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}
+      APP_URL: ${APP_URL:-https://app.linkdean.app}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      BIND: 0.0.0.0:8080
+      STATIC_DIR: /app/static
+      AVATAR_DIR: /app/data/avatars
+      PREVIEW_DIR: /app/data/previews
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-true}
+      # Set BROWSER_WS_URL=http://chrome:9222 when starting with --profile chrome
+      BROWSER_WS_URL: ${BROWSER_WS_URL:-}
+    volumes:
+      - avatars:/app/data/avatars
+      - previews:/app/data/previews
+    networks: [data, browser, edge]
+    depends_on:
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./static:/srv:ro
+    networks: [edge]
+    depends_on:
+      api:
+        condition: service_healthy
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN}
+    networks: [edge]
+    depends_on:
+      - caddy
+
+networks:
+  # Pick unused ranges on the guest if Docker complains about exhausted pools.
+  data:
+    ipam:
+      config:
+        - subnet: 10.89.10.0/24
+  browser:
+    ipam:
+      config:
+        - subnet: 10.89.11.0/24
+  edge:
+    ipam:
+      config:
+        - subnet: 10.89.12.0/24
+
+volumes:
+  pgdata:
+  meili:
+  avatars:
+  previews:
