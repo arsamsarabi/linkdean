@@ -44,17 +44,6 @@ const imports = [
   ['<img src="/assets/icons/json.svg" alt="">', 'linkdean.json', 'Linkdean'],
 ]
 
-const vaultDiagram = JSON.stringify({
-  layout: 'lanes',
-  alt: 'A link saved into a vault is encrypted with that vault’s key, kept out of search and locked again after inactivity.',
-  input: { label: 'Saved link', icon: 'ui:link', sub: 'Into a vault' },
-  core: { label: 'Vault key', icon: 'ui:lock' },
-  lanes: [
-    { label: 'Encrypted at rest', icon: 'ui:shield', done: true, sub: 'Argon2id, AES-GCM' },
-    { label: 'Kept out of search', icon: 'ui:search-x', done: true, sub: 'Never indexed' },
-    { label: 'Locks itself', icon: 'ui:timer', done: true, sub: 'After inactivity' },
-  ],
-})
 
 const title = 'Linkdean: bookmarks you can self-host'
 const description =
@@ -104,7 +93,7 @@ const description =
     <link rel="stylesheet" href="/assets/ui/checklist/fragment.css" />
     <link rel="stylesheet" href="/assets/ui/toggles/fragment.css" />
     <link rel="stylesheet" href="/assets/ui/terminal-run/fragment.css" />
-    <link rel="stylesheet" href="/assets/diagrams/diagram.css" />
+    <link rel="stylesheet" href="/assets/ui/notify/fragment.css" />
     <script is:inline src="/assets/backgrounds/backgrounds.js"></script>
   </head>
   <body>
@@ -206,7 +195,7 @@ const description =
       <section class="section" id="search" aria-labelledby="search-h">
         <div class="wrap">
           <div class="grid">
-            <h2 id="search-h" class="span-6">Search and the command palette</h2>
+            <h2 id="search-h" class="span-6">Search every bookmark from one palette</h2>
             <p class="span-6 start-7 muted">
               Press ⌘K to search titles, notes and addresses, jump to a folder or add a link. Unread links wait in your reading list until you open them. <a
                 class="link"
@@ -301,11 +290,11 @@ const description =
       <section class="section" id="features" style="--hm: 2" aria-labelledby="features-h">
         <div class="wrap">
           <div class="section-head">
-            <h2 id="features-h">Library health, imports and sharing. <span class="muted">Built in, for every account.</span></h2>
+            <h2 id="features-h">Health checks, imports and sharing for bookmarks. <span class="muted">Built in, for every account.</span></h2>
           </div>
           <div class="grid">
             <article class="card card--row card--open span-4">
-              <h3>Broken-link and duplicate checks</h3>
+              <h3>Bookmark health checks</h3>
               <p>A background check flags dead links. Open, edit, recheck or remove each one in place.</p>
               <div class="panel">
                 <div class="stage stage--fade-b">
@@ -330,7 +319,7 @@ const description =
               </div>
             </article>
             <article class="card card--row card--open span-4">
-              <h3>Imports from browsers and Pocket</h3>
+              <h3>Bookmark imports from any browser</h3>
               <p>Bring browser HTML, Pocket or Raindrop CSV, or a Linkdean export. Previews fill in afterwards.</p>
               <div class="panel">
                 <div class="stage stage--fade-r">
@@ -358,7 +347,7 @@ const description =
               </div>
             </article>
             <article class="card card--row card--open span-4">
-              <h3>Shared folders and public lists</h3>
+              <h3>Shared bookmark folders and lists</h3>
               <p>Invite people to read or edit a folder, or turn a list into a public link you can revoke.</p>
               <div class="panel">
                 <div class="stage stage--fade-b">
@@ -399,40 +388,35 @@ const description =
         </div>
       </section>
 
-      <section class="section ground-surface" id="vaults" aria-labelledby="vaults-h">
+      <section class="section ground-surface" id="private" style="--hm: 2" aria-labelledby="private-h">
         <div class="wrap">
-          <div class="grid">
-            <div class="span-6 stack-4">
-              <h2 id="vaults-h">Encrypted vaults for private links</h2>
-              <p>Each vault has its own passphrase and recovery key. Its links are encrypted at rest and never reach the search index.</p>
-              <p class="muted">Unlocking opens a vault for one session only. Other devices and API keys stay locked.</p>
-            </div>
-            <div class="span-6 start-7 split-visual">
-              <div class="panel">
-                <div class="dg" data-diagram={vaultDiagram}></div>
-              </div>
-            </div>
+          <div class="section-head">
+            <h2 id="private-h">Private bookmarks, on your server if you like. <span class="muted">Vaults lock links away; Docker runs the whole app.</span></h2>
           </div>
-        </div>
-      </section>
-
-      <section class="section ground-surface" id="self-host" aria-labelledby="selfhost-h">
-        <div class="wrap">
           <div class="grid">
-            <div class="span-6 stack-4">
-              <h2 id="selfhost-h">Self-hosting with Docker</h2>
-              <p>The same app, open source under the MIT license, as one Docker image beside Postgres and Meilisearch. Sign in with your own OIDC provider if you like.</p>
-              <p><a class="link" href={github}>Source on GitHub</a></p>
-              <ul class="tool-row" aria-label="What it runs on">
-                <li><img src="/assets/icons/docker.svg" alt="" width="33" height="24" />Docker</li>
-                <li><img src="/assets/icons/postgres.svg" alt="" width="23" height="24" />PostgreSQL</li>
-                <li><img src="/assets/icons/meilisearch.svg" alt="" width="42" height="24" />Meilisearch</li>
-              </ul>
-            </div>
-            <div class="span-6 start-7 split-visual">
+            <article class="card card--row card--open span-6" id="vaults">
+              <h3>Encrypted vaults for private bookmarks</h3>
+              <p>Each vault has its own passphrase and recovery key. Its links are encrypted at rest and never reach the search index.</p>
               <div class="panel">
                 <div class="stage stage--fade-b">
-                  <div class="at-rise fit" style="--fit-max:520px;--ax:max(32px, 50% - 260px);--ay:48px;--ay-sm:32px" data-ui-loop>
+                  <div class="at-rise fit" style="--fit-max:420px;--ax:max(24px, 50% - 210px);--ay:48px;--ay-sm:32px">
+                    <div class="ui ui-notify" data-ui="notify">
+                  <ul class="ui-notify__list" data-notify-list>
+                    <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="3" y="7.5" width="10" height="6.5" rx="1.5"></rect><path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5"></path></svg></span><span class="ui-note__text"><span class="ui-note__title">Private vault locked<time>now</time></span><span class="ui-note__body">No use for 15 minutes, so it locked itself</span></span><span class="ui-btn ui-btn--sm ui-note__btn">Unlock</span></li>
+                    <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M4 2.5h8v11l-4-2.5-4 2.5z"></path></svg></span><span class="ui-note__text"><span class="ui-note__title">3 bookmarks moved into Private<time>9m</time></span><span class="ui-note__body">Encrypted, and taken out of search</span></span></li>
+                    <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="5.5" cy="8" r="2.5"></circle><path d="M8 8h5.5M11.5 8v2"></path></svg></span><span class="ui-note__text"><span class="ui-note__title">Recovery key created<time>12m</time></span><span class="ui-note__body">Shown once. Keep it somewhere safe</span></span></li>
+                  </ul>
+                </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="card card--row card--open span-6" id="self-host">
+              <h3>Self-host Linkdean with Docker</h3>
+              <p>Open source under the MIT license: one image beside Postgres and Meilisearch, with sign-in through your own OIDC provider. <a class="link" href={github}>Source on GitHub</a></p>
+              <div class="panel">
+                <div class="stage stage--fade-b">
+                  <div class="at-rise fit" style="--fit-max:460px;--ax:max(24px, 50% - 230px);--ay:48px;--ay-sm:32px" data-ui-loop>
                     <div class="ui ui-panel ui-term" data-ui="terminal-run">
                       <div class="ui-term__head">
                         <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -486,7 +470,7 @@ const description =
                   </div>
                 </div>
               </div>
-            </div>
+            </article>
           </div>
         </div>
       </section>
@@ -506,11 +490,11 @@ const description =
                   <p>Import browser HTML, Pocket CSV, Raindrop CSV or a Linkdean export. Export HTML or JSON whenever you like.</p>
                 </div>
                 <div class="faq__item">
-                  <h3>Who can open my vaults?</h3>
+                  <h3>Who can open my Linkdean vaults?</h3>
                   <p>Only you, with the vault's passphrase or recovery key. Lose both and the contents are gone, for us too.</p>
                 </div>
                 <div class="faq__item">
-                  <h3>Does it work on my phone?</h3>
+                  <h3>Does Linkdean work on my phone?</h3>
                   <p>Install it from the browser as an app, with tabs for home, library, add and search.</p>
                 </div>
               </div>
@@ -644,6 +628,5 @@ const description =
     <script is:inline type="module" src="/assets/system.js"></script>
     <script is:inline type="module" src="/assets/motion/motion.js"></script>
     <script is:inline type="module" src="/assets/layout/layout.js"></script>
-    <script is:inline type="module" src="/assets/diagrams/mount.js"></script>
   </body>
 </html>
