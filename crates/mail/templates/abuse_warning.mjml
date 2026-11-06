@@ -1,0 +1,14 @@
+{% extends "layout.mjml" %}
+{% block title %}A warning about your content{% endblock %}
+{% block preview %}An admin of {{ site.instance }} reviewed a report about your content.{% endblock %}
+{% block content %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">A warning about your content</mj-text>
+    <mj-text>An admin of {{ site.instance }} reviewed a report about "{{ subject }}" and sent you this warning:</mj-text>
+    <mj-text>{{ note }}</mj-text>
+    <mj-text>Repeated reports can lead to removed content or a ban. If you think this is a mistake, reply to your admin.</mj-text>
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because someone reported your content and an admin chose to warn you.{% endblock %}

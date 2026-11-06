@@ -11,6 +11,7 @@ mod health;
 mod import_export;
 mod notifications;
 mod public;
+mod reports;
 mod search;
 mod share_invites;
 mod social;
@@ -52,4 +53,5 @@ fn router() -> Router<AppState> {
         .merge(import_export::router())
         .merge(vault::router())
         .merge(public::router())
+        .merge(reports::router())
 }

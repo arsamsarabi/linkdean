@@ -4,7 +4,7 @@ use sqlx::PgPool;
 const PLATFORM_COLS: &str = r#"
     registration_open, api_keys_enabled, require_verified_email,
     max_bookmarks, max_stored_image_bytes, max_enrich_actions_per_day,
-    max_import_bytes, max_upload_image_bytes, updated_at
+    max_import_bytes, max_upload_image_bytes, abuse_contact_email, updated_at
 "#;
 
 pub async fn get_platform_settings(pool: &PgPool) -> Result<PlatformSettings> {
@@ -104,6 +104,26 @@ pub async fn set_platform_quotas(
     .bind(max_import_bytes.flatten())
     .bind(max_upload_image_bytes.is_some())
     .bind(max_upload_image_bytes.flatten())
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or_else(|| Error::msg("platform_settings row missing"))
+}
+
+/// Set (`Some`) or clear (`None`) where abuse reports can be sent. The caller validates it.
+pub async fn set_abuse_contact_email(
+    pool: &PgPool,
+    email: Option<&str>,
+) -> Result<PlatformSettings> {
+    sqlx::query_as::<_, PlatformSettings>(&format!(
+        r#"
+        UPDATE platform_settings
+        SET abuse_contact_email = $1, updated_at = now()
+        WHERE id = TRUE
+        RETURNING {PLATFORM_COLS}
+        "#
+    ))
+    .bind(email)
     .fetch_optional(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?

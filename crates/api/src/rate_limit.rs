@@ -19,6 +19,8 @@ const LOGIN_ACCOUNT: u32 = 50;
 const LOGIN_ADDRESS: u32 = 50;
 const REGISTER_ADDRESS: u32 = 10;
 const VAULT_USER: u32 = 10;
+/// Abuse reports one user may file per window, so nobody floods the admin queue.
+const REPORT_USER: u32 = 10;
 /// Reset link requests for one address, so nobody floods an inbox.
 const RESET_REQUEST_ACCOUNT: u32 = 3;
 const RESET_REQUEST_ADDRESS: u32 = 10;
@@ -85,6 +87,10 @@ pub fn verify_attempt_limit(ip: IpAddr) -> [Limit; 1] {
 /// Share invite emails sent by one owner, in `AppState::invite_limiter`.
 pub fn invite_email_limit(owner_id: uuid::Uuid) -> [Limit; 1] {
     [(format!("invite-email:{owner_id}"), INVITE_EMAIL_OWNER)]
+}
+
+pub fn report_limit(user_id: uuid::Uuid) -> [Limit; 1] {
+    [(format!("report:{user_id}"), REPORT_USER)]
 }
 
 pub fn vault_limit(user_id: uuid::Uuid) -> [Limit; 1] {

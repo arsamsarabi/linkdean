@@ -1,8 +1,8 @@
 import { useState, type ReactElement } from 'react'
-import { Center, Loader, Stack, Text, Title } from '@mantine/core'
+import { Center, Group, Loader, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { FollowListModal, ProfileBookmarksList, ProfileHeader, type FollowListKind } from '@/components'
+import { FollowListModal, ProfileBookmarksList, ProfileHeader, ReportButton, type FollowListKind } from '@/components'
 import { useFollowUser, useProfile, useUnfollowUser } from '@/hooks'
 
 export function UserProfileView({ userId, onEdit }: { userId: string; onEdit: () => void }): ReactElement {
@@ -47,6 +47,11 @@ export function UserProfileView({ userId, onEdit }: { userId: string; onEdit: ()
         onEdit={onEdit}
         onOpenList={setList}
       />
+      {data.is_self ? null : (
+        <Group justify="flex-end">
+          <ReportButton targetType="profile" targetId={data.id} subject="profile" />
+        </Group>
+      )}
       <ProfileBookmarksList userId={data.id} emptyLabel="Nothing to show yet." />
       <FollowListModal userId={data.id} kind={list} onClose={() => setList(null)} />
     </Stack>

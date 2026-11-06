@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import type { SortKey } from '@/lib'
 import {
+  abuseReportEnvelopeSchema,
+  abuseReportsEnvelopeSchema,
   activityEventsEnvelopeSchema,
   adminEmailChangeResponseSchema,
   adminEmailVerifiedResponseSchema,
@@ -61,6 +63,8 @@ import {
   quotaUsageSchema,
   recoveryKeySchema,
   registrationInvitesEnvelopeSchema,
+  reportConfigSchema,
+  reportFiledSchema,
   resendVerificationResponseSchema,
   scheduleDeletionResponseSchema,
   searchResponseSchema,
@@ -74,6 +78,7 @@ import {
   unreadCountSchema,
   userEnvelopeSchema,
   vaultsEnvelopeSchema,
+  type AbuseReport,
   type ActivityAction,
   type ActivityEvent,
   type ActivitySubjectType,
@@ -115,6 +120,7 @@ import {
   type ModerateOutcome,
   type ModerationAction,
   type MuteRelation,
+  type NewAbuseReport,
   type Notification,
   type NotificationEmailPref,
   type NotificationKind,
@@ -130,7 +136,9 @@ import {
   type PutDashboardLayout,
   type QuotaUsage,
   type RegistrationInvite,
+  type ReportConfig,
   type ResendVerificationResponse,
+  type ResolveAbuseReport,
   type ScheduleDeletionResponse,
   type ShareAccess,
   type ShareInvite,
@@ -189,6 +197,7 @@ export const api = {
     max_enrich_actions_per_day?: number | null
     max_import_bytes?: number | null
     max_upload_image_bytes?: number | null
+    abuse_contact_email?: string | null
   }): Promise<{
     settings: PlatformSettings
     require_verified_email_forced: boolean
@@ -242,6 +251,17 @@ export const api = {
 
   moderationActions: (id: string): Promise<{ actions: ModerationAction[] }> =>
     req(`/admin/users/${id}/moderation-actions`, {}, moderationActionsEnvelopeSchema),
+
+  createReport: (body: NewAbuseReport): Promise<{ ok: boolean; id: string }> =>
+    req('/reports', { method: 'POST', body: JSON.stringify(body) }, reportFiledSchema),
+
+  reportConfig: (): Promise<ReportConfig> => req('/reports/config', {}, reportConfigSchema),
+
+  listAbuseReports: (status: 'open' | 'resolved'): Promise<{ reports: AbuseReport[] }> =>
+    req(`/admin/reports?status=${status}`, {}, abuseReportsEnvelopeSchema),
+
+  resolveAbuseReport: (id: string, body: ResolveAbuseReport): Promise<{ report: AbuseReport }> =>
+    req(`/admin/reports/${id}/resolve`, { method: 'POST', body: JSON.stringify(body) }, abuseReportEnvelopeSchema),
 
   reindexSearch: (): Promise<{ ok: boolean; upserted: number; failed: number }> =>
     req('/admin/search/reindex', { method: 'POST' }, adminReindexSchema),

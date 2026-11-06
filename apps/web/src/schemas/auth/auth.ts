@@ -68,6 +68,7 @@ export const platformSettingsSchema = z.object({
   max_enrich_actions_per_day: z.number().int().positive().nullish(),
   max_import_bytes: z.number().int().positive().nullish(),
   max_upload_image_bytes: z.number().int().positive().nullish(),
+  abuse_contact_email: z.string().nullish(),
   updated_at: z.string(),
 })
 

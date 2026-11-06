@@ -1,3 +1,4 @@
+mod abuse_reports;
 mod account_deletion;
 mod account_tokens;
 mod activity;
@@ -32,6 +33,7 @@ mod vault;
 mod vault_global;
 mod vault_moves;
 
+pub use abuse_reports::*;
 pub use account_deletion::*;
 pub use account_tokens::*;
 pub use activity::*;

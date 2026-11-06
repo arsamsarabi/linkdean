@@ -37,6 +37,7 @@ export type PlatformSettingsPatch = {
   max_enrich_actions_per_day?: number | null
   max_import_bytes?: number | null
   max_upload_image_bytes?: number | null
+  abuse_contact_email?: string | null
 }
 
 export function useUpdatePlatformSettings(): UseMutationResult<PlatformEnvelope, Error, PlatformSettingsPatch> {
