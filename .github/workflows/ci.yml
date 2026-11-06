@@ -95,3 +95,30 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+
+  site:
+    name: Site (Astro build, committed output in sync)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/site/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/site/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
+      - run: pnpm build
+      # The build lands in deploy/public-beta/static/site, which Caddy serves. Fail if the
+      # committed copy is stale, so the deployed site always matches apps/site.
+      - name: Committed build is current
+        working-directory: .
+        run: |
+          git status --porcelain -- deploy/public-beta/static/site
+          test -z "$(git status --porcelain -- deploy/public-beta/static/site)"
