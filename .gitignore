@@ -18,3 +18,4 @@ apps/web/.pnpm-store/
 
 # taste-skill deal history (local)
 apps/site/.taste-skill/
+deploy/public-beta/static/site/.taste-skill/
