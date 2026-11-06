@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { Alert, Anchor, Button, Drawer, Radio, Stack, Text, Textarea } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useCreateReport, useReportConfig } from '@/hooks'
-import { useDrawerClosesOnEscape } from '@/hooks/render'
+import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import type { AbuseReason, AbuseTargetType } from '@/schemas'
 import { REPORT_DETAILS_MAX, REPORT_REASONS } from './reasons'
 
@@ -19,6 +19,7 @@ type Props = {
 /** Reason and optional details for an abuse report. Signed-in users only. */
 export function ReportDrawer({ opened, onClose, targetType, targetId, subject }: Props): ReactElement {
   const closeOnEscape = useDrawerClosesOnEscape()
+  const drawerSize = useDrawerSize()
   const create = useCreateReport()
   const config = useReportConfig(opened)
   const [reason, setReason] = useState<AbuseReason | null>(null)
@@ -51,7 +52,7 @@ export function ReportDrawer({ opened, onClose, targetType, targetId, subject }:
       onClose={onClose}
       closeOnEscape={closeOnEscape}
       position="right"
-      size="md"
+      size={drawerSize}
       padding="lg"
       title={`Report ${subject}`}
     >

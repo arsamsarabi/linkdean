@@ -6,7 +6,7 @@ Linkdean stays self-hosted first: the same image runs both, and everything SaaS-
 
 ## Public beta on a home server
 
-Status: planning. Nothing is set up yet. Roadmap order: product readiness (items 1–9) → marketing site → documentation site → membership tiers and pricing (explore) → this deploy.
+Status: planning. Nothing is set up yet. Product readiness through roadmap **#8** (UI/UX and mobile) is done; next is **#9 Structured logs**, then marketing site → documentation site → membership tiers and pricing (explore) → this deploy.
 
 **Shape.** A stand-alone Linkdean stack, separate from any personal instance, serving the whole `linkdean.app` domain:
 

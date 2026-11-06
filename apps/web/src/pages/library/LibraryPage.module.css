@@ -46,3 +46,10 @@
   background: var(--mantine-color-body);
   box-shadow: var(--mantine-shadow-sm);
 }
+
+/* Leave room above the mobile tab bar so the last actions stay tappable. */
+@media (max-width: 48em) {
+  .bulkBar {
+    margin-bottom: 0.5rem;
+  }
+}

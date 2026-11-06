@@ -3,6 +3,7 @@ import { Box, Button, Checkbox, Drawer, LoadingOverlay, Select, Stack, Text, Tex
 import { notifications } from '@mantine/notifications'
 import { IconDeviceFloppy } from '@tabler/icons-react'
 import { useCategories, useSyncDuringRender, useUpdateCategory } from '@/hooks'
+import { useDrawerSize } from '@/hooks/render'
 import { categorySelectData, categorySubtreeIds, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category, CategoryVisibility } from '@/schemas'
 import { CategoryIconPicker } from './CategoryIconPicker'
@@ -17,6 +18,7 @@ type Props = {
 }
 
 export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactElement {
+  const drawerSize = useDrawerSize()
   const cats = useCategories()
   const update = useUpdateCategory()
   const [name, setName] = useState('')
@@ -81,7 +83,7 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
   }
 
   return (
-    <Drawer opened={opened} onClose={onClose} title="Edit category" position="right" size="md" padding="lg">
+    <Drawer opened={opened} onClose={onClose} title="Edit category" position="right" size={drawerSize} padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={update.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
