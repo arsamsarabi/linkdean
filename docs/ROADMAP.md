@@ -23,7 +23,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 5. **Account deletion and full export** (M). **Done:** Settings → General danger zone schedules deletion (email confirm + password when local; 7-day grace; cancel anytime before purge). Hourly maintenance hard-deletes the user row (FK cascade) and cleans Meili + preview assets. Export includes vault items as plaintext while the vault is unlocked. Owned shared folders are deleted (no hand-off). Remaining: fresh OIDC step-up for SSO-only accounts; last-admin check at purge as well as schedule.
 
-6. **Legal pages and beta notice** (S). A public service needs terms people agree to before sign-up.
+6. **Legal pages and beta notice** (S). **Done:** draft Terms, Privacy and Acceptable Use pages (`/terms`, `/privacy`, `/acceptable-use`), required terms checkbox at sign-up and for SSO start (version + time stored on new accounts), and a dismissible beta banner. Remaining: counsel review of the copy before charging money; re-accept flow when `TERMS_VERSION` bumps. Original scope:
    - Terms of service, privacy policy (what is stored, where, for how long, who processes it, such as the email provider and Cloudflare) and an acceptable use policy.
    - Sign-up records which version of the terms was accepted, and when.
    - Only strictly necessary cookies are used today, so no consent banner is needed; say so in the privacy policy, and revisit if analytics are added.

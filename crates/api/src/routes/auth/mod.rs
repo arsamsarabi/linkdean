@@ -16,6 +16,7 @@ use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use linkdean_core::legal::{require_current_terms, TERMS_VERSION};
 use linkdean_core::{AuthResponse, Error, LoginRequest, RegisterRequest};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
@@ -82,6 +83,7 @@ async fn register(
     if req.email.trim().is_empty() || req.password.len() < min {
         return Err(Error::BadRequest(format!("email required; password min {min} chars")).into());
     }
+    require_current_terms(Some(&req.terms_version))?;
     disposable_email::refuse_if_disposable(&req.email, state.cfg.block_disposable_emails)?;
     let ip = client_ip(&headers, peer.ip(), state.cfg.trust_forwarded_for);
     if state.cfg.turnstile_enabled() {
@@ -118,6 +120,7 @@ async fn register(
             enforce: true,
             invite_code,
             bootstrap_token_ok: state.cfg.bootstrap_token_ok(req.bootstrap_token.as_deref()),
+            terms_version: Some(TERMS_VERSION),
         },
     )
     .await?;

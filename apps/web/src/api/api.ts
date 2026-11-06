@@ -351,6 +351,7 @@ export const api = {
     bootstrap_token?: string
     share_token?: string
     turnstile_token?: string
+    terms_version: string
   }): Promise<{ user: UserPublic; token: string }> =>
     req('/auth/register', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
 

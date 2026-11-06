@@ -21,7 +21,7 @@ import {
   IconUpload,
   IconUserPlus,
 } from '@tabler/icons-react'
-import { TurnstileWidget } from '@/components'
+import { TermsAgreement, TurnstileWidget } from '@/components'
 import { MIN_SECRET_LENGTH } from '@/services'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -42,6 +42,8 @@ type Props = {
   password: string
   password2: string
   pendingAvatar: Blob | null
+  termsAccepted: boolean
+  onTermsAccepted: (v: boolean) => void
   turnstileSiteKey: string | null
   turnstileResetKey: number
   resetRef: RefObject<(() => void) | null>
@@ -78,6 +80,8 @@ export function OnboardingSteps({
   password,
   password2,
   pendingAvatar,
+  termsAccepted,
+  onTermsAccepted,
   turnstileSiteKey,
   turnstileResetKey,
   resetRef,
@@ -170,6 +174,7 @@ export function OnboardingSteps({
                   </Button>
                 ) : null}
               </Group>
+              <TermsAgreement checked={termsAccepted} onChange={onTermsAccepted} />
               {turnstileSiteKey ? (
                 <TurnstileWidget key={turnstileResetKey} siteKey={turnstileSiteKey} onToken={onTurnstileToken} />
               ) : null}
@@ -177,7 +182,7 @@ export function OnboardingSteps({
                 leftSection={<IconUserPlus {...iconSm} />}
                 loading={busy}
                 onClick={onCreateAdmin}
-                disabled={!email || !password || (needsBootstrapToken && !bootstrapToken.trim())}
+                disabled={!email || !password || !termsAccepted || (needsBootstrapToken && !bootstrapToken.trim())}
               >
                 Create admin account
               </Button>

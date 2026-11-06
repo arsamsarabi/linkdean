@@ -48,6 +48,9 @@ function isPublicPath(pathname: string): boolean {
     pathname === '/register' ||
     pathname === '/onboarding' ||
     pathname === '/banned' ||
+    pathname === '/terms' ||
+    pathname === '/privacy' ||
+    pathname === '/acceptable-use' ||
     pathname === '/forgot-password' ||
     pathname === '/reset-password' ||
     pathname === '/verify-email' ||

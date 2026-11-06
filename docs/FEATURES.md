@@ -135,6 +135,9 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Session auth; multi-device via server account
 - Delete account (Settings → General): confirm email (and password when the account has one), 7-day grace with cancel, then hard purge of owned data including shared folders; last admin cannot schedule
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts
+- Legal pages (draft, not counsel-reviewed): Terms of Service, Privacy Policy (necessary cookies only, no consent banner) and Acceptable Use Policy at `/terms`, `/privacy` and `/acceptable-use`, linked from sign-in and sign-up
+- Terms at sign-up: password sign-up and first-admin setup need a terms checkbox and the API refuses a missing or stale `terms_version`; SSO sign-in needs the checkbox too (`/auth/oidc/start?terms_version=`), and a new SSO account records it. The version and time are stored on the user (`users.terms_version`, `terms_accepted_at`); accounts from before are NULL and are not re-prompted
+- Beta banner on every page (no uptime promise, export regularly), dismissible for the browser session
 - Banned users list with bulk unban and bulk change of reason or duration
 - Moderation of a banned user's exposed content: turn off public links, set items private, hide the profile, revoke shares, delete comments, move items to the owner's Trash; private and vault content stay out of reach, and every action is recorded
 
@@ -192,6 +195,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 | `/settings` | Preferences, categories, import, vault, API keys, admin |
 | `/vaults` | Open vaults, with Library filters and views |
 | `/banned` | Reason and end date for a banned account |
+| `/terms`, `/privacy`, `/acceptable-use` | Legal pages (public) |
 | `/trash` | Soft-deleted items |
 | `/profile` | Account profile |
 | Command palette | Quick add / search / navigate |
