@@ -405,6 +405,16 @@ Register `{APP_URL}/api/auth/oidc/callback` as the redirect URI. A new identity 
 | --- | --- | --- |
 | `BROWSER_WS_URL` | unset | Chrome DevTools address, `http://chrome:9222` with the service above. Unset, no screenshots are taken |
 
+### Logging
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `LOG_FORMAT` | `text` | `text` for human stdout, `json` for one JSON object per line on stdout. Invalid values stop startup |
+| `LOG_FILE` | unset | When set, append JSON lines (JSONL) to this path even if stdout stays `text`. Create the file if missing; open failures stop startup. Rotate the file yourself (for example logrotate); the process does not |
+| `RUST_LOG` | `info` | Log filter, such as `debug` or `info,linkdean_api=debug` (also listed under Advanced) |
+
+Every HTTP response includes `X-Request-Id`. A valid inbound value (1–128 characters: letters, digits, `_`, `-`, `.`) is kept; otherwise the API mints a UUID. The same id appears on the request's log span.
+
 ### Metrics
 
 | Variable | Default | What it does |

@@ -10,7 +10,10 @@ vi.mock('@/hooks', () => ({
   useCreateReport: () => ({ mutateAsync: state.create, isPending: false }),
   useReportConfig: () => ({ data: { abuse_contact_email: state.contact } }),
 }))
-vi.mock('@/hooks/render', () => ({ useDrawerClosesOnEscape: () => true }))
+vi.mock('@/hooks/render', () => ({
+  useDrawerClosesOnEscape: () => true,
+  useDrawerSize: (desktop: string | number = 'md') => desktop,
+}))
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 
 beforeAll(() => {

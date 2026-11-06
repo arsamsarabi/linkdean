@@ -91,6 +91,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - Per-route body limits: import 20 MiB (10 MiB file content), avatar 6 MiB, preview 9 MiB. Uploaded images over 40 megapixels are refused from their header, each decode may allocate at most 160 MiB, and two decode at once.
 - Each Postgres statement times out after 30 s; migrations run on a separate connection without the limit
 - `GET /api/metrics` needs `Authorization: Bearer $METRICS_TOKEN` and is off when the token is unset. Labels use the route template, not the raw path. `GET /api/ready` returns booleans only
+- Logging (`crates/api/src/logging.rs`, `request_id.rs`): stdout is human text by default or JSON lines when `LOG_FORMAT=json`; optional `LOG_FILE` always appends JSONL. Every response includes `X-Request-Id` (valid inbound values are kept; otherwise a UUID), and that id is a field on the HTTP request span
 - Hourly maintenance (`crates/api/src/maintenance.rs`): trash retention, with search and preview cleanup for purged bookmarks, the expired-session purge, removal of unused tags more than an hour old, the email outbox purge and the account token purge
 
 Operator-facing limits and behaviour: [SELF_HOSTED.md](./SELF_HOSTED.md#limits-and-behaviour-operators-should-know).

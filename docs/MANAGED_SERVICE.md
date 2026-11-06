@@ -6,7 +6,7 @@ Linkdean stays self-hosted first: the same image runs both, and everything SaaS-
 
 ## Public beta on a home server
 
-Status: planning. Nothing is set up yet. Product readiness through roadmap **#8** (UI/UX and mobile) is done; next is **#9 Structured logs**, then marketing site → documentation site → membership tiers and pricing (explore) → this deploy.
+Status: planning. Nothing is set up yet. Product readiness through roadmap **#9** (structured logs) is done; next is **#10 Marketing site**, then documentation site → membership tiers and pricing (explore) → this deploy.
 
 **Shape.** A stand-alone Linkdean stack, separate from any personal instance, serving the whole `linkdean.app` domain:
 
@@ -69,8 +69,8 @@ Also needed for a hosted service:
 - **Abuse controls.** A captcha on sign-up, per-plan quotas on the screenshot and page-fetch services (they are both an SSRF surface and a cost), and Cloud Armor in front of everything.
 - **Legal and data rights.** Terms of service, privacy policy, a data processing agreement, cookie consent, account deletion and full export. Import and export already exist.
 - **Feature flags for the hosted service.** Billing and plan checks switch on through configuration only, so the self-hosted image never needs them.
-- **Structured logs** (in the roadmap's Now stage) become required: Cloud Logging indexes JSON.
-- **Library pagination** (in the roadmap's Now stage) matters more at hosted scale, where libraries of any size share the same database.
+- **Structured logs** are shipped (`LOG_FORMAT=json`); Cloud Logging indexes JSON. Keep `LOG_FORMAT=json` on hosted instances.
+- **Library pagination** is shipped; it matters more at hosted scale, where libraries of any size share the same database.
 
 ### 2. Landing and marketing site
 
@@ -117,7 +117,7 @@ infra/
 
 ### 5. Phases
 
-1. **Ready for several instances.** Cloud Storage for files, the worker split, shared rate limits, and a decision on vault keys. Ship library pagination and structured logs from the roadmap's Now stage.
+1. **Ready for several instances.** Cloud Storage for files, the worker split, shared rate limits, and a decision on vault keys. Library pagination and structured logs are already on main; run hosted with `LOG_FORMAT=json`.
 2. **Infrastructure.** Terraform for a staging project: Cloud SQL, Cloud Run, Meilisearch on a VM, load balancer and DNS. Deploy it and load-test it.
 3. **SaaS layer.** Open sign-up with a captcha, Stripe, plan limits, legal pages and the marketing site.
 4. **Launch hardening.** Cloud Armor rules, alerting, a backup restore drill and a status page.
