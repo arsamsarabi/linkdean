@@ -172,7 +172,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Public docs site: [docs.linkdean.app](https://docs.linkdean.app) (Docusaurus in `apps/docs`, content synced from this `docs/` tree)
 - Public marketing site: [linkdean.app](https://linkdean.app) (Astro in `apps/site`)
 - Public app: [app.linkdean.app](https://app.linkdean.app) (homelab beta stack in `deploy/public-beta/`)
-- Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
+- Healthchecks on db / Meili / api; `GET /api/health` (reports the running version) and `GET /api/ready`
 - Security headers on every response (`Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional `Strict-Transport-Security` via `HSTS_MAX_AGE`). Image routes keep their own sandbox CSP. `/.well-known/security.txt` and `/security.txt` point to the project security contact
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Structured logs: `LOG_FORMAT=text|json` on stdout (default text); optional `LOG_FILE` appends JSONL; every response has `X-Request-Id` correlated into request log spans

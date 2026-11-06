@@ -228,7 +228,7 @@ Running the API and web on the host is covered in the README under Development.
 
 | Probe | Path | Meaning |
 | --- | --- | --- |
-| Liveness | `GET /api/health` | Process up |
+| Liveness | `GET /api/health` | Process up; the body reports the running `version` |
 | Readiness | `GET /api/ready` | Postgres + Meilisearch reachable |
 | Metrics | `GET /api/metrics` | Prometheus scrape. Off unless `METRICS_TOKEN` is set; then send `Authorization: Bearer <token>` |
 
