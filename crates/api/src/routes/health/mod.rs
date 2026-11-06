@@ -11,8 +11,13 @@ pub fn router() -> Router<AppState> {
         .route("/ready", get(ready))
 }
 
+/// Liveness. Reports the running version so a deploy can confirm which build is live.
 async fn health() -> Json<Value> {
-    Json(json!({ "status": "ok", "service": "linkdean" }))
+    Json(json!({
+        "status": "ok",
+        "service": "linkdean",
+        "version": env!("CARGO_PKG_VERSION"),
+    }))
 }
 
 /// Liveness of dependencies (Postgres + Meilisearch). Use for Compose / k8s probes.
@@ -53,5 +58,17 @@ async fn ready(State(state): State<AppState>) -> impl IntoResponse {
         (StatusCode::OK, Json(body)).into_response()
     } else {
         (StatusCode::SERVICE_UNAVAILABLE, Json(body)).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn health_reports_the_crate_version() {
+        let Json(body) = health().await;
+        assert_eq!(body["status"], "ok");
+        assert_eq!(body["version"], env!("CARGO_PKG_VERSION"));
     }
 }

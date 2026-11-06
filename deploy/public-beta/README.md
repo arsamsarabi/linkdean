@@ -9,6 +9,7 @@ Do **not** run this Compose project on the Nova host next to personal services. 
 - Nova with LXD 5.21+ (`snap list lxd`). If LXD was never initialized, run `sudo lxd init` **only after** an explicit go-ahead.
 - Cloudflare zone for `linkdean.app` (Tunnel + DNS created below).
 - A GitHub release / GHCR image tag for `ghcr.io/arsamsarabi/linkdean`.
+- The repo cloned at `/opt/linkdean` on the guest (the Release workflow deploys there).
 
 ## 1. Create the guest (on Nova)
 
@@ -63,26 +64,49 @@ Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `s
 
 **Do not seed accounts.** First admin is onboarding on an empty instance. Leave `BOOTSTRAP_TOKEN` for the operator if needed.
 
-## 4. CI / release / selective updates
+## 4. Releases and deploys
 
-| Channel | Trigger | What it publishes |
+| Workflow | Trigger | What it does |
 | --- | --- | --- |
-| [CI](../../.github/workflows/ci.yml) | PR + push to `main` | Tests; site build must match committed `static/site`; docs build uploads a Linux artifact |
-| [Release](../../.github/workflows/release.yml) | Tag `v*.*.*` | GHCR `:x.y.z`, `:x.y`, `:latest` + GitHub release |
-| [Deploy main](../../.github/workflows/deploy-main.yml) | Push to `main` (path-filtered) | App → GHCR `:main` + `:sha-<short>`; docs → Linux static artifact; site → committed-static check |
+| [CI](../../.github/workflows/ci.yml) | PR and push to `main` | Tests and builds every app; the site build must match the committed `static/site` |
+| [Release](../../.github/workflows/release.yml) | Tag `v*.*.*` on a commit in `main` | Builds and deploys only the apps changed since the previous tag, then checks they are live |
 
-**Intelligent updates:** Deploy main uses [dorny/paths-filter](https://github.com/dorny/paths-filter) so only changed deployables run (app crates/web/Docker, docs markdown/`apps/docs`, marketing `apps/site`). Manual **workflow_dispatch** can force any subset (or all if none forced).
+**What counts as changed** (diff from the previous `v*.*.*` tag to this one; the first tag deploys everything):
 
-**Guest roll-forward (manual):** after `git pull` on the guest:
+| App | Paths | Deploy |
+| --- | --- | --- |
+| app | `crates/`, `apps/web/`, `migrations/`, `deploy/docker/`, `Cargo.toml`, `Cargo.lock` | GHCR `:x.y.z`, `:x.y`, `:latest`; the guest's `LINKDEAN_VERSION` set to the tag, api pulled and restarted |
+| docs | `apps/docs/`, `static/docs/`, `docs/INSTALL.md`, `docs/SELF_HOSTED.md`, `docs/FEATURES.md`, `docs/ARCHITECTURE.md` | guest checks out the tag; Caddy restarted |
+| site | `apps/site/`, `static/site/` | guest checks out the tag; Caddy restarted |
+
+An app release needs the tag to match the version in `Cargo.toml` and `apps/web/package.json`; a docs- or site-only release does not.
+
+**Cutting a release:**
 
 ```bash
-# From /opt/linkdean — pulls api image and/or restarts Caddy for static
-bash deploy/public-beta/scripts/pull-update.sh
+git switch main && git pull
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
-For continuous app images set `LINKDEAN_VERSION=main` in `.env`. Pin a release tag for slower upgrades.
+**Deploy and checks** run only when the repository variable `NOVA_DEPLOY_ENABLED=true` is set, with the secrets `NOVA_DEPLOY_HOST`, `NOVA_DEPLOY_USER`, `NOVA_DEPLOY_SSH_KEY`, and `NOVA_DEPLOY_LXC=linkdean-public` when SSH lands on the Nova host and the stack runs in the LXD guest. The host must be reachable from GitHub-hosted runners (public SSH, Tailscale, or a self-hosted runner). The deploy job runs in the `public-beta` environment, so required reviewers can be added there.
 
-**Optional auto-deploy from GitHub Actions:** repository variable `NOVA_DEPLOY_ENABLED=true` plus secrets `NOVA_DEPLOY_HOST`, `NOVA_DEPLOY_USER`, `NOVA_DEPLOY_SSH_KEY`, and usually `NOVA_DEPLOY_LXC=linkdean-public` (SSH to Nova, then `lxc exec`). The host must be reachable from GitHub (Tailscale Funnel/subnet, public SSH, or a self-hosted runner). Leave disabled until that path is intentional.
+Over SSH the job checks out the tag in `/opt/linkdean`, runs [`scripts/pull-update.sh`](scripts/pull-update.sh) for the changed apps, then [`scripts/verify.sh`](scripts/verify.sh), which fails the release unless:
+
+- app: the api container runs the tagged image, is healthy, `/api/health` reports the tag's version and `/api/ready` passes;
+- docs and site: Caddy serves the checked-out `index.html` for `docs.linkdean.app` and `linkdean.app`.
+
+A last job then fetches each changed app through Cloudflare (`app.linkdean.app/api/health` must report the new version). The GitHub release is created only after the deploy passes.
+
+Redeploy a release by hand: Actions → Release → Run workflow on the tag; tick "Deploy every app" to refresh all three.
+
+**Manual roll-forward on the guest** (same scripts):
+
+```bash
+cd /opt/linkdean
+git fetch --tags && git checkout --detach v0.2.0
+REF_BEFORE=v0.1.0 RELEASE_TAG=v0.2.0 bash deploy/public-beta/scripts/pull-update.sh   # refreshes what changed since v0.1.0
+RELEASE_TAG=v0.2.0 CHECK_APP=true CHECK_DOCS=true CHECK_SITE=true bash deploy/public-beta/scripts/verify.sh
+```
 
 ## 5. Before announce
 
