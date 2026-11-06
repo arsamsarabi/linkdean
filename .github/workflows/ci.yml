@@ -97,7 +97,7 @@ jobs:
       - run: pnpm build
 
   docs-site:
-    name: Docs site (Docusaurus build, committed output in sync)
+    name: Docs site (Docusaurus build)
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -113,14 +113,15 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/docs/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # Webpack content hashes differ between macOS and Linux, so we do not require the
+      # committed deploy/public-beta/static/docs tree to match this runner byte-for-byte.
+      # Build must succeed; publish Linux output as an artifact for guest/deploy use.
       - run: pnpm build
-      # The build lands in deploy/public-beta/static/docs, which Caddy serves. Fail if the
-      # committed copy is stale, so the deployed docs always match apps/docs + synced markdown.
-      - name: Committed build is current
-        working-directory: .
-        run: |
-          git status --porcelain -- deploy/public-beta/static/docs
-          test -z "$(git status --porcelain -- deploy/public-beta/static/docs)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-site-static
+          path: deploy/public-beta/static/docs
+          if-no-files-found: error
 
   site:
     name: Site (Astro build, committed output in sync)

@@ -67,9 +67,9 @@ Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `s
 
 | Channel | Trigger | What it publishes |
 | --- | --- | --- |
-| [CI](../../.github/workflows/ci.yml) | PR + push to `main` | Tests; docs/site builds must match committed `static/` |
+| [CI](../../.github/workflows/ci.yml) | PR + push to `main` | Tests; site build must match committed `static/site`; docs build uploads a Linux artifact |
 | [Release](../../.github/workflows/release.yml) | Tag `v*.*.*` | GHCR `:x.y.z`, `:x.y`, `:latest` + GitHub release |
-| [Deploy main](../../.github/workflows/deploy-main.yml) | Push to `main` (path-filtered) | App → GHCR `:main` + `:sha-<short>`; docs/site → re-check committed static |
+| [Deploy main](../../.github/workflows/deploy-main.yml) | Push to `main` (path-filtered) | App → GHCR `:main` + `:sha-<short>`; docs → Linux static artifact; site → committed-static check |
 
 **Intelligent updates:** Deploy main uses [dorny/paths-filter](https://github.com/dorny/paths-filter) so only changed deployables run (app crates/web/Docker, docs markdown/`apps/docs`, marketing `apps/site`). Manual **workflow_dispatch** can force any subset (or all if none forced).
 

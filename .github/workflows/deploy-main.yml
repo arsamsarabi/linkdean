@@ -147,7 +147,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   publish-docs:
-    name: Docs static (build + committed sync)
+    name: Docs static (Linux build artifact)
     needs: changes
     if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-24.04
@@ -165,12 +165,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/docs/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # Hashes differ across OS; ship the Linux build as the deployable artifact.
       - run: pnpm build
-      - name: Committed build is current
-        working-directory: .
-        run: |
-          git status --porcelain -- deploy/public-beta/static/docs
-          test -z "$(git status --porcelain -- deploy/public-beta/static/docs)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-site-static
+          path: deploy/public-beta/static/docs
+          if-no-files-found: error
 
   publish-site:
     name: Site static (build + committed sync)
