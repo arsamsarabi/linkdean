@@ -1,8 +1,8 @@
 import { type ReactElement } from 'react'
 import { Stack, Text } from '@mantine/core'
-import { IconFolder, IconSearch } from '@tabler/icons-react'
 import type { CategoryFolderMenuProps } from '@/components/category/CategoryFolderMenu'
 import { EmptyState } from '@/components/empty-state'
+import { MASCOT } from '@/components/mascot'
 import { useLibraryExplorerContents } from '@/hooks/library'
 import type { SortKey } from '@/lib'
 import type { Bookmark, Category } from '@/schemas'
@@ -90,7 +90,7 @@ export function LibraryExplorerView({
     if (sortedHits.length === 0) {
       return (
         <EmptyState
-          icon={<IconSearch size={28} stroke={1.5} />}
+          illustration={{ src: MASCOT.lookingUp }}
           title="Nothing matched"
           description="Try a different search."
         />
@@ -127,14 +127,14 @@ export function LibraryExplorerView({
 
       {emptyLibrary ? (
         <EmptyState
-          icon={<IconFolder size={28} stroke={1.5} />}
+          illustration={{ src: MASCOT.standing }}
           title="No bookmarks yet"
           description={emptyDescription}
           action={canCreate ? { label: 'Add bookmark', onClick: onCreate } : undefined}
         />
       ) : emptyFolder ? (
         <EmptyState
-          icon={<IconFolder size={28} stroke={1.5} />}
+          illustration={{ src: MASCOT.thinking }}
           title={folderReadOnly ? 'Shared folder is empty' : 'Empty folder'}
           description={
             folderReadOnly ? 'The owner has not added bookmarks here yet.' : 'No subfolders or bookmarks here.'

@@ -27,7 +27,8 @@ vi.mock('./useLibraryPageModel', () => ({ useLibraryPageModel: () => lib }))
 vi.mock('./LibraryFilterPanel', () => ({ LibraryFilterPanel: () => null }))
 vi.mock('@/components', async () => {
   const { EmptyState } = await import('@/components/empty-state')
-  return { EmptyState, BookmarkCard: () => null, BookmarkGridSkeleton: () => null }
+  const { MASCOT } = await import('@/components/mascot')
+  return { EmptyState, MASCOT, BookmarkCard: () => null, BookmarkGridSkeleton: () => null }
 })
 
 function renderView(): void {
