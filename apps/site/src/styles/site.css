@@ -359,6 +359,31 @@ a {
   }
 }
 
+/* Product screenshot: real captures of the app, swapped with the theme. */
+.product {
+  background: linear-gradient(var(--surface) 0 30%, var(--bg) 30% 100%);
+  padding-bottom: clamp(2rem, 5vw, 4rem);
+}
+.product-shot {
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.product-shot img,
+.palette-shot img {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.product-shot figcaption {
+  font-size: var(--step--1);
+  color: var(--ink-muted);
+}
+.palette-shot {
+  margin: 1rem 0 0;
+  max-width: 460px;
+}
+
 /* Feature sections: heading column + list column */
 .section {
   padding-block: var(--section);
