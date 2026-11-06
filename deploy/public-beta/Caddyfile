@@ -1,24 +1,27 @@
 # HTTP only — TLS terminates at Cloudflare. cloudflared reaches this on :80.
+{
+	auto_https off
+}
 
-www.linkdean.app {
+http://www.linkdean.app {
 	redir https://linkdean.app{uri} permanent
 }
 
-linkdean.app {
+http://linkdean.app {
 	root * /srv/site
 	encode gzip
 	file_server
 	try_files {path} /index.html
 }
 
-docs.linkdean.app {
+http://docs.linkdean.app {
 	root * /srv/docs
 	encode gzip
 	file_server
 	try_files {path} /index.html
 }
 
-app.linkdean.app {
+http://app.linkdean.app {
 	encode gzip
 	reverse_proxy api:8080
 }
