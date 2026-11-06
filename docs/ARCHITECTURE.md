@@ -17,16 +17,19 @@ Linkdean is a self-hostable bookmarks manager. Configuration uses environment va
 
 ```
 linkdean/
-  apps/web/           # SPA
-  crates/api/         # HTTP binary
-  crates/core/        # domain, crypto, import/export
-  crates/db/          # Postgres repos + migrations
-  crates/mail/        # email config, templates, SMTP
-  crates/search/      # Meilisearch client
-  crates/worker/      # metadata + favicon/OG disk cache
-  migrations/         # sqlx migrations
-  deploy/docker/      # compose + Dockerfile
-  docs/
+  apps/web/              # SPA
+  apps/site/             # Astro marketing (linkdean.app)
+  apps/docs/             # Docusaurus (docs.linkdean.app; syncs from docs/)
+  crates/api/            # HTTP binary
+  crates/core/           # domain, crypto, import/export
+  crates/db/             # Postgres repos + migrations
+  crates/mail/           # email config, templates, SMTP
+  crates/search/         # Meilisearch client
+  crates/worker/         # metadata + favicon/OG disk cache
+  migrations/            # sqlx migrations
+  deploy/docker/         # self-host compose + Dockerfile
+  deploy/public-beta/    # Nova LXD guest stack (Caddy + Tunnel)
+  docs/                  # canonical markdown (also published via apps/docs)
 ```
 
 ## Runtime shape

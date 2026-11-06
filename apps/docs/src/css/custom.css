@@ -1,0 +1,25 @@
+/**
+ * Linkdean brand tokens (see brand/GUIDELINES.md).
+ */
+:root {
+  --ifm-color-primary: #8458b3;
+  --ifm-color-primary-dark: #7349a1;
+  --ifm-color-primary-darker: #6c4598;
+  --ifm-color-primary-darkest: #59397d;
+  --ifm-color-primary-light: #9569bf;
+  --ifm-color-primary-lighter: #9c72c4;
+  --ifm-color-primary-lightest: #b08fd0;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(132, 88, 179, 0.12);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #a0d2eb;
+  --ifm-color-primary-dark: #7fc2e3;
+  --ifm-color-primary-darker: #6eb9df;
+  --ifm-color-primary-darkest: #3c9ed0;
+  --ifm-color-primary-light: #b5dcef;
+  --ifm-color-primary-lighter: #c2e3f2;
+  --ifm-color-primary-lightest: #dceef7;
+  --docusaurus-highlighted-code-line-bg: rgba(160, 210, 235, 0.15);
+}
