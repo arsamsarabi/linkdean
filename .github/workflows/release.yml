@@ -8,10 +8,9 @@ name: Release
 #   5. checks on the guest and over the public URLs that each changed app is live,
 #   6. creates the GitHub release.
 #
-# Deploy needs the repository variable NOVA_DEPLOY_ENABLED=true and the secrets
-# NOVA_DEPLOY_HOST, NOVA_DEPLOY_USER, NOVA_DEPLOY_SSH_KEY (and NOVA_DEPLOY_LXC when SSH lands
-# on the Nova host rather than the guest). Without the variable the release still builds
-# and publishes, and the deploy and verify jobs are skipped.
+# Deploy needs the repository variable NOVA_DEPLOY_ENABLED=true and a self-hosted runner
+# labelled linkdean-nova on the Nova host (it runs `lxc exec linkdean-public` locally).
+# Without the variable the release still builds and publishes, and deploy/verify are skipped.
 #
 # Run it by hand (Actions → Release → Run workflow, on a tag) to redeploy a release; tick
 # "Deploy every app" to refresh all three regardless of what changed.
@@ -145,48 +144,30 @@ jobs:
       needs.ci.result == 'success' &&
       (needs.image.result == 'success' || needs.image.result == 'skipped') &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true')
-    runs-on: ubuntu-24.04
-    environment: public-beta
+    # Self-hosted on Nova (label linkdean-nova). Do not use this label on pull_request jobs.
+    runs-on: [self-hosted, linkdean-nova]
     steps:
-      - name: Install SSH key
-        env:
-          HOST: ${{ secrets.NOVA_DEPLOY_HOST }}
-          USER: ${{ secrets.NOVA_DEPLOY_USER }}
-          KEY: ${{ secrets.NOVA_DEPLOY_SSH_KEY }}
-        run: |
-          if [ -z "$HOST" ] || [ -z "$USER" ] || [ -z "$KEY" ]; then
-            echo "::error::NOVA_DEPLOY_ENABLED is true but NOVA_DEPLOY_HOST, NOVA_DEPLOY_USER or NOVA_DEPLOY_SSH_KEY is missing"
-            exit 1
-          fi
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
       - name: Roll forward and verify on the guest
         env:
-          HOST: ${{ secrets.NOVA_DEPLOY_HOST }}
-          USER: ${{ secrets.NOVA_DEPLOY_USER }}
-          # Optional. When set, SSH lands on the Nova host and runs inside this LXD instance.
-          LXC: ${{ secrets.NOVA_DEPLOY_LXC }}
+          LXC: linkdean-public
           APP: ${{ needs.changes.outputs.app }}
           DOCS: ${{ needs.changes.outputs.docs }}
           SITE: ${{ needs.changes.outputs.site }}
         run: |
-          remote() {
-            local cmd="bash -s"
-            if [ -n "${LXC:-}" ]; then cmd="lxc exec $LXC -- bash -s"; fi
-            ssh -o BatchMode=yes "$USER@$HOST" "$cmd"
-          }
-          # The repo lives at /opt/linkdean on the guest.
-          remote <<EOF
+          set -euo pipefail
+          if ! command -v lxc >/dev/null; then
+            echo "::error::lxc not found on the self-hosted runner"
+            exit 1
+          fi
+          # The repo lives at /opt/linkdean inside the public-beta LXD guest.
+          lxc exec "$LXC" -- bash -s <<EOF
           set -euo pipefail
           cd /opt/linkdean
           git fetch --tags --force origin
           git checkout --detach "$GITHUB_REF_NAME"
-          RELEASE_TAG="$GITHUB_REF_NAME" UPDATE_APP=$APP UPDATE_DOCS=$DOCS UPDATE_SITE=$SITE \
+          RELEASE_TAG="$GITHUB_REF_NAME" UPDATE_APP=$APP UPDATE_DOCS=$DOCS UPDATE_SITE=$SITE \\
             bash deploy/public-beta/scripts/pull-update.sh
-          RELEASE_TAG="$GITHUB_REF_NAME" CHECK_APP=$APP CHECK_DOCS=$DOCS CHECK_SITE=$SITE \
+          RELEASE_TAG="$GITHUB_REF_NAME" CHECK_APP=$APP CHECK_DOCS=$DOCS CHECK_SITE=$SITE \\
             bash deploy/public-beta/scripts/verify.sh
           EOF
 
