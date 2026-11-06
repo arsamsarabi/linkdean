@@ -1,0 +1,135 @@
+/*
+  Linkdean marketing page. Built on the taste-skill kit in /assets (system.css, ui/cards.css,
+  motion, layout); this file holds only the brand palette, the brand faces, the dark theme and the
+  page CSS the kit's recipes ask for (inside visuals). Brand colours by request: Purple Pain is the
+  one accent, even though the kit prefers no violet (see apps/site/README.md).
+*/
+
+@font-face {
+  font-family: 'Rajdhani';
+  src: url('/fonts/Rajdhani-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+/* Light: white ground, Freeze Purple surface, Night ink, Purple Pain accent. */
+:root {
+  --p-bg: #ffffff; --p-surface: #e5eaf5; --p-ink: #1a1618; --p-muted: #5f5763;
+  --p-accent: #8458b3; --p-accent-ink: #ffffff; --p-action: #8458b3; --p-action-ink: #ffffff;
+  --p-inv-bg: #1a1618; --p-inv-surface: #272325; --p-inv-ink: #ffffff; --p-inv-muted: #b3abb6;
+  --p-inv-accent: #a57fd0; --p-inv-accent-ink: #1a1618; --p-inv-action: #a57fd0; --p-inv-action-ink: #1a1618;
+  --font-display: 'Rajdhani', system-ui, sans-serif;
+  --font-text: 'Satoshi', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --display-weight: 600;
+  --display-tracking: -0.01em;
+  --display-tracking-xl: -0.015em;
+  color-scheme: light;
+}
+
+/* The lit ground behind UI, in brand colours (html:root beats the kit's html[data-ground]) */
+html:root { --ground-bg: #d6dcef; --ground-surface: #e5eaf5; --ground-ink: #1a1618; --ground-muted: #4e4752; --ground-accent: #8458b3; }
+
+/* Dark: Night ground, a lighter purple for actions (dark label on it). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --p-bg: #1a1618; --p-surface: #241d27; --p-ink: #f4f1f6; --p-muted: #b3abb6;
+    --p-accent: #a57fd0; --p-accent-ink: #1a1618; --p-action: #a57fd0; --p-action-ink: #1a1618;
+    --p-inv-bg: #120f11; --p-inv-surface: #1f1a1d;
+    --ground-bg: #7c6c8c; --ground-surface: #887898; --ground-ink: #ffffff; --ground-muted: #ece6f0; --ground-accent: #a57fd0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --p-bg: #1a1618; --p-surface: #241d27; --p-ink: #f4f1f6; --p-muted: #b3abb6;
+  --p-accent: #a57fd0; --p-accent-ink: #1a1618; --p-action: #a57fd0; --p-action-ink: #1a1618;
+  --p-inv-bg: #120f11; --p-inv-surface: #1f1a1d;
+  --ground-bg: #7c6c8c; --ground-surface: #887898; --ground-ink: #ffffff; --ground-muted: #ece6f0; --ground-accent: #a57fd0;
+  color-scheme: dark;
+}
+
+html, body { overflow-x: clip; }
+
+/* Logo and theme-swapped pictures */
+.nav__logo img, .footer-logo img { display: block; height: 32px; width: auto; }
+.footer-logo img { height: 40px; }
+.only-dark { display: none !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .only-light { display: none !important; }
+  :root:not([data-theme='light']) .only-dark { display: block !important; }
+}
+:root[data-theme='dark'] .only-light { display: none !important; }
+:root[data-theme='dark'] .only-dark { display: block !important; }
+
+/* The h1's inline mark: the client's logo mark */
+.hero-mark { display: inline-block; width: .8em; height: .8em; vertical-align: -.08em; margin-right: .12em; }
+
+/* Hero window: the real library screen inside the lit frame */
+.hero__window > .ly-piece.shot { border-radius: var(--r-md); overflow: hidden; border: 1px solid color-mix(in srgb, var(--ground-ink) 14%, transparent); box-shadow: 0 24px 60px -24px color-mix(in srgb, var(--ground-ink) 40%, transparent); }
+.hero__window > .ly-piece.shot img { display: block; width: 100%; height: auto; }
+.menu-card picture { display: contents; }
+
+/* app-frame (sections-library.md, app-frame) */
+.app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+.app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+.app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+.app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
+.app > .app__pane--open { padding: var(--s-6); background: var(--ground-bg); }
+.app > .app__pane--open::after { background: linear-gradient(transparent, var(--ground-bg)); }
+.app > .app__pane--open > .ui-panel { max-width: 560px; margin-inline: auto; border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+@media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+@media (max-width: 1023px) {
+  .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .app > .app__pane--list { max-height: 252px; }
+  .app > .app__pane--list::after { display: none; }
+  .app .ui-win__side { display: none; }
+  .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
+  .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
+}
+@media (max-width: 639px) {
+  .app.ui { grid-template-rows: minmax(0, 1fr); }
+  .app > .app__pane--list { display: none; }
+  .app > .app__pane + .app__pane { border-top: 0; }
+  .app > .app__pane--open { padding: var(--s-4); }
+}
+
+/* Skip link: hidden until focused, so the logo stays on the left line */
+.skip-link { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip-link:focus-visible { width: auto; height: auto; clip-path: none; padding: var(--s-2) var(--s-3); background: var(--bg); color: var(--ink); z-index: 20; }
+
+/* Feature cards: one panel height for the group; two screens once the cards stack */
+#features .panel { --p-h: 320px; }
+@media (min-width: 640px) and (max-width: 1279px) { #features { --h: 2; } }
+
+/* Vaults and self-host: the split's visual column */
+.split-visual .panel { --p-h: 560px; }
+@media (max-width: 639px) { .split-visual .panel { --p-h: 360px; } }
+.tool-row { display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: var(--s-4); margin-top: var(--s-5); padding: 0; list-style: none; }
+.tool-row li { display: flex; align-items: center; gap: var(--s-2); font-size: var(--t-small); color: var(--muted); }
+.tool-row img { height: 24px; width: auto; }
+
+/* FAQ beside Dean */
+.faq-dean { margin: 0; align-self: start; display: flex; justify-content: flex-end; }
+.faq-dean img { max-width: 320px; }
+.faq-dean img { display: block; width: 100%; height: auto; }
+@media (max-width: 1023px) { .faq-dean { grid-column: 1 / -1; } .faq-dean img { width: 220px; } }
+@media (max-width: 639px) { .faq-dean img { width: 120px; } }
+
+/* Theme picker in the footer */
+.theme-picker { display: inline-flex; gap: 2px; padding: 3px; margin: 0; border: 1px solid var(--line); border-radius: 999px; }
+.theme-picker legend { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+.theme-picker input { position: absolute; opacity: 0; pointer-events: none; }
+.theme-picker label { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; color: var(--muted); cursor: pointer; }
+.theme-picker label svg { width: 16px; height: 16px; }
+.theme-picker input:checked + label { background: var(--action); color: var(--action-ink); }
+.theme-picker input:focus-visible + label { outline: 2px solid var(--action); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
+
+@media (max-width: 639px) { .tool-row li { font-size: var(--t-label); } .footer.closing .footer__legal { margin-top: var(--s-4); } }
