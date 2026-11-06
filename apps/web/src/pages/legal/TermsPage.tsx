@@ -58,7 +58,10 @@ export function TermsPage(): ReactElement {
         </Text>
       </LegalSection>
       <LegalSection heading="9. Contact">
-        <Text>Questions go to the administrator of this instance.</Text>
+        <Text>
+          Questions go to the administrator of this instance. To report abuse, use Report on public lists, profiles and
+          comments, or email the operator&apos;s abuse address when it is published in the report form.
+        </Text>
       </LegalSection>
     </LegalLayout>
   )

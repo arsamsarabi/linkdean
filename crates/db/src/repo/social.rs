@@ -19,12 +19,13 @@ async fn actor_label(pool: &PgPool, user_id: Uuid) -> String {
 }
 
 #[derive(Debug, Clone)]
-struct SubjectMeta {
-    owner_user_id: Uuid,
-    title: String,
+pub(super) struct SubjectMeta {
+    pub owner_user_id: Uuid,
+    pub title: String,
 }
 
-async fn resolve_subject(
+/// The subject's owner and title, when `user_id` may see it and nobody blocks anybody.
+pub(super) async fn resolve_subject(
     pool: &PgPool,
     user_id: Uuid,
     subject_type: SocialSubjectType,

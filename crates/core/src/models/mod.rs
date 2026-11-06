@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+mod abuse;
+pub use abuse::*;
 mod moderation;
 pub use moderation::*;
 
@@ -172,6 +174,8 @@ pub struct PlatformSettings {
     pub max_import_bytes: Option<i64>,
     /// Max uploaded image body bytes (clamped to avatar/preview hard caps). `None` = hard caps only.
     pub max_upload_image_bytes: Option<i64>,
+    /// Where to send abuse and takedown reports. `None` until an admin sets it.
+    pub abuse_contact_email: Option<String>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -223,6 +227,18 @@ pub struct UpdatePlatformSettings {
     pub max_import_bytes: Option<Option<i64>>,
     #[serde(default, deserialize_with = "deserialize_option_option_i64")]
     pub max_upload_image_bytes: Option<Option<i64>>,
+    /// `Some(None)` clears; `Some(Some(email))` sets; omit = no change.
+    #[serde(default, deserialize_with = "deserialize_option_option_string")]
+    pub abuse_contact_email: Option<Option<String>>,
+}
+
+fn deserialize_option_option_string<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Some(Option::<String>::deserialize(deserializer)?))
 }
 
 fn deserialize_option_option_i64<'de, D>(

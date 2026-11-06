@@ -35,7 +35,10 @@ export function AcceptableUsePage(): ReactElement {
         </Text>
       </LegalSection>
       <LegalSection heading="4. Reporting">
-        <Text>To report abuse, contact the administrator of this instance.</Text>
+        <Text>
+          To report abuse, use Report on public lists, profiles and comments (you need to be signed in), or contact the
+          administrator of this instance at the abuse address shown in the report form once one is published.
+        </Text>
       </LegalSection>
     </LegalLayout>
   )
