@@ -88,9 +88,9 @@ git switch main && git pull
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-**Deploy and checks** run only when the repository variable `NOVA_DEPLOY_ENABLED=true` is set, with the secrets `NOVA_DEPLOY_HOST`, `NOVA_DEPLOY_USER`, `NOVA_DEPLOY_SSH_KEY`, and `NOVA_DEPLOY_LXC=linkdean-public` when SSH lands on the Nova host and the stack runs in the LXD guest. The host must be reachable from GitHub-hosted runners (public SSH, Tailscale, or a self-hosted runner). The deploy job runs in the `public-beta` environment, so required reviewers can be added there.
+**Deploy and checks** run only when the repository variable `NOVA_DEPLOY_ENABLED=true` is set. The deploy job runs on a self-hosted runner labelled `linkdean-nova` on the Nova host and uses `lxc exec linkdean-public` (no SSH secrets). Keep that label off pull_request jobs — this repo is public.
 
-Over SSH the job checks out the tag in `/opt/linkdean`, runs [`scripts/pull-update.sh`](scripts/pull-update.sh) for the changed apps, then [`scripts/verify.sh`](scripts/verify.sh), which fails the release unless:
+On the guest the job checks out the tag in `/opt/linkdean`, runs [`scripts/pull-update.sh`](scripts/pull-update.sh) for the changed apps, then [`scripts/verify.sh`](scripts/verify.sh), which fails the release unless:
 
 - app: the api container runs the tagged image, is healthy, `/api/health` reports the tag's version and `/api/ready` passes;
 - docs and site: Caddy serves the checked-out `index.html` for `docs.linkdean.app` and `linkdean.app`.
