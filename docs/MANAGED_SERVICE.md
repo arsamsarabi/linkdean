@@ -6,7 +6,7 @@ Linkdean stays self-hosted first: the same image runs both, and everything SaaS-
 
 ## Public beta on a home server
 
-Status: planning. Nothing is set up yet. Product readiness through roadmap **#9** (structured logs) is done; next is **#10 Marketing site**, then documentation site → membership tiers and pricing (explore) → this deploy.
+Status: in progress. Design and a deploy package are in-repo ([public-beta-homelab design](./superpowers/specs/2026-11-06-public-beta-homelab-design.md), [`deploy/public-beta/`](../deploy/public-beta/)). Next: LXD guest on Nova + Cloudflare Tunnel for `app.linkdean.app`, then Astro marketing (`apps/site`) and Docusaurus (`apps/docs`). Do not announce until the go-live checklist below is green. Membership pricing explore (#12) stays after the sites.
 
 **Shape.** A stand-alone Linkdean stack, separate from any personal instance, serving the whole `linkdean.app` domain:
 

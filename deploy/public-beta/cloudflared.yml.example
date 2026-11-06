@@ -1,0 +1,19 @@
+# Optional file-based config. Prefer TUNNEL_TOKEN in .env (Cloudflare Zero Trust → Tunnels).
+# If you use a credentials file instead of a token, mount it and point cloudflared at this file.
+#
+# tunnel: <TUNNEL_UUID>
+# credentials-file: /etc/cloudflared/credentials.json
+#
+# ingress:
+#   - hostname: linkdean.app
+#     service: http://caddy:80
+#   - hostname: www.linkdean.app
+#     service: http://caddy:80
+#   - hostname: docs.linkdean.app
+#     service: http://caddy:80
+#   - hostname: app.linkdean.app
+#     service: http://caddy:80
+#   - service: http_status:404
+
+# With TUNNEL_TOKEN, configure public hostnames in the Cloudflare dashboard to http://caddy:80
+# (same Docker network `edge`). One hostname per route is enough; Caddy routes by Host.
