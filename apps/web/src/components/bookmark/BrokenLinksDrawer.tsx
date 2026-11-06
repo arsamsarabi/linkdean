@@ -11,6 +11,7 @@ import {
   usePrefetchBrokenLinks,
   useRecheckBookmarkLink,
 } from '@/hooks'
+import { useDrawerSize } from '@/hooks/render'
 import type { Bookmark } from '@/schemas'
 
 type Props = {
@@ -28,6 +29,7 @@ function statusLabel(b: Bookmark): string {
 }
 
 export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElement {
+  const drawerSize = useDrawerSize()
   const broken = useBrokenLinks(opened)
   const recheck = useRecheckBookmarkLink()
   const remove = useDeleteBookmark()
@@ -62,7 +64,7 @@ export function BrokenLinksDrawer({ opened, onClose, onEdit }: Props): ReactElem
   const items = broken.data ?? []
 
   return (
-    <Drawer opened={opened} onClose={onClose} title="Broken links" position="right" size="md" padding="lg">
+    <Drawer opened={opened} onClose={onClose} title="Broken links" position="right" size={drawerSize} padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={broken.isLoading} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">

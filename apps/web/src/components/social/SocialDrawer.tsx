@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { Drawer } from '@mantine/core'
-import { useDrawerClosesOnEscape } from '@/hooks/render'
+import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import type { SocialSubjectType } from '@/schemas'
 import { SocialThread } from './SocialThread'
 
@@ -14,13 +14,14 @@ type Props = {
 
 export function SocialDrawer({ opened, onClose, subjectType, subjectId, title }: Props): ReactElement {
   const closeOnEscape = useDrawerClosesOnEscape()
+  const drawerSize = useDrawerSize()
   return (
     <Drawer
       opened={opened}
       onClose={onClose}
       closeOnEscape={closeOnEscape}
       position="right"
-      size="md"
+      size={drawerSize}
       title={title?.trim() || 'Shared activity'}
       padding="md"
     >

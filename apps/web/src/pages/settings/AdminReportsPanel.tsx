@@ -27,9 +27,10 @@ function AbuseContactField(): ReactElement | null {
   const changed = value.trim() !== saved
 
   return (
-    <Group align="flex-end" gap="sm" wrap="nowrap">
+    <Group align="flex-end" gap="sm" wrap="wrap">
       <TextInput
         flex={1}
+        miw={200}
         type="email"
         label="Abuse contact email"
         description="Shown in the report form so people can write to you. Leave blank to hide it."

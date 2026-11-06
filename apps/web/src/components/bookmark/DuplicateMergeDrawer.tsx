@@ -16,6 +16,7 @@ import { notifications } from '@mantine/notifications'
 import { IconCopy } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useDuplicates, useMergeDuplicateGroup, useSyncDuringRender } from '@/hooks'
+import { useDrawerSize } from '@/hooks/render'
 import type { Bookmark, DuplicateGroup } from '@/schemas'
 import { pickDefaultKeepId } from '@/services'
 
@@ -96,6 +97,7 @@ export function DuplicatesButton({ onClick }: { onClick: () => void }): ReactEle
 }
 
 export function DuplicateMergeDrawer({ opened, onClose }: Props): ReactElement {
+  const drawerSize = useDrawerSize()
   const dupes = useDuplicates(opened)
   const merge = useMergeDuplicateGroup()
   const [busyUrl, setBusyUrl] = useState<string | null>(null)
@@ -115,7 +117,7 @@ export function DuplicateMergeDrawer({ opened, onClose }: Props): ReactElement {
   const groups = dupes.data?.groups ?? []
 
   return (
-    <Drawer opened={opened} onClose={onClose} title="Duplicate URLs" position="right" size="md" padding="lg">
+    <Drawer opened={opened} onClose={onClose} title="Duplicate URLs" position="right" size={drawerSize} padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={dupes.isLoading} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">

@@ -3,6 +3,7 @@ import { ActionIcon, Badge, Box, Drawer, Group, SegmentedControl, Skeleton, Stac
 import { IconHistory } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useActivity, usePrefetchActivity } from '@/hooks'
+import { useDrawerSize } from '@/hooks/render'
 import type { ActivityAction, ActivitySubjectType } from '@/schemas'
 
 type Props = {
@@ -40,6 +41,7 @@ type SubjectFilter = 'all' | ActivitySubjectType
 type ActionFilter = 'all' | ActivityAction
 
 export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
+  const drawerSize = useDrawerSize()
   const [subject, setSubject] = useState<SubjectFilter>('all')
   const [action, setAction] = useState<ActionFilter>('all')
   const list = useActivity(opened, { subjectType: subject, action })
@@ -50,7 +52,7 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
   const swappingFilters = list.isFetching && list.isPlaceholderData
 
   return (
-    <Drawer opened={opened} onClose={onClose} position="right" size="md" title="History" padding="md">
+    <Drawer opened={opened} onClose={onClose} position="right" size={drawerSize} title="History" padding="md">
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           Personal create / edit / delete log

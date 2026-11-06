@@ -25,7 +25,7 @@ import {
   useUploadBookmarkPreview,
   useVaults,
 } from '@/hooks'
-import { useDrawerClosesOnEscape } from '@/hooks/render'
+import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import { categorySelectData, withWebScheme, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { emptyDraft, type BookmarkDraft } from '@/services'
@@ -53,6 +53,7 @@ export function BookmarkDrawer({
   discussion = false,
 }: Props): ReactElement {
   const closeOnEscape = useDrawerClosesOnEscape()
+  const drawerSize = useDrawerSize()
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
   const [pendingPreview, setPendingPreview] = useState<Blob | null>(null)
   const [tab, setTab] = useState<string | null>('details')
@@ -267,7 +268,7 @@ export function BookmarkDrawer({
       onClose={onClose}
       title={editing ? 'Edit bookmark' : 'Add bookmark'}
       position="right"
-      size="md"
+      size={drawerSize}
       padding="lg"
     >
       {showDiscussion && draft.id ? (

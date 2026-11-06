@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Button, Checkbox, Group, Stack, Table, Text, ThemeIcon, Title } from '@mantine/core'
+import { Button, Checkbox, Group, ScrollArea, Stack, Table, Text, ThemeIcon, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconRestore, IconTrash } from '@tabler/icons-react'
 import { ConfirmModal, EmptyState, MASCOT, QueryErrorAlert } from '@/components'
@@ -126,69 +126,71 @@ export function TrashPage(): ReactElement {
           description="Deleted bookmarks, folders, and dashboards land here."
         />
       ) : (
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th w={40}>
-                <Checkbox
-                  aria-label="Select all"
-                  checked={allSelected}
-                  indeterminate={selected.size > 0 && !allSelected}
-                  onChange={() => setSelected(allSelected ? new Set() : new Set(allKeys))}
-                />
-              </Table.Th>
-              <Table.Th>Type</Table.Th>
-              <Table.Th>Title</Table.Th>
-              <Table.Th>Deleted</Table.Th>
-              <Table.Th w={200} />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {items.map((item) => {
-              const key = itemKey(item)
-              return (
-                <Table.Tr key={key}>
-                  <Table.Td>
-                    <Checkbox
-                      aria-label={`Select ${item.title}`}
-                      checked={selected.has(key)}
-                      onChange={() => toggle(key)}
-                    />
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{kindLabel(item.kind)}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" fw={500} lineClamp={1}>
-                      {item.title || 'Untitled'}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c="dimmed">
-                      {new Date(item.deleted_at).toLocaleString()}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs" justify="flex-end">
-                      <Button
-                        size="compact-xs"
-                        variant="light"
-                        leftSection={<IconRestore size={14} stroke={1.5} />}
-                        loading={restore.isPending}
-                        onClick={() => void onRestore(item)}
-                      >
-                        Restore
-                      </Button>
-                      <Button size="compact-xs" color="red" variant="subtle" onClick={() => setPurgeConfirm([item])}>
-                        Delete forever
-                      </Button>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              )
-            })}
-          </Table.Tbody>
-        </Table>
+        <ScrollArea type="scroll" offsetScrollbars>
+          <Table striped highlightOnHover miw={560}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th w={40}>
+                  <Checkbox
+                    aria-label="Select all"
+                    checked={allSelected}
+                    indeterminate={selected.size > 0 && !allSelected}
+                    onChange={() => setSelected(allSelected ? new Set() : new Set(allKeys))}
+                  />
+                </Table.Th>
+                <Table.Th>Type</Table.Th>
+                <Table.Th>Title</Table.Th>
+                <Table.Th>Deleted</Table.Th>
+                <Table.Th w={200} />
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {items.map((item) => {
+                const key = itemKey(item)
+                return (
+                  <Table.Tr key={key}>
+                    <Table.Td>
+                      <Checkbox
+                        aria-label={`Select ${item.title}`}
+                        checked={selected.has(key)}
+                        onChange={() => toggle(key)}
+                      />
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{kindLabel(item.kind)}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" fw={500} lineClamp={1}>
+                        {item.title || 'Untitled'}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {new Date(item.deleted_at).toLocaleString()}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs" justify="flex-end" wrap="nowrap">
+                        <Button
+                          size="compact-xs"
+                          variant="light"
+                          leftSection={<IconRestore size={14} stroke={1.5} />}
+                          loading={restore.isPending}
+                          onClick={() => void onRestore(item)}
+                        >
+                          Restore
+                        </Button>
+                        <Button size="compact-xs" color="red" variant="subtle" onClick={() => setPurgeConfirm([item])}>
+                          Delete forever
+                        </Button>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                )
+              })}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
       )}
 
       <ConfirmModal
