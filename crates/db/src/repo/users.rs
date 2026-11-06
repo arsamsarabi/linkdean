@@ -228,6 +228,7 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
         email_verified: user.email_verified_at.is_some(),
         sso_connected: user.oidc_subject.is_some(),
         sso_provider: user.sso_provider(),
+        deletion_scheduled_at: user.deletion_scheduled_at,
     })
 }
 

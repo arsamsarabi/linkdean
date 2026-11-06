@@ -1,6 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Query, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -146,12 +147,19 @@ async fn import(
 async fn export(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    session: VaultSession,
     Query(q): Query<ExportQuery>,
 ) -> ApiResult<impl axum::response::IntoResponse> {
-    let (cats, bms, dashboards) = db::export_data(&state.pool, user.id).await?;
+    // Vault items are in the file, as plaintext, only for vaults this session has unlocked.
+    let keyring = state.vault_keyring(&session, user.id).await;
+    let (mut cats, bms, dashboards) = db::export_data(&state.pool, user.id, &keyring).await?;
     let format = q.format.to_ascii_lowercase();
     match format.as_str() {
         "html" | "netscape" => {
+            // Locked, the HTML file keeps leaving vault folders out, as it always has.
+            if keyring.is_empty() {
+                cats.retain(|c| !c.is_vault);
+            }
             let html = export_netscape(&bms, &cats);
             Ok((
                 [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],

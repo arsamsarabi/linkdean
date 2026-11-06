@@ -58,6 +58,8 @@ impl ParsedImport {
     }
 }
 
+/// Writes every bookmark and folder it is given. Callers decide what is in the file: vault
+/// items are only there when the caller passed them (an unlocked vault).
 pub fn export_netscape(bookmarks: &[BookmarkExport], categories: &[CategoryExport]) -> String {
     let mut out = String::from(
         "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n\
@@ -68,7 +70,7 @@ pub fn export_netscape(bookmarks: &[BookmarkExport], categories: &[CategoryExpor
          <DL><p>\n",
     );
 
-    let exported: Vec<&CategoryExport> = categories.iter().filter(|c| !c.is_vault).collect();
+    let exported: Vec<&CategoryExport> = categories.iter().collect();
     let known: HashSet<Uuid> = exported.iter().map(|c| c.id).collect();
     // A folder whose parent is not in the file (trashed, or someone else's) starts a tree.
     let roots = exported
@@ -78,7 +80,7 @@ pub fn export_netscape(bookmarks: &[BookmarkExport], categories: &[CategoryExpor
         write_category_html(&mut out, cat, &exported, bookmarks, 1);
     }
     // A bookmark in no exported folder, such as one only in a shared folder, goes at the top.
-    for b in bookmarks.iter().filter(|b| !b.is_vault) {
+    for b in bookmarks {
         if !b.all_category_ids().iter().any(|id| known.contains(id)) {
             write_bookmark_html(&mut out, b, 1);
         }
@@ -105,7 +107,7 @@ fn write_category_html(
     // A bookmark in several folders appears in each.
     for b in bookmarks
         .iter()
-        .filter(|b| !b.is_vault && b.all_category_ids().contains(&cat.id))
+        .filter(|b| b.all_category_ids().contains(&cat.id))
     {
         write_bookmark_html(out, b, depth + 1);
     }
@@ -524,7 +526,7 @@ mod tests {
     }
 
     #[test]
-    fn netscape_round_trip_skips_vault_on_export() {
+    fn netscape_export_writes_the_vault_bookmarks_it_is_given() {
         let cats = vec![CategoryExport {
             id: Uuid::nil(),
             parent_id: None,
@@ -558,10 +560,9 @@ mod tests {
         ];
         let html = export_netscape(&bms, &cats);
         assert!(html.contains("https://a.example"));
-        assert!(!html.contains("secret.example"));
+        assert!(html.contains("https://secret.example"));
         let parsed = parse_netscape(&html).unwrap();
-        assert_eq!(parsed.bookmarks.len(), 1);
-        assert_eq!(parsed.bookmarks[0].bookmark.url, "https://a.example");
+        assert_eq!(parsed.bookmarks.len(), 2);
     }
 
     #[test]

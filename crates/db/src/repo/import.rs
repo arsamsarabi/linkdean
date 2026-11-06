@@ -179,9 +179,12 @@ pub async fn apply_parsed_import_counted(
     Ok(())
 }
 
+/// Everything the user owns. Vault bookmarks are included, as plaintext, for the vaults `keyring`
+/// has unlocked; with an empty keyring they are left out.
 pub async fn export_data(
     pool: &PgPool,
     user_id: Uuid,
+    keyring: &VaultKeyring,
 ) -> Result<(
     Vec<CategoryExport>,
     Vec<BookmarkExport>,
@@ -201,12 +204,14 @@ pub async fn export_data(
         })
         .collect::<Vec<_>>();
 
-    let bookmarks =
-        list_bookmarks(pool, user_id, None, false, &VaultKeyring::default(), false).await?;
+    let include_vault = !keyring.is_empty();
+    // Vault bookmarks of a vault that is still locked are dropped by `list_bookmarks`.
+    let bookmarks = list_bookmarks(pool, user_id, None, include_vault, keyring, false).await?;
     let owned_ids: HashSet<Uuid> = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT id FROM bookmarks WHERE owner_user_id = $1 AND is_vault = FALSE",
+        "SELECT id FROM bookmarks WHERE owner_user_id = $1 AND (is_vault = FALSE OR $2)",
     )
     .bind(user_id)
+    .bind(include_vault)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?
@@ -228,7 +233,7 @@ pub async fn export_data(
                 category_id: category_ids.first().copied().or(b.category_id),
                 category_ids,
                 tags: b.tags,
-                is_vault: false,
+                is_vault: b.is_vault,
                 is_favorite: b.is_favorite,
                 is_unread: b.is_unread,
                 is_pinned: b.is_pinned,

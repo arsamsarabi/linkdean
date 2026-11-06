@@ -21,10 +21,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 4. **Page the library list** (L). **Done:** `GET /bookmarks` returns a keyset page (`items`, `next_cursor`, `total`) with folder / tag / flag / since / sort filters; `GET /bookmarks/ids` backs select-all. The SPA uses infinite scroll; Explorer loads the open folder's page. Remaining: push the keyset into SQL (today the filtered set is paged in memory — see `bookmark_page.rs`), and restore Explorer folder counts without a full fetch.
 
-5. **Account deletion and full export** (M). People can export bookmarks today, but cannot close their account themselves. Public users expect both, and privacy law (GDPR, UK GDPR) requires erasure on request.
-   - **Delete account** in Settings, confirmed with the password or a fresh OIDC sign-in, with a short grace period before data is purged.
-   - Deletion removes bookmarks, vaults, files, shares, sessions, API keys and search entries, and hands off or deletes shared folders the person owns.
-   - Export everything the person owns in one download, including vault items while the vault is unlocked.
+5. **Account deletion and full export** (M). **Done:** Settings → General danger zone schedules deletion (email confirm + password when local; 7-day grace; cancel anytime before purge). Hourly maintenance hard-deletes the user row (FK cascade) and cleans Meili + preview assets. Export includes vault items as plaintext while the vault is unlocked. Owned shared folders are deleted (no hand-off). Remaining: fresh OIDC step-up for SSO-only accounts; last-admin check at purge as well as schedule.
 
 6. **Legal pages and beta notice** (S). A public service needs terms people agree to before sign-up.
    - Terms of service, privacy policy (what is stored, where, for how long, who processes it, such as the email provider and Cloudflare) and an acceptable use policy.

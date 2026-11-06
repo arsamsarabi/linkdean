@@ -18,6 +18,47 @@ pub async fn run(state: AppState) {
     }
 }
 
+/// Hard-deletes accounts whose deletion grace period has ended, then drops what lives outside
+/// Postgres: search entries, preview files and the avatar. One failing account does not stop
+/// the rest; a failed purge is retried on the next tick because the schedule stays set.
+// Known issue: the last-admin check runs when deletion is scheduled, not here, so admins who
+// each schedule deletion while another admin exists can leave the instance with none. Fix: re-check
+// under the `user_bans` lock in `purge_account` and skip the purge.
+async fn purge_deleted_accounts(state: &AppState) {
+    let due = match linkdean_db::list_users_due_for_deletion(&state.pool).await {
+        Ok(due) => due,
+        Err(e) => {
+            tracing::warn!(error = %e, "listing accounts due for deletion failed");
+            return;
+        }
+    };
+    let preview_dir = Path::new(&state.cfg.preview_dir);
+    for user_id in due {
+        let bookmark_ids = match linkdean_db::purge_account(&state.pool, user_id).await {
+            Ok(ids) => ids,
+            Err(e) => {
+                tracing::warn!(%user_id, error = %e, "account purge failed");
+                continue;
+            }
+        };
+        // Keys of the deleted user's sessions are unreachable now, but free the memory.
+        state.clear_vault_keys(user_id).await;
+        for id in &bookmark_ids {
+            if let Err(e) = state.search.delete_bookmark(*id).await {
+                tracing::warn!(bookmark_id = %id, error = %e, "meili delete on account purge failed");
+            }
+            linkdean_worker::purge_preview_assets(preview_dir, *id).await;
+        }
+        let avatar = state.avatar_path(user_id);
+        if let Err(e) = tokio::fs::remove_file(&avatar).await {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                tracing::warn!(%user_id, error = %e, "avatar delete on account purge failed");
+            }
+        }
+        tracing::info!(%user_id, bookmarks = bookmark_ids.len(), "purged deleted account");
+    }
+}
+
 async fn run_once(state: &AppState) {
     match linkdean_db::purge_expired_trash(&state.pool).await {
         Ok(purged) => {
@@ -40,6 +81,8 @@ async fn run_once(state: &AppState) {
         }
         Err(e) => tracing::warn!(error = %e, "trash retention purge failed"),
     }
+
+    purge_deleted_accounts(state).await;
 
     match linkdean_db::purge_expired_sessions(&state.pool).await {
         Ok(0) => {}

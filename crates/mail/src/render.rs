@@ -40,6 +40,7 @@ const TEMPLATES: &[Template] = &[
     template!("share_invite"),
     template!("share_invite_pending"),
     template!("notification"),
+    template!("account_deletion_scheduled"),
 ];
 const LAYOUT: &str = include_str!("../templates/layout.mjml");
 const MACROS: &str = include_str!("../templates/macros.mjml");
