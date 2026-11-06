@@ -126,3 +126,7 @@ html, body { overflow-x: clip; }
 .sr-only { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
 
 @media (max-width: 639px) { .footer.closing .close__word { font-size: 17vw; } }
+
+/* Two-screen sections fill their screens: taller panels where the cards stack */
+@media (min-width: 640px) and (max-width: 1279px) { #features .panel { --p-h: max(420px, 43svh); } }
+@media (max-width: 639px) { #private .panel { --p-h: 460px; } }
