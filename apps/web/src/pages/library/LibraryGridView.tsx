@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react'
 import { Button, Group, SimpleGrid, Stack, Text } from '@mantine/core'
-import { IconBookmark, IconBookmarkPlus, IconFolder, IconSearch, IconX } from '@tabler/icons-react'
+import { IconBookmarkPlus, IconFolder, IconX } from '@tabler/icons-react'
 import {
   BookmarkCard,
   BookmarkGridSkeleton,
   EmptyState,
   InfiniteScrollSentinel,
+  MASCOT,
   type BookmarkCardItem,
 } from '@/components'
 import { FOLDER_ALL } from '@/services'
@@ -42,7 +43,7 @@ export function LibraryGridView(): ReactElement {
         <BookmarkGridSkeleton />
       ) : lib.emptyLibrary ? (
         <EmptyState
-          icon={<IconBookmark size={28} stroke={1.5} />}
+          illustration={{ src: MASCOT.standing }}
           title={lib.canCreateInContext ? 'No bookmarks yet' : 'Nothing here yet'}
           description={
             lib.scope === 'vault'
@@ -63,7 +64,7 @@ export function LibraryGridView(): ReactElement {
         />
       ) : lib.emptyFiltered && lib.folderCat && !lib.searching && !lib.filterActive ? (
         <EmptyState
-          icon={<IconFolder size={28} stroke={1.5} />}
+          illustration={{ src: MASCOT.thinking }}
           title="This folder is empty"
           description={
             lib.canCreateInContext
@@ -78,7 +79,7 @@ export function LibraryGridView(): ReactElement {
         />
       ) : lib.emptyFiltered ? (
         <EmptyState
-          icon={<IconSearch size={28} stroke={1.5} />}
+          illustration={{ src: MASCOT.lookingUp }}
           title="Nothing matched"
           description="Try a different search or clear filters."
           action={

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { Center, Loader, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useNavigate } from '@tanstack/react-router'
-import { AvatarCropModal, RecoveryKeyModal } from '@/components'
+import { AvatarCropModal, MASCOT, MascotFigure, RecoveryKeyModal } from '@/components'
 import {
   useBootstrap,
   useCompleteOnboarding,
@@ -184,6 +184,9 @@ export function OnboardingPage(): ReactElement {
 
   return (
     <Stack maw={760} mx="auto" mt={48} px="md" pb={48} gap="lg" className={motion.fadeIn}>
+      <Center>
+        <MascotFigure src={MASCOT.standing} width={160} />
+      </Center>
       <Stack gap={6}>
         <Title order={1} c="violet">
           Welcome to Linkdean

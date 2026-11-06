@@ -1,0 +1,30 @@
+.plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 42%,
+    color-mix(in srgb, var(--mantine-color-gray-0) 88%, transparent) 0%,
+    color-mix(in srgb, var(--mantine-color-violet-1) 55%, transparent) 45%,
+    transparent 72%
+  );
+  padding: 1.25rem;
+}
+
+:global([data-mantine-color-scheme='dark']) .plate {
+  background: radial-gradient(
+    circle at 50% 42%,
+    color-mix(in srgb, var(--mantine-color-gray-2) 28%, transparent) 0%,
+    color-mix(in srgb, var(--mantine-color-violet-8) 35%, transparent) 48%,
+    transparent 74%
+  );
+}
+
+.img {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  pointer-events: none;
+  user-select: none;
+}

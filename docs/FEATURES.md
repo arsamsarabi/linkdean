@@ -191,6 +191,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 ## Surfaces
 
+- Mascot (Dean) on moment screens only: empty library / folder / search, empty Deleted, fully empty Shared, 404, onboarding, and the wide sign-in panel. Soft light backdrop; decorative (`alt=""`). Not in header, sidebar, cards, or settings.
 - Drawers go full-width on phones (`sm` and up keep `md`/`lg`); Deleted items table scrolls horizontally; app shell padding tightens on small screens.
 
 | Surface | Role |
