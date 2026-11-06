@@ -57,7 +57,9 @@ Optional screenshots:
 docker compose --profile chrome up -d
 ```
 
-Smoke: `https://app.linkdean.app/api/health` and the app shell. Apex/docs show placeholders until `apps/site` / `apps/docs` builds replace `static/`.
+Smoke: `https://app.linkdean.app/api/health` and the app shell.
+
+Static sites: `pnpm --dir apps/site build` publishes the Astro marketing site into `static/site/` (served at `linkdean.app`). `docs.linkdean.app` shows a placeholder until the `apps/docs` build replaces `static/docs/`.
 
 **Do not seed accounts.** First admin is onboarding on an empty instance. Leave `BOOTSTRAP_TOKEN` for the operator if needed.
 
