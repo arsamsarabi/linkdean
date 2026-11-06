@@ -4,6 +4,9 @@
 
 ### Added
 
+- Public documentation site at [docs.linkdean.app](https://docs.linkdean.app) (`apps/docs`, synced from `docs/`).
+- Public marketing site at [linkdean.app](https://linkdean.app) (`apps/site`).
+- Homelab public-beta deploy package (`deploy/public-beta/`) for the Nova LXD guest + Cloudflare Tunnel.
 - Contributing guide, security policy, code of conduct and pull request template.
 
 ### Fixed

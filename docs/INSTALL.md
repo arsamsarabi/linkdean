@@ -2,7 +2,7 @@
 
 This guide runs a released Linkdean image from the GitHub Container Registry with Docker Compose. You write two files, `.env` and `docker-compose.yml`, and nothing is built on your machine. A third file, `chrome-seccomp.json`, is only needed if you want page screenshots.
 
-For operations detail (limits, reverse proxies, email providers, single sign-on, backups) see [SELF_HOSTED.md](SELF_HOSTED.md). To build the image from a checkout instead, see the README.
+Published copy: [docs.linkdean.app](https://docs.linkdean.app/docs/self-hosting/install) (synced from this file). For operations detail (limits, reverse proxies, email providers, single sign-on, backups) see [SELF_HOSTED.md](SELF_HOSTED.md). To build the image from a checkout instead, see the README.
 
 ## Requirements
 

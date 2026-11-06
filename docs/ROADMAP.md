@@ -31,24 +31,17 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 9. **Structured logs** (S–M). **Done:** `LOG_FORMAT=text|json` (default text) for stdout; optional `LOG_FILE` appends JSONL regardless of stdout format; every response has `X-Request-Id` (valid inbound ids kept, else a UUID), with the same id on the HTTP request span. Remaining: log rotation stays with the operator; OpenTelemetry exporters stay in Backlog.
 
-10. **Marketing site** (M). Right after the product is ready for a public beta. A static site at `linkdean.app`: what Linkdean is, features, screenshots, a "self-host it for free" path to the install guide and GitHub, sign-up, and links to the legal pages and status.
-    - Static and cached at Cloudflare, so it costs the server nothing.
-    - Keep it in this repository (for example `apps/site`) so features and docs stay in step.
+10. **Marketing site** (M). **Done (in repo):** Astro site in `apps/site`, published to `deploy/public-beta/static/site` for `linkdean.app` — product pitch, features, self-host CTA to the docs site, sign-up / sign-in, legal + GitHub links. Static and cached at Cloudflare. Remaining: keep guest `static/site` in sync when the marketing PR lands; abuse contact copy before announce; pricing section waits on item 12.
 
-11. **Documentation site** (M). Immediately after the marketing site. A [Docusaurus](https://docusaurus.io/) site at `docs.linkdean.app`, built from the existing docs. Needed at launch so public users and self-hosters have one place to read:
-    - Self-hosting, with every environment variable and what it does.
-    - Development setup.
-    - Features list.
-    - API reference, from the OpenAPI spec in **API platform** (added once that ships).
-    - FAQ and code examples.
+11. **Documentation site** (M). **Done:** [Docusaurus](https://docusaurus.io/) at [`apps/docs`](../apps/docs), live at [docs.linkdean.app](https://docs.linkdean.app). Builds from repo `docs/` (Install, Operations / development setup, Features, Architecture) via `pnpm sync` + `pnpm build` into `deploy/public-beta/static/docs`. Remaining: API reference once **API platform** ships OpenAPI; optional FAQ pages.
 
 12. **Membership tiers and pricing** (M, explore). Right after the marketing and documentation sites. Decide what the hosted service charges for, before anyone pays and before Stripe or plan gates land in code.
     - Start from the plan sketch in the [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
     - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats).
     - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
-13. **Public beta on the homelab** (S). Run the public instance at `app.linkdean.app` as a stand-alone stack on the home server, with the marketing and documentation sites beside it. Plan and checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server).
-    - Isolated Compose project (own networks, volumes and secrets; preferably its own VM), Cloudflare Tunnel instead of open ports, a firewall rule keeping Chrome off the LAN, a transactional email provider, off-site backups with a tested restore, and an external uptime check.
+13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App health and docs site are live. Plan and checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server).
+    - Still open before announce: transactional SMTP + SPF/DKIM/DMARC, Turnstile + verified-email / disposable blocks, Chrome off the LAN, off-site backups with a tested restore, external uptime, ISP terms confirmation, marketing static sync on the guest, abuse contact on the marketing site.
 
 ---
 

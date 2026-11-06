@@ -6,7 +6,7 @@ Linkdean stays self-hosted first: the same image runs both, and everything SaaS-
 
 ## Public beta on a home server
 
-Status: in progress. Design and a deploy package are in-repo ([public-beta-homelab design](./superpowers/specs/2026-11-06-public-beta-homelab-design.md), [`deploy/public-beta/`](../deploy/public-beta/)). Next: LXD guest on Nova + Cloudflare Tunnel for `app.linkdean.app`, then Astro marketing (`apps/site`) and Docusaurus (`apps/docs`). Do not announce until the go-live checklist below is green. Membership pricing explore (#12) stays after the sites.
+Status: in progress. Public app and docs are live on Nova via LXD + Cloudflare Tunnel (`app.linkdean.app`, [docs.linkdean.app](https://docs.linkdean.app)). Docs source: [`apps/docs`](../apps/docs) (Docusaurus → `deploy/public-beta/static/docs`). Marketing: [`apps/site`](../apps/site) (Astro → `deploy/public-beta/static/site`). Next: finish go-live hardening (SMTP, Turnstile, backups, uptime, abuse contact) — do **not** announce until the checklist below is green. Membership pricing explore (#12) stays after that. Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md); deploy: [`deploy/public-beta/`](../deploy/public-beta/).
 
 **Shape.** A stand-alone Linkdean stack, separate from any personal instance, serving the whole `linkdean.app` domain:
 

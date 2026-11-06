@@ -1,6 +1,6 @@
 # Self-host Linkdean
 
-This page covers the production stack in `deploy/docker/docker-compose.yml`. To install a released image instead, start with [INSTALL.md](INSTALL.md). For local development, see [Development setup](#development-setup) below and the README.
+This page covers the production stack in `deploy/docker/docker-compose.yml`. Published copy: [docs.linkdean.app](https://docs.linkdean.app/docs/self-hosting/operations) (synced from this file). To install a released image instead, start with [INSTALL.md](INSTALL.md). For local development, see [Development setup](#development-setup) below and the README.
 
 ## Quick start
 

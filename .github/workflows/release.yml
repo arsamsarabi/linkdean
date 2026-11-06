@@ -92,4 +92,4 @@ jobs:
               gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
             done
           gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes $prerelease \
-            --notes "Image: \`$image\`. Install and upgrade guide: [docs/INSTALL.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/docs/INSTALL.md)."
+            --notes "Image: \`$image\`. Docs: [docs.linkdean.app](https://docs.linkdean.app). Install guide: [docs/INSTALL.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/docs/INSTALL.md)."

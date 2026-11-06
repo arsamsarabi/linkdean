@@ -223,19 +223,23 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 
 ## Docs
 
+Published site: [docs.linkdean.app](https://docs.linkdean.app) (built from the files below via `apps/docs`).
+
 | Doc | Contents |
 | --- | --- |
+| [Install](docs/INSTALL.md) | Released image, Compose, environment variables |
+| [Self-host](docs/SELF_HOSTED.md) | Production secrets, reverse proxy, limits, upgrades, backup, development setup |
 | [Features](docs/FEATURES.md) | What the app can do today |
 | [Architecture](docs/ARCHITECTURE.md) | Stack, domain model, auth, vault vs hidden |
 | [Roadmap](docs/ROADMAP.md) | Planned milestones / backlog |
-| [Self-host](docs/SELF_HOSTED.md) | Production secrets, reverse proxy, limits, upgrades, backup |
+| [Managed service](docs/MANAGED_SERVICE.md) | Homelab public beta, VPS, GCP notes |
 | [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---
 
 ## Roadmap
 
-**Next up:** browser extension (save tab / file to category). Backlog includes search filters, notification digests, PWA, and more. Far out: native apps, archive/downloads, gamification.
+**Next up (before announce):** go-live hardening on the homelab beta — SMTP + DNS auth, Turnstile, backups, uptime ([ROADMAP](docs/ROADMAP.md) #13 / [MANAGED_SERVICE](docs/MANAGED_SERVICE.md)). After that: membership pricing explore (#12), then post-release work (browser extension, …).
 
 - Capabilities: [docs/FEATURES.md](docs/FEATURES.md)
 - Plan: [docs/ROADMAP.md](docs/ROADMAP.md)

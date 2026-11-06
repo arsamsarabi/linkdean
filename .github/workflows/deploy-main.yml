@@ -1,0 +1,267 @@
+name: Deploy main
+
+# On push to main, publish only the deployables whose sources changed.
+# - App → GHCR tags :main and :sha-<short> (versioned :x.y.z / :latest stay on Release tags)
+# - Docs / site → rebuild and assert committed static under deploy/public-beta/static/ is current
+# Optional Nova roll-forward: set repository variable NOVA_DEPLOY_ENABLED=true and secrets
+# NOVA_DEPLOY_HOST, NOVA_DEPLOY_USER, NOVA_DEPLOY_SSH_KEY (see deploy/public-beta/README.md).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_app:
+        description: Force app image publish
+        type: boolean
+        default: false
+      force_docs:
+        description: Force docs static check
+        type: boolean
+        default: false
+      force_site:
+        description: Force site static check
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: Detect changed deployables
+    runs-on: ubuntu-24.04
+    outputs:
+      app: ${{ steps.gate.outputs.app }}
+      docs: ${{ steps.gate.outputs.docs }}
+      site: ${{ steps.gate.outputs.site }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v4
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            app:
+              - 'crates/**'
+              - 'apps/web/**'
+              - 'migrations/**'
+              - 'deploy/docker/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            docs:
+              - 'apps/docs/**'
+              - 'docs/INSTALL.md'
+              - 'docs/SELF_HOSTED.md'
+              - 'docs/FEATURES.md'
+              - 'docs/ARCHITECTURE.md'
+              - 'brand/exports/web/favicon.ico'
+              - 'brand/exports/web/favicon.svg'
+              - 'brand/exports/linkdean-symbol-color.svg'
+            site:
+              - 'apps/site/**'
+              - 'brand/GUIDELINES.md'
+              - 'brand/final/**'
+              - 'brand/exports/**'
+              - 'apps/web/public/mascot/**'
+              - 'apps/web/public/fonts/**'
+
+      - id: gate
+        env:
+          EVENT: ${{ github.event_name }}
+          FORCE_APP: ${{ inputs.force_app }}
+          FORCE_DOCS: ${{ inputs.force_docs }}
+          FORCE_SITE: ${{ inputs.force_site }}
+          FILTER_APP: ${{ steps.filter.outputs.app }}
+          FILTER_DOCS: ${{ steps.filter.outputs.docs }}
+          FILTER_SITE: ${{ steps.filter.outputs.site }}
+        run: |
+          set_out() { echo "$1=$2" >> "$GITHUB_OUTPUT"; echo "$1=$2"; }
+          if [ "$EVENT" = workflow_dispatch ]; then
+            set_out app "$FORCE_APP"
+            set_out docs "$FORCE_DOCS"
+            set_out site "$FORCE_SITE"
+            # If nothing forced, rebuild all (manual full refresh).
+            if [ "$FORCE_APP$FORCE_DOCS$FORCE_SITE" = "falsefalsefalse" ]; then
+              set_out app true
+              set_out docs true
+              set_out site true
+            fi
+          else
+            set_out app "${FILTER_APP:-false}"
+            set_out docs "${FILTER_DOCS:-false}"
+            set_out site "${FILTER_SITE:-false}"
+          fi
+
+  publish-app:
+    name: Publish app image (main)
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkdean" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=main
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=Linkdean
+            org.opencontainers.image.description=Self-hosted bookmarks server (main branch)
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-docs:
+    name: Docs static (Linux build artifact)
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/docs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/docs/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/docs/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # Hashes differ across OS; ship the Linux build as the deployable artifact.
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-site-static
+          path: deploy/public-beta/static/docs
+          if-no-files-found: error
+
+  publish-site:
+    name: Site static (build + committed sync)
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/site/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/site/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Committed build is current
+        working-directory: .
+        run: |
+          git status --porcelain -- deploy/public-beta/static/site
+          test -z "$(git status --porcelain -- deploy/public-beta/static/site)"
+
+  deploy-nova:
+    name: Roll forward Nova guest (optional)
+    needs: [changes, publish-app, publish-docs, publish-site]
+    # Run when any publish job succeeded, or when only static changed and those jobs ran.
+    # skipped needed jobs are treated as success by GitHub when using always() carefully —
+    # require at least one of app/docs/site true and no failed publishes.
+    if: >
+      always() &&
+      vars.NOVA_DEPLOY_ENABLED == 'true' &&
+      (needs.changes.outputs.app == 'true' || needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true') &&
+      (needs.publish-app.result == 'success' || needs.publish-app.result == 'skipped') &&
+      (needs.publish-docs.result == 'success' || needs.publish-docs.result == 'skipped') &&
+      (needs.publish-site.result == 'success' || needs.publish-site.result == 'skipped') &&
+      (needs.publish-app.result == 'success' || needs.publish-docs.result == 'success' || needs.publish-site.result == 'success')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require deploy secrets
+        env:
+          HOST: ${{ secrets.NOVA_DEPLOY_HOST }}
+          USER: ${{ secrets.NOVA_DEPLOY_USER }}
+          KEY: ${{ secrets.NOVA_DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$USER" ] || [ -z "$KEY" ]; then
+            echo "::error::NOVA_DEPLOY_ENABLED is true but NOVA_DEPLOY_HOST / NOVA_DEPLOY_USER / NOVA_DEPLOY_SSH_KEY are missing"
+            exit 1
+          fi
+
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.NOVA_DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.NOVA_DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Run guest update script
+        env:
+          HOST: ${{ secrets.NOVA_DEPLOY_HOST }}
+          USER: ${{ secrets.NOVA_DEPLOY_USER }}
+          # Optional. When set, SSH lands on the Nova host and runs inside this LXD instance.
+          LXC: ${{ secrets.NOVA_DEPLOY_LXC }}
+          UPDATE_APP: ${{ needs.changes.outputs.app }}
+          UPDATE_DOCS: ${{ needs.changes.outputs.docs }}
+          UPDATE_SITE: ${{ needs.changes.outputs.site }}
+        run: |
+          remote_bash() {
+            if [ -n "${LXC:-}" ]; then
+              ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+                "$USER@$HOST" "lxc exec $LXC -- bash -s"
+            else
+              ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+                "$USER@$HOST" "bash -s"
+            fi
+          }
+          # Repo at /opt/linkdean on the guest; compose project deploy/public-beta.
+          remote_bash <<EOF
+          set -euo pipefail
+          cd /opt/linkdean
+          git fetch origin main
+          git pull --ff-only origin main
+          UPDATE_APP=$UPDATE_APP UPDATE_DOCS=$UPDATE_DOCS UPDATE_SITE=$UPDATE_SITE \
+            bash deploy/public-beta/scripts/pull-update.sh
+          EOF
