@@ -10,6 +10,7 @@ import {
   useUpdateDashboardPendingShare,
   useUpdateDashboardShare,
 } from '@/hooks'
+import { useDrawerSize } from '@/hooks/render'
 import type { ShareAccess } from '@/schemas'
 import { claimLinkFrom, inviteEmailStatus, inviteToast, type InviteEmailStatus } from '@/services'
 
@@ -21,6 +22,7 @@ type Props = {
 }
 
 export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onClose }: Props): ReactElement {
+  const drawerSize = useDrawerSize()
   const [email, setEmail] = useState('')
   const [access, setAccess] = useState<ShareAccess>('read')
 
@@ -59,7 +61,7 @@ export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onCl
       onClose={onClose}
       title={`Share “${dashboardTitle}”`}
       position="right"
-      size="md"
+      size={drawerSize}
       padding="lg"
     >
       <ShareInvitePanel

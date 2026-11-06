@@ -191,6 +191,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 ## Surfaces
 
+- Drawers go full-width on phones (`sm` and up keep `md`/`lg`); Deleted items table scrolls horizontally; app shell padding tightens on small screens.
+
 | Surface | Role |
 | --- | --- |
 | `/` | Dashboard (glance boards) |

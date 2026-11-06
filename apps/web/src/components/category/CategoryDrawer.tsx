@@ -3,6 +3,7 @@ import { Box, Button, Checkbox, Drawer, LoadingOverlay, Select, Stack, TextInput
 import { notifications } from '@mantine/notifications'
 import { IconFolderPlus } from '@tabler/icons-react'
 import { useCreateCategory, useSyncDuringRender, useVaults } from '@/hooks'
+import { useDrawerSize } from '@/hooks/render'
 import { categorySelectData, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
 import { CategoryIconPicker } from './CategoryIconPicker'
@@ -18,6 +19,7 @@ type Props = {
 }
 
 export function CategoryDrawer({ opened, onClose, categories, defaultParentId = null }: Props): ReactElement {
+  const drawerSize = useDrawerSize()
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState<string | null>(null)
   const [hidden, setHidden] = useState(false)
@@ -63,7 +65,7 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
   }
 
   return (
-    <Drawer opened={opened} onClose={onClose} title="New category" position="right" size="md" padding="lg">
+    <Drawer opened={opened} onClose={onClose} title="New category" position="right" size={drawerSize} padding="lg">
       <Box pos="relative">
         <LoadingOverlay visible={create.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
         <Stack gap="md">
