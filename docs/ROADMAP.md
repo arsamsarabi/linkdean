@@ -29,7 +29,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 8. **Final UI/UX and mobile pass** (L). **Done:** mascot (Dean) on moment empty states, 404, onboarding and the wide sign-in panel; drawers full-width on phones; tighter shell padding and scrollable Deleted table; light polish on dashboard empty copy and glance density. Remaining: welcome-email avatar badge when a welcome template exists (security emails stay plain); deeper visual redesign stays out of scope for beta.
 
-9. **Structured logs** (S–M). Write activity and errors as structured JSON (`LOG_FORMAT=json`), to stdout and optionally to a file, with a request ID on every line and in an `X-Request-Id` response header. Today logs are plain text on stdout only, which makes self-hosted problems hard to report and debug.
+9. **Structured logs** (S–M). **Done:** `LOG_FORMAT=text|json` (default text) for stdout; optional `LOG_FILE` appends JSONL regardless of stdout format; every response has `X-Request-Id` (valid inbound ids kept, else a UUID), with the same id on the HTTP request span. Remaining: log rotation stays with the operator; OpenTelemetry exporters stay in Backlog.
 
 10. **Marketing site** (M). Right after the product is ready for a public beta. A static site at `linkdean.app`: what Linkdean is, features, screenshots, a "self-host it for free" path to the install guide and GitHub, sign-up, and links to the legal pages and status.
     - Static and cached at Cloudflare, so it costs the server nothing.
