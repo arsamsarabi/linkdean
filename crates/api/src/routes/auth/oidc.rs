@@ -22,6 +22,7 @@ use axum::http::{header, HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::Json;
 use linkdean_core::crypto::constant_time_eq;
+use linkdean_core::legal::{require_current_terms, TERMS_VERSION};
 use linkdean_core::{issuer_host, Error, User};
 use linkdean_db::{self as db};
 use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
@@ -99,10 +100,13 @@ async fn discover(
 #[derive(Deserialize)]
 pub(super) struct StartQuery {
     mode: Option<String>,
+    terms_version: Option<String>,
 }
 
 /// `?mode=connect` attaches the provider identity to the signed-in account instead of signing
-/// in; it needs a session.
+/// in; it needs a session. Sign-in may create an account, so it needs `?terms_version=` equal to
+/// the current terms version; the flow cookie carries it to the callback, which records it on a
+/// new account. Existing accounts sign in unchanged. Connect mode never creates an account.
 pub(super) async fn start(
     State(state): State<AppState>,
     Query(q): Query<StartQuery>,
@@ -120,6 +124,13 @@ pub(super) async fn start(
             }
         },
         Some(_) => return Err(Error::BadRequest("unknown sign-in mode".into()).into()),
+    };
+    let terms = match mode {
+        FlowMode::SignIn => {
+            require_current_terms(q.terms_version.as_deref())?;
+            Some(TERMS_VERSION.to_string())
+        }
+        FlowMode::Connect(_) => None,
     };
     let s = settings(&state)?;
     let http = http_client()?;
@@ -147,6 +158,7 @@ pub(super) async fn start(
         nonce: nonce.secret().clone(),
         verifier: verifier.secret().clone(),
         mode,
+        terms,
     };
     let mut res = Redirect::to(url.as_str()).into_response();
     set_cookie(
@@ -341,6 +353,7 @@ async fn sign_in(
     flow: Option<FlowCookie>,
     q: CallbackQuery,
 ) -> Result<SignInOutcome, Error> {
+    let terms = flow.as_ref().and_then(|f| f.terms.clone());
     let id = provider_identity(state, flow, q).await?;
 
     // Never auto-login by email alone (account takeover). Match the OIDC subject or create.
@@ -386,6 +399,8 @@ async fn sign_in(
         .await?;
         return Ok(SignInOutcome::PendingLink(token));
     }
+    // Only a new account needs the terms, which the sign-in start must have presented.
+    require_current_terms(terms.as_deref())?;
     // A provider sign-in cannot carry the bootstrap token, so with one set the first account
     // must register with a password.
     let created = db::create_user_gated(
@@ -399,6 +414,7 @@ async fn sign_in(
             enforce: true,
             invite_code: None,
             bootstrap_token_ok: state.cfg.bootstrap_token_ok(None),
+            terms_version: Some(TERMS_VERSION),
         },
     )
     .await?;
@@ -525,24 +541,29 @@ struct FlowCookie {
     nonce: String,
     verifier: String,
     mode: FlowMode,
+    /// Terms version presented at sign-in start; always `None` in connect mode.
+    terms: Option<String>,
 }
 
 impl FlowCookie {
-    /// `state.nonce.verifier`, plus `.connect.<user id>` in connect mode. The three values are
-    /// URL-safe base64 and a UUID has no `.`, so `.` cannot occur inside a part.
+    /// `state.nonce.verifier`, plus `.terms.<version>` in sign-in mode or `.connect.<user id>`
+    /// in connect mode. The three values are URL-safe base64, a UUID has no `.`, and the terms
+    /// version is a date, so `.` cannot occur inside a part.
     fn encode(&self) -> String {
         let base = format!("{}.{}.{}", self.state, self.nonce, self.verifier);
-        match self.mode {
-            FlowMode::SignIn => base,
-            FlowMode::Connect(id) => format!("{base}.connect.{id}"),
+        match (self.mode, &self.terms) {
+            (FlowMode::SignIn, None) => base,
+            (FlowMode::SignIn, Some(v)) => format!("{base}.terms.{v}"),
+            (FlowMode::Connect(id), _) => format!("{base}.connect.{id}"),
         }
     }
 
     fn decode(raw: &str) -> Option<Self> {
         let parts: Vec<&str> = raw.split('.').collect();
-        let mode = match parts.as_slice() {
-            [_, _, _] => FlowMode::SignIn,
-            [_, _, _, "connect", id] => FlowMode::Connect(id.parse().ok()?),
+        let (mode, terms) = match parts.as_slice() {
+            [_, _, _] => (FlowMode::SignIn, None),
+            [_, _, _, "terms", v] if !v.is_empty() => (FlowMode::SignIn, Some((*v).to_string())),
+            [_, _, _, "connect", id] => (FlowMode::Connect(id.parse().ok()?), None),
             _ => return None,
         };
         let (state, nonce, verifier) = (parts[0], parts[1], parts[2]);
@@ -554,6 +575,7 @@ impl FlowCookie {
             nonce: nonce.into(),
             verifier: verifier.into(),
             mode,
+            terms,
         })
     }
 }
@@ -614,9 +636,25 @@ mod tests {
             nonce: "n".into(),
             verifier: "v".into(),
             mode: FlowMode::SignIn,
+            terms: None,
         };
         assert_eq!(flow.encode(), "s-_1.n.v");
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
+    }
+
+    #[test]
+    fn sign_in_flow_cookie_carries_the_terms_version() {
+        let flow = FlowCookie {
+            state: "s".into(),
+            nonce: "n".into(),
+            verifier: "v".into(),
+            mode: FlowMode::SignIn,
+            terms: Some(TERMS_VERSION.into()),
+        };
+        assert_eq!(flow.encode(), format!("s.n.v.terms.{TERMS_VERSION}"));
+        assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
+        assert_eq!(FlowCookie::decode("s.n.v.terms."), None);
+        assert_eq!(FlowCookie::decode("s.n.v.terms.x.y"), None);
     }
 
     #[test]
@@ -627,6 +665,7 @@ mod tests {
             nonce: "n".into(),
             verifier: "v".into(),
             mode: FlowMode::Connect(id),
+            terms: None,
         };
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
         for raw in [

@@ -57,6 +57,7 @@ fn gate(invite_code: Option<&str>, bootstrap_token_ok: Option<bool>) -> SignupGa
         enforce: true,
         invite_code,
         bootstrap_token_ok,
+        terms_version: None,
     }
 }
 

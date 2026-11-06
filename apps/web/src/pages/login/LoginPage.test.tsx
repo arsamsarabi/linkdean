@@ -2,6 +2,7 @@ import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TERMS_VERSION } from '@/lib'
 import type { BootstrapStatus } from '@/schemas'
 import { LoginPage } from './LoginPage'
 
@@ -141,5 +142,24 @@ describe('LoginPage single sign-on link', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     await waitFor(() => expect(state.login).toHaveBeenCalled())
     expect(notify).not.toHaveBeenCalled()
+  })
+})
+
+describe('LoginPage terms for single sign-on', () => {
+  beforeEach(() => {
+    state.search = {}
+    state.bootstrap = { ...state.bootstrap, oidc_enabled: true }
+  })
+  afterEach(() => {
+    state.bootstrap = { ...state.bootstrap, oidc_enabled: false }
+    cleanup()
+  })
+
+  it('starts OIDC with the terms version only after the checkbox is ticked', async () => {
+    renderPage()
+    const button = screen.getByText('Sign in with OIDC').closest('a')!
+    expect(button.getAttribute('href')).toBeNull()
+    await userEvent.click(screen.getByRole('checkbox'))
+    expect(button.getAttribute('href')).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}`)
   })
 })

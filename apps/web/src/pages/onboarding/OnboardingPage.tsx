@@ -12,7 +12,7 @@ import {
   useRegister,
   useUploadAvatar,
 } from '@/hooks'
-import { isSignedIn, resolveDefaultLanding } from '@/lib'
+import { isSignedIn, resolveDefaultLanding, TERMS_VERSION } from '@/lib'
 import { MIN_SECRET_LENGTH, validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
 import { OnboardingSteps } from './OnboardingSteps'
@@ -38,6 +38,7 @@ export function OnboardingPage(): ReactElement {
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const resetRef = useRef<() => void>(null)
@@ -113,6 +114,7 @@ export function OnboardingPage(): ReactElement {
         display_name: displayName || undefined,
         bootstrap_token: bootstrapToken.trim() || undefined,
         turnstile_token: turnstileToken ?? undefined,
+        terms_version: TERMS_VERSION,
       })
       if (pendingAvatar) {
         try {
@@ -217,6 +219,8 @@ export function OnboardingPage(): ReactElement {
         password={password}
         password2={password2}
         pendingAvatar={pendingAvatar}
+        termsAccepted={termsAccepted}
+        onTermsAccepted={setTermsAccepted}
         turnstileSiteKey={turnstileSiteKey}
         turnstileResetKey={turnstileResetKey}
         resetRef={resetRef}

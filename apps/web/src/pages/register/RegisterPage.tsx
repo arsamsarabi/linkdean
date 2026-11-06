@@ -5,7 +5,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { AvatarCropModal, QueryErrorAlert } from '@/components'
 import { useBootstrap, useRegister, useSessionCheck, useSyncDuringRender, useUploadAvatar } from '@/hooks'
-import { resolveDefaultLanding } from '@/lib'
+import { resolveDefaultLanding, TERMS_VERSION } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import { RegisterForm } from './RegisterForm'
 import { RegisterInviteGate } from './RegisterInviteGate'
@@ -22,6 +22,7 @@ export function RegisterPage(): ReactElement {
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingAvatar, setPendingAvatar] = useState<Blob | null>(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const resetRef = useRef<() => void>(null)
@@ -60,6 +61,7 @@ export function RegisterPage(): ReactElement {
         invite_code: inviteCode.trim() || undefined,
         share_token: search.share,
         turnstile_token: turnstileToken ?? undefined,
+        terms_version: TERMS_VERSION,
       })
       if (pendingAvatar) {
         try {
@@ -135,6 +137,7 @@ export function RegisterPage(): ReactElement {
         password2={password2}
         pendingAvatar={pendingAvatar}
         registerPending={register.isPending}
+        termsAccepted={termsAccepted}
         turnstileSiteKey={turnstileSiteKey}
         turnstileResetKey={turnstileResetKey}
         resetRef={resetRef}
@@ -153,6 +156,7 @@ export function RegisterPage(): ReactElement {
           setPendingAvatar(null)
           resetRef.current?.()
         }}
+        onTermsAccepted={setTermsAccepted}
         onTurnstileToken={setTurnstileToken}
         onSubmit={() => void submit()}
         onLogin={() => void nav({ to: '/login' })}

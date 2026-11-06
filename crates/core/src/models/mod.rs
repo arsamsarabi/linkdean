@@ -1133,6 +1133,9 @@ pub struct RegisterRequest {
     /// Cloudflare Turnstile widget token; required when the server has Turnstile keys.
     #[serde(default)]
     pub turnstile_token: Option<String>,
+    /// Terms of Service version the user accepted; must equal `legal::TERMS_VERSION`.
+    #[serde(default)]
+    pub terms_version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

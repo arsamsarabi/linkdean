@@ -18,9 +18,9 @@ import { notifications } from '@mantine/notifications'
 import { IconLogin, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
-import { LogoMark, QueryErrorAlert } from '@/components'
+import { LegalFooterLinks, LogoMark, QueryErrorAlert, TermsAgreement } from '@/components'
 import { useBootstrap, useDropSignedOutCache, useLogin, usePendingOidcLink } from '@/hooks'
-import { resolveDefaultLanding } from '@/lib'
+import { oidcStartUrl, resolveDefaultLanding } from '@/lib'
 import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -30,6 +30,7 @@ export function LoginPage(): ReactElement {
   useDropSignedOutCache()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const bootstrap = useBootstrap()
   const login = useLogin()
   const { oidc_error: oidcError, link } = useSearch({ from: '/login' })
@@ -151,7 +152,19 @@ export function LoginPage(): ReactElement {
           {oidc ? (
             <>
               <Divider label="or" labelPosition="center" />
-              <Button component="a" href="/api/auth/oidc/start" variant="light" leftSection={<IconLogin {...iconSm} />}>
+              <TermsAgreement
+                checked={termsAccepted}
+                onChange={setTermsAccepted}
+                description="Needed to create an account with single sign-on."
+              />
+              <Button
+                component="a"
+                // No href until accepted: the link is neither clickable nor focusable.
+                href={termsAccepted ? oidcStartUrl() : undefined}
+                disabled={!termsAccepted}
+                variant="light"
+                leftSection={<IconLogin {...iconSm} />}
+              >
                 Sign in with OIDC
               </Button>
             </>
@@ -166,6 +179,7 @@ export function LoginPage(): ReactElement {
           ) : null}
         </Stack>
       </Paper>
+      <LegalFooterLinks />
     </Stack>
   )
 }
