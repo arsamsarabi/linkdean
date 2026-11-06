@@ -191,6 +191,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 ## Surfaces
 
+- Mascot (Dean) on moment screens only: empty library / folder / search, empty Deleted, fully empty Shared, 404, onboarding, and the wide sign-in panel. Soft light backdrop; decorative (`alt=""`). Not in header, sidebar, cards, or settings.
+
 | Surface | Role |
 | --- | --- |
 | `/` | Dashboard (glance boards) |

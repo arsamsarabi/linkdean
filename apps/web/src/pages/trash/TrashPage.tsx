@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactElement } from 'react'
 import { Button, Checkbox, Group, Stack, Table, Text, ThemeIcon, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconRestore, IconTrash } from '@tabler/icons-react'
-import { ConfirmModal, EmptyState, QueryErrorAlert } from '@/components'
+import { ConfirmModal, EmptyState, MASCOT, QueryErrorAlert } from '@/components'
 import { useMe, usePurgeTrashItem, usePurgeTrashSelected, useRestoreTrashItem, useTrash } from '@/hooks'
 import type { TrashItem, TrashKind } from '@/schemas'
 
@@ -121,7 +121,7 @@ export function TrashPage(): ReactElement {
 
       {!trash.isLoading && items.length === 0 ? (
         <EmptyState
-          icon={<IconTrash size={28} stroke={1.5} />}
+          illustration={{ src: MASCOT.smiling }}
           title="Nothing in Deleted"
           description="Deleted bookmarks, folders, and dashboards land here."
         />
