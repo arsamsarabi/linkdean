@@ -20,7 +20,7 @@ export function LegalLayout({ title, children }: Props): ReactElement {
         </Text>
       </Stack>
       {children}
-      <Group gap="md" component="nav" aria-label="Legal pages">
+      <Group gap="md" wrap="wrap" component="nav" aria-label="Legal pages">
         <Anchor href="/terms" size="sm">
           Terms of Service
         </Anchor>
