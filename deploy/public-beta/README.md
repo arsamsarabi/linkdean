@@ -59,11 +59,32 @@ docker compose --profile chrome up -d
 
 Smoke: `https://app.linkdean.app/api/health` and the app shell.
 
-Static sites: `pnpm --dir apps/site build` publishes the Astro marketing site into `static/site/` (served at `linkdean.app`). `docs.linkdean.app` shows a placeholder until the `apps/docs` build replaces `static/docs/`.
+Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `static/docs/` (served at `docs.linkdean.app`). `pnpm --dir apps/site build` publishes the Astro marketing site into `static/site/` (served at `linkdean.app`).
 
 **Do not seed accounts.** First admin is onboarding on an empty instance. Leave `BOOTSTRAP_TOKEN` for the operator if needed.
 
-## 4. Before announce
+## 4. CI / release / selective updates
+
+| Channel | Trigger | What it publishes |
+| --- | --- | --- |
+| [CI](../../.github/workflows/ci.yml) | PR + push to `main` | Tests; docs/site builds must match committed `static/` |
+| [Release](../../.github/workflows/release.yml) | Tag `v*.*.*` | GHCR `:x.y.z`, `:x.y`, `:latest` + GitHub release |
+| [Deploy main](../../.github/workflows/deploy-main.yml) | Push to `main` (path-filtered) | App → GHCR `:main` + `:sha-<short>`; docs/site → re-check committed static |
+
+**Intelligent updates:** Deploy main uses [dorny/paths-filter](https://github.com/dorny/paths-filter) so only changed deployables run (app crates/web/Docker, docs markdown/`apps/docs`, marketing `apps/site`). Manual **workflow_dispatch** can force any subset (or all if none forced).
+
+**Guest roll-forward (manual):** after `git pull` on the guest:
+
+```bash
+# From /opt/linkdean — pulls api image and/or restarts Caddy for static
+bash deploy/public-beta/scripts/pull-update.sh
+```
+
+For continuous app images set `LINKDEAN_VERSION=main` in `.env`. Pin a release tag for slower upgrades.
+
+**Optional auto-deploy from GitHub Actions:** repository variable `NOVA_DEPLOY_ENABLED=true` plus secrets `NOVA_DEPLOY_HOST`, `NOVA_DEPLOY_USER`, `NOVA_DEPLOY_SSH_KEY`, and usually `NOVA_DEPLOY_LXC=linkdean-public` (SSH to Nova, then `lxc exec`). The host must be reachable from GitHub (Tailscale Funnel/subnet, public SSH, or a self-hosted runner). Leave disabled until that path is intentional.
+
+## 5. Before announce
 
 Complete the go-live list in the design spec / MANAGED_SERVICE: SMTP + SPF/DKIM/DMARC, Turnstile, `REQUIRE_VERIFIED_EMAIL`, `BLOCK_DISPOSABLE_EMAILS`, Chrome off LAN, off-site backups + restore test, external uptime, ISP terms, `LOG_FORMAT=json` (default here).
 

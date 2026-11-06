@@ -3,11 +3,10 @@
 	auto_https off
 }
 
-http://www.linkdean.app {
-	redir https://linkdean.app{uri} permanent
-}
-
-http://linkdean.app {
+# www and apex share one site. Do not redirect to https:// here — TLS is at
+# Cloudflare; an origin 301 to https://linkdean.app just re-enters the edge.
+# Prefer a Cloudflare Redirect Rule for www → apex if you want a single hostname.
+http://linkdean.app, http://www.linkdean.app {
 	root * /srv/site
 	encode gzip
 	file_server
