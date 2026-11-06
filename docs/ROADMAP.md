@@ -29,10 +29,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
    - Only strictly necessary cookies are used today, so no consent banner is needed; say so in the privacy policy, and revisit if analytics are added.
    - A visible beta notice: no uptime promise, export your data regularly.
 
-7. **Report abuse** (M). Public lists, profiles and comments are visible to everyone, and admins can ban users today, but nobody can report content.
-   - A **Report** action on public lists, profiles and comments, with a reason.
-   - A report queue in the admin moderation tools, with actions to hide the content, warn or ban, and dismiss.
-   - An abuse and takedown contact address on the marketing site and in the terms.
+7. **Report abuse** (M). **Done:** signed-in users can **Report** a public list, a profile or a comment with a reason; admins work the queue under Settings → Admin (dismiss, hide content, warn, ban); the operator's abuse contact email is an admin setting shown in the report form. Remaining: anonymous reports are out of scope (reporting needs a sign-in, which keeps the queue spam-resistant); the contact address on the marketing site (item 10); the Terms and Privacy pages point to Report and to the address once it is published rather than printing it.
 
 8. **Final UI/UX and mobile pass** (L). Before the public release, review the whole UI with a strong UI/UX skill and reimagine it where needed. Make every page responsive and usable on phones, not only the nav.
    - Mascot art (`brand/graphics`) in moment screens only: empty library, empty folder, no search results, empty Deleted items, nothing shared yet, the 404 page, first-run setup, the sign-in side panel on wide screens, and success modals. Never in the header, sidebar, cards, dashboards or settings. One character per screen at most, behind the main action. WebP at 2× display size, lazy-loaded, `alt=""`, a soft light backdrop so the dark robe reads on the dark theme. Security emails stay plain; a welcome email may carry the small avatar badge, embedded in the email rather than linked.

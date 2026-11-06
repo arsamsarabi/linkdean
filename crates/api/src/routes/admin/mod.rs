@@ -1,4 +1,5 @@
 mod email;
+mod reports;
 
 use crate::auth::AdminUser;
 use crate::error::ApiResult;
@@ -39,6 +40,7 @@ pub fn router() -> Router<AppState> {
         .route("/admin/invites/{id}", axum::routing::delete(revoke_invite))
         .route("/admin/search/reindex", post(reindex_search))
         .merge(email::router())
+        .merge(reports::router())
 }
 
 async fn get_platform_settings(
@@ -98,6 +100,10 @@ async fn patch_platform_settings(
             req.max_upload_image_bytes,
         )
         .await?;
+    }
+    if let Some(email) = req.abuse_contact_email {
+        let email = linkdean_core::clean_abuse_contact_email(email.as_deref())?;
+        settings = db::set_abuse_contact_email(&state.pool, email.as_deref()).await?;
     }
     if state.cfg.require_verified_email {
         settings.require_verified_email = true;

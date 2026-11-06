@@ -3,8 +3,8 @@ import { Anchor, Center, Group, Loader, SimpleGrid, Stack, Text, Title } from '@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { api } from '@/api'
-import { BookmarkCard, LogoMark, PageContainer, QueryErrorAlert } from '@/components'
-import { CategoryIcon } from '@/lib'
+import { BookmarkCard, LogoMark, PageContainer, QueryErrorAlert, ReportButton } from '@/components'
+import { CategoryIcon, isSignedIn } from '@/lib'
 import motion from '@/styles/motion.module.css'
 
 export function PublicListPage(): ReactElement {
@@ -83,9 +83,18 @@ export function PublicListPage(): ReactElement {
               {total > data.bookmarks.length ? ` · showing the newest ${data.bookmarks.length}` : ''}
             </Text>
           </Stack>
-          <Anchor component={Link} to="/login" size="sm">
-            Sign in
-          </Anchor>
+          <Group gap="sm">
+            {isSignedIn() ? (
+              <ReportButton targetType="public_list" targetId={slug} subject="list" />
+            ) : (
+              <Anchor component={Link} to="/login" size="sm">
+                Sign in to report
+              </Anchor>
+            )}
+            <Anchor component={Link} to="/login" size="sm">
+              Sign in
+            </Anchor>
+          </Group>
         </Group>
 
         {data.bookmarks.length === 0 ? (

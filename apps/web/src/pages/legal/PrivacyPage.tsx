@@ -70,7 +70,9 @@ export function PrivacyPage(): ReactElement {
       <LegalSection heading="5. Public and shared content">
         <Text>
           Lists you make public, and what you share with other people, can be seen by them. Your email address is not
-          shown to people who were not given it.
+          shown to people who were not given it. To flag something that should not be there, use Report on public lists,
+          profiles and comments, or email the operator&apos;s abuse address when it is published in the report form. The
+          report, your account and your reason are visible to the instance administrators.
         </Text>
       </LegalSection>
       <LegalSection heading="6. Your choices">
