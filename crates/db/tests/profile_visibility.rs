@@ -8,6 +8,7 @@ use linkdean_core::{
     UpdateProfile, User,
 };
 use linkdean_db::{self as db};
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -34,12 +35,13 @@ async fn pool_or_skip() -> Option<PgPool> {
 
 /// Put a row into its owner's vault, creating the vault when needed.
 async fn mark_vault(pool: &PgPool, table: &str, id: Uuid) {
-    let (owner,): (Uuid,) =
-        sqlx::query_as(&format!("SELECT owner_user_id FROM {table} WHERE id = $1"))
-            .bind(id)
-            .fetch_one(pool)
-            .await
-            .expect("owner");
+    let (owner,): (Uuid,) = sqlx::query_as(AssertSqlSafe(format!(
+        "SELECT owner_user_id FROM {table} WHERE id = $1"
+    )))
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .expect("owner");
     let existing = db::list_vaults(pool, owner).await.expect("vaults");
     let vault_id = match existing.first() {
         Some(vault) => vault.id,
@@ -51,9 +53,9 @@ async fn mark_vault(pool: &PgPool, table: &str, id: Uuid) {
                 .id
         }
     };
-    sqlx::query(&format!(
+    sqlx::query(AssertSqlSafe(format!(
         "UPDATE {table} SET is_vault = TRUE, vault_id = $2 WHERE id = $1"
-    ))
+    )))
     .bind(id)
     .bind(vault_id)
     .execute(pool)

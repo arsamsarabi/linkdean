@@ -3,6 +3,7 @@ use linkdean_core::{
     ShareAccess,
 };
 use serde_json::json;
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -96,7 +97,7 @@ async fn insert_notification(
         "#,
         super::notification_email::email_state_sql("$1", "$3", "$9"),
     );
-    sqlx::query(&sql)
+    sqlx::query(AssertSqlSafe(sql))
         .bind(recipient_user_id)
         .bind(actor_user_id)
         .bind(kind.as_str())

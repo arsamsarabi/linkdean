@@ -4,6 +4,7 @@
 
 use linkdean_core::{CreateBookmark, CreateCategory, ForkCategory, User, VaultKeyring};
 use linkdean_db::{self as db};
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -117,23 +118,23 @@ async fn a_failed_fork_leaves_nothing_behind() {
     let tag = Uuid::new_v4().simple().to_string();
     let bad_url = format!("https://bad-{tag}.example/");
     bookmark(&pool, &owner, &bad_url, root).await;
-    sqlx::raw_sql(&format!(
+    sqlx::raw_sql(AssertSqlSafe(format!(
         r#"
         CREATE FUNCTION fork_fail_{tag}() RETURNS trigger LANGUAGE plpgsql AS $$
         BEGIN RAISE EXCEPTION 'copy refused'; END $$;
         CREATE TRIGGER fork_fail_{tag} BEFORE INSERT ON bookmarks
         FOR EACH ROW WHEN (NEW.url = '{bad_url}') EXECUTE FUNCTION fork_fail_{tag}();
         "#
-    ))
+    )))
     .execute(&pool)
     .await
     .expect("trigger");
     let before = counts(&pool, &owner).await;
 
     let result = db::fork_category(&pool, owner.id, root, ForkCategory { name: None }).await;
-    sqlx::raw_sql(&format!(
+    sqlx::raw_sql(AssertSqlSafe(format!(
         "DROP TRIGGER fork_fail_{tag} ON bookmarks; DROP FUNCTION fork_fail_{tag}();"
-    ))
+    )))
     .execute(&pool)
     .await
     .expect("drop trigger");
