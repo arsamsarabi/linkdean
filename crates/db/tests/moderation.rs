@@ -358,7 +358,7 @@ async fn bookmark_in(pool: &PgPool, owner: Uuid, url: &str, category: Uuid) -> U
     .id
 }
 
-async fn exec(pool: &PgPool, sql: &str, id: Uuid) {
+async fn exec(pool: &PgPool, sql: &'static str, id: Uuid) {
     sqlx::query(sql).bind(id).execute(pool).await.expect("exec");
 }
 

@@ -8,7 +8,7 @@ COPY apps/web/ ./
 RUN pnpm build
 
 # --- backend ---
-FROM rust:1.89-bookworm AS api
+FROM rust:1.94-bookworm AS api
 WORKDIR /src
 RUN apt-get update && apt-get install -y pkg-config libssl-dev cmake libwebp-dev && rm -rf /var/lib/apt/lists/*
 COPY Cargo.toml Cargo.lock* ./
