@@ -27,7 +27,7 @@ chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 futures = "0.3"
 hex = "0.4"
-meilisearch-sdk = "0.28"
+meilisearch-sdk = "0.33"
 oauth2 = "5"
 openidconnect = "4"
 rand = "0.8"
