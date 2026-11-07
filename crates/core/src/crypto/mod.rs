@@ -1,9 +1,6 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
-use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Algorithm, Argon2, Params, Version,
-};
+use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use crypto_box::{PublicKey, SecretKey};
 use rand::rngs::OsRng;
 use rand::RngCore;
@@ -38,9 +35,9 @@ fn current_params(output_len: Option<usize>) -> Params {
 }
 
 pub fn hash_password(password: &str) -> Result<String> {
-    let salt = SaltString::generate(&mut rand::thread_rng());
+    let salt = random_bytes(SALT_LEN);
     let hash = argon2_with(current_params(None))
-        .hash_password(password.as_bytes(), &salt)
+        .hash_password_with_salt(password.as_bytes(), &salt)
         .map_err(|e| Error::msg(e.to_string()))?
         .to_string();
     Ok(hash)
@@ -335,9 +332,8 @@ mod key_wrap_tests {
 
     #[test]
     fn old_password_hashes_verify_and_ask_to_be_replaced() {
-        let salt = SaltString::generate(&mut rand::thread_rng());
         let old = Argon2::default()
-            .hash_password(b"password-long", &salt)
+            .hash_password_with_salt(b"password-long", &random_bytes(SALT_LEN))
             .unwrap()
             .to_string();
         assert!(verify_password("password-long", &old).unwrap());
@@ -386,5 +382,56 @@ mod key_wrap_tests {
             normalize_recovery_key(&messy),
             normalize_recovery_key(&code)
         );
+    }
+}
+
+/// Fixed values made with aes-gcm 0.10 and argon2 0.5 (the AES-GCM one also matches
+/// OpenSSL). Stored vaults and password hashes must keep opening after a crate upgrade,
+/// and round-trip tests alone cannot catch a change in output.
+#[cfg(test)]
+mod known_answers {
+    use super::*;
+
+    const NONCE: [u8; NONCE_LEN] = [0x07; NONCE_LEN];
+    const DATA_KEY: [u8; KEY_LEN] = [0x5a; KEY_LEN];
+    const PASSPHRASE: &str = "correct horse battery";
+
+    fn unhex(s: &str) -> Vec<u8> {
+        hex::decode(s).expect("valid hex")
+    }
+
+    #[test]
+    fn aes_gcm_decrypts_a_stored_ciphertext() {
+        let ciphertext =
+            unhex("148b33c7d1941395033f825faa35061d9b2978588fdff1b2af711acf2b6f63f7777cb6e65a");
+        let plain = decrypt(&[0x42; KEY_LEN], &ciphertext, &NONCE).expect("decrypts");
+        assert_eq!(plain, b"linkdean known answer");
+    }
+
+    #[test]
+    fn a_stored_wrap_with_a_recorded_cost_unlocks() {
+        let salt = unhex("4c446b3100000400000000010000000111111111111111111111111111111111");
+        let wrapped = unhex("b429929c90d8514032f46b4cfc89808720bb2c0112d2b4d34b6f39d2b08482128afca50e047188d0d1ee8230aa18c3ba");
+        let key = unlock_vault(PASSPHRASE, &salt, &wrapped, &NONCE).expect("unlocks");
+        assert_eq!(key, DATA_KEY);
+    }
+
+    #[test]
+    fn a_stored_wrap_with_a_bare_salt_unlocks() {
+        let wrapped = unhex("25abcf68f3974d1cb2c42882da1e2ba1f22c50985a8344f698d1bc91bb7bd9196550610b71cd4559afaf9872375fb349");
+        let key = unlock_vault(PASSPHRASE, &[0x22; SALT_LEN], &wrapped, &NONCE).expect("unlocks");
+        assert_eq!(key, DATA_KEY);
+    }
+
+    #[test]
+    fn stored_password_hashes_verify() {
+        let current = "$argon2id$v=19$m=65536,t=3,p=1$MzMzMzMzMzMzMzMzMzMzMw$kWXrIykpeVR9HBc5tjezgfxV0eB/g75JsBz6aQBn0Ec";
+        let old = "$argon2id$v=19$m=19456,t=2,p=1$MzMzMzMzMzMzMzMzMzMzMw$c1fUhsnw2+UaPZUNl1l21Ya36xtusodAI7nqSU5bLKQ";
+        for hash in [current, old] {
+            assert!(verify_password("hunter2hunter2", hash).unwrap());
+            assert!(!verify_password("hunter2hunter3", hash).unwrap());
+        }
+        assert!(!password_needs_rehash(current));
+        assert!(password_needs_rehash(old));
     }
 }
