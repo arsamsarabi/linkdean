@@ -80,7 +80,7 @@ jobs:
         working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/web/package.json
       - uses: actions/setup-node@v4
@@ -104,7 +104,7 @@ jobs:
         working-directory: apps/docs
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/docs/package.json
       - uses: actions/setup-node@v4
@@ -125,7 +125,7 @@ jobs:
         working-directory: apps/site
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/site/package.json
       - uses: actions/setup-node@v4
