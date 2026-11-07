@@ -5,6 +5,7 @@ use linkdean_core::{
     Bookmark, Category, Error, MoveToVaultRequest, Result, VaultKeyring, VaultMoveBlocker,
     VaultMoveBlockerKind, VaultMoveOutcome, VaultPayload,
 };
+use sqlx::AssertSqlSafe;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -285,13 +286,13 @@ async fn scrub_moved_in(
 
     for table in ["social_likes", "social_comments", "social_ratings"] {
         // `table` comes from the fixed list above.
-        sqlx::query(&format!(
+        sqlx::query(AssertSqlSafe(format!(
             r#"
             DELETE FROM {table}
             WHERE (subject_type = 'bookmark' AND subject_id = ANY($1))
                OR (subject_type = 'category' AND subject_id = ANY($2))
             "#
-        ))
+        )))
         .bind(bookmark_ids)
         .bind(category_ids)
         .execute(&mut **tx)

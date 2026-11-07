@@ -4,6 +4,7 @@
 
 use linkdean_core::{CreateBookmark, CreateCategory, Error, UpdateSettings, User, VaultKeyring};
 use linkdean_db::{self as db};
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -99,9 +100,9 @@ async fn vault_category(s: &Setup, name: &str, parent_id: Option<Uuid>) -> Uuid 
 }
 
 async fn row_exists(pool: &PgPool, table: &str, id: Uuid) -> bool {
-    sqlx::query_scalar::<_, bool>(&format!(
+    sqlx::query_scalar::<_, bool>(AssertSqlSafe(format!(
         "SELECT EXISTS(SELECT 1 FROM {table} WHERE id = $1)"
-    ))
+    )))
     .bind(id)
     .fetch_one(pool)
     .await

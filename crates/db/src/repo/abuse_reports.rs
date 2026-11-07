@@ -7,6 +7,7 @@ use linkdean_core::{
     AbuseAction, AbuseReport, AbuseTargetType, CreateAbuseReport, CreateBan, Error,
     ResolveAbuseReport, Result, SocialSubjectType,
 };
+use sqlx::AssertSqlSafe;
 use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
@@ -123,7 +124,7 @@ async fn resolve_target(
 }
 
 async fn fetch_report(pool: &PgPool, id: Uuid) -> Result<Option<AbuseReport>> {
-    sqlx::query_as::<_, AbuseReport>(&format!("{REPORT_SELECT} WHERE r.id = $1"))
+    sqlx::query_as::<_, AbuseReport>(AssertSqlSafe(format!("{REPORT_SELECT} WHERE r.id = $1")))
         .bind(id)
         .fetch_optional(pool)
         .await
@@ -184,9 +185,9 @@ pub async fn list_reports(pool: &PgPool, status: &str) -> Result<Vec<AbuseReport
     if !matches!(status, "open" | "resolved") {
         return Err(Error::BadRequest("status must be open or resolved".into()));
     }
-    sqlx::query_as::<_, AbuseReport>(&format!(
+    sqlx::query_as::<_, AbuseReport>(AssertSqlSafe(format!(
         "{REPORT_SELECT} WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT $2"
-    ))
+    )))
     .bind(status)
     .bind(LIST_LIMIT)
     .fetch_all(pool)

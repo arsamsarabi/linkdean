@@ -4,6 +4,7 @@
 
 use linkdean_core::{CreateBookmark, Error, User, VaultKeyring};
 use linkdean_db::{self as db};
+use sqlx::AssertSqlSafe;
 use sqlx::{Connection, PgConnection, PgPool};
 use uuid::Uuid;
 
@@ -52,7 +53,7 @@ async fn make_due(pool: &PgPool, id: Uuid) {
     .expect("make due");
 }
 
-async fn count(pool: &PgPool, sql: &str, id: Uuid) -> i64 {
+async fn count(pool: &PgPool, sql: &'static str, id: Uuid) -> i64 {
     sqlx::query_scalar(sql)
         .bind(id)
         .fetch_one(pool)
@@ -232,7 +233,7 @@ async fn the_last_admin_cannot_schedule_deletion() {
     };
     let name = format!("deletion_{}", Uuid::new_v4().simple());
     let mut admin_conn = PgConnection::connect(&url).await.expect("admin conn");
-    sqlx::query(&format!("CREATE DATABASE {name}"))
+    sqlx::query(AssertSqlSafe(format!("CREATE DATABASE {name}")))
         .execute(&mut admin_conn)
         .await
         .expect("create database");
@@ -266,8 +267,10 @@ async fn the_last_admin_cannot_schedule_deletion() {
         .expect("another admin exists");
 
     pool.close().await;
-    sqlx::query(&format!("DROP DATABASE IF EXISTS {name} WITH (FORCE)"))
-        .execute(&mut admin_conn)
-        .await
-        .expect("drop database");
+    sqlx::query(AssertSqlSafe(format!(
+        "DROP DATABASE IF EXISTS {name} WITH (FORCE)"
+    )))
+    .execute(&mut admin_conn)
+    .await
+    .expect("drop database");
 }

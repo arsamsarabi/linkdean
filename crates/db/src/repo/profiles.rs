@@ -5,6 +5,7 @@ use linkdean_core::{
     Bookmark, Error, FollowUserView, ProfileBookmarksPage, ProfileSummary, ProfileView, Result,
     User,
 };
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -128,7 +129,7 @@ pub async fn profile_visible_bookmarks(
     let tiers = visible_tiers(pool, viewer_id, target.id).await?;
 
     let count_sql = format!("SELECT COUNT(*) FROM bookmarks b WHERE {VISIBLE_BOOKMARK_FILTER}");
-    let (total,): (i64,) = sqlx::query_as(&count_sql)
+    let (total,): (i64,) = sqlx::query_as(AssertSqlSafe(count_sql))
         .bind(target.id)
         .bind(&tiers)
         .fetch_one(pool)
@@ -139,7 +140,7 @@ pub async fn profile_visible_bookmarks(
         "SELECT b.* FROM bookmarks b WHERE {VISIBLE_BOOKMARK_FILTER} \
          ORDER BY b.updated_at DESC, b.id LIMIT $3 OFFSET $4"
     );
-    let rows = sqlx::query_as::<_, Bookmark>(&rows_sql)
+    let rows = sqlx::query_as::<_, Bookmark>(AssertSqlSafe(rows_sql))
         .bind(target.id)
         .bind(&tiers)
         .bind(limit)

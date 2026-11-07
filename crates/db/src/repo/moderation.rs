@@ -5,6 +5,7 @@ use linkdean_core::{
     ModerationActionView, NotificationKind, Result, UserBan,
 };
 use serde_json::json;
+use sqlx::AssertSqlSafe;
 use sqlx::{PgConnection, PgPool};
 use std::collections::BTreeMap;
 use uuid::Uuid;
@@ -525,9 +526,9 @@ async fn owned_bookmark(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> Res
 }
 
 async fn set_category_column(conn: &mut PgConnection, id: Uuid, assignment: &str) -> Result<()> {
-    sqlx::query(&format!(
+    sqlx::query(AssertSqlSafe(format!(
         "UPDATE categories SET {assignment}, updated_at = now() WHERE id = $1"
-    ))
+    )))
     .bind(id)
     .execute(conn)
     .await
@@ -594,13 +595,13 @@ async fn revoke_share(
     } else {
         "s.dashboard_id"
     };
-    let row: Option<(Uuid, Uuid, Uuid, String)> = sqlx::query_as(&format!(
+    let row: Option<(Uuid, Uuid, Uuid, String)> = sqlx::query_as(AssertSqlSafe(format!(
         r#"
         SELECT p.owner_user_id, s.invitee_user_id, {parent}, {owner}
         FROM {table} s JOIN {join}
         WHERE s.id = $1
         "#
-    ))
+    )))
     .bind(id)
     .fetch_optional(&mut *conn)
     .await
@@ -611,7 +612,7 @@ async fn revoke_share(
     if owner_id != user_id {
         return Err(Error::NotFound);
     }
-    sqlx::query(&format!("DELETE FROM {table} WHERE id = $1"))
+    sqlx::query(AssertSqlSafe(format!("DELETE FROM {table} WHERE id = $1")))
         .bind(id)
         .execute(conn)
         .await
@@ -828,7 +829,7 @@ pub async fn moderate_content(
             "#,
             super::notification_email::email_state_sql("$1", "'moderation_changes'", "$5"),
         );
-        sqlx::query(&sql)
+        sqlx::query(AssertSqlSafe(sql))
             .bind(user_id)
             .bind(admin_id)
             .bind(format!(

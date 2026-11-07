@@ -4,6 +4,7 @@
 //! database, because claiming takes every due row in the instance.
 
 use linkdean_db::{self as db, EmailRetry, NewOutboxEmail};
+use sqlx::AssertSqlSafe;
 use sqlx::{Connection, PgConnection, PgPool};
 use uuid::Uuid;
 
@@ -17,10 +18,10 @@ impl FreshDb {
     async fn drop_db(self) {
         self.pool.close().await;
         let mut admin = PgConnection::connect(&self.admin_url).await.expect("admin");
-        sqlx::query(&format!(
+        sqlx::query(AssertSqlSafe(format!(
             "DROP DATABASE IF EXISTS {} WITH (FORCE)",
             self.name
-        ))
+        )))
         .execute(&mut admin)
         .await
         .expect("drop database");
@@ -34,7 +35,7 @@ async fn fresh_db_or_skip() -> Option<FreshDb> {
     };
     let name = format!("mail_{}", Uuid::new_v4().simple());
     let mut admin = PgConnection::connect(&url).await.expect("admin");
-    sqlx::query(&format!("CREATE DATABASE {name}"))
+    sqlx::query(AssertSqlSafe(format!("CREATE DATABASE {name}")))
         .execute(&mut admin)
         .await
         .expect("create database");
