@@ -1,9 +1,6 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
-use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Algorithm, Argon2, Params, Version,
-};
+use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use crypto_box::{PublicKey, SecretKey};
 use rand::rngs::OsRng;
 use rand::RngCore;
@@ -38,9 +35,9 @@ fn current_params(output_len: Option<usize>) -> Params {
 }
 
 pub fn hash_password(password: &str) -> Result<String> {
-    let salt = SaltString::generate(&mut rand::thread_rng());
+    let salt = random_bytes(SALT_LEN);
     let hash = argon2_with(current_params(None))
-        .hash_password(password.as_bytes(), &salt)
+        .hash_password_with_salt(password.as_bytes(), &salt)
         .map_err(|e| Error::msg(e.to_string()))?
         .to_string();
     Ok(hash)
@@ -335,9 +332,8 @@ mod key_wrap_tests {
 
     #[test]
     fn old_password_hashes_verify_and_ask_to_be_replaced() {
-        let salt = SaltString::generate(&mut rand::thread_rng());
         let old = Argon2::default()
-            .hash_password(b"password-long", &salt)
+            .hash_password_with_salt(b"password-long", &random_bytes(SALT_LEN))
             .unwrap()
             .to_string();
         assert!(verify_password("password-long", &old).unwrap());

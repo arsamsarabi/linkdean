@@ -34,14 +34,13 @@ async fn an_old_hash_is_replaced_at_sign_in() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
-    use argon2::password_hash::{PasswordHasher, SaltString};
+    use argon2::PasswordHasher;
     let email = format!("old-{}@login.test", Uuid::new_v4());
     let user = db::create_user(&pool, &email, Some("password-long"), None, None, None)
         .await
         .expect("user");
-    let salt = SaltString::generate(&mut rand::thread_rng());
     let old = argon2::Argon2::default()
-        .hash_password(b"password-long", &salt)
+        .hash_password_with_salt(b"password-long", &linkdean_core::crypto::random_bytes(16))
         .unwrap()
         .to_string();
     sqlx::query("UPDATE users SET password_hash = $2 WHERE id = $1")
