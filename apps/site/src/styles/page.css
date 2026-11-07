@@ -110,8 +110,8 @@ html, body { overflow-x: clip; }
 
 /* FAQ beside Dean */
 .faq-dean { margin: 0; align-self: start; display: flex; justify-content: flex-end; }
-.faq-dean img { max-width: 320px; }
-.faq-dean img { display: block; width: 100%; height: auto; }
+.faq-dean img { max-width: 220px; }
+.faq-dean img { display: block; width: 100%; height: auto; transform: rotateY(180deg); }
 @media (max-width: 1023px) { .faq-dean { grid-column: 1 / -1; } .faq-dean img { width: 220px; } }
 @media (max-width: 639px) { .faq-dean img { width: 120px; } }
 
