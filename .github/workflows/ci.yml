@@ -18,14 +18,14 @@ jobs:
     name: Docs (install guide in sync)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: python3 deploy/scripts/sync_install_seccomp.py --check
 
   rust-audit:
     name: Rust (cargo audit)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "1.89"
@@ -54,7 +54,7 @@ jobs:
       DATABASE_URL: postgres://linkdean:linkdean@localhost:5432/linkdean_test
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install system libraries
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev cmake libwebp-dev
       - uses: dtolnay/rust-toolchain@master
@@ -79,7 +79,7 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/web/package.json
@@ -103,7 +103,7 @@ jobs:
       run:
         working-directory: apps/docs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/docs/package.json
@@ -124,7 +124,7 @@ jobs:
       run:
         working-directory: apps/site
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/site/package.json
