@@ -67,7 +67,7 @@ Do not put public-beta secrets in the repo. `deploy/public-beta/.env.example` li
 
 Static Astro site for the apex host.
 
-**First viewport / pages (v1):** brand-forward hero (product name as hero signal), one headline, one short sentence, CTAs: **Sign up** → `https://app.linkdean.app/register` (or login), **Self-host** → install guide (docs or GitHub INSTALL). Feature highlights, real product screenshots (no invented metrics), links to Terms / Privacy / Acceptable Use on the app host (or copied static legal pages if we choose to avoid a hop — default: link to `app.linkdean.app` legal routes), GitHub, and an abuse contact (from operator settings once known; placeholder copy until then). Status link optional if a status page exists later.
+**First viewport / pages (v1):** brand-forward hero (product name as hero signal), one headline, one short sentence, CTAs: **Sign up** → `https://app.linkdean.app/register` (or login), **Self-host** → install guide (docs or GitHub INSTALL). Feature highlights, real product screenshots (no invented metrics), links to Terms / Privacy / Acceptable Use on the app host (or copied static legal pages if we choose to avoid a hop — default: link to `app.linkdean.app` legal routes), GitHub, and abuse/contact `contact@linkdean.app` in the footer. Status link optional if a status page exists later.
 
 **Explicitly not in v1:** pricing table (wait for #12), blog, account dashboard.
 
@@ -111,13 +111,13 @@ Until 3–4 are done, the app may be up for operator smoke tests; **do not annou
 
 ## Delivery slices (reviewable PRs)
 
-1. **Design + deploy skeleton** — this spec; `deploy/public-beta/` stubs; MANAGED_SERVICE status/pointer update.
-2. **Guest + Tunnel + app** — LXD VM, Compose app stack, Cloudflare Tunnel/DNS for `app.linkdean.app`; mail/Turnstile env placeholders.
-3. **Marketing site** — `apps/site`, CI build, Caddy apex route, DNS for `linkdean.app`.
-4. **Docs site** — `apps/docs`, CI build, `docs.linkdean.app`.
-5. **Go-live hardening** — SMTP/Turnstile/firewall/backup/uptime; close roadmap #10/#11/#13 in FEATURES/ROADMAP when each slice’s product claim is true (or close together at announce if preferred).
+1. **Design + deploy skeleton** — **Done.**
+2. **Guest + Tunnel + app** — **Done** (`app.linkdean.app` live).
+3. **Marketing site** — **Done** ([linkdean.app](https://linkdean.app)).
+4. **Docs site** — **Done** ([docs.linkdean.app](https://docs.linkdean.app)).
+5. **Go-live hardening** — **Open.** SMTP/Turnstile/firewall/backup/uptime; remaining plan: [public-beta-homelab plan](../plans/2026-11-06-public-beta-homelab.md).
 
-Roadmap bookkeeping: mark #10/#11/#13 **Done** when the corresponding slice is live (or at announce for #13). Do not mark #13 Done until the go-live checklist is complete.
+Roadmap bookkeeping: #10 and #11 are **Done**. Do not mark #13 Done until the go-live checklist is complete.
 
 ## Ops process on Nova
 

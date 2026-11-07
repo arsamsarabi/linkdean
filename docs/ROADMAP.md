@@ -25,23 +25,23 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 6. **Legal pages and beta notice** (S). **Done:** draft Terms, Privacy and Acceptable Use pages (`/terms`, `/privacy`, `/acceptable-use`), required terms checkbox at sign-up and for SSO start (version + time stored on new accounts), and a dismissible beta banner. Remaining: counsel review of the copy before charging money; re-accept flow when `TERMS_VERSION` bumps.
 
-7. **Report abuse** (M). **Done:** signed-in users can **Report** a public list, a profile or a comment with a reason; admins work the queue under Settings → Admin (dismiss, hide content, warn, ban); the operator's abuse contact email is an admin setting shown in the report form. Remaining: anonymous reports (out of scope for spam control); contact address on the marketing site (item 10).
+7. **Report abuse** (M). **Done:** signed-in users can **Report** a public list, a profile or a comment with a reason; admins work the queue under Settings → Admin (dismiss, hide content, warn, ban); the operator's abuse contact email is an admin setting shown in the report form; marketing footer lists `contact@linkdean.app`. Remaining: anonymous reports (out of scope for spam control).
 
 8. **Final UI/UX and mobile pass** (L). **Done:** mascot (Dean) on moment empty states, 404, onboarding and the wide sign-in panel; drawers full-width on phones; tighter shell padding and scrollable Deleted table; light polish on dashboard empty copy and glance density. Remaining: welcome-email avatar badge when a welcome template exists (security emails stay plain); deeper visual redesign stays out of scope for beta.
 
 9. **Structured logs** (S–M). **Done:** `LOG_FORMAT=text|json` (default text) for stdout; optional `LOG_FILE` appends JSONL regardless of stdout format; every response has `X-Request-Id` (valid inbound ids kept, else a UUID), with the same id on the HTTP request span. Remaining: log rotation stays with the operator; OpenTelemetry exporters stay in Backlog.
 
-10. **Marketing site** (M). **Done (in repo):** Astro site in `apps/site`, published to `deploy/public-beta/static/site` for `linkdean.app` — product pitch, features, self-host CTA to the docs site, sign-up / sign-in, legal + GitHub links. Static and cached at Cloudflare. Remaining: keep guest `static/site` in sync when the marketing PR lands; abuse contact copy before announce; pricing section waits on item 12.
+10. **Marketing site** (M). **Done:** Astro site in `apps/site`, live at [linkdean.app](https://linkdean.app) via `deploy/public-beta/static/site` — product pitch, features, self-host CTA to the docs site, sign-up / sign-in, legal + GitHub links, `contact@linkdean.app`. Static and cached at Cloudflare. Remaining: pricing section waits on item 12.
 
 11. **Documentation site** (M). **Done:** [Docusaurus](https://docusaurus.io/) at [`apps/docs`](../apps/docs), live at [docs.linkdean.app](https://docs.linkdean.app). Builds from repo `docs/` (Install, Operations / development setup, Features, Architecture) via `pnpm sync` + `pnpm build` into `deploy/public-beta/static/docs`. Remaining: API reference once **API platform** ships OpenAPI; optional FAQ pages.
 
-12. **Membership tiers and pricing** (M, explore). Right after the marketing and documentation sites. Decide what the hosted service charges for, before anyone pays and before Stripe or plan gates land in code.
-    - Start from the plan sketch in the [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
-    - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats).
-    - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
+12. **Membership tiers and pricing** (M, explore). After go-live hardening (#13), before anyone pays and before Stripe or plan gates land in code.
+   - Start from the plan sketch in the [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
+   - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats).
+   - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
-13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App health and docs site are live. Plan and checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server).
-    - Still open before announce: transactional SMTP + SPF/DKIM/DMARC, Turnstile + verified-email / disposable blocks, Chrome off the LAN, off-site backups with a tested restore, external uptime, ISP terms confirmation, marketing static sync on the guest, abuse contact on the marketing site.
+13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server). Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md).
+   - Still open before announce: transactional SMTP + SPF/DKIM/DMARC, Turnstile + verified-email / disposable blocks, Chrome off the LAN, off-site backups with a tested restore, external uptime, ISP terms confirmation.
 
 ---
 
