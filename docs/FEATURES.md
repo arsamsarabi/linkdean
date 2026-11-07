@@ -140,7 +140,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Beta banner on every page (no uptime promise, export regularly), dismissible for the browser session
 - Report abuse (signed-in users): a **Report** control on public lists (`/l/…`, sign-in link when signed out), other people's profiles and other people's comments, with a reason (spam, harassment, illegal, impersonation, other) and optional details. Reporting your own content is refused; a second report of the same target while yours is open returns the first; 10 reports per 15 minutes per user
 - Admin report queue (Settings → Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
-- Abuse contact: admins set an email in the same panel (`platform_settings.abuse_contact_email`); the report form shows it. Terms and Privacy tell people to use Report or that address
+- Abuse contact: admins set an email in the same panel (`platform_settings.abuse_contact_email`); the report form shows it. Terms and Privacy tell people to use Report or that address. Marketing site footer also lists `contact@linkdean.app`
 - Banned users list with bulk unban and bulk change of reason or duration
 - Moderation of a banned user's exposed content: turn off public links, set items private, hide the profile, revoke shares, delete comments, move items to the owner's Trash; private and vault content stay out of reach, and every action is recorded
 

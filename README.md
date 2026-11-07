@@ -239,7 +239,7 @@ Published site: [docs.linkdean.app](https://docs.linkdean.app) (built from the f
 
 ## Roadmap
 
-**Next up (before announce):** go-live hardening on the homelab beta — SMTP + DNS auth, Turnstile, backups, uptime ([ROADMAP](docs/ROADMAP.md) #13 / [MANAGED_SERVICE](docs/MANAGED_SERVICE.md)). After that: membership pricing explore (#12), then post-release work (browser extension, …).
+**Where we are:** product Now items 1–11 are shipped; `app` / `docs` / marketing are live on the homelab. **Before announce:** go-live hardening — SMTP + DNS auth, Turnstile, backups, uptime ([ROADMAP](docs/ROADMAP.md) #13 / [MANAGED_SERVICE](docs/MANAGED_SERVICE.md)). After that: membership pricing explore (#12), then post-release work (browser extension, …).
 
 - Capabilities: [docs/FEATURES.md](docs/FEATURES.md)
 - Plan: [docs/ROADMAP.md](docs/ROADMAP.md)
