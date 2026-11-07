@@ -34,7 +34,7 @@ More detail: [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md), [crates/AGENTS.md]
 **Requirements**
 
 - Docker with the Compose plugin
-- For running checks on the host: Rust `1.89` (what CI and the image use), Node `22`, and `pnpm` (enable it with `corepack enable`)
+- For running checks on the host: Rust `1.94` (what CI and the image use), Node `22`, and `pnpm` (enable it with `corepack enable`)
 - Optional: [`cargo-nextest`](https://nexte.st) for faster Rust test runs
 
 ```bash
