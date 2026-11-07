@@ -2060,12 +2060,12 @@ dependencies = [
 
 [[package]]
 name = "linkdean-api"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "dotenvy",
  "futures",
@@ -2095,12 +2095,12 @@ dependencies = [
 
 [[package]]
 name = "linkdean-core"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
  "argon2",
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "crypto_box",
  "csv",
@@ -2120,10 +2120,11 @@ dependencies = [
 
 [[package]]
 name = "linkdean-db"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "argon2",
+ "base64 0.23.1",
  "chrono",
  "hex",
  "linkdean-core",
@@ -2139,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-mail"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "html2text",
@@ -2157,7 +2158,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-search"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "linkdean-core",
@@ -2170,10 +2171,10 @@ dependencies = [
 
 [[package]]
 name = "linkdean-worker"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
+ "base64 0.23.1",
  "chromiumoxide",
  "chrono",
  "futures",
@@ -2530,7 +2531,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.21.7",
  "chrono",
  "getrandom 0.2.17",
  "http",
@@ -4319,6 +4320,7 @@ dependencies = [
  "tower-service",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -4378,6 +4380,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-serde"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
+dependencies = [
+ "serde",
+ "tracing-core",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4387,12 +4399,15 @@ dependencies = [
  "nu-ansi-term",
  "once_cell",
  "regex-automata",
+ "serde",
+ "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
+ "tracing-serde",
 ]
 
 [[package]]

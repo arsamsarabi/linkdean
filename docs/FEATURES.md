@@ -15,11 +15,12 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)
 - Grid, compact list and explorer library views (preference persisted). The list shows each bookmark on one row: site icon, title, site and description, folders, badges and the same menu
+- Library list is keyset-paginated (infinite scroll); folder, tag, flag, created-within, vault-only and sort run on the server with a total match count
 - Unsorted / uncategorized filter
 - Library filters: category, tag, created-within (7d/30d/90d/year), vault-only
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
-- Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens
+- Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens. Select all asks the server for every id the current filter matches (not only loaded rows)
 - Duplicate detection and merge UI (sidebar → Library health → Duplicates)
 - Broken links in the sidebar's Library health group, opening a drawer where each link can be opened, edited, rechecked or removed (Remove bookmark moves it to Deleted items); red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
@@ -34,7 +35,6 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Meilisearch full-text search for **non-vault** bookmarks
 - Shared-folder visibility in search (owned + readable shared categories)
-- Wait/retry UX when Meili lags writes: local matches merged + retry banner
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot waits a week before the boot backfill retries it)
 - Admin reindex: rebuild Meili from Postgres (Settings → Admin)
@@ -53,7 +53,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Settings for whether vault items also appear in the Library, and whether deleted vault items go to Trash or are removed immediately
 - Unlock from Settings or the command palette's Unlock vault command; locking clears decrypted data from the browser cache
 - Vault content never indexed in Meilisearch
-- Export never dumps vault bookmarks as plaintext
+- Export includes vault bookmarks as plaintext only while the vault is unlocked for that session; locked vaults stay out of the file
 - Unlocking a vault opens it for that login session only. Other devices, other sessions and API keys stay locked
 - Optional auto-lock after inactivity (Settings). The server enforces it too: unlocked keys it has not used for that long are dropped. Logging out, a password change or reset, or a ban locks them
 
@@ -119,18 +119,28 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Optional OIDC sign-in with any standard issuer (discovery, PKCE, nonce and ID token checks)
 - Single sign-on linking: an OIDC sign-in whose address belongs to a password account asks for that account's password once, then connects; the account gets a "Single sign-on was connected" email. **Profile → Edit profile → Single sign-on** shows the connected provider, with **Connect** (any provider address) and **Disconnect** (needs the password; not offered to SSO-only accounts)
 - First registered user becomes admin (bootstrap)
-- Open registration toggle (Admin)
+- Open registration toggle (Admin); public beta keeps registration open and relies on the protections below
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
+- Optional Cloudflare Turnstile on password registration (`TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`); off when unset; OIDC uncapped by Turnstile
+- Optional disposable-email domain block at register and email-change (`BLOCK_DISPOSABLE_EMAILS`)
+- Per-user quotas (Admin platform settings; null = unlimited): max bookmarks, stored image bytes, enrich actions per UTC day, import size, upload image size (clamped to hard caps). Usage shown in Settings when a limit is set
 - Optional `BOOTSTRAP_TOKEN`: the first account (the admin) must enter it on the setup page. Racing sign-ups cannot make two first admins or redeem one invite twice
 - Profile: display name, bio, avatar, password change, email change. A new password signs out every other session, and can revoke all API keys too
 - Password reset: with mail on, **Forgot password?** emails a single-use link that works for 30 minutes; admins can make a 24-hour link to hand over, the only way back in when mail is off. A reset signs out every session, can revoke all API keys, and leaves vaults locked
 - Email verification (needs mail): a password registration emails a 24-hour, single-use link, and unverified accounts see a banner with **Resend email**. Opening the link verifies the address without signing in. OIDC accounts are verified when the provider reports the address as verified. Accounts that existed before verification shipped count as verified
 - Email change: **Profile → Edit profile → Change email** with the current password sends a link to the new address and a notice to the old one; the address changes only when the link is opened. Not for SSO-only accounts; with mail off it says to ask an admin
 - Admin verification controls: an **Unverified** badge in the accounts list, **Mark verified**, **Remove verification**, and **Change email** applied at once
-- **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held
+- **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate and locks the admin toggle
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
+- Delete account (Settings → General): confirm email (and password when the account has one), 7-day grace with cancel, then hard purge of owned data including shared folders; last admin cannot schedule
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts
+- Legal pages (draft, not counsel-reviewed): Terms of Service, Privacy Policy (necessary cookies only, no consent banner) and Acceptable Use Policy at `/terms`, `/privacy` and `/acceptable-use`, linked from sign-in and sign-up
+- Terms at sign-up: password sign-up and first-admin setup need a terms checkbox and the API refuses a missing or stale `terms_version`; SSO sign-in needs the checkbox too (`/auth/oidc/start?terms_version=`), and a new SSO account records it. The version and time are stored on the user (`users.terms_version`, `terms_accepted_at`); accounts from before are NULL and are not re-prompted
+- Beta banner on every page (no uptime promise, export regularly), dismissible for the browser session
+- Report abuse (signed-in users): a **Report** control on public lists (`/l/…`, sign-in link when signed out), other people's profiles and other people's comments, with a reason (spam, harassment, illegal, impersonation, other) and optional details. Reporting your own content is refused; a second report of the same target while yours is open returns the first; 10 reports per 15 minutes per user
+- Admin report queue (Settings → Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
+- Abuse contact: admins set an email in the same panel (`platform_settings.abuse_contact_email`); the report form shows it. Terms and Privacy tell people to use Report or that address. Marketing site footer also lists `contact@linkdean.app`
 - Banned users list with bulk unban and bulk change of reason or duration
 - Moderation of a banned user's exposed content: turn off public links, set items private, hide the profile, revoke shares, delete comments, move items to the owner's Trash; private and vault content stay out of reach, and every action is recorded
 
@@ -149,7 +159,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Import: Netscape HTML, Linkdean JSON, Pocket CSV, Raindrop CSV
 - Imported bookmarks get metadata and previews in the background
-- Export: Netscape HTML, Linkdean JSON
+- Export: Netscape HTML, Linkdean JSON (full account export of owned folders, bookmarks and dashboards; vault items included while unlocked)
 - Linkdean JSON (version 2) keeps every folder of a bookmark, its favourite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
 - Netscape HTML lists a bookmark under each folder it is in, and reads `<DD>` descriptions on import
 
@@ -158,10 +168,14 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Ops & self-host
 
 - Docker Compose stack (API, Postgres, Meilisearch, optional Chrome)
-- Release images: a `v*` tag runs CI, publishes `ghcr.io/arsamsarabi/linkdean:<version>` and creates a GitHub release; [INSTALL.md](INSTALL.md) gives operators a Compose file to copy, optional Chrome setup and the full environment variable reference
-- Healthchecks on db / Meili / api; `GET /api/health` and `GET /api/ready`
+- Release images: a `v*` tag runs CI, publishes `ghcr.io/arsamsarabi/linkdean:<version>` and creates a GitHub release; [INSTALL.md](INSTALL.md) (also on [docs.linkdean.app](https://docs.linkdean.app/docs/self-hosting/install)) gives operators a Compose file to copy, optional Chrome setup and the full environment variable reference
+- Public docs site: [docs.linkdean.app](https://docs.linkdean.app) (Docusaurus in `apps/docs`, content synced from this `docs/` tree)
+- Public marketing site: [linkdean.app](https://linkdean.app) (Astro in `apps/site`)
+- Public app: [app.linkdean.app](https://app.linkdean.app) (homelab beta stack in `deploy/public-beta/`)
+- Healthchecks on db / Meili / api; `GET /api/health` (reports the running version) and `GET /api/ready`
 - Security headers on every response (`Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional `Strict-Transport-Security` via `HSTS_MAX_AGE`). Image routes keep their own sandbox CSP. `/.well-known/security.txt` and `/security.txt` point to the project security contact
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
+- Structured logs: `LOG_FORMAT=text|json` on stdout (default text); optional `LOG_FILE` appends JSONL; every response has `X-Request-Id` correlated into request log spans
 - Outbound email over SMTP (optional): an outbox with retries, Settings → Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
 - Avatars and preview volumes; backup recipe in [SELF_HOSTED.md](./SELF_HOSTED.md)
 - Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in. On wide screens the header's sidebar button (or ⌘B / Ctrl+B) hides and shows it, remembered per browser
@@ -181,6 +195,9 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 ## Surfaces
 
+- Mascot (Dean) on moment screens only: empty library / folder / search, empty Deleted, fully empty Shared, 404, onboarding, and the wide sign-in panel. Soft light backdrop; decorative (`alt=""`). Not in header, sidebar, cards, dashboards, or settings.
+- Drawers go full-width on phones (`sm` and up keep `md`/`lg`); Deleted items table scrolls horizontally; app shell padding tightens on small screens; dashboard glance tiles stack to one column on the narrowest phones.
+
 | Surface | Role |
 | --- | --- |
 | `/` | Dashboard (glance boards) |
@@ -188,6 +205,10 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 | `/settings` | Preferences, categories, import, vault, API keys, admin |
 | `/vaults` | Open vaults, with Library filters and views |
 | `/banned` | Reason and end date for a banned account |
+| `/terms`, `/privacy`, `/acceptable-use` | Legal pages (public) |
 | `/trash` | Soft-deleted items |
 | `/profile` | Account profile |
 | Command palette | Quick add / search / navigate |
+| [linkdean.app](https://linkdean.app) | Marketing (static) |
+| [docs.linkdean.app](https://docs.linkdean.app) | Documentation (static) |
+| [app.linkdean.app](https://app.linkdean.app) | Hosted app (public beta) |

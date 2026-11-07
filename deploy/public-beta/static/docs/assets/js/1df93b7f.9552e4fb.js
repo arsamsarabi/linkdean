@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunklinkdean_docs=self.webpackChunklinkdean_docs||[]).push([["452"],{5146(n,e,s){s.r(e),s.d(e,{default:()=>r});var d=s(159),c=s(5528);function r(){return(0,d.jsx)(c.rd,{to:"/docs/intro"})}}}]);

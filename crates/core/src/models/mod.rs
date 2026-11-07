@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+mod abuse;
+pub use abuse::*;
 mod moderation;
 pub use moderation::*;
 
@@ -24,6 +26,8 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
     /// When the account proved it controls `email`. `None` until then.
     pub email_verified_at: Option<DateTime<Utc>>,
+    /// When the account is purged after a self-serve delete request. `None` when not scheduled.
+    pub deletion_scheduled_at: Option<DateTime<Utc>>,
 }
 
 impl User {
@@ -55,6 +59,19 @@ pub struct UserPublic {
     pub sso_connected: bool,
     /// The host of the attached identity's issuer, for display.
     pub sso_provider: Option<String>,
+    /// Set while the account is scheduled for deletion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletion_scheduled_at: Option<DateTime<Utc>>,
+}
+
+/// Body of `POST /users/me/deletion`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ScheduleAccountDeletion {
+    /// Must match the account email (case-insensitive).
+    pub confirm_email: String,
+    /// Required for accounts with a local password; ignored for single sign-on only accounts.
+    #[serde(default)]
+    pub password: Option<String>,
 }
 
 /// The host of an OIDC issuer URL, for display: `https://id.example.com/realms/x` →
@@ -147,7 +164,51 @@ pub struct PlatformSettings {
     pub registration_open: bool,
     pub api_keys_enabled: bool,
     pub require_verified_email: bool,
+    /// Max owned bookmarks (non-deleted). `None` = unlimited.
+    pub max_bookmarks: Option<i64>,
+    /// Max bytes for avatar + preview assets. `None` = unlimited.
+    pub max_stored_image_bytes: Option<i64>,
+    /// Max enrich actions (page/favicon/OG/screenshot) per UTC day. `None` = unlimited.
+    pub max_enrich_actions_per_day: Option<i64>,
+    /// Max import payload bytes (clamped to the hard 10 MiB cap). `None` = hard cap only.
+    pub max_import_bytes: Option<i64>,
+    /// Max uploaded image body bytes (clamped to avatar/preview hard caps). `None` = hard caps only.
+    pub max_upload_image_bytes: Option<i64>,
+    /// Where to send abuse and takedown reports. `None` until an admin sets it.
+    pub abuse_contact_email: Option<String>,
     pub updated_at: DateTime<Utc>,
+}
+
+/// Effective quotas for a user. Today = platform row; later may AND with a plan.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct ResolvedLimits {
+    pub max_bookmarks: Option<i64>,
+    pub max_stored_image_bytes: Option<i64>,
+    pub max_enrich_actions_per_day: Option<i64>,
+    pub max_import_bytes: Option<i64>,
+    pub max_upload_image_bytes: Option<i64>,
+}
+
+impl From<&PlatformSettings> for ResolvedLimits {
+    fn from(p: &PlatformSettings) -> Self {
+        Self {
+            max_bookmarks: p.max_bookmarks,
+            max_stored_image_bytes: p.max_stored_image_bytes,
+            max_enrich_actions_per_day: p.max_enrich_actions_per_day,
+            max_import_bytes: p.max_import_bytes,
+            max_upload_image_bytes: p.max_upload_image_bytes,
+        }
+    }
+}
+
+/// Usage snapshot for Settings. Limits mirror [`ResolvedLimits`]; used gauges/counters are filled in.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuotaUsageView {
+    pub limits: ResolvedLimits,
+    pub bookmarks: i64,
+    pub stored_image_bytes: i64,
+    pub enrich_actions_today: i64,
+    pub enrich_period_start: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,6 +216,38 @@ pub struct UpdatePlatformSettings {
     pub registration_open: Option<bool>,
     pub api_keys_enabled: Option<bool>,
     pub require_verified_email: Option<bool>,
+    /// `Some(None)` clears; `Some(Some(n))` sets; omit = no change.
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_bookmarks: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_stored_image_bytes: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_enrich_actions_per_day: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_import_bytes: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_upload_image_bytes: Option<Option<i64>>,
+    /// `Some(None)` clears; `Some(Some(email))` sets; omit = no change.
+    #[serde(default, deserialize_with = "deserialize_option_option_string")]
+    pub abuse_contact_email: Option<Option<String>>,
+}
+
+fn deserialize_option_option_string<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Some(Option::<String>::deserialize(deserializer)?))
+}
+
+fn deserialize_option_option_i64<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<Option<i64>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Some(Option::<i64>::deserialize(deserializer)?))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -1053,6 +1146,12 @@ pub struct RegisterRequest {
     /// The server's `BOOTSTRAP_TOKEN`, needed for the first account when one is set.
     #[serde(default)]
     pub bootstrap_token: Option<String>,
+    /// Cloudflare Turnstile widget token; required when the server has Turnstile keys.
+    #[serde(default)]
+    pub turnstile_token: Option<String>,
+    /// Terms of Service version the user accepted; must equal `legal::TERMS_VERSION`.
+    #[serde(default)]
+    pub terms_version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

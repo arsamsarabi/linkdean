@@ -12,4 +12,4 @@ export type {
   SearchResponse,
   ImportResult,
 } from '@/schemas'
-export { api } from './api'
+export { api, type BookmarksListParams } from './api'

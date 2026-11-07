@@ -17,16 +17,19 @@ Linkdean is a self-hostable bookmarks manager. Configuration uses environment va
 
 ```
 linkdean/
-  apps/web/           # SPA
-  crates/api/         # HTTP binary
-  crates/core/        # domain, crypto, import/export
-  crates/db/          # Postgres repos + migrations
-  crates/mail/        # email config, templates, SMTP
-  crates/search/      # Meilisearch client
-  crates/worker/      # metadata + favicon/OG disk cache
-  migrations/         # sqlx migrations
-  deploy/docker/      # compose + Dockerfile
-  docs/
+  apps/web/              # SPA
+  apps/site/             # Astro marketing (linkdean.app)
+  apps/docs/             # Docusaurus (docs.linkdean.app; syncs from docs/)
+  crates/api/            # HTTP binary
+  crates/core/           # domain, crypto, import/export
+  crates/db/             # Postgres repos + migrations
+  crates/mail/           # email config, templates, SMTP
+  crates/search/         # Meilisearch client
+  crates/worker/         # metadata + favicon/OG disk cache
+  migrations/            # sqlx migrations
+  deploy/docker/         # self-host compose + Dockerfile
+  deploy/public-beta/    # Nova LXD guest stack (Caddy + Tunnel)
+  docs/                  # canonical markdown (also published via apps/docs)
 ```
 
 ## Runtime shape
@@ -64,11 +67,16 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - Email verification (`crates/api/src/routes/auth/email_verification.rs`, `crates/db/src/repo/email_verification.rs`): `users.email_verified_at` records when the account proved it controls its address; migration `042` marks every account that existed then as verified. A password registration enqueues `verify_email` when mail is on (best effort; the registration never fails on it), and `POST /api/auth/email/resend` sends a new link (refused with mail off; answers `verified: true` when already verified). Links open `/verify-email#token=…` and last 24 hours (`EMAIL_VERIFY_LINK_HOURS`). `POST /api/auth/email/verify` needs no session: the token proves control of the inbox. OIDC sign-in marks the account verified when the ID token or userinfo reports `email_verified: true`, for new and existing accounts
 - Invite routing: a folder or dashboard share to an address whose account is unverified is stored as an address-only pending invite (no `invitee_user_id`, no notification), the same as an address with no account. Verifying (link, admin or OIDC), confirming an email change and an admin email change call `link_pending_share_invites`, which attaches the waiting invites to the account; they still need accepting. Removing verification keeps accepted shares and routes only new invites to pending. `POST /api/shares/claim` lets a signed-in account claim an invite link sent to its current address (400 otherwise), which is how invites reach accounts with mail off. An invite has two claim links: the owner's copyable one (`claim_token_hash`) and one only its email carries (`email_claim_token_hash`, issued when the email is sent). Claiming with the emailed link, at registration or signed in, also calls `mark_email_verified`, since it proves control of the inbox; the owner's link never verifies, because the owner may pass it on. Claiming with either link, or inviting again, voids both
 - Email change: `POST /api/auth/email/change` takes the current password and the new address (refused for SSO-only accounts, with mail off, and for an address another account uses). It makes a `change_email` token holding the new address, emails `email_change_verify` with `/verify-email#token=…&change=1` to the new address and `email_change_notice` (masked as `n•••@domain`) to the old one. The address changes only at `POST /api/auth/email/confirm-change`, which checks again that it is free (a unique violation is a `409`), switches it, marks it verified, voids every live account token and attaches invites waiting for the new address. `PATCH /api/users/me` no longer changes the email. Admins use `POST /api/admin/users/{id}/email` (applied at once, counts as verified) and `POST /api/admin/users/{id}/email-verified {verified}`
-- Hard gate (`crates/api/src/auth/mod.rs`): with the `platform_settings.require_verified_email` setting on, the `AuthUser` extractor answers `403 {"code":"email_unverified"}` for an unverified, non-admin account on every path outside `/api/auth/*` (read from `OriginalUri`, since the nested router strips `/api`). Admins are never gated, so the setting cannot lock everyone out. Only unverified accounts trigger the platform settings lookup; verified ones pass without another query. The admin platform `PATCH` refuses to turn it on while mail is off, and the gate does not apply while mail is off even if the setting was left on. `/api/auth/me` reports the effective value, and the SPA sends gated accounts to the `/verify-email` screen (Resend, Sign out)
+- Hard gate (`crates/api/src/auth/mod.rs`): with `platform_settings.require_verified_email` **or** host env `REQUIRE_VERIFIED_EMAIL`, the `AuthUser` extractor answers `403 {"code":"email_unverified"}` for an unverified, non-admin account on every path outside `/api/auth/*` (read from `OriginalUri`, since the nested router strips `/api`). Admins are never gated, so the setting cannot lock everyone out. Only unverified accounts trigger the platform settings lookup; verified ones pass without another query. The admin platform `PATCH` refuses to turn it on while mail is off, and refuses changes when the host env forces it; the gate does not apply while mail is off even if the setting was left on. `/api/auth/me` and admin platform responses report the effective value (`require_verified_email_forced` when the env is set). The SPA sends gated accounts to the `/verify-email` screen (Resend, Sign out)
+- Turnstile (`crates/api/src/turnstile.rs`): when both `TURNSTILE_*` keys are set, `POST /api/auth/register` requires `turnstile_token` and checks it with Cloudflare Siteverify (secret, token, client IP). Fail closed on Cloudflare errors. Bootstrap and auth-config expose `turnstile_site_key` for the SPA
+- Disposable domains (`crates/api/src/disposable_email.rs`): when `BLOCK_DISPOSABLE_EMAILS` is on, register and email-change refuse an embedded denylist with `400` "Use a lasting email address."
+- Terms acceptance (`crates/core/src/legal/mod.rs`, migration `048`): `TERMS_VERSION` must match on password register and on OIDC sign-in start (`?terms_version=`). New accounts store `users.terms_version` and `terms_accepted_at`. Existing accounts keep NULL and are not re-prompted. Public draft pages live at `/terms`, `/privacy`, `/acceptable-use`
+- Account deletion (`crates/db/src/repo/account_deletion.rs`, migration `047`): `POST /api/users/me/deletion` schedules `users.deletion_scheduled_at` (7-day grace); `DELETE` cancels. Hourly maintenance hard-deletes due users (FK cascade) and cleans Meili + preview assets
+- Abuse reports (`crates/db/src/repo/abuse_reports.rs`, migration `049`): signed-in `POST /api/reports` for `public_list` / `profile` / `comment`; admins list and resolve via `/api/admin/reports` (dismiss, hide, warn, ban). Optional `platform_settings.abuse_contact_email` is shown in the report form
 - Argon2 work runs on a blocking pool, at most 4 at once (`crates/db/src/repo/blocking.rs`)
 - Startup refuses published secrets unless `ALLOW_DEFAULT_SECRETS=true` (dev only)
 - First install uses `/onboarding` (admin account, optional vault, optional import). Sign-ups run under the `user_signup` advisory lock in one transaction, so only one account can become the first admin and a registration invite is claimed (`FOR UPDATE`) with the user insert. With `BOOTSTRAP_TOKEN` set, the first account must present it; OIDC cannot, so it is refused until an admin exists
-- OIDC: Authorization Code with discovery, PKCE, state and nonce against `OIDC_*` env; callback `/api/auth/oidc/callback`. State, nonce and verifier ride in a 10 minute HttpOnly `linkdean_oidc` cookie scoped to `/api/auth/oidc`. The ID token is validated (signature, issuer, audience, expiry, nonce); userinfo fills in a missing email. Users are keyed by issuer and subject, never by email. New identities obey closed registration. The callback always redirects: home with a session cookie, `/login?link=1` with a pending link, or `/login?oidc_error=…`
+- OIDC: Authorization Code with discovery, PKCE, state and nonce against `OIDC_*` env; callback `/api/auth/oidc/callback`. State, nonce, verifier and (for sign-in) terms version ride in a 10 minute HttpOnly `linkdean_oidc` cookie scoped to `/api/auth/oidc`. The ID token is validated (signature, issuer, audience, expiry, nonce); userinfo fills in a missing email. Users are keyed by issuer and subject, never by email. New identities obey closed registration and current terms. The callback always redirects: home with a session cookie, `/login?link=1` with a pending link, or `/login?oidc_error=…`
 - Single sign-on linking (`crates/db/src/repo/oidc_links.rs`, `routes/auth/oidc.rs`): an unknown identity whose address belongs to a password account (case-insensitive) creates a `pending_oidc_links` row (migration `043`: issuer, subject, provider email, provider `email_verified`, 10 minute expiry, `PENDING_OIDC_LINK_MINUTES`). Only the SHA-256 of its 32-byte token is stored; the token rides in an HttpOnly, SameSite=Lax `linkdean_oidc_link` cookie scoped to `/api/auth`. `GET /api/auth/oidc/pending-link` returns the masked provider address or 404. `POST /api/auth/login` with the cookie consumes the link in one transaction under a row lock: it attaches the identity only when the signed-in account's address equals the link's, marks the account verified only when the provider verified that address, adds `"sso_connected": true` to the response, enqueues `sso_connected`, and always expires the cookie; the link is spent either way and a failure never fails the sign-in. SSO-only holders and holders already linked to another identity are refused with `oidc_error`
 - Connect and disconnect: `GET /api/auth/oidc/start?mode=connect` needs a session and records the user id in the flow cookie; the callback checks that the session still belongs to that user, attaches the identity whatever its address (`link_oidc_identity`), enqueues `sso_connected`, and redirects to `/profile?sso=connected` or `/profile?oidc_error=…`. `POST /api/auth/oidc/disconnect {password}` clears the identity after a password check (400 for accounts without a password, 401 for a wrong one, counted on the login limits). A unique index on `(oidc_issuer, oidc_subject)` keeps one identity per account and per subject; a taken identity is a 409 "This sign-in is already connected to another account." `UserPublic` carries `sso_connected` and `sso_provider` (issuer host). Maintenance purges links used or expired over a day ago
 - Profile (`/profile`) and settings (`/settings`); header avatar menu
@@ -86,6 +94,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 - Per-route body limits: import 20 MiB (10 MiB file content), avatar 6 MiB, preview 9 MiB. Uploaded images over 40 megapixels are refused from their header, each decode may allocate at most 160 MiB, and two decode at once.
 - Each Postgres statement times out after 30 s; migrations run on a separate connection without the limit
 - `GET /api/metrics` needs `Authorization: Bearer $METRICS_TOKEN` and is off when the token is unset. Labels use the route template, not the raw path. `GET /api/ready` returns booleans only
+- Logging (`crates/api/src/logging.rs`, `request_id.rs`): stdout is human text by default or JSON lines when `LOG_FORMAT=json`; optional `LOG_FILE` always appends JSONL. Every response includes `X-Request-Id` (valid inbound values are kept; otherwise a UUID), and that id is a field on the HTTP request span
 - Hourly maintenance (`crates/api/src/maintenance.rs`): trash retention, with search and preview cleanup for purged bookmarks, the expired-session purge, removal of unused tags more than an hour old, the email outbox purge and the account token purge
 
 Operator-facing limits and behaviour: [SELF_HOSTED.md](./SELF_HOSTED.md#limits-and-behaviour-operators-should-know).
@@ -126,9 +135,9 @@ Writes upsert non-vault docs into Meilisearch index `bookmarks` using the bookma
 | Pocket CSV | in |
 | Raindrop CSV | in |
 
-Vault bookmarks are not exported as plaintext.
+Vault bookmarks are exported as plaintext only while the vault session keyring is unlocked; locked vaults stay out of the file. Import of Linkdean JSON still skips `is_vault` rows (they will not round-trip into a vault).
 
-Linkdean JSON is versioned (`EXPORT_VERSION` in `crates/core/src/import_export/mod.rs`, now 2). Version 1 files still import. A file newer than the server is refused. Trash and vault content are left out.
+Linkdean JSON is versioned (`EXPORT_VERSION` in `crates/core/src/import_export/mod.rs`, now 2). Version 1 files still import. A file newer than the server is refused. Trash is left out.
 
 ## Local dev
 

@@ -15,7 +15,10 @@ import type {
   TestEmailResult,
 } from '@/schemas'
 
-type PlatformEnvelope = { settings: PlatformSettings }
+type PlatformEnvelope = {
+  settings: PlatformSettings
+  require_verified_email_forced: boolean
+}
 
 export function usePlatformSettings(enabled = true): UseQueryResult<PlatformEnvelope> {
   return useQuery({
@@ -25,11 +28,19 @@ export function usePlatformSettings(enabled = true): UseQueryResult<PlatformEnve
   })
 }
 
-export function useUpdatePlatformSettings(): UseMutationResult<
-  PlatformEnvelope,
-  Error,
-  { registration_open?: boolean; api_keys_enabled?: boolean; require_verified_email?: boolean }
-> {
+export type PlatformSettingsPatch = {
+  registration_open?: boolean
+  api_keys_enabled?: boolean
+  require_verified_email?: boolean
+  max_bookmarks?: number | null
+  max_stored_image_bytes?: number | null
+  max_enrich_actions_per_day?: number | null
+  max_import_bytes?: number | null
+  max_upload_image_bytes?: number | null
+  abuse_contact_email?: string | null
+}
+
+export function useUpdatePlatformSettings(): UseMutationResult<PlatformEnvelope, Error, PlatformSettingsPatch> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body) => api.updatePlatformSettings(body),

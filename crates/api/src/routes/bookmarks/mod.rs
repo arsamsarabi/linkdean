@@ -7,11 +7,12 @@ use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use chrono::{DateTime, Utc};
 use linkdean_core::preview_image::{self, process_bookmark_preview};
 use linkdean_core::VaultKeyring;
 use linkdean_core::{BookmarkView, CreateBookmark, Error, UpdateBookmark};
-use linkdean_db::{self as db};
-use serde::Deserialize;
+use linkdean_db::{self as db, BookmarkPageFilter, BookmarkSort, DEFAULT_PAGE_LIMIT};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
 
@@ -26,6 +27,7 @@ pub fn router() -> Router<AppState> {
         // axum never tries to parse names like `broken` as a Uuid → bare 400.
         .route("/bookmarks/broken", get(broken))
         .route("/bookmarks/broken-links", get(broken))
+        .route("/bookmarks/ids", get(list_ids))
         .route("/bookmarks/{id}/check-link", post(check_link))
         .route("/bookmarks/{id}/save", post(save_copy))
         .route(
@@ -46,8 +48,77 @@ pub fn router() -> Router<AppState> {
 #[derive(Deserialize)]
 pub struct ListQuery {
     pub category_id: Option<Uuid>,
+    pub folder: Option<String>,
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub sort: Option<String>,
+    /// Comma-separated or single tag name(s).
+    pub tag: Option<String>,
+    /// Comma-separated or single flag name(s).
+    pub flag: Option<String>,
+    /// RFC3339 timestamp lower bound on `created_at`.
+    pub since: Option<String>,
     #[serde(default)]
     pub include_vault: bool,
+    /// Alias: `vault=1` also sets vault-only filter.
+    pub vault: Option<String>,
+    #[serde(default)]
+    pub vault_only: bool,
+}
+
+#[derive(Serialize)]
+pub struct BookmarkListResponse {
+    pub items: Vec<BookmarkView>,
+    pub next_cursor: Option<String>,
+    pub total: i64,
+}
+
+#[derive(Serialize)]
+pub struct BookmarkIdsResponse {
+    pub ids: Vec<Uuid>,
+}
+
+fn split_csv(raw: Option<&str>) -> Vec<String> {
+    raw.map(|s| {
+        s.split(',')
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .map(str::to_string)
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
+fn page_filter(
+    q: &ListQuery,
+    include_vault: bool,
+    include_deleted: bool,
+) -> Result<BookmarkPageFilter, Error> {
+    let folder = q
+        .folder
+        .clone()
+        .or_else(|| q.category_id.map(|id| id.to_string()));
+    let since = match q.since.as_deref() {
+        None | Some("") => None,
+        Some(s) => Some(
+            DateTime::parse_from_rfc3339(s)
+                .map(|dt| dt.with_timezone(&Utc))
+                .map_err(|_| Error::BadRequest("invalid since".into()))?,
+        ),
+    };
+    let vault_only = q.vault_only || matches!(q.vault.as_deref(), Some("1") | Some("true"));
+    Ok(BookmarkPageFilter {
+        folder,
+        tags: split_csv(q.tag.as_deref()),
+        flags: split_csv(q.flag.as_deref()),
+        since,
+        vault_only,
+        include_vault,
+        include_deleted,
+        sort: BookmarkSort::parse(q.sort.as_deref().unwrap_or("")),
+        limit: q.limit.unwrap_or(DEFAULT_PAGE_LIMIT),
+        cursor: q.cursor.clone(),
+    })
 }
 
 async fn list(
@@ -55,20 +126,31 @@ async fn list(
     AuthUser(user): AuthUser,
     vault_session: VaultSession,
     Query(q): Query<ListQuery>,
-) -> ApiResult<Json<Vec<BookmarkView>>> {
+) -> ApiResult<Json<BookmarkListResponse>> {
     let keyring = state.vault_keyring(&vault_session, user.id).await;
     let include_vault = q.include_vault && !keyring.is_empty();
     let settings = db::get_user_settings(&state.pool, user.id).await?;
-    let items = db::list_bookmarks(
-        &state.pool,
-        user.id,
-        q.category_id,
-        include_vault,
-        &keyring,
-        settings.show_deleted_in_library,
-    )
-    .await?;
-    Ok(Json(items))
+    let filter = page_filter(&q, include_vault, settings.show_deleted_in_library)?;
+    let page = db::list_bookmarks_page(&state.pool, user.id, filter, &keyring).await?;
+    Ok(Json(BookmarkListResponse {
+        items: page.items,
+        next_cursor: page.next_cursor,
+        total: page.total,
+    }))
+}
+
+async fn list_ids(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    vault_session: VaultSession,
+    Query(q): Query<ListQuery>,
+) -> ApiResult<Json<BookmarkIdsResponse>> {
+    let keyring = state.vault_keyring(&vault_session, user.id).await;
+    let include_vault = q.include_vault && !keyring.is_empty();
+    let settings = db::get_user_settings(&state.pool, user.id).await?;
+    let filter = page_filter(&q, include_vault, settings.show_deleted_in_library)?;
+    let ids = db::list_bookmark_ids_matching(&state.pool, user.id, filter, &keyring).await?;
+    Ok(Json(BookmarkIdsResponse { ids }))
 }
 
 async fn get_one(
@@ -190,6 +272,15 @@ async fn upload_preview(
         break;
     }
     let raw_bytes = bytes.ok_or_else(|| Error::BadRequest("missing preview file field".into()))?;
+    let limits = crate::quotas::limits_for(&state.pool).await?;
+    crate::quotas::refuse_upload(
+        &state,
+        user.id,
+        &limits,
+        raw_bytes.len(),
+        crate::quotas::HARD_PREVIEW_BODY,
+    )
+    .await?;
     let jpeg = tokio::task::spawn_blocking(move || process_bookmark_preview(&raw_bytes))
         .await
         .map_err(|e| Error::msg(e.to_string()))??;

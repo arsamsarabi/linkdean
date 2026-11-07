@@ -2,7 +2,7 @@ import { useMemo, type ReactElement, type ReactNode } from 'react'
 import { Anchor, Badge, Card, Group, Paper, SimpleGrid, Skeleton, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { IconFolder, IconLayoutDashboard, IconMailOpened, IconShare, IconUsers } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { QueryErrorAlert, ShareInvitesList } from '@/components'
+import { EmptyState, MASCOT, QueryErrorAlert, ShareInvitesList } from '@/components'
 import { useCategories, useDashboards, useShareInvites } from '@/hooks'
 import { buildLibrarySearch } from '@/lib'
 import { splitShared, type SharedItem as Item } from './splitShared'
@@ -95,8 +95,9 @@ export function SharedPage(): ReactElement {
     () => splitShared(categories.data ?? [], dashboards.data ?? []),
     [categories.data, dashboards.data]
   )
-  const loading = categories.isLoading || dashboards.isLoading
+  const loading = categories.isLoading || dashboards.isLoading || invites.isLoading
   const error = categories.error || dashboards.error
+  const fullyEmpty = !loading && pending.length === 0 && withMe.length === 0 && byMe.length === 0
 
   return (
     <Stack gap="xl" maw={1100}>
@@ -116,38 +117,48 @@ export function SharedPage(): ReactElement {
         />
       ) : null}
 
-      <Section title="Waiting for you" description="Accept an invite to add the folder or dashboard to yours.">
-        {pending.length > 0 ? (
-          <ShareInvitesList />
-        ) : (
-          <Empty icon={<IconMailOpened size={18} stroke={1.5} />}>No invites waiting.</Empty>
-        )}
-      </Section>
+      {fullyEmpty ? (
+        <EmptyState
+          illustration={{ src: MASCOT.lookingUp }}
+          title="Nothing shared yet"
+          description="Accept an invite, or share a folder from its menu in the library."
+        />
+      ) : (
+        <>
+          <Section title="Waiting for you" description="Accept an invite to add the folder or dashboard to yours.">
+            {pending.length > 0 ? (
+              <ShareInvitesList />
+            ) : (
+              <Empty icon={<IconMailOpened size={18} stroke={1.5} />}>No invites waiting.</Empty>
+            )}
+          </Section>
 
-      <Section title="Shared with me" description="Folders and dashboards other people share with you.">
-        {loading ? (
-          <Skeleton height={72} radius="md" />
-        ) : withMe.length > 0 ? (
-          <ItemGrid items={withMe} />
-        ) : (
-          <Empty icon={<IconUsers size={18} stroke={1.5} />}>Nothing is shared with you yet.</Empty>
-        )}
-      </Section>
+          <Section title="Shared with me" description="Folders and dashboards other people share with you.">
+            {loading ? (
+              <Skeleton height={72} radius="md" />
+            ) : withMe.length > 0 ? (
+              <ItemGrid items={withMe} />
+            ) : (
+              <Empty icon={<IconUsers size={18} stroke={1.5} />}>Nothing is shared with you yet.</Empty>
+            )}
+          </Section>
 
-      <Section
-        title="Shared by me"
-        description="Change who has access from the folder's menu in the library, or Share on the dashboard."
-      >
-        {loading ? (
-          <Skeleton height={72} radius="md" />
-        ) : byMe.length > 0 ? (
-          <ItemGrid items={byMe} />
-        ) : (
-          <Empty icon={<IconShare size={18} stroke={1.5} />}>
-            You have not shared anything. Share a folder from its menu in the library.
-          </Empty>
-        )}
-      </Section>
+          <Section
+            title="Shared by me"
+            description="Change who has access from the folder's menu in the library, or Share on the dashboard."
+          >
+            {loading ? (
+              <Skeleton height={72} radius="md" />
+            ) : byMe.length > 0 ? (
+              <ItemGrid items={byMe} />
+            ) : (
+              <Empty icon={<IconShare size={18} stroke={1.5} />}>
+                You have not shared anything. Share a folder from its menu in the library.
+              </Empty>
+            )}
+          </Section>
+        </>
+      )}
     </Stack>
   )
 }

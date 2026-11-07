@@ -122,6 +122,19 @@ export function namedFolder(folderId: string | null | undefined): string | null 
   return folderId && folderId !== FOLDER_ALL && folderId !== FOLDER_UNCATEGORIZED ? folderId : null
 }
 
+/**
+ * Splits the folder + category filters into what the server can take (`folder`, a single
+ * target) and what is left for the client (several categories, or one that differs from the folder).
+ */
+export function splitFolderFilter(
+  folderId: string | null | undefined,
+  filterCats: readonly string[]
+): { folder: string | undefined; clientCats: string[] } {
+  const folder = folderId && folderId !== FOLDER_ALL ? folderId : filterCats.length === 1 ? filterCats[0] : undefined
+  const handled = filterCats.length === 1 && filterCats[0] === folder
+  return { folder, clientCats: filterCats.length && !handled ? [...filterCats] : [] }
+}
+
 /** Items filed directly in `folderId`, or all items when no folder is named. */
 export function scopeToFolder<T extends LibraryListItem>(items: T[], folderId: string | null | undefined): T[] {
   const folder = namedFolder(folderId)

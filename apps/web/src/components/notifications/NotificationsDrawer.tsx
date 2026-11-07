@@ -10,6 +10,7 @@ import {
   useShareInvites,
   useUnreadNotificationCount,
 } from '@/hooks'
+import { useDrawerSize } from '@/hooks/render'
 import type { Notification, ShareInvite } from '@/schemas'
 import { ShareInvitesList } from './ShareInvitesList'
 
@@ -61,6 +62,7 @@ function kindLabel(kind: Notification['kind']): string {
 }
 
 export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
+  const drawerSize = useDrawerSize()
   const nav = useNavigate()
   const list = useNotifications(opened)
   const unread = useUnreadNotificationCount(true)
@@ -96,7 +98,7 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
   }
 
   return (
-    <Drawer opened={opened} onClose={onClose} position="right" size="md" title="Notifications" padding="md">
+    <Drawer opened={opened} onClose={onClose} position="right" size={drawerSize} title="Notifications" padding="md">
       <Stack gap="md">
         <Group justify="space-between">
           <Text size="sm" c="dimmed">

@@ -1,6 +1,7 @@
 export * from './auth'
 export * from './categories'
 export * from './id'
+export * from './legal'
 export * from './library'
 export * from './settings'
 export * from './sharing'

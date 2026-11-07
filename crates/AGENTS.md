@@ -80,7 +80,7 @@ If tradeoffs are required, follow that order. Security outranks convenience for 
 - Vault plaintext never enters Meilisearch
 - Passphrases never logged, never returned in responses, never written to disk
 - Data keys only in memory for unlocked sessions; lock clears server-held key material
-- Export must not emit vault bookmarks as plaintext
+- Export emits vault bookmarks as plaintext only for vaults the requesting login session has unlocked (never for API keys or locked vaults)
 
 ### Input and output
 

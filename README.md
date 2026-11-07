@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8458B3?style=flat-square" alt="MIT License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20NC-8458B3?style=flat-square" alt="PolyForm Noncommercial License" /></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/backend-Rust%20%2B%20axum-dea584?style=flat-square&logo=rust&logoColor=white" alt="Rust" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" /></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/db-Postgres-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="Postgres" /></a>
@@ -133,6 +133,9 @@ Runtime configuration is environment variables only. The full reference, with de
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | | Set both or neither |
 | `SMTP_TLS` | | `starttls` (default), `tls`, or `none` (local servers only) |
 | `MAIL_FROM` | | Sender, e.g. `Linkdean <no-reply@example.com>` |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | | Optional Cloudflare Turnstile on password registration. Set both or neither |
+| `REQUIRE_VERIFIED_EMAIL` | | When `true` and mail is on, unverified non-admins are gated even if the admin toggle is off |
+| `BLOCK_DISPOSABLE_EMAILS` | | When `true`, registration and email-change refuse known throwaway domains |
 | `METRICS_TOKEN` | | Turns on `GET /api/metrics`, which then needs `Authorization: Bearer <token>`. Unset, the route returns `404` |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | | Optional OIDC. `OIDC_ISSUER` must match the issuer in the provider's discovery document exactly, trailing slash included. New identities get an account only while registration is open |
 
@@ -220,19 +223,23 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 
 ## Docs
 
+Published site: [docs.linkdean.app](https://docs.linkdean.app) (built from the files below via `apps/docs`).
+
 | Doc | Contents |
 | --- | --- |
+| [Install](docs/INSTALL.md) | Released image, Compose, environment variables |
+| [Self-host](docs/SELF_HOSTED.md) | Production secrets, reverse proxy, limits, upgrades, backup, development setup |
 | [Features](docs/FEATURES.md) | What the app can do today |
 | [Architecture](docs/ARCHITECTURE.md) | Stack, domain model, auth, vault vs hidden |
 | [Roadmap](docs/ROADMAP.md) | Planned milestones / backlog |
-| [Self-host](docs/SELF_HOSTED.md) | Production secrets, reverse proxy, limits, upgrades, backup |
+| [Managed service](docs/MANAGED_SERVICE.md) | Homelab public beta, VPS, GCP notes |
 | [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---
 
 ## Roadmap
 
-**Next up:** browser extension (save tab / file to category). Backlog includes search filters, notification digests, PWA, and more. Far out: native apps, archive/downloads, gamification.
+**Where we are:** product Now items 1–11 are shipped; `app` / `docs` / marketing are live on the homelab. **Before announce:** go-live hardening — SMTP + DNS auth, Turnstile, backups, uptime ([ROADMAP](docs/ROADMAP.md) #13 / [MANAGED_SERVICE](docs/MANAGED_SERVICE.md)). After that: membership pricing explore (#12), then post-release work (browser extension, …).
 
 - Capabilities: [docs/FEATURES.md](docs/FEATURES.md)
 - Plan: [docs/ROADMAP.md](docs/ROADMAP.md)
@@ -252,7 +259,11 @@ Pull requests should stay focused:
 
 ## License
 
-[MIT](LICENSE) © Linkdean Contributors
+[PolyForm Noncommercial License 1.0.0](LICENSE) © Arsam Sarabi.
+
+Non-commercial use, modification, and redistribution (including forks) are allowed under that license. Commercial use — including selling Linkdean or derivatives — requires a separate license: **arsamsarabi@me.com**.
+
+Prior MIT-tagged releases remain MIT for those trees; current `main` is PolyForm Noncommercial.
 
 <p align="center">
   <img src="brand/exports/png/linkdean-symbol-color-256.png" alt="Linkdean symbol" width="64" />

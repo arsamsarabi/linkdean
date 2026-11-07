@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { useBookmarks, useSearchBookmarks } from '@/hooks/bookmarks'
+import { useEffect, useMemo } from 'react'
+import { useSearchBookmarks, useTagNames } from '@/hooks/bookmarks'
 import { useCategories } from '@/hooks/categories'
 import { categoryPath, type SortKey } from '@/lib'
 import {
@@ -7,12 +7,12 @@ import {
   filterAndSortLibraryItems,
   FOLDER_UNCATEGORIZED,
   matchesVaultQuery,
-  mergeSearchWithLocalCatchUp,
   namedFolder,
   scopeBookmarks,
   scopeCategories,
   scopeToFolder,
   sinceFilterToIso,
+  splitFolderFilter,
   type ExplorerFolderId,
   type FlagFilter,
   type LibraryListItem,
@@ -20,6 +20,7 @@ import {
 } from '@/services'
 import { useUi } from '@/stores'
 import type { LibraryScope } from './types'
+import { useLibraryBookmarksInfinite, type LibraryPageFilter } from './useLibraryBookmarksInfinite'
 
 type Input = {
   scope: LibraryScope
@@ -37,7 +38,10 @@ type Input = {
   filterActive: boolean
 }
 
-/** Bookmarks + search merge, filtered list, and label maps. */
+/**
+ * Keyset-paged bookmarks (the server filters and sorts), Meili search, and label maps.
+ * `fetchNextPage` / `hasNextPage` drive infinite scroll.
+ */
 export function useLibraryList({
   scope,
   vaultId,
@@ -56,27 +60,53 @@ export function useLibraryList({
   const inVaults = scope === 'vault'
   const includeVault = inVaults || (vaultUnlocked && showVaultInLibrary)
   const catsQuery = useCategories(undefined, includeVault)
-  const bookmarksQuery = useBookmarks(undefined, includeVault)
   const cats = useMemo(
     () => (inVaults ? { ...catsQuery, data: scopeCategories(catsQuery.data, vaultId) } : catsQuery),
     [catsQuery, inVaults, vaultId]
   ) as typeof catsQuery
-  const bookmarks = useMemo(
-    () => (inVaults ? { ...bookmarksQuery, data: scopeBookmarks(bookmarksQuery.data, vaultId) } : bookmarksQuery),
-    [bookmarksQuery, inVaults, vaultId]
-  ) as typeof bookmarksQuery
   const searching = debouncedQ.trim().length > 1
-  // Meilisearch holds no vault content, so the Vaults page filters what it already has.
+
+  // `since` must be stable: a fresh timestamp per render would be a fresh query key.
+  const sinceIso = useMemo(() => sinceFilterToIso(filterSince), [filterSince])
+  const { folder, clientCats } = splitFolderFilter(folderId, filterCats)
+  const filter = useMemo(
+    (): LibraryPageFilter => ({
+      folder,
+      sort,
+      tag: filterTags,
+      flag: filterFlags,
+      since: sinceIso,
+      include_vault: includeVault,
+      vault_only: inVaults || vaultOnly,
+    }),
+    [folder, sort, filterTags, filterFlags, sinceIso, includeVault, inVaults, vaultOnly]
+  )
+  // Meilisearch holds no vault content, so only the Vaults page searches the paged list.
+  const infinite = useLibraryBookmarksInfinite(filter, !searching || inVaults)
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = infinite
+
+  // ponytail: the API has no text or vault_id filter, so a vault search walks every page
+  // (ceiling: vault size). Upgrade: a server `q` and `vault_id` on /bookmarks.
+  useEffect(() => {
+    if (inVaults && searching && hasNextPage && !isFetchingNextPage) void fetchNextPage()
+  }, [inVaults, searching, hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  const loaded = useMemo(() => {
+    const all = infinite.data?.pages.flatMap((p) => p.items) ?? []
+    return inVaults ? scopeBookmarks(all, vaultId) : all
+  }, [infinite.data, inVaults, vaultId])
+  const bookmarks = useMemo(() => ({ ...infinite, data: loaded }), [infinite, loaded])
   const search = useSearchBookmarks(debouncedQ, searching && !inVaults)
 
-  const allTags = useMemo(() => collectTagOptions(bookmarks.data || []), [bookmarks.data])
+  const tagNames = useTagNames()
+  const allTags = useMemo(() => collectTagOptions([{ tags: tagNames.data ?? [] }, ...loaded]), [tagNames.data, loaded])
 
   // What a search finds, before list filters. Explorer shows these in place of a folder.
   const searchItems = useMemo((): LibraryListItem[] => {
     if (!searching) return []
-    if (inVaults) return (bookmarks.data || []).filter((b) => matchesVaultQuery(b, debouncedQ))
+    if (inVaults) return loaded.filter((b) => matchesVaultQuery(b, debouncedQ))
     return search.data?.hits || []
-  }, [searching, inVaults, bookmarks.data, debouncedQ, search.data])
+  }, [searching, inVaults, loaded, debouncedQ, search.data])
 
   const catLabel = useMemo(() => {
     const list = cats.data || []
@@ -87,24 +117,18 @@ export function useLibraryList({
     return map
   }, [cats.data])
 
-  const { list, searchCatchUpCount } = useMemo((): {
-    list: LibraryListItem[]
-    searchCatchUpCount: number
-  } => {
-    let catchUpCount = 0
-    let raw: LibraryListItem[]
-    if (searching && inVaults) {
-      raw = searchItems
-    } else if (searching) {
-      const merged = mergeSearchWithLocalCatchUp(search.data?.hits || [], bookmarks.data || [], debouncedQ)
-      raw = merged.items
-      catchUpCount = merged.catchUpCount
-    } else {
-      raw = bookmarks.data || []
+  const list = useMemo((): LibraryListItem[] => {
+    if (!searching) {
+      // The server already filtered and sorted; only a category filter it cannot take is left.
+      return clientCats.length
+        ? filterAndSortLibraryItems({ items: loaded, filterCats: clientCats, filterTags: [], sort })
+        : loaded
     }
-    const flagsById = new Map((bookmarks.data || []).map((b) => [b.id, b]))
-    const items = raw.map((item) => {
-      const full = flagsById.get(item.id)
+    // ponytail: search hits are not server-filtered, and Meili catch-up is skipped (it needed every
+    // bookmark loaded). Hits borrow flags from whatever pages are already loaded.
+    const byId = new Map(loaded.map((b) => [b.id, b]))
+    const items = searchItems.map((item) => {
+      const full = byId.get(item.id)
       if (!full) return item
       return {
         ...item,
@@ -121,35 +145,34 @@ export function useLibraryList({
       folderId === FOLDER_UNCATEGORIZED && !filterCats.includes(FOLDER_UNCATEGORIZED)
         ? [...filterCats, FOLDER_UNCATEGORIZED]
         : filterCats
-    // A folder from the palette or a link narrows the grid too, as Explorer shows it.
-    const scoped = scopeToFolder(items, folderId)
-    return {
-      list: filterAndSortLibraryItems({
-        items: scoped,
-        filterCats: catsForFilter,
-        filterTags,
-        filterFlags,
-        vaultOnly,
-        sinceIso: sinceFilterToIso(filterSince),
-        sort,
-      }),
-      searchCatchUpCount: catchUpCount,
-    }
+    return filterAndSortLibraryItems({
+      items: scopeToFolder(items, folderId),
+      filterCats: catsForFilter,
+      filterTags,
+      filterFlags,
+      vaultOnly,
+      sinceIso,
+      sort,
+    })
   }, [
-    bookmarks.data,
-    inVaults,
-    search.data,
-    searchItems,
     searching,
-    debouncedQ,
+    loaded,
+    searchItems,
+    clientCats,
     filterCats,
     filterTags,
     filterFlags,
     vaultOnly,
-    filterSince,
+    sinceIso,
     sort,
     folderId,
   ])
+
+  // The server's count is only the visible count when nothing is filtered client-side.
+  const serverExact = !searching && !clientCats.length && !(inVaults && vaultId)
+  const total = serverExact ? (infinite.data?.pages[0]?.total ?? 0) : list.length
+  // What /bookmarks/ids can reproduce exactly; null when the screen is client-filtered.
+  const matchFilter = serverExact ? filter : null
 
   const loading = bookmarks.isLoading || (searching && search.isFetching && !search.data)
   const inFolder = !!namedFolder(folderId)
@@ -166,7 +189,11 @@ export function useLibraryList({
     allTags,
     catLabel,
     list,
-    searchCatchUpCount,
+    total,
+    matchFilter,
+    fetchNextPage,
+    hasNextPage: !searching && hasNextPage,
+    isFetchingNextPage,
     loading,
     emptyLibrary,
     emptyFiltered,

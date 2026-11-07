@@ -2,7 +2,11 @@
 
 This guide runs a released Linkdean image from the GitHub Container Registry with Docker Compose. You write two files, `.env` and `docker-compose.yml`, and nothing is built on your machine. A third file, `chrome-seccomp.json`, is only needed if you want page screenshots.
 
-For operations detail (limits, reverse proxies, email providers, single sign-on, backups) see [SELF_HOSTED.md](SELF_HOSTED.md). To build the image from a checkout instead, see the README.
+Published copy: [docs.linkdean.app](https://docs.linkdean.app/docs/self-hosting/install) (synced from this file). For operations detail (limits, reverse proxies, email providers, single sign-on, backups) see [SELF_HOSTED.md](SELF_HOSTED.md). To build the image from a checkout instead, see the README.
+
+## License
+
+Linkdean is [PolyForm Noncommercial License 1.0.0](https://github.com/arsamsarabi/linkdean/blob/main/LICENSE). You may self-host and fork for non-commercial purposes. Commercial use requires a separate license — contact [arsamsarabi@me.com](mailto:arsamsarabi@me.com).
 
 ## Requirements
 
@@ -374,6 +378,19 @@ Off unless both `SMTP_HOST` and `MAIL_FROM` are set. Without it the instance sen
 
 The API refuses to start when only one of a pair is set, `SMTP_TLS` or `SMTP_PORT` is invalid, or `MAIL_FROM` is not a valid mailbox.
 
+### Sign-up protection
+
+Off by default. Public beta hosts usually set all three with SMTP.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `TURNSTILE_SITE_KEY` | unset | Cloudflare Turnstile site key. With `TURNSTILE_SECRET_KEY`, password registration shows a captcha and the API checks the token with Siteverify. OIDC sign-in is unchanged |
+| `TURNSTILE_SECRET_KEY` | unset | Turnstile secret. Set together with `TURNSTILE_SITE_KEY`, or leave both unset |
+| `REQUIRE_VERIFIED_EMAIL` | `false` | When `true` and mail is on, the verified-email hard gate applies even if the admin toggle is off. The admin UI shows the toggle on and disabled |
+| `BLOCK_DISPOSABLE_EMAILS` | `false` | When `true`, registration and email-change refuse addresses on an embedded disposable-domain list (`400` "Use a lasting email address.") |
+
+The API refuses to start when only one Turnstile key is set.
+
 ### Single sign-on (OIDC)
 
 On when all three are set. Details and how SSO meets existing password accounts: [Single sign-on](SELF_HOSTED.md#single-sign-on).
@@ -391,6 +408,16 @@ Register `{APP_URL}/api/auth/oidc/callback` as the redirect URI. A new identity 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `BROWSER_WS_URL` | unset | Chrome DevTools address, `http://chrome:9222` with the service above. Unset, no screenshots are taken |
+
+### Logging
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `LOG_FORMAT` | `text` | `text` for human stdout, `json` for one JSON object per line on stdout. Invalid values stop startup |
+| `LOG_FILE` | unset | When set, append JSON lines (JSONL) to this path even if stdout stays `text`. Create the file if missing; open failures stop startup. Rotate the file yourself (for example logrotate); the process does not |
+| `RUST_LOG` | `info` | Log filter, such as `debug` or `info,linkdean_api=debug` (also listed under Advanced) |
+
+Every HTTP response includes `X-Request-Id`. A valid inbound value (1–128 characters: letters, digits, `_`, `-`, `.`) is kept; otherwise the API mints a UUID. The same id appears on the request's log span.
 
 ### Metrics
 

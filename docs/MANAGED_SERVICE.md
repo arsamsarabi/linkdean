@@ -6,7 +6,7 @@ Linkdean stays self-hosted first: the same image runs both, and everything SaaS-
 
 ## Public beta on a home server
 
-Status: planning. Nothing is set up yet. Roadmap order: product readiness (items 1–9) → marketing site → documentation site → membership tiers and pricing (explore) → this deploy.
+Status: in progress. Public app, docs, and marketing are live on Nova via LXD + Cloudflare Tunnel (`app.linkdean.app`, [docs.linkdean.app](https://docs.linkdean.app), [linkdean.app](https://linkdean.app)). Docs source: [`apps/docs`](../apps/docs) (Docusaurus → `deploy/public-beta/static/docs`). Marketing: [`apps/site`](../apps/site) (Astro → `deploy/public-beta/static/site`; footer contact `contact@linkdean.app`). Next: finish go-live hardening (SMTP, Turnstile, backups, uptime) — do **not** announce until the checklist below is green. Membership pricing explore (#12) stays after that. Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md); remaining ops plan: [public-beta-homelab plan](./superpowers/plans/2026-11-06-public-beta-homelab.md); deploy: [`deploy/public-beta/`](../deploy/public-beta/).
 
 **Shape.** A stand-alone Linkdean stack, separate from any personal instance, serving the whole `linkdean.app` domain:
 
@@ -39,11 +39,12 @@ Yes — plan on it. A public `linkdean.app` is a different threat model from per
 
 - **No open ports.** Publish through a Cloudflare Tunnel (`cloudflared`) instead of router port forwarding, so the home IP stays hidden and Cloudflare's DDoS protection and WAF sit in front. Cache the static sites at Cloudflare.
 - **Chrome kept off the LAN.** The app already refuses private addresses, for its own fetches and Chrome's. Add a host firewall rule so the Chrome container's network cannot reach the home LAN even if that check is bypassed.
-- **Email through a provider.** Mail from a home IP lands in spam. Send through a transactional provider's SMTP with SPF, DKIM and DMARC on `linkdean.app`, and require verified email for new accounts.
+- **Email through a provider.** Mail from a home IP lands in spam. Send through a transactional provider's SMTP with SPF, DKIM and DMARC on `linkdean.app`.
+- **Open registration with misuse controls.** Keep `registration_open` on for the free beta (invite-only is an admin escape hatch, not the default). Set `REQUIRE_VERIFIED_EMAIL=true` with SMTP, `BLOCK_DISPOSABLE_EMAILS=true`, and both Cloudflare Turnstile keys (`TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`).
 - **Backups off-site.** Nightly Postgres dump and the avatars and previews volume, copied off the host, with a restore tested end to end.
 - **Monitoring.** An external uptime check (the host's own dashboard cannot report that the host is down) and alerts to a phone.
 - **ISP terms.** Check the home broadband contract allows serving a public site.
-- **Product and launch readiness.** [ROADMAP.md](./ROADMAP.md) Now items 1–12: security hardening through membership tiers and pricing (explore), then this deploy.
+- **Product and launch readiness.** [ROADMAP.md](./ROADMAP.md) Now items 1–11 are shipped in product; this deploy's go-live checklist (below) is what remains before announce. Membership pricing explore (#12) follows announce readiness.
 
 ### When to move off the home server
 
@@ -68,15 +69,13 @@ Also needed for a hosted service:
 - **Abuse controls.** A captcha on sign-up, per-plan quotas on the screenshot and page-fetch services (they are both an SSRF surface and a cost), and Cloud Armor in front of everything.
 - **Legal and data rights.** Terms of service, privacy policy, a data processing agreement, cookie consent, account deletion and full export. Import and export already exist.
 - **Feature flags for the hosted service.** Billing and plan checks switch on through configuration only, so the self-hosted image never needs them.
-- **Structured logs** (in the roadmap's Now stage) become required: Cloud Logging indexes JSON.
-- **Library pagination** (in the roadmap's Now stage) matters more at hosted scale, where libraries of any size share the same database.
+- **Structured logs** are shipped (`LOG_FORMAT=json`); Cloud Logging indexes JSON. Keep `LOG_FORMAT=json` on hosted instances.
+- **Library pagination** is shipped; it matters more at hosted scale, where libraries of any size share the same database.
 
-### 2. Landing and marketing site
+### 2. Landing, docs, and marketing
 
-- A separate static site (Astro or similar) on the apex domain, with the app on `app.<domain>`.
-- Hosted on Firebase Hosting, or a Cloud Storage bucket behind Cloud CDN, managed in the same Terraform.
-- Content: what Linkdean is, features, pricing and plans, a "self-host it for free" link to [INSTALL.md](./INSTALL.md) and GitHub, and sign-up.
-- Later, the documentation site from the roadmap lives beside it on `docs.<domain>`.
+- Homelab beta already ships Astro marketing on the apex, the app on `app.<domain>`, and Docusaurus on `docs.<domain>` (see Public beta above). On GCP, move those static sites to Firebase Hosting or a Cloud Storage bucket behind Cloud CDN in the same Terraform.
+- Content already covered for beta: product pitch, features, self-host CTA, sign-up, legal links, abuse contact. Pricing and plans wait on roadmap #12.
 
 ### 3. Using GCP services
 
@@ -116,9 +115,9 @@ infra/
 
 ### 5. Phases
 
-1. **Ready for several instances.** Cloud Storage for files, the worker split, shared rate limits, and a decision on vault keys. Ship library pagination and structured logs from the roadmap's Now stage.
+1. **Ready for several instances.** Cloud Storage for files, the worker split, shared rate limits, and a decision on vault keys. Library pagination and structured logs are already on main; run hosted with `LOG_FORMAT=json`.
 2. **Infrastructure.** Terraform for a staging project: Cloud SQL, Cloud Run, Meilisearch on a VM, load balancer and DNS. Deploy it and load-test it.
-3. **SaaS layer.** Open sign-up with a captcha, Stripe, plan limits, legal pages and the marketing site.
+3. **SaaS layer.** Stripe, plan limits, and any hosted-only gates. Captcha, legal pages, abuse reports, quotas, and the marketing/docs sites already ship for the free beta; reuse them.
 4. **Launch hardening.** Cloud Armor rules, alerting, a backup restore drill and a status page.
 
 ### Rough cost

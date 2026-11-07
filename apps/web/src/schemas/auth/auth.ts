@@ -19,6 +19,8 @@ export const userPublicSchema = z.object({
   sso_connected: z.boolean().default(false),
   /** The host of the attached identity's issuer, for display. */
   sso_provider: z.string().nullish(),
+  /** ISO time the account is purged; set while a delete is scheduled, so it can still be cancelled. */
+  deletion_scheduled_at: z.string().nullish(),
 })
 
 export const userSettingsSchema = z.object({
@@ -53,17 +55,43 @@ export const bootstrapStatusSchema = z.object({
   registration_open: z.boolean().default(true),
   /** Outbound mail is on, so a forgotten password can be reset by email. */
   mail_enabled: z.boolean().default(false),
+  /** Cloudflare Turnstile site key; null when captcha is off. */
+  turnstile_site_key: z.string().nullish(),
 })
 
 export const platformSettingsSchema = z.object({
   registration_open: z.boolean(),
   api_keys_enabled: z.boolean().default(true),
   require_verified_email: z.boolean().default(false),
+  max_bookmarks: z.number().int().positive().nullish(),
+  max_stored_image_bytes: z.number().int().positive().nullish(),
+  max_enrich_actions_per_day: z.number().int().positive().nullish(),
+  max_import_bytes: z.number().int().positive().nullish(),
+  max_upload_image_bytes: z.number().int().positive().nullish(),
+  abuse_contact_email: z.string().nullish(),
   updated_at: z.string(),
 })
 
 export const platformSettingsEnvelopeSchema = z.object({
   settings: platformSettingsSchema,
+  /** Host set REQUIRE_VERIFIED_EMAIL; the admin toggle cannot change it. */
+  require_verified_email_forced: z.boolean().default(false),
+})
+
+export const resolvedLimitsSchema = z.object({
+  max_bookmarks: z.number().int().positive().nullish(),
+  max_stored_image_bytes: z.number().int().positive().nullish(),
+  max_enrich_actions_per_day: z.number().int().positive().nullish(),
+  max_import_bytes: z.number().int().positive().nullish(),
+  max_upload_image_bytes: z.number().int().positive().nullish(),
+})
+
+export const quotaUsageSchema = z.object({
+  limits: resolvedLimitsSchema,
+  bookmarks: z.number().int(),
+  stored_image_bytes: z.number().int(),
+  enrich_actions_today: z.number().int(),
+  enrich_period_start: z.string(),
 })
 
 export const apiKeySchema = z.object({
@@ -198,13 +226,19 @@ export const okSchema = z.object({
   ok: z.boolean(),
 })
 
+export const scheduleDeletionResponseSchema = z.object({
+  deletion_scheduled_at: z.string(),
+})
+
 export type UserPublic = z.infer<typeof userPublicSchema>
 export type UserSettings = z.infer<typeof userSettingsSchema>
+export type ScheduleDeletionResponse = z.infer<typeof scheduleDeletionResponseSchema>
 export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
 export type PendingOidcLink = z.infer<typeof pendingOidcLinkSchema>
 export type PlatformSettings = z.infer<typeof platformSettingsSchema>
+export type QuotaUsage = z.infer<typeof quotaUsageSchema>
 export type ApiKey = z.infer<typeof apiKeySchema>
 export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>
 export type AdminUserSummary = z.infer<typeof adminUserSummarySchema>

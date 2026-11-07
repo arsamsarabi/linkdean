@@ -34,6 +34,13 @@ pub enum Error {
     VaultUnlockFailed,
     #[error("too many attempts, try again later")]
     TooManyRequests,
+    /// A platform (or later plan) quota was hit. `meter` is a stable id for the SPA.
+    #[error("quota exceeded")]
+    QuotaExceeded {
+        meter: &'static str,
+        limit: i64,
+        used: i64,
+    },
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

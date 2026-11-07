@@ -21,6 +21,11 @@ export function useBookmarks(categoryId?: string | null, includeVault?: boolean)
   })
 }
 
+/** Tag names for the filter picker (the library only loads one page of bookmarks at a time). */
+export function useTagNames(): UseQueryResult<string[]> {
+  return useQuery({ queryKey: ['bookmarks', 'tags'], queryFn: () => api.tags() })
+}
+
 export function useSearchBookmarks(q: string, enabled: boolean): UseQueryResult<SearchResponse> {
   return useQuery({
     queryKey: ['search', q],

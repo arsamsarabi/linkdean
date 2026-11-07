@@ -70,7 +70,12 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
     url.sort,
   ])
 
-  const selection = useLibrarySelection({ list: selectable })
+  // Explorer at All lists folders, not bookmarks, so there is no match for Select all to reach.
+  const atExplorerRoot = viewMode === 'explorer' && !url.folderId
+  const selection = useLibrarySelection({
+    list: selectable,
+    matchFilter: atExplorerRoot ? null : listState.matchFilter,
+  })
 
   const folderCat = useMemo(() => {
     if (!url.folderId || url.folderId === FOLDER_ALL || url.folderId === FOLDER_UNCATEGORIZED) {

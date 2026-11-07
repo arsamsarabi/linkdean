@@ -10,7 +10,7 @@ import {
   TagsInput,
   Text,
 } from '@mantine/core'
-import { useDrawerClosesOnEscape } from '@/hooks/render'
+import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import { categorySelectData, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
 import { ConfirmModal } from '../confirm-modal/ConfirmModal'
@@ -39,6 +39,7 @@ export function BulkEditDrawer({
   onApplyTag,
 }: Props): ReactElement {
   const closeOnEscape = useDrawerClosesOnEscape()
+  const drawerSize = useDrawerSize()
   const [categoryIds, setCategoryIds] = useState<string[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [tagMode, setTagMode] = useState<'add' | 'replace'>('add')
@@ -70,7 +71,7 @@ export function BulkEditDrawer({
       closeOnEscape={closeOnEscape}
       title={title}
       position="right"
-      size="md"
+      size={drawerSize}
       padding="lg"
     >
       <Box pos="relative">

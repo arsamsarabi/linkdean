@@ -30,6 +30,9 @@ pub struct SignupGate<'a> {
     /// `None` when no `BOOTSTRAP_TOKEN` is set; otherwise whether the request presented it. Only
     /// the first account, which becomes admin, needs it.
     pub bootstrap_token_ok: Option<bool>,
+    /// Terms version the new account accepted, stored with the time of acceptance. The caller
+    /// checks it is current; `None` for tools that create users directly.
+    pub terms_version: Option<&'a str>,
 }
 
 /// Creates a user with no sign-up checks. The first user still becomes admin.
@@ -101,9 +104,9 @@ pub async fn create_user_gated(
         r#"
         INSERT INTO users (
             email, display_name, password_hash, oidc_subject, oidc_issuer,
-            is_admin, onboarding_completed
+            is_admin, onboarding_completed, terms_version, terms_accepted_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::text, CASE WHEN $8::text IS NULL THEN NULL ELSE now() END)
         RETURNING *
         "#,
     )
@@ -114,6 +117,7 @@ pub async fn create_user_gated(
     .bind(oidc_issuer)
     .bind(is_first) // first user = admin
     .bind(false) // onboarding starts incomplete for new admins
+    .bind(gate.terms_version)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -228,6 +232,7 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
         email_verified: user.email_verified_at.is_some(),
         sso_connected: user.oidc_subject.is_some(),
         sso_provider: user.sso_provider(),
+        deletion_scheduled_at: user.deletion_scheduled_at,
     })
 }
 

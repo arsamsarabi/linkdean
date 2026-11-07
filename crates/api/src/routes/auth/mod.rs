@@ -5,15 +5,18 @@ mod password_reset;
 pub(crate) use password_reset::reset_url;
 
 use crate::auth::AuthUser;
+use crate::disposable_email;
 use crate::error::ApiResult;
 use crate::rate_limit::{client_ip, login_limits, register_limit};
 use crate::state::AppState;
+use crate::turnstile;
 use crate::vault_keys::VaultSession;
 use axum::extract::{ConnectInfo, State};
 use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use linkdean_core::legal::{require_current_terms, TERMS_VERSION};
 use linkdean_core::{AuthResponse, Error, LoginRequest, RegisterRequest};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
@@ -52,6 +55,7 @@ async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value
         "oidc_enabled": state.cfg.oidc_enabled(),
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),
+        "turnstile_site_key": state.cfg.turnstile_site_key,
     })))
 }
 
@@ -62,6 +66,7 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
         "app_url": state.cfg.app_url,
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),
+        "turnstile_site_key": state.cfg.turnstile_site_key,
     })))
 }
 
@@ -78,7 +83,24 @@ async fn register(
     if req.email.trim().is_empty() || req.password.len() < min {
         return Err(Error::BadRequest(format!("email required; password min {min} chars")).into());
     }
+    require_current_terms(Some(&req.terms_version))?;
+    disposable_email::refuse_if_disposable(&req.email, state.cfg.block_disposable_emails)?;
     let ip = client_ip(&headers, peer.ip(), state.cfg.trust_forwarded_for);
+    if state.cfg.turnstile_enabled() {
+        let secret = state
+            .cfg
+            .turnstile_secret_key
+            .as_deref()
+            .expect("turnstile_enabled implies secret");
+        turnstile::verify(
+            &reqwest::Client::new(),
+            turnstile::SITEVERIFY_URL,
+            secret,
+            req.turnstile_token.as_deref().unwrap_or(""),
+            Some(ip),
+        )
+        .await?;
+    }
     let limits = register_limit(ip);
     state.limiter.check(&limits)?;
     state.limiter.record(&limits);
@@ -98,6 +120,7 @@ async fn register(
             enforce: true,
             invite_code,
             bootstrap_token_ok: state.cfg.bootstrap_token_ok(req.bootstrap_token.as_deref()),
+            terms_version: Some(TERMS_VERSION),
         },
     )
     .await?;
@@ -227,7 +250,9 @@ async fn me(
         "settings": settings,
         "vault_unlocked": vault_unlocked,
         "api_keys_allowed": api_keys_allowed,
-        "require_verified_email": platform.require_verified_email && state.mail.is_some(),
+        "require_verified_email": (platform.require_verified_email
+            || state.cfg.require_verified_email)
+            && state.mail.is_some(),
     })))
 }
 

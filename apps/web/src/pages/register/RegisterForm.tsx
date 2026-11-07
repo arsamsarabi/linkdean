@@ -1,6 +1,7 @@
 import { type ReactElement, type RefObject } from 'react'
 import { Anchor, Button, FileButton, Group, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
+import { LegalFooterLinks, TermsAgreement, TurnstileWidget } from '@/components'
 import { MIN_SECRET_LENGTH } from '@/services'
 import motion from '@/styles/motion.module.css'
 
@@ -17,6 +18,9 @@ type Props = {
   password2: string
   pendingAvatar: Blob | null
   registerPending: boolean
+  termsAccepted: boolean
+  turnstileSiteKey: string | null
+  turnstileResetKey: number
   resetRef: RefObject<(() => void) | null>
   onInviteCode: (v: string) => void
   onDisplayName: (v: string) => void
@@ -25,6 +29,8 @@ type Props = {
   onPassword2: (v: string) => void
   onPickAvatar: (f: File | null) => void
   onClearAvatar: () => void
+  onTermsAccepted: (v: boolean) => void
+  onTurnstileToken: (token: string | null) => void
   onSubmit: () => void
   onLogin: () => void
 }
@@ -40,6 +46,9 @@ export function RegisterForm({
   password2,
   pendingAvatar,
   registerPending,
+  termsAccepted,
+  turnstileSiteKey,
+  turnstileResetKey,
   resetRef,
   onInviteCode,
   onDisplayName,
@@ -48,6 +57,8 @@ export function RegisterForm({
   onPassword2,
   onPickAvatar,
   onClearAvatar,
+  onTermsAccepted,
+  onTurnstileToken,
   onSubmit,
   onLogin,
 }: Props): ReactElement {
@@ -104,11 +115,15 @@ export function RegisterForm({
               </Button>
             ) : null}
           </Group>
+          <TermsAgreement checked={termsAccepted} onChange={onTermsAccepted} />
+          {turnstileSiteKey ? (
+            <TurnstileWidget key={turnstileResetKey} siteKey={turnstileSiteKey} onToken={onTurnstileToken} />
+          ) : null}
           <Button
             leftSection={<IconUserPlus {...iconSm} />}
             loading={registerPending}
             onClick={onSubmit}
-            disabled={!email || !password || (closed && !inviteCode.trim())}
+            disabled={!email || !password || !termsAccepted || (closed && !inviteCode.trim())}
           >
             Sign up
           </Button>
@@ -120,6 +135,7 @@ export function RegisterForm({
           </Anchor>
         </Stack>
       </Paper>
+      <LegalFooterLinks />
     </Stack>
   )
 }

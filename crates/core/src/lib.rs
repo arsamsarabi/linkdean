@@ -2,6 +2,7 @@ pub mod avatar;
 pub mod crypto;
 pub mod error;
 pub mod import_export;
+pub mod legal;
 pub mod models;
 pub mod preview_image;
 

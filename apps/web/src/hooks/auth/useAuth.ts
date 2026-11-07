@@ -12,6 +12,8 @@ type RegisterBody = {
   invite_code?: string
   bootstrap_token?: string
   share_token?: string
+  turnstile_token?: string
+  terms_version: string
 }
 
 export function useLogin(): UseMutationResult<AuthTokenResponse, Error, LoginBody> {

@@ -1,6 +1,7 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
+use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Query, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -39,17 +40,23 @@ fn default_format() -> String {
     "json".into()
 }
 
-const MAX_IMPORT_BYTES: usize = 10 * 1024 * 1024;
 /// JSON escaping can grow the file on the way in. The handler enforces the real limit.
-const MAX_IMPORT_BODY: usize = 2 * MAX_IMPORT_BYTES;
+const MAX_IMPORT_BODY: usize = 2 * crate::quotas::HARD_IMPORT_BYTES;
 
 async fn import(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Json(body): Json<ImportBody>,
 ) -> ApiResult<Json<Value>> {
-    if body.content.len() > MAX_IMPORT_BYTES {
-        return Err(Error::BadRequest("import too large (max 10 MiB)".into()).into());
+    let limits = crate::quotas::limits_for(&state.pool).await?;
+    let max_bytes = crate::quotas::effective_import_max(&limits);
+    if body.content.len() > max_bytes {
+        return Err(Error::QuotaExceeded {
+            meter: db::METER_IMPORT,
+            limit: max_bytes as i64,
+            used: body.content.len() as i64,
+        }
+        .into());
     }
     let format = body.format.to_ascii_lowercase();
     let content = body.content;
@@ -67,6 +74,9 @@ async fn import(
     let parsed = tokio::task::spawn_blocking(move || parser(&content))
         .await
         .map_err(|e| Error::msg(format!("import parse: {e}")))??;
+
+    // Refuse the whole import when the bookmark gauge would overflow.
+    db::refuse_bookmark_quota(&state.pool, user.id, &limits, parsed.bookmarks.len() as i64).await?;
 
     let job = db::create_import_job(&state.pool, user.id, &format).await?;
     let mut counts = db::ImportCounts::default();
@@ -137,12 +147,19 @@ async fn import(
 async fn export(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    session: VaultSession,
     Query(q): Query<ExportQuery>,
 ) -> ApiResult<impl axum::response::IntoResponse> {
-    let (cats, bms, dashboards) = db::export_data(&state.pool, user.id).await?;
+    // Vault items are in the file, as plaintext, only for vaults this session has unlocked.
+    let keyring = state.vault_keyring(&session, user.id).await;
+    let (mut cats, bms, dashboards) = db::export_data(&state.pool, user.id, &keyring).await?;
     let format = q.format.to_ascii_lowercase();
     match format.as_str() {
         "html" | "netscape" => {
+            // Locked, the HTML file keeps leaving vault folders out, as it always has.
+            if keyring.is_empty() {
+                cats.retain(|c| !c.is_vault);
+            }
             let html = export_netscape(&bms, &cats);
             Ok((
                 [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],

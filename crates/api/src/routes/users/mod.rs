@@ -1,5 +1,6 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
+use crate::mail::enqueue;
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
@@ -9,8 +10,8 @@ use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::avatar::{self, process_avatar};
 use linkdean_core::{
-    ChangePassword, Error, NotificationKind, ProfileBookmarksPage, ProfileView, UpdateProfile,
-    UpdateSettings,
+    ChangePassword, Error, NotificationKind, ProfileBookmarksPage, ProfileView,
+    ScheduleAccountDeletion, UpdateProfile, UpdateSettings,
 };
 use linkdean_db::{self as db};
 use serde::Deserialize;
@@ -25,9 +26,14 @@ pub fn router() -> Router<AppState> {
         .route("/users/me", patch(update_me))
         .route("/users/me/password", post(change_password))
         .route(
+            "/users/me/deletion",
+            post(schedule_deletion).delete(cancel_deletion),
+        )
+        .route(
             "/users/me/settings",
             get(get_settings).patch(patch_settings),
         )
+        .route("/users/me/quota-usage", get(quota_usage))
         .route(
             "/users/me/avatar",
             get(get_avatar)
@@ -133,6 +139,38 @@ async fn change_password(
     })))
 }
 
+/// Schedules the account for deletion after the grace period. The session stays signed in, so
+/// the person can still export their data and cancel.
+async fn schedule_deletion(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Json(body): Json<ScheduleAccountDeletion>,
+) -> ApiResult<Json<Value>> {
+    let at =
+        db::schedule_account_deletion(&state.pool, user.id, &body.confirm_email, body.password)
+            .await?;
+    let deletion_date = at.format("%-d %b %Y, %H:%M UTC").to_string();
+    if let Err(e) = enqueue(
+        &state,
+        &user.email,
+        "account_deletion_scheduled",
+        &json!({ "deletion_date": deletion_date }),
+    )
+    .await
+    {
+        tracing::warn!(user_id = %user.id, error = %e, "account deletion email failed");
+    }
+    Ok(Json(json!({ "deletion_scheduled_at": at })))
+}
+
+async fn cancel_deletion(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    db::cancel_account_deletion(&state.pool, user.id).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
 async fn get_settings(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -152,6 +190,14 @@ async fn patch_settings(
         crate::vault_keys::idle_limit(settings.vault_auto_lock_minutes),
     );
     Ok(Json(json!({ "settings": settings })))
+}
+
+async fn quota_usage(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    let usage = crate::quotas::usage_view(&state, user.id).await?;
+    Ok(Json(json!(usage)))
 }
 
 async fn upload_avatar(
@@ -181,6 +227,15 @@ async fn upload_avatar(
         break;
     }
     let raw = bytes.ok_or_else(|| Error::BadRequest("missing avatar file field".into()))?;
+    let limits = crate::quotas::limits_for(&state.pool).await?;
+    crate::quotas::refuse_upload(
+        &state,
+        user.id,
+        &limits,
+        raw.len(),
+        crate::quotas::HARD_AVATAR_BODY,
+    )
+    .await?;
     let webp = tokio::task::spawn_blocking(move || process_avatar(&raw))
         .await
         .map_err(|e| Error::msg(e.to_string()))??;

@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '@/api'
-import { markSignedIn } from '@/lib'
+import { markSignedIn, TERMS_VERSION } from '@/lib'
 import type { MeResponse } from '@/schemas'
 import { OnboardingPage } from './OnboardingPage'
 
@@ -56,6 +56,7 @@ async function createAdmin(person: ReturnType<typeof userEvent.setup>): Promise<
   await person.type(await screen.findByRole('textbox', { name: /email/i }), 'ada@example.com')
   await person.type(screen.getByLabelText(/^password/i), 'password-long')
   await person.type(screen.getByLabelText(/^confirm password/i), 'password-long')
+  await person.click(screen.getByRole('checkbox', { name: /terms of service/i }))
   await person.click(screen.getByRole('button', { name: /create admin account/i }))
 }
 
@@ -106,7 +107,9 @@ describe('OnboardingPage', () => {
     await createAdmin(person)
 
     await vi.waitFor(() =>
-      expect(mocked.register).toHaveBeenCalledWith(expect.objectContaining({ bootstrap_token: 's3cret' }))
+      expect(mocked.register).toHaveBeenCalledWith(
+        expect.objectContaining({ bootstrap_token: 's3cret', terms_version: TERMS_VERSION })
+      )
     )
   })
 

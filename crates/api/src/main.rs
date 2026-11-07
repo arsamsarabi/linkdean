@@ -1,14 +1,19 @@
 mod auth;
 mod config;
+mod disposable_email;
 mod error;
+mod logging;
 mod mail;
 mod maintenance;
 mod metrics;
 mod notification_mail;
+mod quotas;
 mod rate_limit;
+mod request_id;
 mod routes;
 mod security;
 mod state;
+mod turnstile;
 mod vault_keys;
 
 use axum::http::{HeaderValue, Method};
@@ -16,16 +21,14 @@ use axum::Router;
 use state::AppState;
 use std::net::SocketAddr;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
+use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .init();
+    logging::init()?;
 
     let cfg = config::Config::from_env()?;
     let state = AppState::new(cfg.clone()).await?;
@@ -77,7 +80,11 @@ async fn main() -> anyhow::Result<()> {
             let hsts = hsts_max_age;
             async move { security::security_headers_middleware(hsts, req, next).await }
         }))
-        .layer(TraceLayer::new_for_http());
+        // Last `.layer` is outermost: normalize → set id → trace → propagate → security → cors.
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(TraceLayer::new_for_http().make_span_with(request_id::RequestIdMakeSpan))
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+        .layer(axum::middleware::from_fn(request_id::normalize_request_id));
 
     let addr: SocketAddr = cfg.bind.parse()?;
     tracing::info!("linkdean listening on {addr}");

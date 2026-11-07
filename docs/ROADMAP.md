@@ -15,66 +15,33 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 1. **Security hardening** (M). A public instance draws scanners and attackers from day one. Session and OIDC cookies are already `HttpOnly` and `SameSite`; image routes send `nosniff` and a sandbox CSP. **Done:** app-wide security headers (CSP with `frame-ancestors 'none'`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional HSTS via `HSTS_MAX_AGE`), `/.well-known/security.txt`, CI `cargo audit` and `pnpm audit --prod`, and Dependabot for Cargo, npm and Actions.
    - Still open: a security review before launch — auth and session flows, sharing and public-list access checks, the page fetch and screenshot path (SSRF), import parsing, and upload handling.
 
-2. **Sign-up protection** (S–M). Open registration on a public site invites bots and throwaway accounts. Registration attempts are already rate-limited per IP, email verification exists, and admins can switch to invite-only.
-   - An optional captcha on registration ([Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) fits a Cloudflare-fronted host), off unless configured, so self-hosted instances are unaffected.
-   - Require a verified email before an account can save anything, on the public instance.
-   - Optional blocking of disposable email domains.
-   - Decide whether the beta opens with invite codes (already built) or open registration.
+2. **Sign-up protection** (S–M). **Done:** public beta keeps **open registration**. Misuse controls: optional Cloudflare Turnstile on password registration (`TURNSTILE_*`), host-forced verified-email gate (`REQUIRE_VERIFIED_EMAIL`, ORs with the admin toggle), and optional disposable-domain blocking (`BLOCK_DISPOSABLE_EMAILS`). Invite-only remains an admin toggle. Registration rate limits and email verification were already in place.
 
-3. **Per-user quotas** (M). On a shared instance one account can use up the disk, Chrome or the database for everyone, and a home server has little headroom. Admins set defaults in platform settings; nothing is limited unless configured.
-   - Limits on bookmarks, stored images (avatars and previews), screenshots and page fetches per day, and import file size.
-   - Admin-set maximum sizes for uploaded images, below the built-in hard caps.
-   - A clear message when a limit is reached, and usage shown in Settings.
-   - The same limits become plan limits if the service ever charges.
+3. **Per-user quotas** (M). **Done:** platform-default limits (null = unlimited) for bookmarks, stored image bytes, enrich actions per UTC day, import bytes, and upload image bytes. Enforced at create/import/upload/enrich; `resolve_limits` + period-keyed usage leave room for membership plans. Usage in Settings when any limit is set. No per-user overrides in v1.
 
-4. **Page the library list** (L). `GET /bookmarks` returns every bookmark, and the web app filters and sorts the whole set in the browser (`useLibraryList` → `filterAndSortLibraryItems`). Large libraries pay for that on every load, and an import of thousands of bookmarks makes the app slow from day one.
-   - Use infinite scrolling, not numbered pages. The library is browsed and filtered rather than jumped through by page, and filters change the result set often.
-   - Keyset pagination in the API (`cursor` + `limit`, ordered by the active sort key and `id`), so new or edited bookmarks do not shift or repeat rows the way `OFFSET` would.
-   - Move folder, tag, flag, "since" and sort filters into the query, and return the total match count for headers and "select all".
-   - Explorer loads one folder's contents at a time, rather than slicing the full list.
-   - Bulk actions on "select all" act on the server-side match (filters sent to the API), not only the rows loaded so far. Keep H21's rule: select all reaches only what the open folder or search shows.
-   - Vault search stays a Postgres scan of unlocked rows. Page it the same way.
-   - Batch the access checks for bookmarks shared with the viewer, which still run one at a time.
+4. **Page the library list** (L). **Done:** `GET /bookmarks` returns a keyset page (`items`, `next_cursor`, `total`) with folder / tag / flag / since / sort filters; `GET /bookmarks/ids` backs select-all. The SPA uses infinite scroll; Explorer loads the open folder's page. Remaining: push the keyset into SQL (today the filtered set is paged in memory — see `bookmark_page.rs`), and restore Explorer folder counts without a full fetch.
 
-5. **Account deletion and full export** (M). People can export bookmarks today, but cannot close their account themselves. Public users expect both, and privacy law (GDPR, UK GDPR) requires erasure on request.
-   - **Delete account** in Settings, confirmed with the password or a fresh OIDC sign-in, with a short grace period before data is purged.
-   - Deletion removes bookmarks, vaults, files, shares, sessions, API keys and search entries, and hands off or deletes shared folders the person owns.
-   - Export everything the person owns in one download, including vault items while the vault is unlocked.
+5. **Account deletion and full export** (M). **Done:** Settings → General danger zone schedules deletion (email confirm + password when local; 7-day grace; cancel anytime before purge). Hourly maintenance hard-deletes the user row (FK cascade) and cleans Meili + preview assets. Export includes vault items as plaintext while the vault is unlocked. Owned shared folders are deleted (no hand-off). Remaining: fresh OIDC step-up for SSO-only accounts; last-admin check at purge as well as schedule.
 
-6. **Legal pages and beta notice** (S). A public service needs terms people agree to before sign-up.
-   - Terms of service, privacy policy (what is stored, where, for how long, who processes it, such as the email provider and Cloudflare) and an acceptable use policy.
-   - Sign-up records which version of the terms was accepted, and when.
-   - Only strictly necessary cookies are used today, so no consent banner is needed; say so in the privacy policy, and revisit if analytics are added.
-   - A visible beta notice: no uptime promise, export your data regularly.
+6. **Legal pages and beta notice** (S). **Done:** draft Terms, Privacy and Acceptable Use pages (`/terms`, `/privacy`, `/acceptable-use`), required terms checkbox at sign-up and for SSO start (version + time stored on new accounts), and a dismissible beta banner. Remaining: counsel review of the copy before charging money; re-accept flow when `TERMS_VERSION` bumps.
 
-7. **Report abuse** (M). Public lists, profiles and comments are visible to everyone, and admins can ban users today, but nobody can report content.
-   - A **Report** action on public lists, profiles and comments, with a reason.
-   - A report queue in the admin moderation tools, with actions to hide the content, warn or ban, and dismiss.
-   - An abuse and takedown contact address on the marketing site and in the terms.
+7. **Report abuse** (M). **Done:** signed-in users can **Report** a public list, a profile or a comment with a reason; admins work the queue under Settings → Admin (dismiss, hide content, warn, ban); the operator's abuse contact email is an admin setting shown in the report form; marketing footer lists `contact@linkdean.app`. Remaining: anonymous reports (out of scope for spam control).
 
-8. **Final UI/UX and mobile pass** (L). Before the public release, review the whole UI with a strong UI/UX skill and reimagine it where needed. Make every page responsive and usable on phones, not only the nav.
-   - Mascot art (`brand/graphics`) in moment screens only: empty library, empty folder, no search results, empty Deleted items, nothing shared yet, the 404 page, first-run setup, the sign-in side panel on wide screens, and success modals. Never in the header, sidebar, cards, dashboards or settings. One character per screen at most, behind the main action. WebP at 2× display size, lazy-loaded, `alt=""`, a soft light backdrop so the dark robe reads on the dark theme. Security emails stay plain; a welcome email may carry the small avatar badge, embedded in the email rather than linked.
+8. **Final UI/UX and mobile pass** (L). **Done:** mascot (Dean) on moment empty states, 404, onboarding and the wide sign-in panel; drawers full-width on phones; tighter shell padding and scrollable Deleted table; light polish on dashboard empty copy and glance density. Remaining: welcome-email avatar badge when a welcome template exists (security emails stay plain); deeper visual redesign stays out of scope for beta.
 
-9. **Structured logs** (S–M). Write activity and errors as structured JSON (`LOG_FORMAT=json`), to stdout and optionally to a file, with a request ID on every line and in an `X-Request-Id` response header. Today logs are plain text on stdout only, which makes self-hosted problems hard to report and debug.
+9. **Structured logs** (S–M). **Done:** `LOG_FORMAT=text|json` (default text) for stdout; optional `LOG_FILE` appends JSONL regardless of stdout format; every response has `X-Request-Id` (valid inbound ids kept, else a UUID), with the same id on the HTTP request span. Remaining: log rotation stays with the operator; OpenTelemetry exporters stay in Backlog.
 
-10. **Marketing site** (M). Right after the product is ready for a public beta. A static site at `linkdean.app`: what Linkdean is, features, screenshots, a "self-host it for free" path to the install guide and GitHub, sign-up, and links to the legal pages and status.
-    - Static and cached at Cloudflare, so it costs the server nothing.
-    - Keep it in this repository (for example `apps/site`) so features and docs stay in step.
+10. **Marketing site** (M). **Done:** Astro site in `apps/site`, live at [linkdean.app](https://linkdean.app) via `deploy/public-beta/static/site` — product pitch, features, self-host CTA to the docs site, sign-up / sign-in, legal + GitHub links, `contact@linkdean.app`. Static and cached at Cloudflare. Remaining: pricing section waits on item 12.
 
-11. **Documentation site** (M). Immediately after the marketing site. A [Docusaurus](https://docusaurus.io/) site at `docs.linkdean.app`, built from the existing docs. Needed at launch so public users and self-hosters have one place to read:
-    - Self-hosting, with every environment variable and what it does.
-    - Development setup.
-    - Features list.
-    - API reference, from the OpenAPI spec in **API platform** (added once that ships).
-    - FAQ and code examples.
+11. **Documentation site** (M). **Done:** [Docusaurus](https://docusaurus.io/) at [`apps/docs`](../apps/docs), live at [docs.linkdean.app](https://docs.linkdean.app). Builds from repo `docs/` (Install, Operations / development setup, Features, Architecture) via `pnpm sync` + `pnpm build` into `deploy/public-beta/static/docs`. Remaining: API reference once **API platform** ships OpenAPI; optional FAQ pages.
 
-12. **Membership tiers and pricing** (M, explore). Right after the marketing and documentation sites. Decide what the hosted service charges for, before anyone pays and before Stripe or plan gates land in code.
-    - Start from the plan sketch in the [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
-    - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats).
-    - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
+12. **Membership tiers and pricing** (M, explore). After go-live hardening (#13), before anyone pays and before Stripe or plan gates land in code.
+   - Start from the plan sketch in the [organizations and teams design](./superpowers/specs/2026-11-03-organizations-and-teams-design.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
+   - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats).
+   - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
-13. **Public beta on the homelab** (S). Run the public instance at `app.linkdean.app` as a stand-alone stack on the home server, with the marketing and documentation sites beside it. Plan and checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server).
-    - Isolated Compose project (own networks, volumes and secrets; preferably its own VM), Cloudflare Tunnel instead of open ports, a firewall rule keeping Chrome off the LAN, a transactional email provider, off-site backups with a tested restore, and an external uptime check.
+13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server). Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md).
+   - Still open before announce: transactional SMTP + SPF/DKIM/DMARC, Turnstile + verified-email / disposable blocks, Chrome off the LAN, off-site backups with a tested restore, external uptime, ISP terms confirmation.
 
 ---
 

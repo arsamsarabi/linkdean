@@ -23,7 +23,7 @@ export function DashboardViewLayout({ view, empty, canEditLayout, viewerUserId, 
         title="Dashboard is empty"
         description={
           canEditLayout
-            ? 'Pin frequently used links into sections for a quick glance home.'
+            ? 'Pin links into sections for a quick glance home.'
             : 'This shared dashboard has no sections yet.'
         }
         action={
@@ -47,10 +47,10 @@ export function DashboardViewLayout({ view, empty, canEditLayout, viewerUserId, 
           <Title order={4}>{section.title}</Title>
           {section.items.length === 0 ? (
             <Text size="sm" c="dimmed">
-              No bookmarks in this section.
+              Nothing in this section yet.
             </Text>
           ) : (
-            <SimpleGrid cols={{ base: 2, sm: 4, lg: 6, xl: 8 }} spacing="sm">
+            <SimpleGrid cols={{ base: 1, xs: 2, sm: 4, lg: 6, xl: 8 }} spacing="sm">
               {section.items.map((item) => (
                 <BookmarkCard
                   key={item.id}

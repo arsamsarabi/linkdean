@@ -1,12 +1,14 @@
 import { useState, type ReactElement } from 'react'
 import { ActionIcon, Button, Group, Rating, Skeleton, Stack, Text, Textarea, UnstyledButton } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconHeart, IconHeartFilled, IconTrash } from '@tabler/icons-react'
+import { IconFlag, IconHeart, IconHeartFilled, IconTrash } from '@tabler/icons-react'
+import { ReportDrawer } from '@/components/abuse'
 import { ConfirmModal } from '@/components/confirm-modal/ConfirmModal'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import {
   useAddSocialComment,
   useDeleteSocialComment,
+  useMe,
   useSetSocialRating,
   useSocial,
   useToggleSocialLike,
@@ -29,6 +31,8 @@ export function SocialThread({ subjectType, subjectId, enabled }: Props): ReactE
   const setRating = useSetSocialRating(subjectType, subjectId)
   const [draft, setDraft] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [reportingId, setReportingId] = useState<string | null>(null)
+  const meId = useMe().data?.user.id
 
   const s = social.data?.social
 
@@ -114,18 +118,31 @@ export function SocialThread({ subjectType, subjectId, enabled }: Props): ReactE
                     <Text size="xs" fw={600}>
                       {c.author_display_name}
                     </Text>
-                    {c.can_delete ? (
-                      <ActionIcon
-                        size="sm"
-                        variant="subtle"
-                        color="red"
-                        aria-label="Delete comment"
-                        loading={deleteComment.isPending && deleteComment.variables === c.id}
-                        onClick={() => setDeletingId(c.id)}
-                      >
-                        <IconTrash size={14} stroke={1.5} />
-                      </ActionIcon>
-                    ) : null}
+                    <Group gap={4} wrap="nowrap">
+                      {meId && c.user_id !== meId ? (
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="gray"
+                          aria-label="Report comment"
+                          onClick={() => setReportingId(c.id)}
+                        >
+                          <IconFlag size={14} stroke={1.5} />
+                        </ActionIcon>
+                      ) : null}
+                      {c.can_delete ? (
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="red"
+                          aria-label="Delete comment"
+                          loading={deleteComment.isPending && deleteComment.variables === c.id}
+                          onClick={() => setDeletingId(c.id)}
+                        >
+                          <IconTrash size={14} stroke={1.5} />
+                        </ActionIcon>
+                      ) : null}
+                    </Group>
                   </Group>
                   <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
                     {c.body}
@@ -165,6 +182,13 @@ export function SocialThread({ subjectType, subjectId, enabled }: Props): ReactE
           </>
         ) : null}
       </Stack>
+      <ReportDrawer
+        opened={!!reportingId}
+        onClose={() => setReportingId(null)}
+        targetType="comment"
+        targetId={reportingId ?? ''}
+        subject="comment"
+      />
       <ConfirmModal
         opened={!!deletingId}
         onClose={() => setDeletingId(null)}

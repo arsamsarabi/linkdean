@@ -1,6 +1,6 @@
 # Self-host Linkdean
 
-This page covers the production stack in `deploy/docker/docker-compose.yml`. To install a released image instead, start with [INSTALL.md](INSTALL.md). For local development, see [Development setup](#development-setup) below and the README.
+This page covers the production stack in `deploy/docker/docker-compose.yml`. Published copy: [docs.linkdean.app](https://docs.linkdean.app/docs/self-hosting/operations) (synced from this file). To install a released image instead, start with [INSTALL.md](INSTALL.md). For local development, see [Development setup](#development-setup) below and the README.
 
 ## Quick start
 
@@ -48,6 +48,18 @@ The API also refuses to start when a secret is a value published in this reposit
 The first account on an empty instance becomes admin. Sign-ups are serialised, so two people registering at once cannot both become admin, but without a token whoever registers first owns the instance.
 
 Set `BOOTSTRAP_TOKEN` to a long random string (`openssl rand -hex 32`) to require it for that first account. The setup page asks for it. With a token set, the first account must register with a password: an OIDC sign-in cannot carry the token and is refused until an admin exists. Once any account exists the token is ignored and you can remove it.
+
+### Per-user quotas
+
+Under **Settings → Admin**, optional caps apply to every account (leave blank for unlimited):
+
+- Max bookmarks (owned, not deleted). An import that would exceed the cap is refused entirely.
+- Max stored image bytes (avatar + preview/favicon/OG files on disk).
+- Max enrich actions per UTC day (page HTML, favicon, OG and screenshot fetches).
+- Max import payload bytes (cannot exceed the 10 MiB hard cap).
+- Max uploaded image bytes (cannot exceed the avatar/preview hard caps).
+
+When a cap is hit the API answers `403` with `{"code":"quota_exceeded","meter":…}`. Users see current usage under **Settings → General** when any limit is set. Membership plans are not wired yet; limits go through one resolver so plans can plug in later.
 
 ### Reverse proxy
 
@@ -142,7 +154,9 @@ Email verification:
 - With mail off, new accounts stay unverified, there is no banner, and invites to them wait as pending invites. The invite's claim link still works, now also while signed in, when the signed-in account's address matches the invite. An admin can also mark the account verified.
 - People change their own address under **Profile → Edit profile → Change email**, with their current password. The link goes to the new address and the old one gets a notice; the address only changes when the link is opened. Accounts that sign in only with OIDC cannot change it here. With mail off the option says to ask an admin.
 - **Settings → Admin → Accounts** has **Mark verified**, **Remove verification** and **Change email** for each account. An admin email change applies at once and counts as verified. Removing verification keeps shares already accepted; only new invites wait.
-- **Require verified email** under **Settings → Admin** holds unverified accounts at a verify screen with **Resend email** and **Sign out**, and the API answers `403` with `{"code":"email_unverified"}` on every route outside `/api/auth/`. It can only be turned on while mail is on, and it never applies to admins, so it cannot lock everyone out. If you turn mail off while it is on, the gate stops applying until mail is back.
+- **Require verified email** under **Settings → Admin** holds unverified accounts at a verify screen with **Resend email** and **Sign out**, and the API answers `403` with `{"code":"email_unverified"}` on every route outside `/api/auth/`. It can only be turned on while mail is on, and it never applies to admins, so it cannot lock everyone out. If you turn mail off while it is on, the gate stops applying until mail is back. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate (OR with the setting) and shows the toggle on and disabled.
+- **Turnstile** (`TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`, both or neither): password registration shows Cloudflare Turnstile and the API verifies the token; OIDC is unchanged. Unset, registration works as before.
+- **Disposable emails** (`BLOCK_DISPOSABLE_EMAILS=true`): registration and email-change refuse addresses on an embedded throwaway-domain list with `400` "Use a lasting email address."
 - Each account can send 3 verification or email change emails per 15 minutes, and each client IP 10. Each client IP can try 10 verification or email change links per 15 minutes.
 - **Upgrading:** every account that exists when you upgrade counts as verified (migration `042`). If you do not trust an account's address, remove its verification under **Settings → Admin → Accounts**.
 
@@ -214,7 +228,7 @@ Running the API and web on the host is covered in the README under Development.
 
 | Probe | Path | Meaning |
 | --- | --- | --- |
-| Liveness | `GET /api/health` | Process up |
+| Liveness | `GET /api/health` | Process up; the body reports the running `version` |
 | Readiness | `GET /api/ready` | Postgres + Meilisearch reachable |
 | Metrics | `GET /api/metrics` | Prometheus scrape. Off unless `METRICS_TOKEN` is set; then send `Authorization: Bearer <token>` |
 

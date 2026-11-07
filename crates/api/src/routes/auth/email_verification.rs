@@ -143,6 +143,10 @@ pub async fn change(
     if state.mail.is_none() {
         return Err(Error::BadRequest(CHANGE_MAIL_OFF.into()).into());
     }
+    crate::disposable_email::refuse_if_disposable(
+        &req.new_email,
+        state.cfg.block_disposable_emails,
+    )?;
     limit_resend(&state, user.id, peer, &headers)?;
     let token = db::start_email_change(&state.pool, user.id, &req.password, &req.new_email).await?;
     let new_email = req.new_email.trim().to_ascii_lowercase();
