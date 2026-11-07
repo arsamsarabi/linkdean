@@ -1,4 +1,4 @@
-use minijinja::{AutoEscape, Environment, UndefinedBehavior};
+use minijinja::{value::Serde, AutoEscape, Environment, UndefinedBehavior};
 use serde::Serialize;
 use serde_json::Value;
 use std::fmt::Write;
@@ -145,12 +145,12 @@ pub fn render(name: &str, data: &Value, site: &Site) -> Result<Rendered, RenderE
     let mjml = env
         .get_template(t.file)
         .map_err(fail)?
-        .render(&ctx)
+        .render(Serde(&ctx))
         .map_err(fail)?;
     let subject = env
         .get_template(t.subject_file)
         .map_err(fail)?
-        .render(&ctx)
+        .render(Serde(&ctx))
         .map_err(fail)?
         .trim()
         .to_string();
