@@ -1,9 +1,9 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version};
+use crypto_box::aead::OsRng;
 use crypto_box::{PublicKey, SecretKey};
-use rand::rngs::OsRng;
-use rand::RngCore;
+use rand::Rng;
 
 use crate::{Error, Result, VaultPayload};
 
@@ -75,7 +75,7 @@ pub fn verify_dummy_password(password: &str) {
 
 pub fn random_bytes(len: usize) -> Vec<u8> {
     let mut buf = vec![0u8; len];
-    rand::thread_rng().fill_bytes(&mut buf);
+    rand::rng().fill_bytes(&mut buf);
     buf
 }
 
@@ -117,7 +117,7 @@ pub struct WrappedKey {
 
 pub fn new_data_key() -> [u8; KEY_LEN] {
     let mut key = [0u8; KEY_LEN];
-    rand::thread_rng().fill_bytes(&mut key);
+    rand::rng().fill_bytes(&mut key);
     key
 }
 
@@ -433,5 +433,22 @@ mod known_answers {
         }
         assert!(!password_needs_rehash(current));
         assert!(password_needs_rehash(old));
+    }
+
+    /// Session, API key and invite tokens are stored as this hash, so it must never change.
+    #[test]
+    fn token_hashes_match_sha256_vectors() {
+        assert_eq!(
+            hash_token(""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        assert_eq!(
+            hash_token("abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert_eq!(
+            hash_token("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"),
+            "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+        );
     }
 }
