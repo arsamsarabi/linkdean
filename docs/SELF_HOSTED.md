@@ -70,6 +70,25 @@ Login, registration and vault-unlock limits count attempts per client address. B
 
 Only enable it when the proxy is the sole route to the API, and make sure the proxy appends the client address to `X-Forwarded-For`. The API reads the last entry, the one your proxy wrote. With a chain of proxies, the last entry is the nearest proxy's view, so terminate the chain at a single proxy in front of the API.
 
+A Cloudflare Tunnel in front of Caddy is such a chain: Caddy sees the `cloudflared` container as the client and writes that address, so every user still shares one counter. Tell Caddy to trust the tunnel's network, take the client from `Cf-Connecting-Ip`, and pass on only that address:
+
+```caddyfile
+{
+	servers {
+		trusted_proxies static 10.89.12.0/24 # the network cloudflared and Caddy share
+		client_ip_headers Cf-Connecting-Ip
+	}
+}
+
+links.example.com {
+	reverse_proxy api:8080 {
+		header_up X-Forwarded-For {client_ip}
+	}
+}
+```
+
+A request from any other peer keeps its TCP address, so a forged `Cf-Connecting-Ip` header has no effect. `deploy/public-beta/Caddyfile` uses this setup.
+
 ### Container runtime
 
 - The API image runs as an unprivileged user, `linkdean` (UID/GID 10001). It owns `/app/data/avatars` and `/app/data/previews`; the binary and static files stay read-only to it.
