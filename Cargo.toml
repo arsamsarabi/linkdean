@@ -27,6 +27,9 @@ chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 futures = "0.3"
 hex = "0.4"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["http1", "server", "client"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
 meilisearch-sdk = "0.33"
 oauth2 = "5"
 openidconnect = "4"

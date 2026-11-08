@@ -73,6 +73,8 @@ services:
         --use-gl=angle --use-angle=swiftshader
         --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223
         --hide-scrollbars --font-render-hinting=none
+        --proxy-server=http://api:3128 '--proxy-bypass-list=<-loopback>'
+        --force-webrtc-ip-handling-policy=disable_non_proxied_udp
 
   # Catches every email the dev API sends; nothing leaves the machine.
   # Web UI: http://127.0.0.1:8025
@@ -100,6 +102,8 @@ services:
       AVATAR_DIR: /app/data/avatars
       PREVIEW_DIR: /app/data/previews
       BROWSER_WS_URL: http://chrome:9222
+      # Chrome's only way out: a proxy in the API that refuses private addresses.
+      BROWSER_PROXY_BIND: 0.0.0.0:3128
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_TLS: none
@@ -149,6 +153,8 @@ services:
 
 networks:
   data:
+  # Not internal here, so Chrome's DevTools port can be published for debugging.
+  # Production compose makes it internal; Chrome still goes through the proxy.
   browser:
   web:
   mail:

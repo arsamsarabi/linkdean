@@ -19,6 +19,7 @@ use tokio::sync::Mutex;
 use tracing::{info, warn};
 use uuid::Uuid;
 
+pub mod egress_proxy;
 mod net_guard;
 
 #[derive(Clone, Debug)]

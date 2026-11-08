@@ -121,7 +121,9 @@ services:
 networks:
   data:
   # Used only by the optional chrome service, which must not reach the database.
+  # Internal: no route out, so Chrome reaches the web only through the API's proxy.
   browser:
+    internal: true
 
 volumes:
   pgdata:
@@ -141,6 +143,7 @@ networks:
       config:
         - subnet: 10.89.4.0/24
   browser:
+    internal: true
     ipam:
       config:
         - subnet: 10.89.5.0/24
@@ -172,6 +175,8 @@ curl -fsS http://localhost:8080/api/ready    # Postgres and Meilisearch reachabl
 Without Chrome, bookmark cards show the page's Open Graph image and favicon. With it, Linkdean also takes a screenshot of each saved page.
 
 Chrome opens every page your users save, so it runs locked down: as `nobody`, with a read-only filesystem, no Linux capabilities and its own sandbox on. It sits on the `browser` network with the API and has no route to Postgres or Meilisearch.
+
+That network is `internal`, so Chrome has no route out at all. It reaches the web only through a forward proxy inside the API, which resolves every host itself and refuses private and internal addresses. A page therefore cannot reach your LAN, the API's other networks or a cloud metadata address, even through WebSockets, service workers or DNS tricks that the API's per-request check cannot see.
 
 ### 1. Add the service
 
@@ -206,6 +211,8 @@ Add this under `services:` in `docker-compose.yml`:
         --use-gl=angle --use-angle=swiftshader
         --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223
         --hide-scrollbars --font-render-hinting=none
+        --proxy-server=http://api:3128 '--proxy-bypass-list=<-loopback>'
+        --force-webrtc-ip-handling-policy=disable_non_proxied_udp
 ```
 
 ### 2. Point the API at it
@@ -214,7 +221,10 @@ Add to `.env`:
 
 ```bash
 BROWSER_WS_URL=http://chrome:9222
+BROWSER_PROXY_BIND=0.0.0.0:3128
 ```
+
+`BROWSER_PROXY_BIND` starts the proxy Chrome's `--proxy-server` flag points at. Without it Chrome, on its internal network, cannot load any page.
 
 ### 3. Create `chrome-seccomp.json`
 
@@ -408,6 +418,7 @@ Register `{APP_URL}/api/auth/oidc/callback` as the redirect URI. A new identity 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `BROWSER_WS_URL` | unset | Chrome DevTools address, `http://chrome:9222` with the service above. Unset, no screenshots are taken |
+| `BROWSER_PROXY_BIND` | unset | Address the API serves Chrome's egress proxy on, `0.0.0.0:3128` with the service above. Only starts when `BROWSER_WS_URL` is set too. The proxy connects only to public addresses, and only to ports 80, 443 and 1024 and up. The API refuses to start if the value is not `address:port` |
 
 ### Logging
 
