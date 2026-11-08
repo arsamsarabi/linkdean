@@ -60,6 +60,8 @@ services:
         --use-gl=angle --use-angle=swiftshader
         --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223
         --hide-scrollbars --font-render-hinting=none
+        --proxy-server=http://api:3128 '--proxy-bypass-list=<-loopback>'
+        --force-webrtc-ip-handling-policy=disable_non_proxied_udp
 
   api:
     image: ghcr.io/arsamsarabi/linkdean:${LINKDEAN_VERSION:-latest}
@@ -79,6 +81,8 @@ services:
       TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-true}
       # Set BROWSER_WS_URL=http://chrome:9222 when starting with --profile chrome
       BROWSER_WS_URL: ${BROWSER_WS_URL:-}
+      # Chrome's only way out: a proxy in the API that refuses private addresses.
+      BROWSER_PROXY_BIND: 0.0.0.0:3128
     volumes:
       - avatars:/app/data/avatars
       - previews:/app/data/previews
@@ -122,7 +126,10 @@ networks:
     ipam:
       config:
         - subnet: 10.89.10.0/24
+  # No route out: Chrome reaches the web only through the API's egress proxy, so a
+  # page cannot reach the LAN even if it gets past the DevTools request check.
   browser:
+    internal: true
     ipam:
       config:
         - subnet: 10.89.11.0/24

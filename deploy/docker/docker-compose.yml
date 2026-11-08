@@ -65,6 +65,8 @@ services:
         --use-gl=angle --use-angle=swiftshader
         --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223
         --hide-scrollbars --font-render-hinting=none
+        --proxy-server=http://api:3128 '--proxy-bypass-list=<-loopback>'
+        --force-webrtc-ip-handling-policy=disable_non_proxied_udp
 
   api:
     # Release image from GitHub Actions. `docker compose pull` fetches it; `up --build` builds
@@ -86,6 +88,8 @@ services:
       AVATAR_DIR: /app/data/avatars
       PREVIEW_DIR: /app/data/previews
       BROWSER_WS_URL: http://chrome:9222
+      # Chrome's only way out: a proxy in the API that refuses private addresses.
+      BROWSER_PROXY_BIND: 0.0.0.0:3128
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
@@ -125,7 +129,9 @@ services:
 
 networks:
   data:
+  # No route out: Chrome reaches the web only through the API's egress proxy.
   browser:
+    internal: true
 
 volumes:
   pgdata:

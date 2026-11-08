@@ -13,6 +13,8 @@ pub struct Config {
     pub avatar_dir: String,
     pub preview_dir: String,
     pub browser_ws_url: Option<String>,
+    /// Where to serve the forward proxy Chrome uses for all its traffic. Off when unset.
+    pub browser_proxy_bind: Option<std::net::SocketAddr>,
     pub oidc_issuer: Option<String>,
     pub oidc_client_id: Option<String>,
     pub oidc_client_secret: Option<String>,
@@ -113,6 +115,13 @@ impl Config {
             browser_ws_url: std::env::var("BROWSER_WS_URL")
                 .ok()
                 .filter(|s| !s.is_empty()),
+            browser_proxy_bind: match std::env::var("BROWSER_PROXY_BIND") {
+                Ok(s) if !s.is_empty() => Some(
+                    s.parse()
+                        .map_err(|_| anyhow::anyhow!("BROWSER_PROXY_BIND must be address:port"))?,
+                ),
+                _ => None,
+            },
             oidc_issuer: std::env::var("OIDC_ISSUER").ok().filter(|s| !s.is_empty()),
             oidc_client_id: std::env::var("OIDC_CLIENT_ID")
                 .ok()

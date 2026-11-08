@@ -36,6 +36,15 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(maintenance::run(state.clone()));
     tokio::spawn(mail::run_sender(state.clone()));
 
+    // Chrome has no route out of its network; this proxy is its only way to the web.
+    if let (Some(addr), Some(_)) = (cfg.browser_proxy_bind, &cfg.browser_ws_url) {
+        let listener = tokio::net::TcpListener::bind(addr).await?;
+        tokio::spawn(linkdean_worker::egress_proxy::serve(
+            listener,
+            linkdean_worker::egress_proxy::public_resolver(),
+        ));
+    }
+
     {
         let pool = state.pool.clone();
         let search = state.search.clone();

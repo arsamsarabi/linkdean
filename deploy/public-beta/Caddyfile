@@ -1,6 +1,14 @@
 # HTTP only — TLS terminates at Cloudflare. cloudflared reaches this on :80.
 {
 	auto_https off
+	# cloudflared is Caddy's only client and sits on the edge network. Without this,
+	# Caddy writes cloudflared's address to X-Forwarded-For, the API counts every user
+	# as that one address, and one person's failed logins lock everyone out.
+	# Requests from any other peer keep their TCP address, so the header can't be forged.
+	servers {
+		trusted_proxies static 10.89.12.0/24
+		client_ip_headers Cf-Connecting-Ip
+	}
 }
 
 # www and apex share one site. Do not redirect to https:// here — TLS is at
@@ -22,5 +30,8 @@ http://docs.linkdean.app {
 
 http://app.linkdean.app {
 	encode gzip
-	reverse_proxy api:8080
+	reverse_proxy api:8080 {
+		# The API reads the last X-Forwarded-For entry; make it the real client.
+		header_up X-Forwarded-For {client_ip}
+	}
 }

@@ -69,6 +69,24 @@ pub async fn resolves_public(url: &Url) -> bool {
     }
 }
 
+/// The addresses to connect to for `host:port`, or `PermissionDenied` when the host is a
+/// blocked name or any of its addresses is private. `host` may be a name or an IP literal,
+/// with or without IPv6 brackets. Connect to exactly these, so the check cannot be raced.
+pub async fn public_socket_addrs(host: &str, port: u16) -> std::io::Result<Vec<SocketAddr>> {
+    let bare = host.trim_start_matches('[').trim_end_matches(']');
+    if let Ok(ip) = bare.parse::<IpAddr>() {
+        if is_blocked_ip(ip) {
+            return Err(blocked());
+        }
+        return Ok(vec![SocketAddr::new(ip, port)]);
+    }
+    let mut addrs = public_addrs(bare).await?;
+    for addr in &mut addrs {
+        addr.set_port(port);
+    }
+    Ok(addrs)
+}
+
 /// All-or-nothing, so a name with one public and one private address is refused.
 async fn public_addrs(host: &str) -> Result<Vec<SocketAddr>, std::io::Error> {
     if is_blocked_name(host) {

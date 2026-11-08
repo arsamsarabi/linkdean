@@ -127,6 +127,7 @@ Runtime configuration is environment variables only. The full reference, with de
 | `TRUST_FORWARDED_FOR` | Behind a proxy | Set `true` behind a reverse proxy, else all clients share one address for login limits. Leave unset when the API is reachable directly |
 | `HSTS_MAX_AGE` | | Seconds for `Strict-Transport-Security`. Unset on plain HTTP |
 | `BROWSER_WS_URL` | | Chrome CDP URL for screenshots |
+| `BROWSER_PROXY_BIND` | With Chrome | Where the API serves the egress proxy Chrome must use (`0.0.0.0:3128`). Chrome's network has no other route out |
 | `BOOTSTRAP_TOKEN` | | When set, the first account (the admin) must enter it on the setup page, and that account must use a password, not OIDC. Unset, whoever registers first becomes admin. Ignored once any account exists |
 | `SMTP_HOST` | | Mail server. Mail is on when this and `MAIL_FROM` are set; unset, nothing is emailed. See [Email](docs/SELF_HOSTED.md#email) |
 | `SMTP_PORT` | | Default `587`, or `465` with `SMTP_TLS=tls` |
