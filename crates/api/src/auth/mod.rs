@@ -60,7 +60,31 @@ fn gate_exempt(path: &str) -> bool {
     path.starts_with("/api/auth/") || path.starts_with("/auth/")
 }
 
-/// Authenticated user that must be an admin.
+/// Authenticated by a login session, not an API key. For actions a leaked key must not be able
+/// to take: minting more keys, which would outlive revoking the leaked one, and admin powers.
+pub struct SessionUser(pub User);
+
+impl FromRequestParts<AppState> for SessionUser {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        if extract_token(parts).is_some_and(|t| is_api_key(&t)) {
+            return Err(Error::Forbidden.into());
+        }
+        let AuthUser(user) = AuthUser::from_request_parts(parts, state).await?;
+        Ok(SessionUser(user))
+    }
+}
+
+/// API keys carry the `ldk_` prefix; login session tokens are plain hex.
+pub fn is_api_key(token: &str) -> bool {
+    token.starts_with("ldk_")
+}
+
+/// Admin signed in with a login session. An admin's API key does not carry admin powers.
 pub struct AdminUser(pub User);
 
 impl FromRequestParts<AppState> for AdminUser {
@@ -70,7 +94,7 @@ impl FromRequestParts<AppState> for AdminUser {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let AuthUser(user) = AuthUser::from_request_parts(parts, state).await?;
+        let SessionUser(user) = SessionUser::from_request_parts(parts, state).await?;
         if !user.is_admin {
             return Err(Error::Forbidden.into());
         }
@@ -160,6 +184,22 @@ mod tests {
             ],
         );
         assert_eq!(extract_token(&p).as_deref(), Some("abc"));
+    }
+
+    #[test]
+    fn api_keys_are_told_apart_from_login_sessions() {
+        let key = parts(Method::POST, &[("authorization", "Bearer ldk_abc")]);
+        assert!(extract_token(&key).is_some_and(|t| is_api_key(&t)));
+        let session = parts(Method::POST, &[("authorization", "Bearer 0123abcd")]);
+        assert!(!extract_token(&session).is_some_and(|t| is_api_key(&t)));
+        let cookie = parts(
+            Method::POST,
+            &[
+                ("cookie", "linkdean_session=0123abcd"),
+                (CLIENT_HEADER, "web"),
+            ],
+        );
+        assert!(!extract_token(&cookie).is_some_and(|t| is_api_key(&t)));
     }
 
     #[test]
