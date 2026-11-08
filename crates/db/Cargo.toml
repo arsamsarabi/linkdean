@@ -20,4 +20,3 @@ uuid.workspace = true
 
 [dev-dependencies]
 argon2.workspace = true
-rand.workspace = true
