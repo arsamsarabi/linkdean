@@ -245,7 +245,9 @@ curl -fsS http://localhost:8080/api/ready
 
 ## Backup
 
-Stop writes briefly (or accept a short inconsistency window), then dump Postgres + Meili + volumes.
+The managed public beta on Nova uses **restic** to a dedicated Backblaze B2 bucket, with Infisical as the env SoT — see [deploy/public-beta/BACKUP.md](../deploy/public-beta/BACKUP.md).
+
+For a self-hosted Compose install, stop writes briefly (or accept a short inconsistency window), then dump Postgres + Meili + volumes:
 
 ```bash
 # from deploy/docker (compose project name: linkdean)
