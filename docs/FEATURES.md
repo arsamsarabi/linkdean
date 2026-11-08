@@ -150,6 +150,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 
 - Users create and revoke keys scoped to their own data (Settings → API keys)
 - Bearer `ldk_…` accepted alongside session
+- A key cannot create more keys or use admin routes, even an admin's, so revoking a leaked key ends its access
 - Secret hashed at rest; plaintext shown once at creation
 - Platform-wide and per-user enable/disable (Admin)
 

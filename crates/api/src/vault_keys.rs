@@ -23,7 +23,7 @@ pub struct VaultSession(Option<String>);
 
 impl VaultSession {
     pub fn from_token(token: &str) -> Self {
-        if token.starts_with("ldk_") {
+        if crate::auth::is_api_key(token) {
             Self(None)
         } else {
             Self(Some(hash_token(token)))

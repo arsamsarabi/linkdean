@@ -1,4 +1,4 @@
-use crate::auth::AuthUser;
+use crate::auth::{AuthUser, SessionUser};
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, State};
@@ -24,9 +24,10 @@ async fn list_keys(
     Ok(Json(json!({ "keys": keys })))
 }
 
+/// Login sessions only: a key that could mint keys would survive its own revocation.
 async fn create_key(
     State(state): State<AppState>,
-    AuthUser(user): AuthUser,
+    SessionUser(user): SessionUser,
     Json(req): Json<CreateApiKey>,
 ) -> ApiResult<Json<CreateApiKeyResponse>> {
     let created = db::create_api_key(&state.pool, &user, req).await?;
