@@ -27,7 +27,7 @@
 
 ### Task 4: Backups and monitoring
 
-- [ ] Nightly off-site copy of Postgres dump + avatars/previews volumes.
+- [x] Restic → B2 `linkdean-public` + Infisical `/linkdean-public` (see [restic-infisical](../specs/2026-11-07-public-beta-restic-infisical-design.md) / [BACKUP.md](../../../deploy/public-beta/BACKUP.md)).
 - [ ] One restore tested end to end.
 - [ ] External uptime check with phone alert.
 

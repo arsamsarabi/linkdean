@@ -165,6 +165,24 @@ jobs:
           cd /opt/linkdean
           git fetch --tags --force origin
           git checkout --detach "$GITHUB_REF_NAME"
+          EOF
+
+          # Infisical → guest Compose .env (restic keys filtered). Run on the Nova host
+          # so the Infisical CLI / machine identity stay off the public VM; script comes
+          # from the tag just checked out on the guest.
+          RENDER=/opt/linkdean/deploy/public-beta/scripts/render-env-from-infisical.sh
+          if lxc exec "$LXC" -- test -f "$RENDER"; then
+            lxc file pull "$LXC$RENDER" /tmp/render-env-from-infisical.sh
+            chmod +x /tmp/render-env-from-infisical.sh
+            LXC="$LXC" bash /tmp/render-env-from-infisical.sh
+            rm -f /tmp/render-env-from-infisical.sh
+          else
+            echo "::warning::render-env-from-infisical.sh missing on guest; skipping Infisical render"
+          fi
+
+          lxc exec "$LXC" -- bash -s <<EOF
+          set -euo pipefail
+          cd /opt/linkdean
           RELEASE_TAG="$GITHUB_REF_NAME" UPDATE_APP=$APP UPDATE_DOCS=$DOCS UPDATE_SITE=$SITE \\
             bash deploy/public-beta/scripts/pull-update.sh
           RELEASE_TAG="$GITHUB_REF_NAME" CHECK_APP=$APP CHECK_DOCS=$DOCS CHECK_SITE=$SITE \\

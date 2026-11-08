@@ -40,8 +40,8 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
    - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats).
    - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
-13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server). Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md).
-   - Still open before announce: transactional SMTP + SPF/DKIM/DMARC, Turnstile + verified-email / disposable blocks, Chrome off the LAN, off-site backups with a tested restore, external uptime, ISP terms confirmation.
+13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Guest `.env` SoT is Infisical `/linkdean-public`; off-site backups are restic → B2 bucket `linkdean-public` ([BACKUP.md](../deploy/public-beta/BACKUP.md)). Checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server). Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md), [restic-infisical](./superpowers/specs/2026-11-07-public-beta-restic-infisical-design.md).
+   - Still open before announce: transactional SMTP + SPF/DKIM/DMARC, Turnstile + verified-email / disposable blocks, Chrome off the LAN, first restic restore drill, external uptime, ISP terms confirmation.
 
 ---
 
