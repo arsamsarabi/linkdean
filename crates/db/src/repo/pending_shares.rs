@@ -57,6 +57,9 @@ async fn assert_owner(
     Ok(())
 }
 
+/// Open invites on the subject, declined ones included. A declined invite looks the same as any
+/// other pending one, so the owner is not told, and can still change or cancel it: the invitee
+/// can restore a declined invite and accept it later.
 pub async fn list_pending_for_subject(
     pool: &PgPool,
     owner_user_id: Uuid,
@@ -73,7 +76,6 @@ pub async fn list_pending_for_subject(
           AND subject_id = $2
           AND claimed_at IS NULL
           AND revoked_at IS NULL
-          AND rejected_at IS NULL
         ORDER BY created_at ASC
         "#,
     )
@@ -224,7 +226,6 @@ pub async fn update_pending_share_invite(
           AND subject_id = $4
           AND claimed_at IS NULL
           AND revoked_at IS NULL
-          AND rejected_at IS NULL
         RETURNING *
         "#,
     )
@@ -258,7 +259,6 @@ pub async fn revoke_pending_share_invite(
           AND subject_id = $3
           AND claimed_at IS NULL
           AND revoked_at IS NULL
-          AND rejected_at IS NULL
         "#,
     )
     .bind(pending_id)
@@ -628,8 +628,6 @@ async fn release_claim(pool: &PgPool, id: Uuid, revoke: bool) -> Result<()> {
     Ok(())
 }
 
-// Known issue: Owners cannot see or revoke a rejected invite, and the invitee can restore it at any
-// time. Fix: let owners revoke rejected invites, or make rejection final.
 pub async fn reject_share_invite(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<()> {
     let row = find_invitee_row(pool, user_id, id).await?;
     if row.rejected_at.is_some() {

@@ -75,7 +75,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Pending email invites: share with an address that has no account yet, or whose account has not verified it; the invite waits until an account verifies the address, and access starts when they accept
 - Invite claim links also work while signed in, for the account whose address the invite was sent to
 - Invite emails (needs mail): sharing with a verified account emails it an invite to open Linkdean, and sharing with an address emails the claim link. The share drawer says "We emailed them an invite." For an address the owner still sees the claim link to copy. Registering or claiming through the emailed link also verifies the address; the owner's copied link does not. No email for a declined invitee or an access change. Each owner can send 20 invite emails an hour; past that the share is still saved and the drawer says no email was sent
-- Accept or decline shares from the notifications drawer; nothing appears in your library until you accept. Declining is silent and stops repeat invites until you restore it from Profile
+- Accept or decline shares from the notifications drawer; nothing appears in your library until you accept. Declining is silent and stops repeat invites until you restore it from Profile. The owner keeps seeing a declined invite as pending and can still change or cancel it; a cancelled invite can no longer be restored or accepted
 - Collaborative edit on write-shared collections
 - Save a shared bookmark into your own library (⋮ → Save to my library; lands in Unsorted)
 - Share dashboards: read / write; invitees see shared boards in the switcher
