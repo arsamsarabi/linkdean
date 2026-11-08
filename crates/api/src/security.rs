@@ -8,9 +8,11 @@ use axum::routing::get;
 use axum::Router;
 
 /// SPA-safe CSP. Image asset routes set their own sandbox CSP; middleware keeps that.
+/// `challenges.cloudflare.com` is the Turnstile script and iframe on registration.
 pub const CONTENT_SECURITY_POLICY: &str = "\
 default-src 'self'; \
-script-src 'self'; \
+script-src 'self' https://challenges.cloudflare.com; \
+frame-src https://challenges.cloudflare.com; \
 style-src 'self' 'unsafe-inline'; \
 img-src 'self' data: blob:; \
 font-src 'self' data:; \
@@ -126,6 +128,13 @@ mod tests {
             .unwrap()
             .contains("camera=()"));
         assert!(!h.contains_key(header::STRICT_TRANSPORT_SECURITY));
+    }
+
+    #[test]
+    fn csp_allows_the_turnstile_widget() {
+        let csp = CONTENT_SECURITY_POLICY;
+        assert!(csp.contains("script-src 'self' https://challenges.cloudflare.com;"));
+        assert!(csp.contains("frame-src https://challenges.cloudflare.com;"));
     }
 
     #[test]
