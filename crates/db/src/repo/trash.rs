@@ -1,4 +1,5 @@
 use linkdean_core::{Error, Result, TrashItem, TrashKind};
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -119,7 +120,7 @@ pub async fn purge_expired_trash(pool: &PgPool) -> Result<PurgedTrash> {
         )
     }
 
-    let bookmark_ids: Vec<Uuid> = sqlx::query_scalar(&sql("bookmarks", "bm"))
+    let bookmark_ids: Vec<Uuid> = sqlx::query_scalar(AssertSqlSafe(sql("bookmarks", "bm")))
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
@@ -146,11 +147,11 @@ pub async fn purge_expired_trash(pool: &PgPool) -> Result<PurgedTrash> {
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
     super::categories::rescue_live_children(pool, &expiring).await?;
-    let categories: Vec<Uuid> = sqlx::query_scalar(&sql("categories", "c"))
+    let categories: Vec<Uuid> = sqlx::query_scalar(AssertSqlSafe(sql("categories", "c")))
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
-    let dashboards: Vec<Uuid> = sqlx::query_scalar(&sql("dashboards", "d"))
+    let dashboards: Vec<Uuid> = sqlx::query_scalar(AssertSqlSafe(sql("dashboards", "d")))
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;

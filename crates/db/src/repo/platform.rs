@@ -1,4 +1,5 @@
 use linkdean_core::{Error, PlatformSettings, Result};
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 
 const PLATFORM_COLS: &str = r#"
@@ -8,13 +9,13 @@ const PLATFORM_COLS: &str = r#"
 "#;
 
 pub async fn get_platform_settings(pool: &PgPool) -> Result<PlatformSettings> {
-    sqlx::query_as::<_, PlatformSettings>(&format!(
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
         r#"
         SELECT {PLATFORM_COLS}
         FROM platform_settings
         WHERE id = TRUE
         "#
-    ))
+    )))
     .fetch_optional(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?
@@ -22,14 +23,14 @@ pub async fn get_platform_settings(pool: &PgPool) -> Result<PlatformSettings> {
 }
 
 pub async fn set_registration_open(pool: &PgPool, open: bool) -> Result<PlatformSettings> {
-    sqlx::query_as::<_, PlatformSettings>(&format!(
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
         r#"
         UPDATE platform_settings
         SET registration_open = $1, updated_at = now()
         WHERE id = TRUE
         RETURNING {PLATFORM_COLS}
         "#
-    ))
+    )))
     .bind(open)
     .fetch_optional(pool)
     .await
@@ -38,14 +39,14 @@ pub async fn set_registration_open(pool: &PgPool, open: bool) -> Result<Platform
 }
 
 pub async fn set_api_keys_enabled(pool: &PgPool, enabled: bool) -> Result<PlatformSettings> {
-    sqlx::query_as::<_, PlatformSettings>(&format!(
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
         r#"
         UPDATE platform_settings
         SET api_keys_enabled = $1, updated_at = now()
         WHERE id = TRUE
         RETURNING {PLATFORM_COLS}
         "#
-    ))
+    )))
     .bind(enabled)
     .fetch_optional(pool)
     .await
@@ -56,14 +57,14 @@ pub async fn set_api_keys_enabled(pool: &PgPool, enabled: bool) -> Result<Platfo
 /// Whether unverified accounts are held at the verify screen. The caller checks that mail is
 /// on before turning it on.
 pub async fn set_require_verified_email(pool: &PgPool, on: bool) -> Result<PlatformSettings> {
-    sqlx::query_as::<_, PlatformSettings>(&format!(
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
         r#"
         UPDATE platform_settings
         SET require_verified_email = $1, updated_at = now()
         WHERE id = TRUE
         RETURNING {PLATFORM_COLS}
         "#
-    ))
+    )))
     .bind(on)
     .fetch_optional(pool)
     .await
@@ -80,7 +81,7 @@ pub async fn set_platform_quotas(
     max_import_bytes: Option<Option<i64>>,
     max_upload_image_bytes: Option<Option<i64>>,
 ) -> Result<PlatformSettings> {
-    sqlx::query_as::<_, PlatformSettings>(&format!(
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
         r#"
         UPDATE platform_settings
         SET
@@ -93,7 +94,7 @@ pub async fn set_platform_quotas(
         WHERE id = TRUE
         RETURNING {PLATFORM_COLS}
         "#
-    ))
+    )))
     .bind(max_bookmarks.is_some())
     .bind(max_bookmarks.flatten())
     .bind(max_stored_image_bytes.is_some())
@@ -115,14 +116,14 @@ pub async fn set_abuse_contact_email(
     pool: &PgPool,
     email: Option<&str>,
 ) -> Result<PlatformSettings> {
-    sqlx::query_as::<_, PlatformSettings>(&format!(
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
         r#"
         UPDATE platform_settings
         SET abuse_contact_email = $1, updated_at = now()
         WHERE id = TRUE
         RETURNING {PLATFORM_COLS}
         "#
-    ))
+    )))
     .bind(email)
     .fetch_optional(pool)
     .await

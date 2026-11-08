@@ -6,6 +6,7 @@ use linkdean_core::{
     CreateCategory, Error, ForkCategory, PublicBookmarkView, PublicListView, Result,
     UpdateCategory,
 };
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -1175,18 +1176,18 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
         .ok_or(Error::NotFound)?;
     let owner_display_name = super::users::public_user_label(&owner, "Owner");
 
-    let (total,): (i64,) = sqlx::query_as(&format!(
+    let (total,): (i64,) = sqlx::query_as(AssertSqlSafe(format!(
         "SELECT COUNT(*) FROM bookmarks b WHERE {PUBLIC_LIST_BOOKMARK_FILTER}"
-    ))
+    )))
     .bind(cat.id)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(&format!(
+    let rows = sqlx::query_as::<_, linkdean_core::Bookmark>(AssertSqlSafe(format!(
         "SELECT b.* FROM bookmarks b WHERE {PUBLIC_LIST_BOOKMARK_FILTER} \
          ORDER BY b.updated_at DESC, b.id LIMIT $2"
-    ))
+    )))
     .bind(cat.id)
     .bind(PUBLIC_LIST_LIMIT)
     .fetch_all(pool)
@@ -1222,9 +1223,9 @@ pub async fn get_public_list_bookmark(
     bookmark_id: Uuid,
 ) -> Result<linkdean_core::Bookmark> {
     let cat = public_list_category(pool, slug).await?;
-    sqlx::query_as::<_, linkdean_core::Bookmark>(&format!(
+    sqlx::query_as::<_, linkdean_core::Bookmark>(AssertSqlSafe(format!(
         "SELECT b.* FROM bookmarks b WHERE b.id = $2 AND {PUBLIC_LIST_BOOKMARK_FILTER}"
-    ))
+    )))
     .bind(cat.id)
     .bind(bookmark_id)
     .fetch_optional(pool)
