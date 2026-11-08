@@ -6,7 +6,7 @@ use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, CreateDashboard,
     CreateDashboardShare, CreateDashboardShareOutcome, Error, PendingShareSubjectType, ShareAccess,
-    User,
+    UpdatePendingShareInvite, User,
 };
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -178,7 +178,9 @@ async fn rejecting_is_silent_blocks_reinvite_and_can_be_restored() {
         db::list_pending_for_subject(&pool, owner.id, PendingShareSubjectType::Category, cat)
             .await
             .expect("owner list");
-    assert!(pending.is_empty());
+    // Still listed, like any pending invite, so the owner is not told it was declined.
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].id, id);
     assert!(db::list_notifications(&pool, owner.id, 20)
         .await
         .expect("owner notifications")
@@ -204,6 +206,53 @@ async fn rejecting_is_silent_blocks_reinvite_and_can_be_restored() {
         .await
         .expect("accept");
     assert!(db::get_category(&pool, invitee.id, cat).await.is_ok());
+}
+
+#[tokio::test]
+async fn owner_can_cancel_a_declined_invite_so_it_cannot_be_restored() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let invitee = user(&pool, "invitee").await;
+    let cat = category(&pool, &owner).await;
+    invite(&pool, &owner, cat, &invitee.email)
+        .await
+        .expect("invite");
+    let id = only_invite(&pool, &invitee).await;
+    db::reject_share_invite(&pool, invitee.id, id)
+        .await
+        .expect("reject");
+
+    db::update_pending_share_invite(
+        &pool,
+        owner.id,
+        PendingShareSubjectType::Category,
+        cat,
+        id,
+        UpdatePendingShareInvite {
+            access: ShareAccess::Read,
+        },
+    )
+    .await
+    .expect("owner changes access of a declined invite");
+    db::revoke_pending_share_invite(&pool, owner.id, PendingShareSubjectType::Category, cat, id)
+        .await
+        .expect("owner cancels a declined invite");
+
+    assert!(db::list_share_invites(&pool, invitee.id)
+        .await
+        .expect("inbox")
+        .is_empty());
+    assert!(matches!(
+        db::restore_share_invite(&pool, invitee.id, id).await,
+        Err(Error::NotFound)
+    ));
+    assert!(matches!(
+        db::accept_share_invite(&pool, invitee.id, id).await,
+        Err(Error::NotFound)
+    ));
+    assert!(db::get_category(&pool, invitee.id, cat).await.is_err());
 }
 
 #[tokio::test]
