@@ -7,6 +7,11 @@ import { lastSaveFolder, rememberSaveFolder, withWebScheme, writableCategories }
 import type { Category } from '@/schemas'
 import { draftFromBookmark, draftFromShare, isFetchableUrl, type BookmarkDraft, type SharedPage } from '@/services'
 
+export type SaveSearch = SharedPage & {
+  /** Opened by the bookmarklet in its own small window: close it when done. */
+  popup?: boolean
+}
+
 /** The last folder used, if it still exists and can take a new bookmark outside a vault. */
 function startingFolder(categories: Category[]): string[] {
   const id = lastSaveFolder()
@@ -19,7 +24,7 @@ function startingFolder(categories: Category[]): string[] {
  * bookmark instead of saving a second copy.
  */
 export function SavePage(): ReactElement {
-  const search: SharedPage = useSearch({ from: '/_app/save' })
+  const search: SaveSearch = useSearch({ from: '/_app/save' })
   const nav = useNavigate()
   const [shared] = useState(() => draftFromShare(search))
   const url = withWebScheme(shared.url)
@@ -38,7 +43,11 @@ export function SavePage(): ReactElement {
     )
   })
 
-  const close = (): void => void nav({ to: '/library' })
+  const close = (): void => {
+    // A window the bookmarklet opened can close itself; if the browser refuses, carry on in it.
+    if (search.popup) window.close()
+    void nav({ to: '/library' })
+  }
 
   if (!fetchable) {
     return (

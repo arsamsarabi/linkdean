@@ -5,6 +5,7 @@ import { notifications } from '@mantine/notifications'
 import {
   IconArrowsExchange,
   IconBell,
+  IconBolt,
   IconFolder,
   IconKey,
   IconLock,
@@ -24,13 +25,23 @@ import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { AdminPlatformSettings } from './AdminPlatformSettings'
 import { DeleteAccountCard } from './DeleteAccountCard'
+import { FastCapturePanel } from './FastCapturePanel'
 import { GeneralSettingsPanel } from './GeneralSettingsPanel'
 import { NotificationEmailsPanel } from './NotificationEmailsPanel'
 import classes from './SettingsPage.module.css'
 import { SettingsSkeleton } from './SettingsSkeleton'
 import { VaultAutoLockSettings } from './VaultAutoLockSettings'
 
-const SETTINGS_TABS = ['general', 'notifications', 'categories', 'import', 'vault', 'api-keys', 'admin'] as const
+const SETTINGS_TABS = [
+  'general',
+  'notifications',
+  'categories',
+  'capture',
+  'import',
+  'vault',
+  'api-keys',
+  'admin',
+] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function isSettingsTab(v: unknown): v is SettingsTab {
@@ -98,6 +109,9 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="categories" leftSection={<IconFolder size={16} stroke={1.5} />}>
             Categories
           </Tabs.Tab>
+          <Tabs.Tab value="capture" leftSection={<IconBolt size={16} stroke={1.5} />}>
+            Fast capture
+          </Tabs.Tab>
           <Tabs.Tab value="import" leftSection={<IconArrowsExchange size={16} stroke={1.5} />}>
             Import / Export
           </Tabs.Tab>
@@ -129,6 +143,10 @@ export function SettingsPage(): ReactElement {
           <Paper p="xl" withBorder>
             <CategoryManager />
           </Paper>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="capture">
+          <FastCapturePanel />
         </Tabs.Panel>
 
         <Tabs.Panel value="import">
