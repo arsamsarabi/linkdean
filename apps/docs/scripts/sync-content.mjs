@@ -36,11 +36,18 @@ const pages = [
     sidebar_position: 3,
   },
   {
+    src: 'FAST_CAPTURE.md',
+    dest: 'fast-capture.md',
+    id: 'fast-capture',
+    title: 'Saving pages fast',
+    sidebar_position: 4,
+  },
+  {
     src: 'ARCHITECTURE.md',
     dest: 'architecture.md',
     id: 'architecture',
     title: 'Architecture',
-    sidebar_position: 4,
+    sidebar_position: 5,
   },
 ];
 
@@ -55,6 +62,8 @@ function rewriteLinks(body) {
       .replace(/\]\(SELF_HOSTED\.md(#[^)]*)?\)/g, '](/docs/self-hosting/operations$1)')
       .replace(/\]\(\.\/FEATURES\.md(#[^)]*)?\)/g, '](/docs/features$1)')
       .replace(/\]\(FEATURES\.md(#[^)]*)?\)/g, '](/docs/features$1)')
+      .replace(/\]\(\.\/FAST_CAPTURE\.md(#[^)]*)?\)/g, '](/docs/fast-capture$1)')
+      .replace(/\]\(FAST_CAPTURE\.md(#[^)]*)?\)/g, '](/docs/fast-capture$1)')
       .replace(/\]\(\.\/ARCHITECTURE\.md(#[^)]*)?\)/g, '](/docs/architecture$1)')
       .replace(/\]\(ARCHITECTURE\.md(#[^)]*)?\)/g, '](/docs/architecture$1)')
       // Not published on the docs site — send readers to GitHub.

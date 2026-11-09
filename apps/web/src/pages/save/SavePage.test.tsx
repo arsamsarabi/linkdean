@@ -46,6 +46,11 @@ function renderPage(): void {
   )
 }
 
+function closeDrawer(): void {
+  const onClose = drawer.props?.onClose as (() => void) | undefined
+  onClose?.()
+}
+
 describe('SavePage', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -96,12 +101,12 @@ describe('SavePage', () => {
     const closeWindow = vi.spyOn(window, 'close').mockImplementation(() => undefined)
     search.value = { url: 'https://example.com', popup: true }
     renderPage()
-    ;(drawer.props?.onClose as () => void)()
+    closeDrawer()
     expect(closeWindow).toHaveBeenCalledTimes(1)
     cleanup()
     search.value = { url: 'https://example.com' }
     renderPage()
-    ;(drawer.props?.onClose as () => void)()
+    closeDrawer()
     expect(closeWindow).toHaveBeenCalledTimes(1)
     closeWindow.mockRestore()
   })

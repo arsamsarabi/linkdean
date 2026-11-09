@@ -17,5 +17,8 @@ describe('FastCapturePanel', () => {
     expect(href.startsWith('javascript:')).toBe(true)
     expect(href).toContain(JSON.stringify(`${window.location.origin}/save?`))
     expect(link.getAttribute('draggable')).toBe('true')
+    expect(screen.getByRole('link', { name: 'How to set it up' }).getAttribute('href')).toBe(
+      'https://docs.linkdean.app/docs/fast-capture'
+    )
   })
 })

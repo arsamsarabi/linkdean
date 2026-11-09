@@ -72,7 +72,7 @@ jobs:
           has() { if grep -Eq "$1" <<<"$files"; then echo true; else echo false; fi; }
           # Keep these patterns in step with deploy/public-beta/scripts/pull-update.sh.
           out app  "$(has '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)')"
-          out docs "$(has '^(apps/docs/|deploy/public-beta/static/docs/|docs/(INSTALL|SELF_HOSTED|FEATURES|ARCHITECTURE)\.md$)')"
+          out docs "$(has '^(apps/docs/|deploy/public-beta/static/docs/|docs/(INSTALL|SELF_HOSTED|FEATURES|FAST_CAPTURE|ARCHITECTURE)\.md$)')"
           out site "$(has '^(apps/site/|deploy/public-beta/static/site/)')"
 
   ci:
