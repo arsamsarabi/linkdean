@@ -38,10 +38,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
    - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
 13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Guest `.env` SoT is Infisical `/linkdean-public`; off-site backups are restic → B2 bucket `linkdean-public` ([BACKUP.md](../deploy/public-beta/BACKUP.md)). Checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server). Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md), [restic-infisical](./superpowers/specs/2026-11-07-public-beta-restic-infisical-design.md).
-   - Go-live checklist. Do not announce until every item is done.
-     - **d. Sign-up controls.** Checked on the live beta (v0.0.2) with `deploy/public-beta/scripts/check-signup-controls.sh`: Turnstile on, disposable domains refused, sign-up without a captcha refused, outbound mail on. Still to confirm by hand: `REQUIRE_VERIFIED_EMAIL=true` in Infisical (the check cannot see it without an account).
-     - **e. First restic restore drill.** **Done** 2026-11-09 on Nova: the latest snapshot restored and checked in 20s ([drill log](../deploy/public-beta/BACKUP.md#drill-log)).
-     - **f. External uptime monitoring.** Set up the checks in [MONITORING.md](../deploy/public-beta/MONITORING.md) with phone alerts, then test one alert by stopping the api.
+   - Go-live checklist. **Done** 2026-11-09: sign-up controls checked on the live beta with `deploy/public-beta/scripts/check-signup-controls.sh` (Turnstile, disposable-domain block, outbound mail) and `REQUIRE_VERIFIED_EMAIL=true` confirmed in Infisical; first restic restore drill passed on Nova ([drill log](../deploy/public-beta/BACKUP.md#drill-log)). External uptime monitoring moved to Later (#28).
 ---
 
 ## Next: high value after release
@@ -120,6 +117,12 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 26. **Localization** (M). i18n-ready strings first, then locale packs.
 
 27. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
+
+28. **External uptime monitoring for the public beta** (S). Nothing outside the homelab notices when Nova, the guest or the home connection goes down, so an outage lasts until someone happens to look.
+    - Set up the checks in [MONITORING.md](../deploy/public-beta/MONITORING.md): `/api/ready` keyword check as the main one, plus health, marketing and docs, every 5 minutes, alerting after 2 failures.
+    - Push alerts to a phone app; email alone is too easy to miss.
+    - Add Cloudflare's Tunnel Health Alert for the `linkdean-public` tunnel.
+    - Test one alert end to end by stopping the api for 15 minutes in a quiet hour.
 
 ---
 
