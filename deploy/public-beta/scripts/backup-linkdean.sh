@@ -3,8 +3,8 @@
 #
 # Install on Nova:
 #   install -m 0755 deploy/public-beta/scripts/backup-linkdean.sh /home/sudow/novabot/restic/
-# Cron:
-#   0 * * * * /home/sudow/novabot/restic/backup-linkdean.sh >> /home/sudow/novabot/restic/logs/restic-linkdean.log 2>&1
+# Cron (three a day, at 00:00, 08:00 and 16:00):
+#   0 */8 * * * /home/sudow/novabot/restic/backup-linkdean.sh >> /home/sudow/novabot/restic/logs/restic-linkdean.log 2>&1
 #
 # Credentials from Infisical /linkdean-public (preferred), else RESTIC_ENV_FILE, else restic/.env.
 set -euo pipefail
@@ -22,9 +22,8 @@ PROJECT_ID="${INFISICAL_PROJECT_ID:-}"
 LAN_API_DEFAULT="${INFISICAL_LAN_URL:-http://192.168.0.120:8104}"
 export PATH="${HOME}/.local/bin:${PATH}"
 
-RESTIC_KEEP_DAILY="${RESTIC_KEEP_DAILY:-30}"
-RESTIC_KEEP_WEEKLY="${RESTIC_KEEP_WEEKLY:-12}"
-RESTIC_KEEP_MONTHLY="${RESTIC_KEEP_MONTHLY:-12}"
+# Only the newest snapshots are kept: three, at the cron below one day's worth.
+RESTIC_KEEP_LAST="${RESTIC_KEEP_LAST:-3}"
 
 if [[ -f "$SCRIPT_DIR/lib/common.sh" ]]; then
   # shellcheck source=/dev/null
@@ -42,15 +41,6 @@ else
     local bucket="$1" endpoint="${B2_ENDPOINT#https://}"
     endpoint="${endpoint#http://}"; endpoint="${endpoint#s3://}"; endpoint="${endpoint%/}"
     printf 's3:%s/%s' "$endpoint" "$bucket"
-  }
-  forget_and_prune() {
-    local repo="$1"
-    log "Applying retention to $repo"
-    restic_cmd -r "$repo" forget \
-      --keep-daily "$RESTIC_KEEP_DAILY" \
-      --keep-weekly "$RESTIC_KEEP_WEEKLY" \
-      --keep-monthly "$RESTIC_KEEP_MONTHLY" \
-      --prune
   }
   init_repo_if_needed() {
     local repo="$1" restic
@@ -123,9 +113,7 @@ linkdean_forget() {
   restic_cmd -r "$repo" forget \
     --tag linkdean-public \
     --group-by host,tags \
-    --keep-daily "$RESTIC_KEEP_DAILY" \
-    --keep-weekly "$RESTIC_KEEP_WEEKLY" \
-    --keep-monthly "$RESTIC_KEEP_MONTHLY" \
+    --keep-last "$RESTIC_KEEP_LAST" \
     --prune
 }
 

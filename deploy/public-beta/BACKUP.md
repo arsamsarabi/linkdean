@@ -17,8 +17,8 @@ Meilisearch is **not** dumped. After a restore, use **Settings → Admin → Rei
 - Bucket: Backblaze B2 `linkdean-public` (dedicated; one restic repo per bucket)
 - Repo URL shape: `s3:s3.eu-central-003.backblazeb2.com/linkdean-public`
 - Credentials + guest env SoT: Infisical `homelab` / `prod` / `/linkdean-public`
-- Schedule on Nova: `0 * * * *` (hourly) → `~/novabot/restic/backup-linkdean.sh`
-- Retention: 30 daily, 12 weekly, 12 monthly, grouped by host and tag (each run backs up from a fresh temp dir, so the default host-and-paths grouping would keep every snapshot)
+- Schedule on Nova: `0 */8 * * *` (00:00, 08:00, 16:00) → `~/novabot/restic/backup-linkdean.sh`
+- Retention: the last 3 snapshots (one day at the schedule above), grouped by host and tag. Each run backs up from a fresh temp dir, so the default host-and-paths grouping would never prune
 
 ## Env inject (deploy)
 
