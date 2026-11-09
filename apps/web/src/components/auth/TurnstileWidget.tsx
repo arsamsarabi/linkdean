@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactElement } from 'react'
+import { useEffect, useEffectEvent, useId, type ReactElement } from 'react'
 import { Text } from '@mantine/core'
 
 declare global {
@@ -53,33 +53,33 @@ type Props = {
 /** Cloudflare Turnstile widget. Parent clears token after a failed submit and may remount to reset. */
 export function TurnstileWidget({ siteKey, onToken }: Props): ReactElement {
   const hostId = useId()
-  const widgetId = useRef<string | null>(null)
-  const onTokenRef = useRef(onToken)
-  onTokenRef.current = onToken
+  // Turnstile calls back long after render; this always reaches the latest `onToken`.
+  const emitToken = useEffectEvent((token: string | null) => onToken(token))
 
   useEffect(() => {
-    let cancelled = false
+    // One object per mount, so the async render and the cleanup share state without
+    // reassigning locals after the effect has run.
+    const mount: { cancelled: boolean; widgetId: string | null } = { cancelled: false, widgetId: null }
     void (async () => {
       try {
         await loadTurnstileScript()
-        if (cancelled || !window.turnstile) return
+        if (mount.cancelled || !window.turnstile) return
         const el = document.getElementById(hostId)
         if (!el) return
-        widgetId.current = window.turnstile.render(el, {
+        mount.widgetId = window.turnstile.render(el, {
           sitekey: siteKey,
-          callback: (token) => onTokenRef.current(token),
-          'expired-callback': () => onTokenRef.current(null),
-          'error-callback': () => onTokenRef.current(null),
+          callback: (token) => emitToken(token),
+          'expired-callback': () => emitToken(null),
+          'error-callback': () => emitToken(null),
         })
       } catch {
-        onTokenRef.current(null)
+        emitToken(null)
       }
     })()
     return () => {
-      cancelled = true
-      if (widgetId.current && window.turnstile) {
-        window.turnstile.remove(widgetId.current)
-        widgetId.current = null
+      mount.cancelled = true
+      if (mount.widgetId && window.turnstile) {
+        window.turnstile.remove(mount.widgetId)
       }
     }
   }, [hostId, siteKey])

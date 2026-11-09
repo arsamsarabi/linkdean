@@ -35,6 +35,24 @@ if [ -z "$UPDATE_APP$UPDATE_DOCS$UPDATE_SITE" ]; then
   if changed '^(apps/site/|deploy/public-beta/static/site/)'; then UPDATE_SITE=true; fi
 fi
 
+# Screenshots are on when .env points the api at the chrome service.
+chrome_on() {
+  grep -Eq "^BROWSER_WS_URL=['\"]?http://chrome:" "$STACK/.env"
+}
+
+# Compose never changes an existing network's options, so a `browser` network made before
+# it was marked `internal` keeps a route out for Chrome. Remove it, and the two containers
+# on it, so `up` makes it again from the compose file. The api is down for a few seconds.
+ensure_browser_network() {
+  local net
+  net="$("${COMPOSE[@]}" config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["networks"]["browser"]["name"])')"
+  docker network inspect "$net" >/dev/null 2>&1 || return 0
+  [ "$(docker network inspect -f '{{.Internal}}' "$net")" = true ] && return 0
+  echo "$net is not internal; recreating it (api and chrome restart)"
+  "${COMPOSE[@]}" --profile chrome rm -sf api chrome
+  docker network rm "$net"
+}
+
 echo "update app=$UPDATE_APP docs=$UPDATE_DOCS site=$UPDATE_SITE tag=${RELEASE_TAG:-none}"
 
 if [ "$UPDATE_APP" = true ]; then
@@ -47,8 +65,15 @@ if [ "$UPDATE_APP" = true ]; then
     fi
     echo "LINKDEAN_VERSION=$version"
   fi
-  "${COMPOSE[@]}" pull api
-  "${COMPOSE[@]}" up -d api
+  if chrome_on; then
+    ensure_browser_network
+    "${COMPOSE[@]}" --profile chrome pull api chrome
+    # Chrome too: its command and network change with the stack, not only with the image.
+    "${COMPOSE[@]}" --profile chrome up -d api chrome
+  else
+    "${COMPOSE[@]}" pull api
+    "${COMPOSE[@]}" up -d api
+  fi
 fi
 
 # Docs and site are bind-mounted from deploy/public-beta/static/, so the checkout already

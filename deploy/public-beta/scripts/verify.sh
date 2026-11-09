@@ -4,7 +4,8 @@
 #   RELEASE_TAG=v0.2.0 CHECK_APP=true CHECK_DOCS=false CHECK_SITE=true bash verify.sh
 #
 # App: the api container runs the release image, is healthy, and /api/health reports the
-# release version. Docs and site: Caddy serves the index.html that is checked out.
+# release version. With screenshots on, Chrome runs behind the egress proxy on internal
+# networks only. Docs and site: Caddy serves the index.html that is checked out.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -43,6 +44,20 @@ if [ "${CHECK_APP:-false}" = true ]; then
 
   caddy_get app.linkdean.app /api/ready >/dev/null || fail "/api/ready is not ready"
   echo "api: /api/ready ok"
+
+  # With screenshots on, Chrome must have no route out but the api's egress proxy.
+  if grep -Eq "^BROWSER_WS_URL=['\"]?http://chrome:" "$STACK/.env"; then
+    chrome="$("${COMPOSE[@]}" --profile chrome ps -q chrome)"
+    [ -n "$chrome" ] || fail "BROWSER_WS_URL is set but chrome is not running"
+    docker inspect -f '{{json .Config.Cmd}}' "$chrome" | grep -q -- '--proxy-server=http://api:3128' ||
+      fail "chrome runs without --proxy-server; recreate it from the compose file"
+    net="$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$chrome")"
+    for n in $net; do
+      [ "$(docker network inspect -f '{{.Internal}}' "$n")" = true ] ||
+        fail "chrome is on network $n, which is not internal"
+    done
+    echo "chrome: behind the egress proxy, on internal network(s) $net"
+  fi
 fi
 
 check_static() {
