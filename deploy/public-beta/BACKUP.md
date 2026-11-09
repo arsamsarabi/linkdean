@@ -18,7 +18,7 @@ Meilisearch is **not** dumped. After a restore, use **Settings → Admin → Rei
 - Repo URL shape: `s3:s3.eu-central-003.backblazeb2.com/linkdean-public`
 - Credentials + guest env SoT: Infisical `homelab` / `prod` / `/linkdean-public`
 - Schedule on Nova: `0 * * * *` (hourly) → `~/novabot/restic/backup-linkdean.sh`
-- Retention: 30 daily, 12 weekly, 12 monthly
+- Retention: 30 daily, 12 weekly, 12 monthly, grouped by host and tag (each run backs up from a fresh temp dir, so the default host-and-paths grouping would keep every snapshot)
 
 ## Env inject (deploy)
 
@@ -49,9 +49,10 @@ On Nova, once:
 ```bash
 install -m 0755 deploy/public-beta/scripts/restore-drill.sh /home/sudow/novabot/restic/
 install -m 0755 deploy/public-beta/scripts/backup-linkdean.sh /home/sudow/novabot/restic/
+install -D -m 0644 deploy/public-beta/restore/docker-compose.yml /home/sudow/novabot/restic/restore/docker-compose.yml
 ```
 
-The drill sources `backup-linkdean.sh` for its credential loader, so both must be the versions from this repo. Then:
+The drill sources `backup-linkdean.sh` for its credential loader, so both must be the versions from this repo. It pushes `restore/docker-compose.yml` into the guest itself, so the guest's checkout does not need it. Then:
 
 ```bash
 /home/sudow/novabot/restic/restore-drill.sh            # latest snapshot
@@ -64,7 +65,7 @@ It fails when the snapshot lacks the dump or files archive, `pg_restore` reports
 With `KEEP=1`, tear down afterwards:
 
 ```bash
-lxc exec linkdean-public -- bash -lc 'cd /opt/linkdean/deploy/public-beta/restore && \
+lxc exec linkdean-public -- bash -lc 'cd /tmp/linkdean-restore-drill/compose && \
   LINKDEAN_VERSION=x DRILL_SESSION_SECRET=x docker compose -p linkdean-restore --profile api down -v'
 ```
 
@@ -83,3 +84,4 @@ The same steps, against the live project, when the guest's data is lost. Do not 
 
 | Date (UTC) | Snapshot | Image | Took | Users / bookmarks restored | Notes |
 | --- | --- | --- | --- | --- | --- |
+| 2026-11-09 13:47 | `fd8c959d` (13:00 hourly) | 0.0.2 | 20s | 1 / 116 (26 categories, 1 avatar, 362 previews), matching live | First drill. Found and fixed: the backup's temp dir (with a plaintext dump) leaked on every run, and retention never pruned (each snapshot was its own group) |
