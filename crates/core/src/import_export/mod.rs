@@ -135,6 +135,10 @@ fn write_bookmark_html(out: &mut String, b: &BookmarkExport, depth: usize) {
 const MAX_FOLDER_DEPTH: usize = 64;
 const MAX_IMPORT_CATEGORIES: usize = 10_000;
 
+/// Each imported dashboard and section is its own row, written one at a time.
+const MAX_IMPORT_DASHBOARDS: usize = 100;
+const MAX_IMPORT_SECTIONS: usize = 100;
+
 fn too_deep() -> Error {
     Error::BadRequest(format!(
         "import nests folders more than {MAX_FOLDER_DEPTH} deep"
@@ -267,6 +271,20 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
         )));
     }
     check_category_tree(&export.categories)?;
+    if export.dashboards.len() > MAX_IMPORT_DASHBOARDS {
+        return Err(Error::BadRequest(format!(
+            "import has more than {MAX_IMPORT_DASHBOARDS} dashboards"
+        )));
+    }
+    if export
+        .dashboards
+        .iter()
+        .any(|d| d.sections.len() > MAX_IMPORT_SECTIONS)
+    {
+        return Err(Error::BadRequest(format!(
+            "an imported dashboard has more than {MAX_IMPORT_SECTIONS} sections"
+        )));
+    }
     let mut parsed = ParsedImport::default();
 
     // Parents before children, whatever order the file lists them in. A parent missing
@@ -405,14 +423,20 @@ pub fn parse_raindrop_csv(raw: &str) -> Result<ParsedImport> {
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string());
         // A CSV names one folder per row; the same name means the same top-level folder.
-        let folder = folder.map(|f| match folders.get(&f) {
-            Some(&i) => i,
-            None => {
-                let i = parsed.push_category(f.clone(), None);
-                folders.insert(f, i);
-                i
-            }
-        });
+        let folder = match folder {
+            None => None,
+            Some(f) => Some(match folders.get(&f) {
+                Some(&i) => i,
+                None => {
+                    if parsed.categories.len() >= MAX_IMPORT_CATEGORIES {
+                        return Err(too_many_folders());
+                    }
+                    let i = parsed.push_category(f.clone(), None);
+                    folders.insert(f, i);
+                    i
+                }
+            }),
+        };
         let tags = idx("tags")
             .and_then(|i| row.get(i))
             .unwrap_or("")
@@ -506,6 +530,43 @@ pub fn new_id() -> Uuid {
 mod tests {
     use super::*;
     use crate::{BookmarkExport, CategoryExport};
+
+    #[test]
+    fn raindrop_import_caps_folders() {
+        let mut csv = String::from("url,title,folder\n");
+        for i in 0..=MAX_IMPORT_CATEGORIES {
+            csv.push_str(&format!("https://x.example/{i},t,f{i}\n"));
+        }
+        assert!(parse_raindrop_csv(&csv).is_err());
+        let ok = "url,title,folder\nhttps://a.example,a,One\nhttps://b.example,b,One\n";
+        assert_eq!(parse_raindrop_csv(ok).unwrap().categories.len(), 1);
+    }
+
+    #[test]
+    fn linkdean_import_caps_dashboards_and_sections() {
+        let board = |sections: usize| {
+            serde_json::json!({
+                "title": "b",
+                "sections": (0..sections)
+                    .map(|_| serde_json::json!({"title": "s", "bookmark_ids": []}))
+                    .collect::<Vec<_>>(),
+            })
+        };
+        let file = |dashboards: Vec<serde_json::Value>| {
+            serde_json::json!({
+                "version": EXPORT_VERSION,
+                "exported_at": "2026-01-01T00:00:00Z",
+                "categories": [],
+                "bookmarks": [],
+                "dashboards": dashboards,
+            })
+            .to_string()
+        };
+        assert!(parse_linkdean_json(&file(vec![board(1); MAX_IMPORT_DASHBOARDS + 1])).is_err());
+        assert!(parse_linkdean_json(&file(vec![board(MAX_IMPORT_SECTIONS + 1)])).is_err());
+        let ok = parse_linkdean_json(&file(vec![board(2); 3])).unwrap();
+        assert_eq!(ok.dashboards.len(), 3);
+    }
 
     #[test]
     fn netscape_import_unescapes_urls_and_tags() {
