@@ -12,9 +12,6 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 ## Now: before the first public release
 
-1. **Security hardening** (M). A public instance draws scanners and attackers from day one. Session and OIDC cookies are already `HttpOnly` and `SameSite`; image routes send `nosniff` and a sandbox CSP. **Done:** app-wide security headers (CSP with `frame-ancestors 'none'`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional HSTS via `HSTS_MAX_AGE`), `/.well-known/security.txt`, CI `cargo audit` and `pnpm audit --prod`, and Dependabot for Cargo, npm and Actions.
-   - Security review before launch. **Done:** the page fetch and screenshot path (SSRF): Chrome now sits on an internal network behind an egress proxy that refuses private addresses; and the public beta's Caddy now passes the real client address, so rate limits count each client instead of everyone as one. Still open: auth and session flows, sharing and public-list access checks, import parsing, and upload handling.
-
 2. **Sign-up protection** (S–M). **Done:** public beta keeps **open registration**. Misuse controls: optional Cloudflare Turnstile on password registration (`TURNSTILE_*`), host-forced verified-email gate (`REQUIRE_VERIFIED_EMAIL`, ORs with the admin toggle), and optional disposable-domain blocking (`BLOCK_DISPOSABLE_EMAILS`). Invite-only remains an admin toggle. Registration rate limits and email verification were already in place.
 
 3. **Per-user quotas** (M). **Done:** platform-default limits (null = unlimited) for bookmarks, stored image bytes, enrich actions per UTC day, import bytes, and upload image bytes. Enforced at create/import/upload/enrich; `resolve_limits` + period-keyed usage leave room for membership plans. Usage in Settings when any limit is set. No per-user overrides in v1.
@@ -41,8 +38,10 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
    - Write the model into [MANAGED_SERVICE.md](./MANAGED_SERVICE.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
 13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Guest `.env` SoT is Infisical `/linkdean-public`; off-site backups are restic → B2 bucket `linkdean-public` ([BACKUP.md](../deploy/public-beta/BACKUP.md)). Checklist: [MANAGED_SERVICE.md](./MANAGED_SERVICE.md#public-beta-on-a-home-server). Design: [public-beta-homelab](./superpowers/specs/2026-11-06-public-beta-homelab-design.md), [restic-infisical](./superpowers/specs/2026-11-07-public-beta-restic-infisical-design.md).
-   - Still open before announce: transactional SMTP + SPF/DKIM/DMARC, Turnstile + verified-email / disposable blocks, first restic restore drill, external uptime, ISP terms confirmation. Chrome off the LAN is handled by the stack (internal `browser` network plus egress proxy) once this version is deployed.
-
+   - Go-live checklist. Do not announce until every item is done.
+     - **d. Sign-up controls.** Checked on the live beta (v0.0.2) with `deploy/public-beta/scripts/check-signup-controls.sh`: Turnstile on, disposable domains refused, sign-up without a captcha refused, outbound mail on. Still to confirm by hand: `REQUIRE_VERIFIED_EMAIL=true` in Infisical (the check cannot see it without an account).
+     - **e. First restic restore drill.** Run `restore-drill.sh` on Nova ([BACKUP.md](../deploy/public-beta/BACKUP.md#restore-drill)) and add the result to the drill log.
+     - **f. External uptime monitoring.** Set up the checks in [MONITORING.md](../deploy/public-beta/MONITORING.md) with phone alerts, then test one alert by stopping the api.
 ---
 
 ## Next: high value after release

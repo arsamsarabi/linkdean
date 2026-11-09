@@ -21,6 +21,9 @@ const REGISTER_ADDRESS: u32 = 10;
 const VAULT_USER: u32 = 10;
 /// Abuse reports one user may file per window, so nobody floods the admin queue.
 const REPORT_USER: u32 = 10;
+/// Imports one user may start per window. Each one reindexes the library and starts a
+/// metadata and screenshot pass, so a loop of tiny files would cost far more than it sends.
+const IMPORT_USER: u32 = 10;
 /// Reset link requests for one address, so nobody floods an inbox.
 const RESET_REQUEST_ACCOUNT: u32 = 3;
 const RESET_REQUEST_ADDRESS: u32 = 10;
@@ -91,6 +94,10 @@ pub fn invite_email_limit(owner_id: uuid::Uuid) -> [Limit; 1] {
 
 pub fn report_limit(user_id: uuid::Uuid) -> [Limit; 1] {
     [(format!("report:{user_id}"), REPORT_USER)]
+}
+
+pub fn import_limit(user_id: uuid::Uuid) -> [Limit; 1] {
+    [(format!("import:{user_id}"), IMPORT_USER)]
 }
 
 pub fn vault_limit(user_id: uuid::Uuid) -> [Limit; 1] {

@@ -78,6 +78,12 @@ function rewriteLinks(body) {
 }
 
 rmSync(join(outRoot, 'self-hosting'), { recursive: true, force: true });
+// The wipe takes the folder's sidebar label with it, so write it back.
+mkdirSync(join(outRoot, 'self-hosting'), { recursive: true });
+writeFileSync(
+  join(outRoot, 'self-hosting', '_category_.json'),
+  `${JSON.stringify({ label: 'Self-hosting', position: 1, collapsed: false }, null, 2)}\n`,
+);
 for (const name of ['features.md', 'architecture.md', 'intro.md']) {
   // intro is hand-written; keep it. Wipe only synced leaves below.
   if (name === 'intro.md') continue;

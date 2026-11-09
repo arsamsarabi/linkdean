@@ -142,6 +142,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Admin report queue (Settings → Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
 - Abuse contact: admins set an email in the same panel (`platform_settings.abuse_contact_email`); the report form shows it. Terms and Privacy tell people to use Report or that address. Marketing site footer also lists `contact@linkdean.app`
 - Banned users list with bulk unban and bulk change of reason or duration
+- A banned user's public lists stop loading for anyone while the ban lasts, and come back when it ends or is lifted
 - Moderation of a banned user's exposed content: turn off public links, set items private, hide the profile, revoke shares, delete comments, move items to the owner's Trash; private and vault content stay out of reach, and every action is recorded
 
 ---
@@ -163,6 +164,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Export: Netscape HTML, Linkdean JSON (full account export of owned folders, bookmarks and dashboards; vault items included while unlocked)
 - Linkdean JSON (version 2) keeps every folder of a bookmark, its favourite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
 - Netscape HTML lists a bookmark under each folder it is in, and reads `<DD>` descriptions on import
+- One import at a time per user, and at most 10 per 15 minutes. A file may hold up to 10,000 folders (Raindrop CSV included), 100 dashboards and 100 sections per dashboard
 
 ---
 
@@ -175,6 +177,9 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Public app: [app.linkdean.app](https://app.linkdean.app) (homelab beta stack in `deploy/public-beta/`)
 - Healthchecks on db / Meili / api; `GET /api/health` (reports the running version) and `GET /api/ready`
 - Security headers on every response (`Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional `Strict-Transport-Security` via `HSTS_MAX_AGE`). Image routes keep their own sandbox CSP. `/.well-known/security.txt` and `/security.txt` point to the project security contact
+- Supply chain: CI runs `cargo audit` and `pnpm audit --prod` on every PR; Dependabot opens updates for Cargo, npm and GitHub Actions
+- Chrome on an internal network with no route out: it reaches the web only through the API's egress proxy, which resolves each host itself and refuses private addresses
+- Public beta operations (`deploy/public-beta/`): restic backups to B2 with a scripted restore drill into a throwaway, network-isolated stack ([BACKUP.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/BACKUP.md)); external uptime check list ([MONITORING.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/MONITORING.md)); a sign-up controls check that creates no account (`scripts/check-signup-controls.sh`)
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Structured logs: `LOG_FORMAT=text|json` on stdout (default text); optional `LOG_FILE` appends JSONL; every response has `X-Request-Id` correlated into request log spans
 - Outbound email over SMTP (optional): an outbox with retries, Settings → Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates

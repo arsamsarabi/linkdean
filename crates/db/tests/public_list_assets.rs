@@ -148,3 +148,69 @@ async fn public_list_images_are_reachable_only_through_the_list() {
         Err(Error::NotFound)
     ));
 }
+
+#[tokio::test]
+async fn a_banned_owners_public_list_goes_dark_until_the_ban_ends() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let mk = |tag: &str| format!("ban-{tag}-{}@public.test", Uuid::new_v4());
+    let owner = db::create_user(&pool, &mk("owner"), Some("password-long"), None, None, None)
+        .await
+        .expect("owner");
+    let moderator = db::create_user(&pool, &mk("mod"), Some("password-long"), None, None, None)
+        .await
+        .expect("moderator");
+    let list = db::create_category(
+        &pool,
+        owner.id,
+        CreateCategory {
+            name: "Banned reading".into(),
+            parent_id: None,
+            is_hidden: false,
+            vault_id: None,
+            icon: None,
+        },
+    )
+    .await
+    .expect("category")
+    .id;
+    let listed = bookmark(&pool, owner.id, Some(list), false).await;
+    let slug = db::enable_category_public_link(&pool, owner.id, list)
+        .await
+        .expect("enable")
+        .slug
+        .expect("slug");
+    db::get_public_list_by_slug(&pool, &slug)
+        .await
+        .expect("served before the ban");
+
+    // `ban_user` needs no admin flag on the acting user; leaving admins alone keeps this test
+    // from racing the moderation tests.
+    let ban = linkdean_core::CreateBan {
+        reason: "spam".into(),
+        ends_at: None,
+        days: None,
+    };
+    db::ban_user(&pool, moderator.id, owner.id, &ban)
+        .await
+        .expect("ban");
+    assert!(matches!(
+        db::get_public_list_by_slug(&pool, &slug).await,
+        Err(Error::NotFound)
+    ));
+    assert!(matches!(
+        db::get_public_list_bookmark(&pool, &slug, listed).await,
+        Err(Error::NotFound)
+    ));
+
+    let lift = linkdean_core::LiftBans {
+        user_ids: vec![owner.id],
+    };
+    db::lift_bans(&pool, moderator.id, &lift)
+        .await
+        .expect("lift");
+    db::get_public_list_by_slug(&pool, &slug)
+        .await
+        .expect("served again once the ban is lifted");
+}

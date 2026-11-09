@@ -1,8 +1,12 @@
-# cargo-audit config (CI: `cargo audit`). Revisit when openidconnect bumps rsa / crypto-bigint.
+# cargo-audit config (CI: `cargo audit`). Revisit when openidconnect bumps rsa / crypto-bigint, or sqlx bumps libsqlite3-sys.
 [advisories]
 ignore = [
     # openidconnect → rsa: Marvin timing sidechannel; no fixed rsa 0.9.x release yet
     "RUSTSEC-2023-0071",
     # openidconnect → p256/p384 → elliptic-curve → crypto-bigint 0.5; fixed in 0.7.6 via upstream bumps
     "RUSTSEC-2026-0387",
+    # sqlx 0.9 → sqlx-sqlite → libsqlite3-sys 0.30 (C SQLite CVE). Lockfile entry only: the
+    # `sqlite` feature is off, so it is never built (`cargo tree -i libsqlite3-sys` is empty).
+    # Drop once sqlx-sqlite allows libsqlite3-sys >= 0.39.
+    "RUSTSEC-2026-0459",
 ]

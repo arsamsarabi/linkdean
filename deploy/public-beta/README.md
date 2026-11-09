@@ -110,7 +110,13 @@ RELEASE_TAG=v0.2.0 CHECK_APP=true CHECK_DOCS=true CHECK_SITE=true bash deploy/pu
 
 ## 5. Before announce
 
-Complete the go-live list in the design spec / MANAGED_SERVICE (and the remaining [plan](../../docs/superpowers/plans/2026-11-06-public-beta-homelab.md)): SMTP + SPF/DKIM/DMARC, Turnstile, `REQUIRE_VERIFIED_EMAIL`, `BLOCK_DISPOSABLE_EMAILS`, restic restore drill ([BACKUP.md](./BACKUP.md)), external uptime, ISP terms, `LOG_FORMAT=json` (default here). Guest `.env` comes from Infisical via [`scripts/render-env-from-infisical.sh`](./scripts/render-env-from-infisical.sh). Marketing contact (`contact@linkdean.app`) is already on the site.
+Remaining go-live items are tracked in [ROADMAP.md](../../docs/ROADMAP.md) (item 13). Tools for them:
+
+- Sign-up controls: `bash deploy/public-beta/scripts/check-signup-controls.sh` checks Turnstile, the disposable-domain block and outbound mail against the live app, without creating an account.
+- Restore drill: [BACKUP.md](./BACKUP.md#restore-drill) (`scripts/restore-drill.sh` on Nova).
+- Uptime checks: [MONITORING.md](./MONITORING.md).
+
+Guest `.env` comes from Infisical via [`scripts/render-env-from-infisical.sh`](./scripts/render-env-from-infisical.sh). Marketing contact (`contact@linkdean.app`) is already on the site.
 
 ## Networks
 
