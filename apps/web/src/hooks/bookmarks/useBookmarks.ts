@@ -6,7 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { Bookmark, SearchResponse } from '@/schemas'
+import type { Bookmark, PageDetails, SearchResponse } from '@/schemas'
 import { useUi } from '@/stores'
 
 export function useBookmarks(categoryId?: string | null, includeVault?: boolean): UseQueryResult<Bookmark[]> {
@@ -138,4 +138,9 @@ export function useSaveBookmarkCopy(): UseMutationResult<Bookmark, Error, string
       window.setTimeout(() => void qc.invalidateQueries({ queryKey: ['bookmarks'] }), 6000)
     },
   })
+}
+
+/** Fetches a page's details for the bookmark form. A mutation: it runs on a click, not on render. */
+export function usePageDetails(): UseMutationResult<PageDetails, Error, string> {
+  return useMutation({ mutationFn: (url: string) => api.pageDetails(url) })
 }

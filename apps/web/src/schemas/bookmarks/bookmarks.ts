@@ -68,6 +68,13 @@ export const importResultSchema = z.object({
   failed: z.number(),
 })
 
+/** What a page says about itself, for filling in the bookmark form. Nothing is saved. */
+export const pageDetailsSchema = z.object({
+  title: z.string().nullish(),
+  description: z.string().nullish(),
+  tags: z.array(z.string()),
+})
+
 export const duplicateGroupSchema = z.object({
   url: z.string(),
   bookmarks: z.array(bookmarkSchema),
@@ -97,5 +104,6 @@ export type LinkCheckStatus = z.infer<typeof linkCheckStatusSchema>
 export type SearchHit = z.infer<typeof searchHitSchema>
 export type SearchResponse = z.infer<typeof searchResponseSchema>
 export type ImportResult = z.infer<typeof importResultSchema>
+export type PageDetails = z.infer<typeof pageDetailsSchema>
 export type DuplicateGroup = z.infer<typeof duplicateGroupSchema>
 export type DuplicatesResponse = z.infer<typeof duplicatesSchema>

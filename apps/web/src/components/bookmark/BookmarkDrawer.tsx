@@ -4,6 +4,8 @@ import {
   Button,
   Checkbox,
   Drawer,
+  Group,
+  Loader,
   LoadingOverlay,
   MultiSelect,
   Select,
@@ -11,15 +13,18 @@ import {
   Switch,
   Tabs,
   TagsInput,
+  Text,
   Textarea,
   TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { IconWorldDownload } from '@tabler/icons-react'
 import { SocialThread } from '@/components/social'
 import {
   useCreateBookmark,
   useDeleteBookmarkPreview,
   useMe,
+  usePageDetails,
   useSyncDuringRender,
   useUpdateBookmark,
   useUploadBookmarkPreview,
@@ -28,7 +33,7 @@ import {
 import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import { categorySelectData, withWebScheme, writableCategories } from '@/lib'
 import type { Category } from '@/schemas'
-import { emptyDraft, type BookmarkDraft } from '@/services'
+import { draftHeadsToVault, emptyDraft, fillFromPage, isFetchableUrl, type BookmarkDraft } from '@/services'
 import { BookmarkPreviewField } from './BookmarkPreviewField'
 
 export type { BookmarkDraft }
@@ -66,15 +71,40 @@ export function BookmarkDrawer({
   const updateBookmark = useUpdateBookmark()
   const uploadPreview = useUploadBookmarkPreview()
   const deletePreview = useDeleteBookmarkPreview()
+  const pageDetails = usePageDetails()
+  // The result of the last Import from URL: a note for an empty page, or why it failed.
+  const [fetchNote, setFetchNote] = useState<{ error: boolean; text: string } | null>(null)
   const pending =
     createBookmark.isPending || updateBookmark.isPending || uploadPreview.isPending || deletePreview.isPending
+  const fetchUrl = withWebScheme(draft.url)
+  const canFetch = isFetchableUrl(fetchUrl)
+  // Vault URLs never leave the instance, so the button is not offered for them.
+  const showFetch = !draftHeadsToVault(draft, categories, vaultRequired) && draft.can_write !== false
+  const fetching = pageDetails.isPending
 
   useSyncDuringRender([opened, initial], () => {
     if (!opened) return
     setDraft(initial ? { ...initial, tags: [...initial.tags] } : emptyDraft())
     setPendingPreview(null)
     setTab('details')
+    setFetchNote(null)
   })
+
+  async function importFromUrl(): Promise<void> {
+    const url = fetchUrl
+    setFetchNote(null)
+    try {
+      const details = await pageDetails.mutateAsync(url)
+      // Typing goes on while the page loads: fill only what is still empty, and only for
+      // the address that was fetched.
+      setDraft((d) => (withWebScheme(d.url) === url ? fillFromPage(d, details) : d))
+      if (!details.title && !details.description && details.tags.length === 0) {
+        setFetchNote({ error: false, text: 'The page did not share a title, description or tags.' })
+      }
+    } catch (e) {
+      setFetchNote({ error: true, text: e instanceof Error ? e.message : String(e) })
+    }
+  }
 
   async function save(): Promise<void> {
     const tags = draft.tags.map((t) => t.trim()).filter(Boolean)
@@ -151,10 +181,33 @@ export function BookmarkDrawer({
           onChange={(e) => {
             const url = e.currentTarget.value
             setDraft((d) => ({ ...d, url }))
+            setFetchNote(null)
           }}
         />
+        {showFetch ? (
+          <Stack gap={4} mt={-8}>
+            <Group>
+              <Button
+                variant="light"
+                size="xs"
+                leftSection={<IconWorldDownload size={14} />}
+                onClick={() => void importFromUrl()}
+                disabled={!canFetch || pending}
+                loading={fetching}
+              >
+                Import from URL
+              </Button>
+            </Group>
+            {fetchNote ? (
+              <Text size="xs" c={fetchNote.error ? 'red' : 'dimmed'} role={fetchNote.error ? 'alert' : undefined}>
+                {fetchNote.text}
+              </Text>
+            ) : null}
+          </Stack>
+        ) : null}
         <TextInput
           label="Title"
+          rightSection={fetching && !draft.title.trim() ? <Loader size="xs" /> : null}
           value={draft.title}
           onChange={(e) => {
             const title = e.currentTarget.value
@@ -163,6 +216,7 @@ export function BookmarkDrawer({
         />
         <Textarea
           label="Description"
+          rightSection={fetching && !draft.description.trim() ? <Loader size="xs" /> : null}
           minRows={2}
           autosize
           value={draft.description}

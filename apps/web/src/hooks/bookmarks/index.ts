@@ -8,6 +8,7 @@ export {
   useUploadBookmarkPreview,
   useDeleteBookmarkPreview,
   useSaveBookmarkCopy,
+  usePageDetails,
 } from './useBookmarks'
 export { useBulkAddCategories, useBulkTagBookmarks, useBulkDeleteBookmarks, type BulkResult } from './useBulkBookmarks'
 export { useDuplicates, useMergeDuplicateGroup } from './useDuplicates'

@@ -11,6 +11,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Edit category drawer (name, parent, icon, hidden) from folder menu
 - Bookmarks with title, URL, description, notes
 - Only `http://` and `https://` addresses are saved, on create, edit and import; an address typed without a scheme gets `https://`
+- **Import from URL** on the bookmark form: the server fetches the page (plain HTTP, public addresses only) and fills in the title, description and tags the person has left empty. Not offered for bookmarks going into a vault. Counts as one enrich action and is limited to 60 per user every 15 minutes
 - Bookmark cards / glance tiles: title primary, full URL muted beneath
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)

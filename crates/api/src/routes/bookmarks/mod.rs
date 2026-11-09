@@ -28,6 +28,7 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/broken", get(broken))
         .route("/bookmarks/broken-links", get(broken))
         .route("/bookmarks/ids", get(list_ids))
+        .route("/bookmarks/page-details", post(page_details))
         .route("/bookmarks/{id}/check-link", post(check_link))
         .route("/bookmarks/{id}/save", post(save_copy))
         .route(
@@ -386,6 +387,53 @@ async fn broken(
 ) -> ApiResult<Json<Vec<BookmarkView>>> {
     let items = db::list_broken_bookmarks(&state.pool, user.id).await?;
     Ok(Json(items))
+}
+
+#[derive(Deserialize)]
+pub struct PageDetailsRequest {
+    pub url: String,
+}
+
+/// Fetches a page's title, description and keyword tags so the bookmark form can fill in
+/// what the person has not typed yet. Nothing is saved. Counts as one enrich action and is
+/// rate limited per user. The SPA never calls it for a bookmark headed into a vault.
+async fn page_details(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Json(req): Json<PageDetailsRequest>,
+) -> ApiResult<Json<Value>> {
+    let url = req.url.trim();
+    db::require_web_url(url)?;
+    let rate = crate::rate_limit::page_details_limit(user.id);
+    state.limiter.check(&rate)?;
+    state.limiter.record(&rate);
+    let limits = crate::quotas::limits_for(&state.pool).await?;
+    db::consume_enrich_action(&state.pool, user.id, &limits).await?;
+
+    use linkdean_worker::PageDetailsError;
+    let details = linkdean_worker::fetch_page_details(url)
+        .await
+        .map_err(|e| {
+            Error::BadRequest(match e {
+                PageDetailsError::NotPublic => {
+                    "Only public web addresses can be fetched.".to_string()
+                }
+                PageDetailsError::Refused(code) => {
+                    format!(
+                        "The site refused the request (HTTP {code}). Fill in the details yourself."
+                    )
+                }
+                PageDetailsError::Unreachable => {
+                    "Couldn't reach that page. Check the address, or fill in the details yourself."
+                        .to_string()
+                }
+            })
+        })?;
+    Ok(Json(json!({
+        "title": details.title,
+        "description": details.description,
+        "tags": details.tags,
+    })))
 }
 
 async fn check_link(

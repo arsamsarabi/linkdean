@@ -1004,6 +1004,8 @@ struct Meta {
     description: Option<String>,
     favicon: Option<String>,
     preview_image: Option<String>,
+    /// From `<meta name="keywords">` and `article:tag`, cleaned up; see `clean_keywords`.
+    keywords: Vec<String>,
 }
 
 fn parse_meta(body: &str) -> Meta {
@@ -1028,6 +1030,21 @@ fn parse_meta(body: &str) -> Meta {
     let description = meta_content(desc_sel)
         .or_else(|| meta_content(og_desc_sel))
         .map(|d| truncate_chars(d, MAX_DESCRIPTION_CHARS));
+    let mut raw_keywords: Vec<String> = Vec::new();
+    if let Some(list) = Selector::parse("meta[name=\"keywords\"]")
+        .ok()
+        .and_then(|s| doc.select(&s).next())
+        .and_then(|el| el.value().attr("content"))
+    {
+        raw_keywords.extend(list.split(',').map(str::to_string));
+    }
+    if let Ok(sel) = Selector::parse("meta[property=\"article:tag\"]") {
+        raw_keywords.extend(
+            doc.select(&sel)
+                .filter_map(|el| el.value().attr("content"))
+                .map(str::to_string),
+        );
+    }
     let preview_image = meta_content(og_image_sel)
         .or_else(|| meta_content(og_image_secure_sel))
         .or_else(|| meta_content(twitter_image_sel))
@@ -1045,7 +1062,104 @@ fn parse_meta(body: &str) -> Meta {
             .and_then(|el| el.value().attr("href"))
             .map(|s| s.to_string()),
         preview_image,
+        keywords: clean_keywords(raw_keywords),
     }
+}
+
+/// Most suggested tags taken from one page, and the longest one kept.
+const MAX_KEYWORDS: usize = 10;
+const MAX_KEYWORD_CHARS: usize = 40;
+
+/// Trimmed, lowercased, without duplicates or overlong entries, at most `MAX_KEYWORDS`.
+/// Keyword lists are often stuffed for search engines, so only the first few are useful.
+fn clean_keywords(raw: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for k in raw {
+        let k = k.trim().to_lowercase();
+        if k.is_empty() || k.chars().count() > MAX_KEYWORD_CHARS || out.contains(&k) {
+            continue;
+        }
+        out.push(k);
+        if out.len() == MAX_KEYWORDS {
+            break;
+        }
+    }
+    out
+}
+
+/// What a page says about itself, for filling in a bookmark form before saving.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct PageDetails {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum PageDetailsError {
+    /// Not an http(s) address, or it resolves to a private one.
+    NotPublic,
+    /// The site answered with this status.
+    Refused(u16),
+    /// No answer: DNS, connection, TLS or timeout.
+    Unreachable,
+}
+
+/// How long a details fetch may take. Someone is waiting on the form.
+const PAGE_DETAILS_TIMEOUT: Duration = Duration::from_secs(8);
+
+/// Fetches a page's title, description and keyword tags with plain HTTP, the same way
+/// enrichment does: public addresses only, through the guarded client, reading at most
+/// `MAX_PAGE_BYTES`. Never runs Chrome.
+pub async fn fetch_page_details(raw_url: &str) -> Result<PageDetails, PageDetailsError> {
+    let url = url::Url::parse(raw_url.trim()).map_err(|_| PageDetailsError::NotPublic)?;
+    if !net_guard::allowed_literal(&url) {
+        return Err(PageDetailsError::NotPublic);
+    }
+    // A private address is refused; a name that does not resolve is just unreachable, which
+    // reads better for a typo. The guarded client checks every address again on connect.
+    if let Some(host) = url.host_str() {
+        let port = url.port_or_known_default().unwrap_or(443);
+        if let Err(e) = net_guard::public_socket_addrs(host, port).await {
+            return Err(if e.kind() == std::io::ErrorKind::PermissionDenied {
+                PageDetailsError::NotPublic
+            } else {
+                PageDetailsError::Unreachable
+            });
+        }
+    }
+    let client = net_guard::public_client(
+        PAGE_DETAILS_TIMEOUT,
+        "Linkdean/0.1 (+https://github.com/arsamsarabi/linkdean)",
+    )
+    .map_err(|_| PageDetailsError::Unreachable)?;
+    fetch_details_with(&client, url.as_str()).await
+}
+
+async fn fetch_details_with(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<PageDetails, PageDetailsError> {
+    let resp = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|_| PageDetailsError::Unreachable)?;
+    if !resp.status().is_success() {
+        return Err(PageDetailsError::Refused(resp.status().as_u16()));
+    }
+    let body = read_capped(resp, MAX_PAGE_BYTES, true)
+        .await
+        .map_err(|_| PageDetailsError::Unreachable)?;
+    let body = String::from_utf8_lossy(&body).into_owned();
+    let meta = tokio::task::spawn_blocking(move || parse_meta(&body))
+        .await
+        .unwrap_or_default();
+    Ok(PageDetails {
+        title: meta.title,
+        description: meta.description,
+        tags: meta.keywords,
+    })
 }
 
 #[cfg(test)]
@@ -1075,6 +1189,86 @@ mod tests {
         assert_eq!(
             meta.description.unwrap().chars().count(),
             super::MAX_DESCRIPTION_CHARS
+        );
+    }
+
+    #[test]
+    fn keywords_become_clean_tag_suggestions() {
+        let html = r#"<html><head>
+            <meta name="keywords" content=" Rust, web ,rust,, a-very-long-keyword-that-nobody-would-ever-use-as-a-tag-at-all ">
+            <meta property="article:tag" content="Databases">
+            <meta property="article:tag" content="WEB">
+        </head></html>"#;
+        assert_eq!(
+            super::parse_meta(html).keywords,
+            vec!["rust", "web", "databases"]
+        );
+
+        let many: Vec<String> = (0..30).map(|i| format!("k{i}")).collect();
+        assert_eq!(super::clean_keywords(many).len(), super::MAX_KEYWORDS);
+    }
+
+    #[tokio::test]
+    async fn page_details_refuse_private_and_non_web_addresses() {
+        for url in [
+            "http://127.0.0.1/",
+            "http://localhost:8080/",
+            "http://192.168.0.1/admin",
+            "javascript:alert(1)",
+            "ftp://example.com/",
+            "not a url",
+        ] {
+            assert_eq!(
+                super::fetch_page_details(url).await,
+                Err(super::PageDetailsError::NotPublic),
+                "{url}"
+            );
+        }
+        // A name that does not resolve is a typo or a dead site, not a private address.
+        assert_eq!(
+            super::fetch_page_details("https://no-such-host.invalid/").await,
+            Err(super::PageDetailsError::Unreachable)
+        );
+    }
+
+    /// Serves one HTTP response with `status` and `body`, then closes.
+    async fn serve_once(status: &'static str, body: &'static str) -> String {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = [0u8; 1024];
+            let _ = tokio::io::AsyncReadExt::read(&mut sock, &mut buf).await;
+            let head = format!(
+                "HTTP/1.1 {status}\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = sock.write_all(head.as_bytes()).await;
+            let _ = sock.write_all(body.as_bytes()).await;
+        });
+        format!("http://{addr}/")
+    }
+
+    #[tokio::test]
+    async fn page_details_read_title_description_and_tags() {
+        let url = serve_once(
+            "200 OK",
+            r#"<html><head><title> Hello &amp; welcome </title>
+            <meta property="og:description" content="A page">
+            <meta name="keywords" content="one, two"></head></html>"#,
+        )
+        .await;
+        let client = reqwest::Client::new();
+        let details = super::fetch_details_with(&client, &url).await.unwrap();
+        assert_eq!(details.title.as_deref(), Some("Hello & welcome"));
+        assert_eq!(details.description.as_deref(), Some("A page"));
+        assert_eq!(details.tags, vec!["one", "two"]);
+
+        let url = serve_once("404 Not Found", "nope").await;
+        assert_eq!(
+            super::fetch_details_with(&client, &url).await,
+            Err(super::PageDetailsError::Refused(404))
         );
     }
 
