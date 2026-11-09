@@ -82,7 +82,8 @@ if [[ -n "$PROJECT_ID" ]]; then
 fi
 infisical "${export_args[@]}" >"$tmp"
 
-# Merge: Infisical wins; keep guest-only keys (e.g. TUNNEL_TOKEN); drop restic-only keys.
+# Merge: Infisical wins, except for guest-owned keys (LINKDEAN_VERSION); keep guest-only keys
+# (e.g. TUNNEL_TOKEN); drop restic-only keys.
 if lxc exec "$LXC" -- test -f "$GUEST_ENV"; then
   lxc file pull "${LXC}${GUEST_ENV}" "$existing" >/dev/null
 else
@@ -114,9 +115,19 @@ def load(path: Path) -> dict[str, str]:
         out[k] = v
     return out
 
+# Set by each release (pull-update.sh), so the guest's value is the running version. An
+# Infisical copy is always stale: letting it win rolled the beta back to an old image the
+# next time Compose recreated the api.
+GUEST_OWNED = {"LINKDEAN_VERSION"}
+
 existing, exported, dest = map(Path, sys.argv[1:4])
 base = load(existing)
-base.update(load(exported))
+for k, v in load(exported).items():
+    if k in GUEST_OWNED and k in base:
+        if v != base[k]:
+            print(f"keeping guest {k}={base[k]} (Infisical has {v}; remove it there)")
+        continue
+    base[k] = v
 # Drop restic keys again in case they were already on the guest from a bad render.
 base = {k: v for k, v in base.items() if not RESTIC_ONLY.match(k)}
 if not base:
