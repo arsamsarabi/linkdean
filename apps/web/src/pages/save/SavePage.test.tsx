@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BookmarkDraft } from '@/services'
 import { SavePage } from './SavePage'
 
-const search = vi.hoisted(() => ({ value: {} as Record<string, string | undefined> }))
+const search = vi.hoisted(() => ({ value: {} as Record<string, string | boolean | undefined> }))
 const lookup = vi.hoisted(() => ({ value: { isPending: false, data: null as unknown } }))
 const drawer = vi.hoisted(() => ({ props: null as null | Record<string, unknown> }))
 
@@ -90,6 +90,20 @@ describe('SavePage', () => {
     expect(localStorage.getItem('linkdean_last_save_folder')).toBeNull()
     onSaved({ category_ids: ['f1'] }, false)
     expect(localStorage.getItem('linkdean_last_save_folder')).toBe('f1')
+  })
+
+  it('closes the bookmarklet window when done, and only that window', () => {
+    const closeWindow = vi.spyOn(window, 'close').mockImplementation(() => undefined)
+    search.value = { url: 'https://example.com', popup: true }
+    renderPage()
+    ;(drawer.props?.onClose as () => void)()
+    expect(closeWindow).toHaveBeenCalledTimes(1)
+    cleanup()
+    search.value = { url: 'https://example.com' }
+    renderPage()
+    ;(drawer.props?.onClose as () => void)()
+    expect(closeWindow).toHaveBeenCalledTimes(1)
+    closeWindow.mockRestore()
   })
 
   it('explains when the link has no web address', () => {

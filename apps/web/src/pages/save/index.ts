@@ -1,1 +1,1 @@
-export { SavePage } from './SavePage'
+export { SavePage, type SaveSearch } from './SavePage'

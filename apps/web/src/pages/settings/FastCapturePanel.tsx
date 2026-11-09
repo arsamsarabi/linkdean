@@ -1,0 +1,62 @@
+import { useEffect, useRef, type ReactElement } from 'react'
+import { Button, Code, CopyButton, Group, List, Paper, Stack, Text, Title } from '@mantine/core'
+import { IconBookmarkPlus } from '@tabler/icons-react'
+import { bookmarkletSource } from '@/lib'
+
+/** Settings → Fast capture: the bookmarklet that saves the page you are on. */
+export function FastCapturePanel(): ReactElement {
+  const source = bookmarkletSource(window.location.origin)
+  const link = useRef<HTMLAnchorElement>(null)
+
+  // React refuses `javascript:` in href, so the bookmarklet is set on the element directly.
+  useEffect(() => {
+    link.current?.setAttribute('href', source)
+  }, [source])
+
+  return (
+    <Paper p="xl" withBorder maw={640}>
+      <Stack gap="md">
+        <Stack gap={4}>
+          <Title order={4}>Save from any page</Title>
+          <Text size="sm" c="dimmed">
+            A bookmarklet is a bookmark that runs a small script. Click it on any page to open Linkdean in a small
+            window with the page&apos;s address and title filled in. Text you have selected becomes the description.
+          </Text>
+        </Stack>
+        <Group>
+          <Button
+            component="a"
+            ref={link}
+            draggable
+            leftSection={<IconBookmarkPlus size={16} />}
+            onClick={(e) => e.preventDefault()}
+            title="Drag me to your bookmarks bar"
+          >
+            Save to Linkdean
+          </Button>
+          <CopyButton value={source} timeout={1500}>
+            {({ copied, copy }) => (
+              <Button variant="default" onClick={copy}>
+                {copied ? 'Copied' : 'Copy code'}
+              </Button>
+            )}
+          </CopyButton>
+        </Group>
+        <List size="sm" spacing={4}>
+          <List.Item>
+            <b>Chrome, Edge, Firefox:</b> show the bookmarks bar, then drag <b>Save to Linkdean</b> onto it.
+          </List.Item>
+          <List.Item>
+            <b>Safari, or a phone:</b> bookmark any page, edit that bookmark, and replace its address with the copied
+            code.
+          </List.Item>
+        </List>
+        <Text size="xs" c="dimmed">
+          It uses the session you are signed in with here, so it needs no API key. If you are signed out, sign in in the
+          window it opens and the save carries on. A page that blocks popups opens Linkdean in the same tab instead. The
+          code points at <Code>{window.location.origin}</Code>.
+        </Text>
+      </Stack>
+    </Paper>
+  )
+}
