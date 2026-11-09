@@ -9,8 +9,8 @@
 #
 # Env:
 #   SNAPSHOT=latest   restic snapshot id to restore
-#   KEEP=1            leave the drill stack running for a look around; tear down later with
-#                     lxc exec linkdean-public -- docker compose -p linkdean-restore down -v
+#   KEEP=1            leave the drill stack running for a look around; BACKUP.md has the
+#                     command that tears it down
 #
 # Fails when: the snapshot lacks the dump or files archive, pg_restore errors, the restored
 # API does not report ready, or the restored database has no users.
@@ -24,8 +24,20 @@ source "$SCRIPT_DIR/backup-linkdean.sh"
 SNAPSHOT="${SNAPSHOT:-latest}"
 KEEP="${KEEP:-0}"
 DRILL_PROJECT=linkdean-restore
-DRILL_DIR="$STACK_DIR/restore"
 GUEST_TMP=/tmp/linkdean-restore-drill
+# The drill's compose file is pushed into the guest, so the guest's checkout (often an older
+# tag) does not need it. Installed next to this script, or found in a repo checkout.
+DRILL_DIR="$GUEST_TMP/compose"
+for candidate in "$SCRIPT_DIR/restore/docker-compose.yml" "$SCRIPT_DIR/../restore/docker-compose.yml"; do
+  if [[ -f "$candidate" ]]; then
+    DRILL_COMPOSE="$candidate"
+    break
+  fi
+done
+[[ -n "${DRILL_COMPOSE:-}" ]] || {
+  echo "restore/docker-compose.yml not found next to $0; see BACKUP.md" >&2
+  exit 1
+}
 
 started=$(date +%s)
 elapsed() { echo $(($(date +%s) - started)); }
@@ -45,11 +57,11 @@ counts() {
 
 teardown() {
   if [[ "$KEEP" == 1 ]]; then
-    log "KEEP=1: drill stack left running (project $DRILL_PROJECT)"
+    log "KEEP=1: drill stack left running (project $DRILL_PROJECT, files in $GUEST_TMP)"
   else
     drill "--profile api down -v --remove-orphans" >/dev/null 2>&1 || true
+    guest rm -rf "$GUEST_TMP" || true
   fi
-  guest rm -rf "$GUEST_TMP" || true
   rm -rf "${staging:-}"
 }
 
@@ -62,6 +74,8 @@ main_drill() {
   staging="$(mktemp -d "${TMPDIR:-/tmp}/linkdean-restore.XXXXXX")"
   secret="$(openssl rand -hex 32)"
   version="$(guest sed -n 's/^LINKDEAN_VERSION=//p' "$STACK_DIR/.env" | tail -1)"
+  # The .env may quote the value.
+  version="${version//[\"\']/}"
   version="${version:-latest}"
   trap teardown EXIT
 
@@ -77,13 +91,17 @@ main_drill() {
   log "Restored to $snap_dir after $(elapsed)s: dump $(du -h "$dump" | cut -f1), files $(du -h "$files" | cut -f1)"
 
   guest rm -rf "$GUEST_TMP"
-  guest mkdir -p "$GUEST_TMP"
+  guest mkdir -p "$DRILL_DIR"
+  lxc file push "$DRILL_COMPOSE" "$LXC$DRILL_DIR/docker-compose.yml"
   lxc file push "$dump" "$LXC$GUEST_TMP/linkdean.dump"
   lxc file push "$files" "$LXC$GUEST_TMP/linkdean-files.tgz"
 
   log "Starting drill db + meilisearch (image tag $version)"
   drill "--profile api down -v --remove-orphans" >/dev/null 2>&1 || true
   drill "up -d --wait db meilisearch"
+  # Create the api container (and so its volumes) now, so the files land in volumes Compose
+  # owns; the api starts once they are in.
+  drill "--profile api create api"
 
   log "pg_restore"
   guest bash -lc "cd '$DRILL_DIR' && LINKDEAN_VERSION='$version' DRILL_SESSION_SECRET='$secret' \

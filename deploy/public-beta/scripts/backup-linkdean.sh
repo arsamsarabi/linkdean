@@ -114,6 +114,21 @@ load_linkdean_restic_env() {
   export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTIC_PASSWORD
 }
 
+# Retention for this repo. Each run backs up from a fresh mktemp dir, and restic groups
+# snapshots by host and paths by default, so every snapshot was its own group and nothing
+# was ever forgotten. Group by host and tag instead.
+linkdean_forget() {
+  local repo="$1"
+  log "Applying retention to $repo"
+  restic_cmd -r "$repo" forget \
+    --tag linkdean-public \
+    --group-by host,tags \
+    --keep-daily "$RESTIC_KEEP_DAILY" \
+    --keep-weekly "$RESTIC_KEEP_WEEKLY" \
+    --keep-monthly "$RESTIC_KEEP_MONTHLY" \
+    --prune
+}
+
 guest() {
   lxc exec "$LXC" -- "$@"
 }
@@ -123,7 +138,9 @@ main() {
   command -v lxc >/dev/null || { echo "lxc not found" >&2; exit 1; }
   command -v "$(restic_bin)" >/dev/null || { echo "restic not found" >&2; exit 1; }
 
-  local repo staging av pre
+  # `staging` stays global: the EXIT trap runs after main returns, when a local is gone,
+  # and under `set -u` the trap then fails and leaves the dump behind in /tmp.
+  local repo av pre
   repo="$(restic_repo_url "$RESTIC_BUCKET_LINKDEAN")"
   staging="$(mktemp -d "${TMPDIR:-/tmp}/linkdean-backup.XXXXXX")"
   av="${PROJECT_NAME}_avatars"
@@ -156,7 +173,7 @@ main() {
     --tag linkdean-public \
     --host linkdean-public
 
-  forget_and_prune "$repo"
+  linkdean_forget "$repo"
   log "Linkdean public-beta backup complete"
 }
 
