@@ -43,16 +43,12 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 ## Next: high value after release
 
-14. **Fast capture** (M). Saving a page is the core action of a bookmark manager, and today it means opening Linkdean and pasting a URL.
-    - Browser extension: save the current tab, and file it to a folder from the popup. Uses an API key.
-    - PWA share target, so "Share → Linkdean" works on phones once the app is installed.
-    - Bookmarklet as a zero-install fallback.
-
-15. **Auto-fill when adding a bookmark** (M). Title, description and images are fetched only after a bookmark is saved, so the form starts empty and people type a title the server would have found anyway.
-    - An **Auto-fill** button below the URL field in the bookmark drawer, disabled until the URL is valid. It asks the API to fetch the page and fills the empty fields: title, description, and suggested tags if the page has keywords. Never overwrite what the person already typed.
-    - Loading state on the button and fields while it runs, and an inline error when the page cannot be fetched or times out; the form stays usable either way.
-    - The API reuses the worker's page fetch (plain HTTP and Open Graph first, headless Chrome only when the page needs JavaScript), with the same private-address blocking, a per-user rate limit and a short timeout.
-    - Vault bookmarks are never enriched today, so the URL never leaves the instance for them. Keep the button hidden or behind an explicit confirmation when the bookmark is going into the vault.
+14. **Fast capture, with auto-fill** (M–L). Saving a page is the core action of a bookmark manager, and today it means opening Linkdean and pasting a URL, then typing a title the server would have found anyway. Absorbs the former item 15 (Auto-fill). Built in slices, each shippable:
+    - **Slice 0, page details from a URL.** One API endpoint fetches a page's title, description and keyword tags from its URL, reusing the worker's page fetch (plain HTTP and Open Graph first, Chrome only when needed) with the same private-address blocking, a short timeout and a per-user rate limit. On the bookmark form, an **Import from URL** button under the URL field, disabled until the URL is valid, fills only the fields the person has not typed in; loading state while it runs, an inline error when the page cannot be fetched, and the form stays usable either way. Hidden when the bookmark is going into the vault, so a vault URL never leaves the instance.
+    - **Slice 1, quick save page.** `/save?url=…&title=…&text=…` opens the bookmark form prefilled, with folder and tags to pick and the last folder used remembered. With no title it runs the slice 0 fetch. A **Save to Unsorted** shortcut saves in one tap and files later (item 29). Signed out, it signs in and comes back to the same save. When the URL is already in the library, say so and open the existing bookmark instead of saving a second copy.
+    - **Slice 2, bookmarklet.** A drag-to-bookmarks-bar button in **Settings → Fast capture** that opens `/save` in a small popup with the page's URL, title and selected text (as the description). Uses the normal session; no install, no API key.
+    - **Slice 3, share target.** A `share_target` in `site.webmanifest`, so "Share → Linkdean" works once the app is installed, handing the link to `/save`. Android and desktop Chrome only: iOS does not support web share targets, so a docs page shows an iOS Shortcut that saves through the API with a key.
+    - **Slice 4, browser extension.** Chrome and Firefox from one codebase: save the current tab from a popup with folder and tags, show when the page is already saved, and optionally a "Save link to Linkdean" context menu and a keyboard shortcut. Signs in with an API key and the instance URL, so self-hosted instances work too. Store listings need the operator's developer accounts.
 
 16. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.
     - Let the Categories field in the bookmark drawer create one: typing a name that matches nothing offers **Create "name"**, which creates it and selects it.
@@ -123,6 +119,14 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
     - Push alerts to a phone app; email alone is too easy to miss.
     - Add Cloudflare's Tunnel Health Alert for the `linkdean-public` tunnel.
     - Test one alert end to end by stopping the api for 15 minutes in a quiet hour.
+
+29. **Filing queue for Unsorted** (M). Fast capture (item 14) makes saving one tap, so links pile up in Unsorted with no folder, few tags and sometimes no title. A place to work through them one at a time turns that pile into a filed library.
+    - A **File** view that steps through Unsorted bookmarks newest first, one card at a time: title, URL, preview, description.
+    - Per card: pick a folder (or create one, see item 16), add tags, fix the title, mark favourite, or delete. **Next** saves and moves on; **Skip** leaves it in Unsorted.
+    - Suggestions: folders and tags already used for bookmarks on the same site, and the page's keyword tags from item 14's fetch.
+    - Keyboard first on desktop (number keys pick a suggested folder, Enter files, S skips, D deletes); swipe on phones.
+    - A count of unsorted bookmarks on the sidebar's Unsorted entry, and an empty state when the queue is clear.
+    - To explore: whether bulk filing (select several, one folder) belongs here or in the library list, and whether a bookmark counts as "filed" once it has tags but no folder.
 
 ---
 
