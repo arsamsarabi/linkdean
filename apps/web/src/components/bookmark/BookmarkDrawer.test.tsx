@@ -6,6 +6,7 @@ import { emptyDraft } from '@/services'
 import { BookmarkDrawer } from './BookmarkDrawer'
 
 const idle = { isPending: false, mutateAsync: vi.fn() }
+const pageDetails = { isPending: false, mutateAsync: vi.fn() }
 
 vi.mock('@/hooks', async (orig) => ({
   ...(await orig<typeof import('@/hooks')>()),
@@ -15,6 +16,7 @@ vi.mock('@/hooks', async (orig) => ({
   useDeleteBookmarkPreview: () => idle,
   useMe: () => ({ data: { user: { id: 'me' } } }),
   useVaults: () => ({ data: { vaults: [] } }),
+  usePageDetails: () => pageDetails,
 }))
 
 vi.mock('@/components/social', () => ({
@@ -41,11 +43,18 @@ beforeAll(() => {
   )
 })
 
-function renderDrawer(opts: { id?: string; discussion?: boolean }): void {
+function renderDrawer(opts: { id?: string; discussion?: boolean; vaultRequired?: boolean }): void {
   const initial = opts.id ? { ...emptyDraft(), id: opts.id, url: 'https://react.dev', owner_user_id: 'sam' } : null
   render(
     <MantineProvider env="test">
-      <BookmarkDrawer opened onClose={() => undefined} categories={[]} initial={initial} discussion={opts.discussion} />
+      <BookmarkDrawer
+        opened
+        onClose={() => undefined}
+        categories={[]}
+        initial={initial}
+        discussion={opts.discussion}
+        vaultRequired={opts.vaultRequired}
+      />
     </MantineProvider>
   )
 }
@@ -66,5 +75,42 @@ describe('BookmarkDrawer discussion', () => {
     cleanup()
     renderDrawer({ discussion: true })
     expect(screen.queryByRole('tab', { name: 'Discussion' })).toBeNull()
+  })
+})
+
+describe('BookmarkDrawer Import from URL', () => {
+  afterEach(() => {
+    cleanup()
+    pageDetails.mutateAsync.mockReset()
+  })
+
+  it('stays disabled until the URL is a web address, then fills only the empty fields', async () => {
+    pageDetails.mutateAsync.mockResolvedValue({ title: 'From page', description: 'About it', tags: ['x'] })
+    renderDrawer({})
+    const button = screen.getByRole('button', { name: /Import from URL/ })
+    expect(button).toHaveProperty('disabled', true)
+
+    await userEvent.type(screen.getByLabelText(/^URL/), 'example.com/post')
+    await userEvent.type(screen.getByLabelText('Title'), 'My title')
+    expect(button).toHaveProperty('disabled', false)
+    await userEvent.click(button)
+
+    expect(pageDetails.mutateAsync).toHaveBeenCalledWith('https://example.com/post')
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('My title')
+    expect((screen.getByLabelText('Description') as HTMLTextAreaElement).value).toBe('About it')
+  })
+
+  it('shows why a page could not be fetched, and keeps the form usable', async () => {
+    pageDetails.mutateAsync.mockRejectedValue(new Error("Couldn't reach that page."))
+    renderDrawer({})
+    await userEvent.type(screen.getByLabelText(/^URL/), 'https://example.com')
+    await userEvent.click(screen.getByRole('button', { name: /Import from URL/ }))
+    expect((await screen.findByRole('alert')).textContent).toContain("Couldn't reach that page.")
+    expect(screen.getByRole('button', { name: 'Add bookmark' })).toHaveProperty('disabled', false)
+  })
+
+  it('is not offered for a bookmark going into a vault', () => {
+    renderDrawer({ vaultRequired: true })
+    expect(screen.queryByRole('button', { name: /Import from URL/ })).toBeNull()
   })
 })

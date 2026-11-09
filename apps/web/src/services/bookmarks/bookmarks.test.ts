@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Bookmark } from '@/schemas'
-import { draftFromBookmark, emptyDraft } from './bookmarks'
+import type { Bookmark, Category } from '@/schemas'
+import { draftFromBookmark, draftHeadsToVault, emptyDraft, fillFromPage, isFetchableUrl } from './bookmarks'
 
 describe('bookmarks drafts', () => {
   it('emptyDraft returns blank fields', () => {
@@ -60,5 +60,43 @@ describe('bookmarks drafts', () => {
       is_vault: false,
       owner_user_id: 'u1',
     })
+  })
+})
+
+describe('filling a draft from the page', () => {
+  const details = { title: 'Page title', description: 'Page text', tags: ['a', 'b'] }
+
+  it('fills only empty fields', () => {
+    const typed = { ...emptyDraft(), title: 'Mine', tags: ['keep'] }
+    expect(fillFromPage(typed, details)).toMatchObject({ title: 'Mine', description: 'Page text', tags: ['keep'] })
+    expect(fillFromPage(emptyDraft(), details)).toMatchObject({
+      title: 'Page title',
+      description: 'Page text',
+      tags: ['a', 'b'],
+    })
+  })
+
+  it('treats whitespace as empty and leaves fields alone when the page has nothing', () => {
+    const spaced = { ...emptyDraft(), title: '   ' }
+    expect(fillFromPage(spaced, details).title).toBe('Page title')
+    expect(fillFromPage(spaced, { title: null, description: null, tags: [] }).title).toBe('   ')
+  })
+
+  it('knows when a draft is going into a vault', () => {
+    const vaultCat = { id: 'v', is_vault: true } as Category
+    const plainCat = { id: 'p', is_vault: false } as Category
+    expect(draftHeadsToVault(emptyDraft(), [])).toBe(false)
+    expect(draftHeadsToVault(emptyDraft(), [], true)).toBe(true)
+    expect(draftHeadsToVault({ ...emptyDraft(), vault_id: 'x' }, [])).toBe(true)
+    expect(draftHeadsToVault({ ...emptyDraft(), category_ids: ['p'] }, [plainCat, vaultCat])).toBe(false)
+    expect(draftHeadsToVault({ ...emptyDraft(), category_ids: ['p', 'v'] }, [plainCat, vaultCat])).toBe(true)
+  })
+
+  it('only fetches web addresses', () => {
+    expect(isFetchableUrl('https://example.com/a')).toBe(true)
+    expect(isFetchableUrl('http://example.com')).toBe(true)
+    expect(isFetchableUrl('https://')).toBe(false)
+    expect(isFetchableUrl('javascript:alert(1)')).toBe(false)
+    expect(isFetchableUrl('example.com')).toBe(false)
   })
 })

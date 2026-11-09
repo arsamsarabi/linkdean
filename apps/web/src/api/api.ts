@@ -53,6 +53,7 @@ import {
   notificationsEnvelopeSchema,
   okSchema,
   okUserEnvelopeSchema,
+  pageDetailsSchema,
   pendingOidcLinkSchema,
   pendingShareInviteSchema,
   platformSettingsEnvelopeSchema,
@@ -642,6 +643,10 @@ export const api = {
       is_private: boolean
     }>
   ): Promise<Bookmark> => req(`/bookmarks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, bookmarkSchema),
+
+  /** Title, description and keyword tags of the page at `url`, fetched by the server. */
+  pageDetails: (url: string) =>
+    req('/bookmarks/page-details', { method: 'POST', body: JSON.stringify({ url }) }, pageDetailsSchema),
 
   deleteBookmark: (id: string): Promise<void> => req(`/bookmarks/${id}`, { method: 'DELETE' }),
 
