@@ -177,6 +177,9 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Public app: [app.linkdean.app](https://app.linkdean.app) (homelab beta stack in `deploy/public-beta/`)
 - Healthchecks on db / Meili / api; `GET /api/health` (reports the running version) and `GET /api/ready`
 - Security headers on every response (`Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional `Strict-Transport-Security` via `HSTS_MAX_AGE`). Image routes keep their own sandbox CSP. `/.well-known/security.txt` and `/security.txt` point to the project security contact
+- Supply chain: CI runs `cargo audit` and `pnpm audit --prod` on every PR; Dependabot opens updates for Cargo, npm and GitHub Actions
+- Chrome on an internal network with no route out: it reaches the web only through the API's egress proxy, which resolves each host itself and refuses private addresses
+- Public beta operations (`deploy/public-beta/`): restic backups to B2 with a scripted restore drill into a throwaway, network-isolated stack ([BACKUP.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/BACKUP.md)); external uptime check list ([MONITORING.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/MONITORING.md)); a sign-up controls check that creates no account (`scripts/check-signup-controls.sh`)
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Structured logs: `LOG_FORMAT=text|json` on stdout (default text); optional `LOG_FILE` appends JSONL; every response has `X-Request-Id` correlated into request log spans
 - Outbound email over SMTP (optional): an outbox with retries, Settings → Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
