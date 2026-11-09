@@ -9,6 +9,7 @@ export {
   useDeleteBookmarkPreview,
   useSaveBookmarkCopy,
   usePageDetails,
+  useBookmarkByUrl,
 } from './useBookmarks'
 export { useBulkAddCategories, useBulkTagBookmarks, useBulkDeleteBookmarks, type BulkResult } from './useBulkBookmarks'
 export { useDuplicates, useMergeDuplicateGroup } from './useDuplicates'

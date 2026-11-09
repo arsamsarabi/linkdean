@@ -83,3 +83,23 @@ export function isFetchableUrl(url: string): boolean {
     return false
   }
 }
+
+export type SharedPage = { url?: string; title?: string; text?: string }
+
+/**
+ * A new draft from what a share sheet or bookmarklet hands over. Some apps put the link in
+ * `text` rather than `url`; then the first web address in the text is the link and the rest
+ * becomes the description.
+ */
+export function draftFromShare(shared: SharedPage): BookmarkDraft {
+  let url = shared.url?.trim() ?? ''
+  let text = shared.text?.trim() ?? ''
+  if (!url) {
+    const found = text.match(/https?:\/\/\S+/i)
+    if (found) {
+      url = found[0]
+      text = text.replace(found[0], '').trim()
+    }
+  }
+  return { ...emptyDraft(), url, title: shared.title?.trim() ?? '', description: text }
+}

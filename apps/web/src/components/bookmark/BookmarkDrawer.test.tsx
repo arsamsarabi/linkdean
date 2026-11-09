@@ -6,11 +6,12 @@ import { emptyDraft } from '@/services'
 import { BookmarkDrawer } from './BookmarkDrawer'
 
 const idle = { isPending: false, mutateAsync: vi.fn() }
+const create = { isPending: false, mutateAsync: vi.fn() }
 const pageDetails = { isPending: false, mutateAsync: vi.fn() }
 
 vi.mock('@/hooks', async (orig) => ({
   ...(await orig<typeof import('@/hooks')>()),
-  useCreateBookmark: () => idle,
+  useCreateBookmark: () => create,
   useUpdateBookmark: () => idle,
   useUploadBookmarkPreview: () => idle,
   useDeleteBookmarkPreview: () => idle,
@@ -112,5 +113,54 @@ describe('BookmarkDrawer Import from URL', () => {
   it('is not offered for a bookmark going into a vault', () => {
     renderDrawer({ vaultRequired: true })
     expect(screen.queryByRole('button', { name: /Import from URL/ })).toBeNull()
+  })
+})
+
+describe('BookmarkDrawer quick save', () => {
+  afterEach(() => {
+    cleanup()
+    pageDetails.mutateAsync.mockReset()
+    create.mutateAsync.mockReset()
+  })
+
+  function renderQuick(initial: ReturnType<typeof emptyDraft>, onSaved = vi.fn(), onClose = vi.fn()): void {
+    render(
+      <MantineProvider env="test">
+        <BookmarkDrawer
+          opened
+          onClose={onClose}
+          categories={[]}
+          initial={initial}
+          autoImport
+          quickSave
+          onSaved={onSaved}
+        />
+      </MantineProvider>
+    )
+  }
+
+  it('fetches the page once when it opens without a title', async () => {
+    pageDetails.mutateAsync.mockResolvedValue({ title: 'Fetched', description: null, tags: [] })
+    renderQuick({ ...emptyDraft(), url: 'https://example.com/a' })
+    expect(await screen.findByDisplayValue('Fetched')).toBeTruthy()
+    expect(pageDetails.mutateAsync).toHaveBeenCalledTimes(1)
+    expect(pageDetails.mutateAsync).toHaveBeenCalledWith('https://example.com/a')
+  })
+
+  it('does not fetch when a title came with the link', () => {
+    renderQuick({ ...emptyDraft(), url: 'https://example.com/a', title: 'Given' })
+    expect(pageDetails.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('Save to Unsorted saves with no folder and says so to the caller', async () => {
+    pageDetails.mutateAsync.mockResolvedValue({ title: null, description: null, tags: [] })
+    create.mutateAsync.mockResolvedValue({ id: 'n1', is_vault: false })
+    const onSaved = vi.fn()
+    const onClose = vi.fn()
+    renderQuick({ ...emptyDraft(), url: 'https://example.com/a', title: 'T', category_ids: ['c1'] }, onSaved, onClose)
+    await userEvent.click(screen.getByRole('button', { name: 'Save to Unsorted' }))
+    expect(create.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ category_ids: [], vault_id: null }))
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ category_ids: [] }), true)
+    expect(onClose).toHaveBeenCalled()
   })
 })

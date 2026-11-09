@@ -1924,6 +1924,36 @@ pub async fn find_duplicate_groups(
     Ok(groups)
 }
 
+/// The person's own live bookmark at exactly `url`, outside any vault, most recently
+/// updated first. Quick save uses it to open the existing bookmark instead of a second copy.
+pub async fn find_own_bookmark_by_url(
+    pool: &PgPool,
+    user_id: Uuid,
+    url: &str,
+) -> Result<Option<BookmarkView>> {
+    let row = sqlx::query_as::<_, Bookmark>(
+        r#"
+        SELECT * FROM bookmarks
+        WHERE owner_user_id = $1 AND is_vault = FALSE AND deleted_at IS NULL AND url = $2
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(user_id)
+    .bind(url.trim())
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let none = VaultKeyring::default();
+    Ok(bookmarks_to_views(pool, vec![row], user_id, |_| &none)
+        .await?
+        .into_iter()
+        .next())
+}
+
 /// Which of `ids` are live bookmarks outside any vault. Search hits are checked against
 /// this, so a document the index failed to drop is never served.
 pub async fn live_plain_bookmark_ids(

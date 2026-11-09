@@ -29,6 +29,7 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/broken-links", get(broken))
         .route("/bookmarks/ids", get(list_ids))
         .route("/bookmarks/page-details", post(page_details))
+        .route("/bookmarks/lookup", get(lookup))
         .route("/bookmarks/{id}/check-link", post(check_link))
         .route("/bookmarks/{id}/save", post(save_copy))
         .route(
@@ -387,6 +388,22 @@ async fn broken(
 ) -> ApiResult<Json<Vec<BookmarkView>>> {
     let items = db::list_broken_bookmarks(&state.pool, user.id).await?;
     Ok(Json(items))
+}
+
+#[derive(Deserialize)]
+pub struct LookupQuery {
+    pub url: String,
+}
+
+/// The person's own bookmark at exactly this URL, if any, so quick save can open it instead
+/// of saving a second copy. Vault bookmarks are never matched.
+async fn lookup(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Query(q): Query<LookupQuery>,
+) -> ApiResult<Json<Value>> {
+    let bookmark = db::find_own_bookmark_by_url(&state.pool, user.id, &q.url).await?;
+    Ok(Json(json!({ "bookmark": bookmark })))
 }
 
 #[derive(Deserialize)]

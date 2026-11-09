@@ -144,3 +144,13 @@ export function useSaveBookmarkCopy(): UseMutationResult<Bookmark, Error, string
 export function usePageDetails(): UseMutationResult<PageDetails, Error, string> {
   return useMutation({ mutationFn: (url: string) => api.pageDetails(url) })
 }
+
+/** The person's own bookmark at `url`, or null. Disabled while `url` is null. */
+export function useBookmarkByUrl(url: string | null): UseQueryResult<Bookmark | null> {
+  return useQuery({
+    queryKey: ['bookmarks', 'lookup', url],
+    queryFn: () => api.lookupBookmark(url ?? ''),
+    enabled: !!url,
+    staleTime: 0,
+  })
+}

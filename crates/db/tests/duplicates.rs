@@ -91,3 +91,34 @@ async fn groups_leave_out_trashed_copies() {
     want.sort();
     assert_eq!(ids, want);
 }
+
+#[tokio::test]
+async fn lookup_by_url_finds_only_the_owners_live_copy() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool).await;
+    let other = user(&pool).await;
+    let url = format!("https://dup.example/{}", Uuid::new_v4());
+    assert!(db::find_own_bookmark_by_url(&pool, owner.id, &url)
+        .await
+        .expect("empty")
+        .is_none());
+
+    let id = bookmark(&pool, &owner, &url).await;
+    let found = db::find_own_bookmark_by_url(&pool, owner.id, &format!(" {url} "))
+        .await
+        .expect("found")
+        .expect("some");
+    assert_eq!(found.id, id);
+    assert!(db::find_own_bookmark_by_url(&pool, other.id, &url)
+        .await
+        .expect("other")
+        .is_none());
+
+    trash(&pool, id).await;
+    assert!(db::find_own_bookmark_by_url(&pool, owner.id, &url)
+        .await
+        .expect("trashed")
+        .is_none());
+}

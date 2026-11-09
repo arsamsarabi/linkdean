@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import { CLIENT_HEADER, isSignedIn, markSignedIn } from '@/lib'
+import { CLIENT_HEADER, isSignedIn, markSignedIn, rememberReturnTo } from '@/lib'
 import { banNoticeSchema, type BanNotice } from '@/schemas'
 
 function parseWithSchema<T>(schema: z.ZodType<T>, data: unknown, path: string): T {
@@ -100,7 +100,10 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
     if (res.status === 401 && sessionExpired(body) && (isSignedIn() || !isPublicPath(location.pathname))) {
       // A full page load also drops the signed-out user's cached data.
       markSignedIn(false)
-      if (!handlesSignOut(location.pathname)) location.assign('/login')
+      if (!handlesSignOut(location.pathname)) {
+        rememberReturnTo(location.pathname + location.search)
+        location.assign('/login')
+      }
     }
     throw new ApiError(msg, res.status, body)
   }
