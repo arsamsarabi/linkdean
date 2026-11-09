@@ -1,0 +1,74 @@
+# Throwaway stack for the restore drill (scripts/restore-drill.sh). Its own project name,
+# volumes and network, so it never touches the live `linkdean-public` project.
+#
+# The network is internal: the restored API cannot send email, fetch pages or reach anything
+# outside this project, whatever the restored data asks of it. Nothing is published.
+name: linkdean-restore
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: linkdean
+      POSTGRES_PASSWORD: restore-drill
+      POSTGRES_DB: linkdean
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [drill]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkdean -d linkdean"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    environment:
+      MEILI_MASTER_KEY: restore-drill-meili-key
+      MEILI_ENV: production
+    networks: [drill]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  api:
+    image: ghcr.io/arsamsarabi/linkdean:${LINKDEAN_VERSION:?set LINKDEAN_VERSION}
+    # Started by the drill once the dump and files are in place.
+    profiles: [api]
+    environment:
+      DATABASE_URL: postgres://linkdean:restore-drill@db:5432/linkdean
+      MEILI_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: restore-drill-meili-key
+      APP_URL: http://restore.invalid
+      SESSION_SECRET: ${DRILL_SESSION_SECRET:?set DRILL_SESSION_SECRET}
+      BIND: 0.0.0.0:8080
+      STATIC_DIR: /app/static
+      AVATAR_DIR: /app/data/avatars
+      PREVIEW_DIR: /app/data/previews
+      LOG_FORMAT: json
+    volumes:
+      - avatars:/app/data/avatars
+      - previews:/app/data/previews
+    networks: [drill]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+
+networks:
+  drill:
+    internal: true
+
+volumes:
+  pgdata:
+  avatars:
+  previews:

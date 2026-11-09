@@ -160,4 +160,7 @@ main() {
   log "Linkdean public-beta backup complete"
 }
 
-main "$@"
+# Sourced by restore-drill.sh for the credential loader; run directly, it backs up.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
