@@ -47,7 +47,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
     - **Slice 0, page details from a URL.** **Done:** `POST /api/bookmarks/page-details` and the **Import from URL** button on the bookmark form (see FEATURES). The fetch is plain HTTP only, never Chrome, so pages that build their title in JavaScript come back empty.
     - **Slice 1, quick save page.** **Done:** `/save` (see FEATURES). URL matching is exact, so `https://a.com` and `https://a.com/` count as different pages, as in Library health → Duplicates.
     - **Slice 2, bookmarklet.** **Done:** **Settings → Fast capture** (see FEATURES).
-    - **Slice 3, share target.** A `share_target` in `site.webmanifest`, so "Share → Linkdean" works once the app is installed, handing the link to `/save`. Android and desktop Chrome only: iOS does not support web share targets, so a docs page shows an iOS Shortcut that saves through the API with a key.
+    - **Slice 3, share target.** **Done:** `share_target` in `site.webmanifest`, and the iOS Shortcuts in [Saving pages fast](./FAST_CAPTURE.md) (see FEATURES).
     - **Slice 4, browser extension.** Chrome and Firefox from one codebase: save the current tab from a popup with folder and tags, show when the page is already saved, and optionally a "Save link to Linkdean" context menu and a keyboard shortcut. Signs in with an API key and the instance URL, so self-hosted instances work too. Store listings need the operator's developer accounts.
 
 16. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.

@@ -13,6 +13,7 @@ Self-host and operate [Linkdean](https://linkdean.app) — a personal bookmark l
 - **[Install](/docs/self-hosting/install)** — run a released image with Docker Compose
 - **[Operations](/docs/self-hosting/operations)** — reverse proxy, email, backups, development setup
 - **[Features](/docs/features)** — what the product can do today
+- **[Saving pages fast](/docs/fast-capture)** — bookmarklet, Share → Linkdean, and an iPhone Shortcut
 - **[Architecture](/docs/architecture)** — stack and domain model
 
 App: [app.linkdean.app](https://app.linkdean.app) · Source: [GitHub](https://github.com/arsamsarabi/linkdean)

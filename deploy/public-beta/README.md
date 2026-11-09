@@ -76,7 +76,7 @@ Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `s
 | App | Paths | Deploy |
 | --- | --- | --- |
 | app | `crates/`, `apps/web/`, `migrations/`, `deploy/docker/`, `Cargo.toml`, `Cargo.lock` | GHCR `:x.y.z`, `:x.y`, `:latest`; the guest's `LINKDEAN_VERSION` set to the tag, api pulled and restarted |
-| docs | `apps/docs/`, `static/docs/`, `docs/INSTALL.md`, `docs/SELF_HOSTED.md`, `docs/FEATURES.md`, `docs/ARCHITECTURE.md` | guest checks out the tag; Caddy restarted |
+| docs | `apps/docs/`, `static/docs/`, `docs/INSTALL.md`, `docs/SELF_HOSTED.md`, `docs/FEATURES.md`, `docs/FAST_CAPTURE.md`, `docs/ARCHITECTURE.md` | guest checks out the tag; Caddy restarted |
 | site | `apps/site/`, `static/site/` | guest checks out the tag; Caddy restarted |
 
 An app release needs the tag to match the version in `Cargo.toml` and `apps/web/package.json`; a docs- or site-only release does not.
