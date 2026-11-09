@@ -1117,6 +1117,8 @@ const PUBLIC_LIST_BOOKMARK_FILTER: &str = r#"
     )
 "#;
 
+/// The public list behind `slug`. A banned owner's lists go dark for the ban, and come back
+/// on their own when it ends or is lifted.
 async fn public_list_category(pool: &PgPool, slug: &str) -> Result<Category> {
     let slug = slug.trim();
     if slug.is_empty() || !slug.starts_with(PUBLIC_SLUG_PREFIX) {
@@ -1124,10 +1126,16 @@ async fn public_list_category(pool: &PgPool, slug: &str) -> Result<Category> {
     }
     sqlx::query_as::<_, Category>(
         r#"
-        SELECT * FROM categories
-        WHERE public_slug = $1
-          AND is_vault = FALSE
-          AND deleted_at IS NULL
+        SELECT c.* FROM categories c
+        WHERE c.public_slug = $1
+          AND c.is_vault = FALSE
+          AND c.deleted_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM user_bans ub
+            WHERE ub.user_id = c.owner_user_id
+              AND ub.lifted_at IS NULL
+              AND (ub.ends_at IS NULL OR ub.ends_at > now())
+          )
         "#,
     )
     .bind(slug)

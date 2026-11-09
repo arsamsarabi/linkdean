@@ -164,6 +164,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Export: Netscape HTML, Linkdean JSON (full account export of owned folders, bookmarks and dashboards; vault items included while unlocked)
 - Linkdean JSON (version 2) keeps every folder of a bookmark, its favourite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
 - Netscape HTML lists a bookmark under each folder it is in, and reads `<DD>` descriptions on import
+- One import at a time per user, and at most 10 per 15 minutes. A file may hold up to 10,000 folders (Raindrop CSV included), 100 dashboards and 100 sections per dashboard
 
 ---
 
