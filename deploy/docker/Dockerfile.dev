@@ -4,4 +4,7 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev cmake libwebp-dev
 RUN cargo install cargo-watch --version 8.5.3 --locked
 WORKDIR /src
 EXPOSE 8080
-CMD ["cargo", "watch", "-w", "crates", "-w", "migrations", "-w", "Cargo.toml", "-w", "Cargo.lock", "-x", "run --locked -p linkdean-api"]
+# No ignore files: only the paths below are watched, and finding .gitignore files walks the whole
+# bind-mounted repo first (node_modules, a stray .pnpm-store), which on macOS can stall start-up
+# for many minutes with no output.
+CMD ["cargo", "watch", "--no-vcs-ignores", "--no-dot-ignores", "-w", "crates", "-w", "migrations", "-w", "Cargo.toml", "-w", "Cargo.lock", "-x", "run --locked -p linkdean-api"]

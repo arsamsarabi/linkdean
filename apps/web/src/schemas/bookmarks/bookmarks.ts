@@ -68,6 +68,9 @@ export const importResultSchema = z.object({
   failed: z.number(),
 })
 
+/** The person's own bookmark at a URL, for quick save. */
+export const bookmarkLookupSchema = z.object({ bookmark: bookmarkSchema.nullable() })
+
 /** What a page says about itself, for filling in the bookmark form. Nothing is saved. */
 export const pageDetailsSchema = z.object({
   title: z.string().nullish(),

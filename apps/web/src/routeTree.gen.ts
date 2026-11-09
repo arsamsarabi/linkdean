@@ -24,6 +24,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppLibraryRouteImport } from './routes/_app/library'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppSaveRouteImport } from './routes/_app/save'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSharedRouteImport } from './routes/_app/shared'
 import { Route as AppTrashRouteImport } from './routes/_app/trash'
@@ -106,6 +107,11 @@ const AppProfileRoute = AppProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSaveRoute = AppSaveRouteImport.update({
+  id: '/save',
+  path: '/save',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
   '/profile': typeof AppProfileRoute
+  '/save': typeof AppSaveRoute
   '/settings': typeof AppSettingsRoute
   '/shared': typeof AppSharedRoute
   '/trash': typeof AppTrashRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
   '/profile': typeof AppProfileRoute
+  '/save': typeof AppSaveRoute
   '/settings': typeof AppSettingsRoute
   '/shared': typeof AppSharedRoute
   '/trash': typeof AppTrashRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/_app/import': typeof AppImportRoute
   '/_app/library': typeof AppLibraryRoute
   '/_app/profile': typeof AppProfileRoute
+  '/_app/save': typeof AppSaveRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/shared': typeof AppSharedRoute
   '/_app/trash': typeof AppTrashRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/import'
     | '/library'
     | '/profile'
+    | '/save'
     | '/settings'
     | '/shared'
     | '/trash'
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/import'
     | '/library'
     | '/profile'
+    | '/save'
     | '/settings'
     | '/shared'
     | '/trash'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/_app/import'
     | '/_app/library'
     | '/_app/profile'
+    | '/_app/save'
     | '/_app/settings'
     | '/_app/shared'
     | '/_app/trash'
@@ -408,6 +420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProfileRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/save': {
+      id: '/_app/save'
+      path: '/save'
+      fullPath: '/save'
+      preLoaderRoute: typeof AppSaveRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -464,6 +483,7 @@ interface AppRouteChildren {
   AppImportRoute: typeof AppImportRoute
   AppLibraryRoute: typeof AppLibraryRoute
   AppProfileRoute: typeof AppProfileRoute
+  AppSaveRoute: typeof AppSaveRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSharedRoute: typeof AppSharedRoute
   AppTrashRoute: typeof AppTrashRoute
@@ -477,6 +497,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppImportRoute: AppImportRoute,
   AppLibraryRoute: AppLibraryRoute,
   AppProfileRoute: AppProfileRoute,
+  AppSaveRoute: AppSaveRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSharedRoute: AppSharedRoute,
   AppTrashRoute: AppTrashRoute,

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { Bookmark, Category } from '@/schemas'
-import { draftFromBookmark, draftHeadsToVault, emptyDraft, fillFromPage, isFetchableUrl } from './bookmarks'
+import {
+  draftFromBookmark,
+  draftFromShare,
+  draftHeadsToVault,
+  emptyDraft,
+  fillFromPage,
+  isFetchableUrl,
+} from './bookmarks'
 
 describe('bookmarks drafts', () => {
   it('emptyDraft returns blank fields', () => {
@@ -98,5 +105,24 @@ describe('filling a draft from the page', () => {
     expect(isFetchableUrl('https://')).toBe(false)
     expect(isFetchableUrl('javascript:alert(1)')).toBe(false)
     expect(isFetchableUrl('example.com')).toBe(false)
+  })
+})
+
+describe('drafts from a share', () => {
+  it('takes the url, title and text as they come', () => {
+    expect(draftFromShare({ url: ' https://a.example/x ', title: ' A ', text: 'Quote' })).toMatchObject({
+      url: 'https://a.example/x',
+      title: 'A',
+      description: 'Quote',
+      category_ids: [],
+    })
+  })
+
+  it('finds the link in the text when there is no url', () => {
+    expect(draftFromShare({ text: 'Worth a read https://b.example/post?id=1' })).toMatchObject({
+      url: 'https://b.example/post?id=1',
+      description: 'Worth a read',
+    })
+    expect(draftFromShare({ text: 'no link here' })).toMatchObject({ url: '', description: 'no link here' })
   })
 })

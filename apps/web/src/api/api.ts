@@ -16,6 +16,7 @@ import {
   blockEnvelopeSchema,
   bookmarkIdsSchema,
   bookmarkListPageSchema,
+  bookmarkLookupSchema,
   bookmarkSchema,
   bootstrapStatusSchema,
   categoriesSchema,
@@ -643,6 +644,10 @@ export const api = {
       is_private: boolean
     }>
   ): Promise<Bookmark> => req(`/bookmarks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, bookmarkSchema),
+
+  /** The person's own bookmark at exactly `url`, outside any vault, or null. */
+  lookupBookmark: async (url: string): Promise<Bookmark | null> =>
+    (await req(`/bookmarks/lookup?url=${encodeURIComponent(url)}`, {}, bookmarkLookupSchema)).bookmark,
 
   /** Title, description and keyword tags of the page at `url`, fetched by the server. */
   pageDetails: (url: string) =>

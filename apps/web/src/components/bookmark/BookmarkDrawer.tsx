@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react'
+import { useEffect, useEffectEvent, useRef, useState, type ReactElement, type ReactNode } from 'react'
 import {
   Box,
   Button,
@@ -47,6 +47,14 @@ type Props = {
   initial: BookmarkDraft | null
   /** A shared bookmark: add a Discussion tab with its likes, rating and comments. */
   discussion?: boolean
+  /** Quick save: on opening a new bookmark with no title, fetch the page's details. */
+  autoImport?: boolean
+  /** Quick save: offer **Save to Unsorted** next to Add, which saves with no folder. */
+  quickSave?: boolean
+  /** Called after a successful save, before `onClose`. `unsorted` is the Save to Unsorted button. */
+  onSaved?: (draft: BookmarkDraft, unsorted: boolean) => void
+  /** Shown above the form, such as "already in your library". */
+  notice?: ReactNode
 }
 
 export function BookmarkDrawer({
@@ -56,6 +64,10 @@ export function BookmarkDrawer({
   initial,
   vaultRequired,
   discussion = false,
+  autoImport = false,
+  quickSave = false,
+  onSaved,
+  notice,
 }: Props): ReactElement {
   const closeOnEscape = useDrawerClosesOnEscape()
   const drawerSize = useDrawerSize()
@@ -106,13 +118,28 @@ export function BookmarkDrawer({
     }
   }
 
-  async function save(): Promise<void> {
+  // Once per opening, and only for a new bookmark that came with an address but no title.
+  const autoImported = useRef(false)
+  const runAutoImport = useEffectEvent(() => {
+    if (autoImported.current || !showFetch || !canFetch || draft.id || draft.title.trim()) return
+    autoImported.current = true
+    void importFromUrl()
+  })
+  useEffect(() => {
+    if (!opened) {
+      autoImported.current = false
+      return
+    }
+    if (autoImport) runAutoImport()
+  }, [opened, autoImport])
+
+  async function save(unsorted = false): Promise<void> {
     const tags = draft.tags.map((t) => t.trim()).filter(Boolean)
     const body = {
       url: withWebScheme(draft.url),
       title: draft.title.trim() || undefined,
       description: draft.description.trim() || undefined,
-      category_ids: draft.category_ids,
+      category_ids: unsorted ? [] : draft.category_ids,
       tags,
     }
     try {
@@ -140,7 +167,7 @@ export function BookmarkDrawer({
           title: body.title,
           description: body.description,
           category_ids: body.category_ids,
-          vault_id: body.category_ids.length === 0 ? (draft.vault_id ?? null) : null,
+          vault_id: !unsorted && body.category_ids.length === 0 ? (draft.vault_id ?? null) : null,
           tags: body.tags,
           is_favorite: draft.is_favorite,
           is_unread: draft.is_unread,
@@ -154,12 +181,14 @@ export function BookmarkDrawer({
               color: 'yellow',
               message: `Bookmark saved; preview upload failed: ${e}`,
             })
+            onSaved?.({ ...draft, category_ids: body.category_ids }, unsorted)
             onClose()
             return
           }
         }
       }
-      notifications.show({ message: editing ? 'Updated' : 'Saved' })
+      notifications.show({ message: editing ? 'Updated' : unsorted ? 'Saved to Unsorted' : 'Saved' })
+      onSaved?.({ ...draft, category_ids: body.category_ids }, unsorted)
       onClose()
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
@@ -173,6 +202,7 @@ export function BookmarkDrawer({
     <Box pos="relative">
       <LoadingOverlay visible={pending} zIndex={100} overlayProps={{ blur: 1 }} />
       <Stack gap="md">
+        {notice}
         <TextInput
           label="URL"
           required
@@ -308,9 +338,16 @@ export function BookmarkDrawer({
             setDraft((d) => ({ ...d, is_pinned }))
           }}
         />
-        <Button mt="sm" onClick={() => void save()} disabled={!draft.url.trim() || vaultMissing} loading={pending}>
-          {editing ? 'Save changes' : 'Add bookmark'}
-        </Button>
+        <Group mt="sm" grow>
+          <Button onClick={() => void save()} disabled={!draft.url.trim() || vaultMissing} loading={pending}>
+            {editing ? 'Save changes' : 'Add bookmark'}
+          </Button>
+          {quickSave && !editing && !vaultRequired ? (
+            <Button variant="default" onClick={() => void save(true)} disabled={!draft.url.trim() || pending}>
+              Save to Unsorted
+            </Button>
+          ) : null}
+        </Group>
       </Stack>
     </Box>
   )
