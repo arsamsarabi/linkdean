@@ -1,0 +1,24 @@
+.layout {
+  display: grid;
+  gap: var(--mantine-spacing-xl);
+  max-width: 1040px;
+  margin: 48px auto 0;
+  padding: 0 var(--mantine-spacing-md) 48px;
+}
+
+.mascot {
+  justify-self: center;
+}
+
+@media (min-width: 62em) {
+  .layout {
+    grid-template-columns: minmax(0, 760px) auto;
+    justify-content: center;
+    align-items: start;
+  }
+
+  .mascot {
+    position: sticky;
+    top: 48px;
+  }
+}
