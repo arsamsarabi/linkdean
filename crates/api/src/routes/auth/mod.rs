@@ -1,4 +1,5 @@
 mod email_verification;
+mod extension;
 mod oidc;
 mod password_reset;
 
@@ -44,6 +45,8 @@ pub fn router() -> Router<AppState> {
         .route("/auth/oidc/pending-link", get(oidc::pending_link))
         .route("/auth/oidc/disconnect", post(oidc::disconnect))
         .route("/auth/config", get(auth_config))
+        .route("/auth/extension/authorize", post(extension::authorize))
+        .route("/auth/extension/token", post(extension::token))
 }
 
 async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value>> {

@@ -37,6 +37,7 @@ import {
   emailChangeResponseSchema,
   emailStatusSchema,
   exposedContentEnvelopeSchema,
+  extensionAuthorizeSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
   forgotPasswordResponseSchema,
@@ -283,6 +284,14 @@ export const api = {
 
   revokeRegistrationInvite: (id: string): Promise<{ ok: boolean }> =>
     req(`/admin/invites/${id}`, { method: 'DELETE' }, okSchema),
+
+  /** Approves the browser extension's sign-in; the reply is where to send its window. */
+  authorizeExtension: (body: {
+    redirect_uri: string
+    code_challenge: string
+    code_challenge_method: string
+    state?: string
+  }) => req('/auth/extension/authorize', { method: 'POST', body: JSON.stringify(body) }, extensionAuthorizeSchema),
 
   listApiKeys: (): Promise<{ keys: ApiKey[] }> => req('/api-keys', {}, apiKeysEnvelopeSchema),
 
