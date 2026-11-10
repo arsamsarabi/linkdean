@@ -1,0 +1,12 @@
+{
+  "printWidth": 120,
+  "trailingComma": "es5",
+  "semi": false,
+  "singleQuote": true,
+  "plugins": ["@ianvs/prettier-plugin-sort-imports"],
+  "importOrder": ["<BUILTIN_MODULES>", "^react$", "<THIRD_PARTY_MODULES>", "^@/(.*)$", "^[./]", "^/.module.css$"],
+  "importOrderParserPlugins": ["typescript", "jsx", "decorators-legacy"],
+  "importOrderTypeScriptVersion": "5.0.0",
+  "importOrderCaseSensitive": false,
+  "importOrderSafeSideEffects": ["^/.css$"]
+}

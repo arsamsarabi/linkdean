@@ -96,6 +96,31 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  extension:
+    name: Extension (format, lint, types, test, build)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/extension
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/extension/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/extension/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm build:firefox
+
   docs-site:
     name: Docs site (Docusaurus build)
     runs-on: ubuntu-24.04
