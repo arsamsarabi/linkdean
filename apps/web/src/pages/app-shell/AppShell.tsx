@@ -3,15 +3,7 @@ import { Group, Loader, AppShell as MantineAppShell } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import {
-  BrokenLinksDrawer,
-  CommandPalette,
-  DuplicateMergeDrawer,
-  HistoryDrawer,
-  NotificationsDrawer,
-  PageContainer,
-  QueryErrorAlert,
-} from '@/components'
+import { CommandPalette, NotificationsDrawer, PageContainer, QueryErrorAlert } from '@/components'
 import {
   useBootstrap,
   useLogout,
@@ -127,9 +119,6 @@ export function AppShell(): ReactElement {
       </MantineAppShell.Footer>
 
       <CommandPalette opened={shell.paletteOpen} onClose={shell.closePalette} />
-      <BrokenLinksDrawer opened={shell.brokenOpen} onClose={shell.closeBroken} />
-      <DuplicateMergeDrawer opened={shell.dupesOpen} onClose={shell.closeDupes} />
-      <HistoryDrawer opened={shell.historyOpen} onClose={shell.closeHistory} />
       <NotificationsDrawer opened={shell.notifOpen} onClose={shell.closeNotif} />
     </MantineAppShell>
   )

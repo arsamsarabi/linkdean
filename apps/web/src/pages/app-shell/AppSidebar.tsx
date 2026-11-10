@@ -15,7 +15,7 @@ import {
   IconUsers,
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { usePrefetchBrokenLinks, useShareInvites } from '@/hooks'
+import { usePrefetchActivity, usePrefetchBrokenLinks, useShareInvites } from '@/hooks'
 import { asStringList, type FlagKey } from '@/lib'
 import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
@@ -53,10 +53,8 @@ function Group({ label, children }: { label: string; children: ReactNode }): Rea
  */
 export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactElement {
   const closeNav = useShellUi((s) => s.closeNav)
-  const openBroken = useShellUi((s) => s.openBroken)
-  const openDupes = useShellUi((s) => s.openDupes)
-  const openHistory = useShellUi((s) => s.openHistory)
   const prefetchBroken = usePrefetchBrokenLinks()
+  const prefetchHistory = usePrefetchActivity()
   const invites = useShareInvites()
   const pendingInvites = (invites.data?.invites ?? []).filter((i) => !i.rejected_at).length
 
@@ -64,10 +62,6 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
   const flags = onLibrary ? asStringList(search.flag) : []
   const folder = onLibrary && typeof search.folder === 'string' && search.folder !== 'all' ? search.folder : undefined
   const plainLibrary = onLibrary && flags.length === 0 && !folder
-  const open = (fn: () => void) => () => {
-    closeNav()
-    fn()
-  }
 
   return (
     <>
@@ -137,24 +131,35 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
 
         <Group label="Library health">
           <NavLink
-            component="button"
+            component={Link}
+            activeOptions={EXACT}
+            to="/broken-links"
             label="Broken links"
             leftSection={<IconLinkOff {...iconProps} />}
-            onClick={open(openBroken)}
+            active={pathname === '/broken-links'}
+            onClick={closeNav}
             onMouseEnter={prefetchBroken}
             onFocus={prefetchBroken}
           />
           <NavLink
-            component="button"
+            component={Link}
+            activeOptions={EXACT}
+            to="/duplicates"
             label="Duplicates"
             leftSection={<IconCopy {...iconProps} />}
-            onClick={open(openDupes)}
+            active={pathname === '/duplicates'}
+            onClick={closeNav}
           />
           <NavLink
-            component="button"
+            component={Link}
+            activeOptions={EXACT}
+            to="/history"
             label="History"
             leftSection={<IconHistory {...iconProps} />}
-            onClick={open(openHistory)}
+            active={pathname === '/history'}
+            onClick={closeNav}
+            onMouseEnter={prefetchHistory}
+            onFocus={prefetchHistory}
           />
         </Group>
       </AppShell.Section>

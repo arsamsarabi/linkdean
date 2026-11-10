@@ -23,6 +23,7 @@ const folders = vi.hoisted(() => [
 
 vi.mock('@/hooks', () => ({
   usePrefetchBrokenLinks: () => () => undefined,
+  usePrefetchActivity: () => () => undefined,
   useCategories: () => ({ isLoading: false, data: folders }),
   useShareInvites: () => ({ data: { invites: [{ id: 'i1', rejected_at: null }] } }),
 }))
@@ -56,7 +57,7 @@ function renderSidebar(opts: { vaultUnlocked?: boolean; pathname?: string; searc
 }
 
 describe('AppSidebar', () => {
-  beforeEach(() => useShellUi.setState({ brokenOpen: false, dupesOpen: false, historyOpen: false, navOpen: true }))
+  beforeEach(() => useShellUi.setState({ navOpen: true }))
   afterEach(() => {
     cleanup()
     localStorage.clear()
@@ -79,15 +80,13 @@ describe('AppSidebar', () => {
     expect(screen.getByRole('link', { name: 'Library' }).hasAttribute('data-active')).toBe(false)
   })
 
-  it('opens the library health drawers and closes the phone menu', async () => {
-    renderSidebar()
-    await userEvent.click(screen.getByRole('button', { name: 'Broken links' }))
-    expect(useShellUi.getState().brokenOpen).toBe(true)
+  it('links the library health pages, marks the open one, and closes the phone menu', async () => {
+    renderSidebar({ pathname: '/duplicates' })
+    expect(screen.getByRole('link', { name: 'Broken links' }).getAttribute('href')).toBe('/broken-links')
+    expect(screen.getByRole('link', { name: 'History' }).getAttribute('href')).toBe('/history')
+    expect(screen.getByRole('link', { name: 'Duplicates' }).hasAttribute('data-active')).toBe(true)
+    await userEvent.click(screen.getByRole('link', { name: 'Broken links' }))
     expect(useShellUi.getState().navOpen).toBe(false)
-    await userEvent.click(screen.getByRole('button', { name: 'Duplicates' }))
-    expect(useShellUi.getState().dupesOpen).toBe(true)
-    await userEvent.click(screen.getByRole('button', { name: 'History' }))
-    expect(useShellUi.getState().historyOpen).toBe(true)
   })
 
   it('lists folders with Unsorted first, nests children, and leaves vault folders out', async () => {
