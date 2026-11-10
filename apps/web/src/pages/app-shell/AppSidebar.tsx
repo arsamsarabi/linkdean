@@ -4,6 +4,7 @@ import {
   IconBookmark,
   IconBooks,
   IconCopy,
+  IconFolders,
   IconHistory,
   IconLayoutDashboard,
   IconLinkOff,
@@ -168,6 +169,15 @@ export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props):
 
       <AppShell.Section py="sm" className={classes.footer}>
         <Stack gap={2}>
+          <NavLink
+            component={Link}
+            activeOptions={EXACT}
+            to="/categories"
+            label="Categories"
+            leftSection={<IconFolders {...iconProps} />}
+            active={pathname === '/categories'}
+            onClick={closeNav}
+          />
           <NavLink
             component={Link}
             activeOptions={EXACT}

@@ -1,25 +1,10 @@
 import { type ReactElement } from 'react'
-import { Group, Paper, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
+import { Group, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import {
-  IconArrowsExchange,
-  IconBell,
-  IconBolt,
-  IconFolder,
-  IconKey,
-  IconLock,
-  IconSettings,
-} from '@tabler/icons-react'
+import { IconArrowsExchange, IconBell, IconBolt, IconKey, IconLock, IconSettings } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import {
-  ApiKeysPanel,
-  CategoryManager,
-  ImportExportPanel,
-  QueryErrorAlert,
-  VaultPanel,
-  VaultPreferencesCard,
-} from '@/components'
+import { ApiKeysPanel, ImportExportPanel, QueryErrorAlert, VaultPanel, VaultPreferencesCard } from '@/components'
 import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { DeleteAccountCard } from './DeleteAccountCard'
@@ -30,7 +15,7 @@ import classes from './SettingsPage.module.css'
 import { SettingsSkeleton } from './SettingsSkeleton'
 import { VaultAutoLockSettings } from './VaultAutoLockSettings'
 
-const SETTINGS_TABS = ['general', 'notifications', 'categories', 'capture', 'import', 'vault', 'api-keys'] as const
+const SETTINGS_TABS = ['general', 'notifications', 'capture', 'import', 'vault', 'api-keys'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function isSettingsTab(v: unknown): v is SettingsTab {
@@ -92,9 +77,6 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="notifications" leftSection={<IconBell size={16} stroke={1.5} />}>
             Notifications
           </Tabs.Tab>
-          <Tabs.Tab value="categories" leftSection={<IconFolder size={16} stroke={1.5} />}>
-            Categories
-          </Tabs.Tab>
           <Tabs.Tab value="capture" leftSection={<IconBolt size={16} stroke={1.5} />}>
             Fast capture
           </Tabs.Tab>
@@ -118,12 +100,6 @@ export function SettingsPage(): ReactElement {
 
         <Tabs.Panel value="notifications">
           <NotificationEmailsPanel />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="categories">
-          <Paper p="xl" withBorder>
-            <CategoryManager />
-          </Paper>
         </Tabs.Panel>
 
         <Tabs.Panel value="capture">

@@ -4,11 +4,11 @@ import { useLocalStorage } from '@mantine/hooks'
 import { IconChevronDown, IconFolder, IconInbox, IconSearch, IconUsers } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { useCategories } from '@/hooks'
-import { buildCategoryTree, CategoryIcon, isCategoryIconKey, type CatNode } from '@/lib'
+import { buildCategoryTree, CategoryIcon, filterFolders, isCategoryIconKey, type CatNode } from '@/lib'
 import type { Category } from '@/schemas'
 import { FOLDER_UNCATEGORIZED } from '@/services'
 import classes from './AppShell.module.css'
-import { filterFolders, recentFolders } from './folderLists'
+import { recentFolders } from './folderLists'
 import { EXACT } from './sidebarLinks'
 
 const iconProps = { size: 18, stroke: 1.5 } as const

@@ -21,7 +21,7 @@ export type FolderTileProps = {
   sharedWith?: readonly string[]
   ownerDisplayName?: string | null
   deletedAt?: string | null
-  /** When set, shows the category ⋮ menu (same as Settings → Categories). */
+  /** When set, shows the category ⋮ menu. */
   menu?: Omit<CategoryFolderMenuProps, 'name' | 'access' | 'isVault' | 'className'>
 }
 

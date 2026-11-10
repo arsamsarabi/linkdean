@@ -37,7 +37,7 @@ type Props = {
   selectMode?: boolean
   selectedIds?: ReadonlySet<string>
   onToggleSelect?: (id: string, range?: boolean) => void
-  /** Category ⋮ menu — same actions as Settings → Categories. */
+  /** Category ⋮ menu — same actions as the Categories page. */
   categoryMenuFor?: (cat: Category) => CategoryMenuHandlers | undefined
 }
 

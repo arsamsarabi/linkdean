@@ -23,6 +23,7 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppBrokenLinksRouteImport } from './routes/_app/broken-links'
+import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 import { Route as AppDuplicatesRouteImport } from './routes/_app/duplicates'
 import { Route as AppHistoryRouteImport } from './routes/_app/history'
 import { Route as AppImportRouteImport } from './routes/_app/import'
@@ -105,6 +106,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
 const AppBrokenLinksRoute = AppBrokenLinksRouteImport.update({
   id: '/broken-links',
   path: '/broken-links',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCategoriesRoute = AppCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDuplicatesRoute = AppDuplicatesRouteImport.update({
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AppAdminRoute
   '/broken-links': typeof AppBrokenLinksRoute
+  '/categories': typeof AppCategoriesRoute
   '/duplicates': typeof AppDuplicatesRoute
   '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AppAdminRoute
   '/broken-links': typeof AppBrokenLinksRoute
+  '/categories': typeof AppCategoriesRoute
   '/duplicates': typeof AppDuplicatesRoute
   '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/broken-links': typeof AppBrokenLinksRoute
+  '/_app/categories': typeof AppCategoriesRoute
   '/_app/duplicates': typeof AppDuplicatesRoute
   '/_app/history': typeof AppHistoryRoute
   '/_app/import': typeof AppImportRoute
@@ -283,6 +292,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin'
     | '/broken-links'
+    | '/categories'
     | '/duplicates'
     | '/history'
     | '/import'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin'
     | '/broken-links'
+    | '/categories'
     | '/duplicates'
     | '/history'
     | '/import'
@@ -341,6 +352,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/_app/admin'
     | '/_app/broken-links'
+    | '/_app/categories'
     | '/_app/duplicates'
     | '/_app/history'
     | '/_app/import'
@@ -473,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBrokenLinksRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/categories': {
+      id: '/_app/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof AppCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/duplicates': {
       id: '/_app/duplicates'
       path: '/duplicates'
@@ -577,6 +596,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppBrokenLinksRoute: typeof AppBrokenLinksRoute
+  AppCategoriesRoute: typeof AppCategoriesRoute
   AppDuplicatesRoute: typeof AppDuplicatesRoute
   AppHistoryRoute: typeof AppHistoryRoute
   AppImportRoute: typeof AppImportRoute
@@ -596,6 +616,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
   AppBrokenLinksRoute: AppBrokenLinksRoute,
+  AppCategoriesRoute: AppCategoriesRoute,
   AppDuplicatesRoute: AppDuplicatesRoute,
   AppHistoryRoute: AppHistoryRoute,
   AppImportRoute: AppImportRoute,
