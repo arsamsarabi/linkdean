@@ -15,6 +15,7 @@ import {
 import { isSignedIn, resolveDefaultLanding, TERMS_VERSION } from '@/lib'
 import { MIN_SECRET_LENGTH, validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
+import styles from './OnboardingPage.module.css'
 import { OnboardingSteps } from './OnboardingSteps'
 
 const VAULT_PW_MESSAGES = {
@@ -183,92 +184,92 @@ export function OnboardingPage(): ReactElement {
   }
 
   return (
-    <Stack maw={760} mx="auto" mt={48} px="md" pb={48} gap="lg" className={motion.fadeIn}>
-      <Center>
-        <MascotFigure src={MASCOT.standing} width={160} />
-      </Center>
-      <Stack gap={6}>
-        <Title order={1} c="violet">
-          Welcome to Linkdean
-        </Title>
-        {firstAccount ? (
-          <Text c="dimmed">
-            First account becomes <strong>admin</strong>. Nested cats, Meilisearch, vault for sensitive links.
-          </Text>
-        ) : (
-          <Text c="dimmed">Two optional steps and you're in.</Text>
-        )}
-      </Stack>
+    <div className={`${styles.layout} ${motion.fadeIn}`}>
+      <Stack gap="lg">
+        <Stack gap={6}>
+          <Title order={1} c="violet">
+            Welcome to Linkdean
+          </Title>
+          {firstAccount ? (
+            <Text c="dimmed">
+              First account becomes <strong>admin</strong>. Nested cats, Meilisearch, vault for sensitive links.
+            </Text>
+          ) : (
+            <Text c="dimmed">Two optional steps and you're in.</Text>
+          )}
+        </Stack>
 
-      {recoveryKey ? (
-        <RecoveryKeyModal
-          recoveryKey={recoveryKey}
-          onDone={() => {
-            setRecoveryKey(null)
-            setStep(3)
+        {recoveryKey ? (
+          <RecoveryKeyModal
+            recoveryKey={recoveryKey}
+            onDone={() => {
+              setRecoveryKey(null)
+              setStep(3)
+            }}
+          />
+        ) : null}
+
+        <OnboardingSteps
+          firstAccount={firstAccount}
+          needsBootstrapToken={!!bootstrap.data?.bootstrap_token_required}
+          bootstrapToken={bootstrapToken}
+          onBootstrapToken={setBootstrapToken}
+          step={step}
+          busy={busy}
+          displayName={displayName}
+          email={email}
+          password={password}
+          password2={password2}
+          pendingAvatar={pendingAvatar}
+          termsAccepted={termsAccepted}
+          onTermsAccepted={setTermsAccepted}
+          turnstileSiteKey={turnstileSiteKey}
+          turnstileResetKey={turnstileResetKey}
+          resetRef={resetRef}
+          vaultPass={vaultPass}
+          vaultPass2={vaultPass2}
+          format={format}
+          file={file}
+          onStep={setStep}
+          onDisplayName={setDisplayName}
+          onEmail={setEmail}
+          onPassword={setPassword}
+          onPassword2={setPassword2}
+          onPickAvatar={(f) => {
+            if (f) {
+              setCropFile(f)
+              setCropOpen(true)
+            }
+          }}
+          onClearAvatar={() => {
+            setPendingAvatar(null)
+            resetRef.current?.()
+          }}
+          onTurnstileToken={setTurnstileToken}
+          onCreateAdmin={() => void createAdmin()}
+          onVaultPass={setVaultPass}
+          onVaultPass2={setVaultPass2}
+          onSetupVault={() => void setupVault()}
+          onFormat={setFormat}
+          onFile={setFile}
+          onImportOrSkip={(skip) => void doImportOrSkip(skip)}
+        />
+
+        <AvatarCropModal
+          opened={cropOpen}
+          file={cropFile}
+          onClose={() => {
+            setCropOpen(false)
+            setCropFile(null)
+            resetRef.current?.()
+          }}
+          onCropped={(blob) => {
+            setPendingAvatar(blob)
+            notifications.show({ message: 'Avatar cropped — uploads with account' })
           }}
         />
-      ) : null}
-
-      <OnboardingSteps
-        firstAccount={firstAccount}
-        needsBootstrapToken={!!bootstrap.data?.bootstrap_token_required}
-        bootstrapToken={bootstrapToken}
-        onBootstrapToken={setBootstrapToken}
-        step={step}
-        busy={busy}
-        displayName={displayName}
-        email={email}
-        password={password}
-        password2={password2}
-        pendingAvatar={pendingAvatar}
-        termsAccepted={termsAccepted}
-        onTermsAccepted={setTermsAccepted}
-        turnstileSiteKey={turnstileSiteKey}
-        turnstileResetKey={turnstileResetKey}
-        resetRef={resetRef}
-        vaultPass={vaultPass}
-        vaultPass2={vaultPass2}
-        format={format}
-        file={file}
-        onStep={setStep}
-        onDisplayName={setDisplayName}
-        onEmail={setEmail}
-        onPassword={setPassword}
-        onPassword2={setPassword2}
-        onPickAvatar={(f) => {
-          if (f) {
-            setCropFile(f)
-            setCropOpen(true)
-          }
-        }}
-        onClearAvatar={() => {
-          setPendingAvatar(null)
-          resetRef.current?.()
-        }}
-        onTurnstileToken={setTurnstileToken}
-        onCreateAdmin={() => void createAdmin()}
-        onVaultPass={setVaultPass}
-        onVaultPass2={setVaultPass2}
-        onSetupVault={() => void setupVault()}
-        onFormat={setFormat}
-        onFile={setFile}
-        onImportOrSkip={(skip) => void doImportOrSkip(skip)}
-      />
-
-      <AvatarCropModal
-        opened={cropOpen}
-        file={cropFile}
-        onClose={() => {
-          setCropOpen(false)
-          setCropFile(null)
-          resetRef.current?.()
-        }}
-        onCropped={(blob) => {
-          setPendingAvatar(blob)
-          notifications.show({ message: 'Avatar cropped — uploads with account' })
-        }}
-      />
-    </Stack>
+      </Stack>
+      <MascotFigure src={MASCOT.standing} width={160} className={styles.mascot} />
+    </div>
   )
 }

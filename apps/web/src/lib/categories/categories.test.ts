@@ -6,6 +6,7 @@ import {
   categoryPath,
   categorySelectData,
   categorySubtreeIds,
+  filterFolders,
   writableCategories,
 } from './categories'
 
@@ -73,6 +74,14 @@ describe('canWriteCategory / writableCategories', () => {
       { ...cats[1]!, id: 'ro', access: 'read' },
     ]
     expect(writableCategories(mixed).map((c) => c.id)).toEqual(['1'])
+  })
+})
+
+describe('filterFolders', () => {
+  it('matches names at any depth, ignoring case, with their path', () => {
+    expect(filterFolders(cats, 'CHI')).toEqual([{ cat: cats[1], path: 'Root / Child' }])
+    expect(filterFolders(cats, 'o').map((m) => m.path)).toEqual(['Root'])
+    expect(filterFolders(cats, '  ')).toEqual([])
   })
 })
 

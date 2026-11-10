@@ -1,0 +1,14 @@
+/* Mantine wraps content in a table so it can scroll sideways; pages should wrap to the width instead. */
+.viewport > div {
+  display: block;
+}
+
+.viewport:focus {
+  outline: none;
+}
+
+/* Start the bar below the fixed header so the header does not cover the thumb. */
+.scrollbar[data-orientation='vertical'] {
+  top: var(--app-shell-header-height, 0px);
+  z-index: 200;
+}

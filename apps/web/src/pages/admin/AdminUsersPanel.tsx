@@ -4,12 +4,12 @@ import { notifications } from '@mantine/notifications'
 import { IconSearch } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
 import { useAdminUsers, useLiftBans, useMe, useSetEmailVerified, useUpdateAdminUser } from '@/hooks'
+import { SettingsSkeleton } from '@/pages/settings'
 import type { AdminUserSummary } from '@/schemas'
 import { banEndLabel } from '@/services'
 import { AdminChangeEmailModal } from './AdminChangeEmailModal'
 import { AdminResetLinkModal } from './AdminResetLinkModal'
 import { BanUserModal } from './BanUserModal'
-import { SettingsSkeleton } from './SettingsSkeleton'
 
 const ADMIN_USERS_PAGE_SIZE = 10
 
@@ -72,6 +72,11 @@ export function AdminUsersPanel(): ReactElement {
           </Text>
         </div>
         <TextInput
+          type="search"
+          name="user-filter"
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           placeholder="Filter by name or email"
           leftSection={<IconSearch size={16} stroke={1.5} />}
           value={userQuery}

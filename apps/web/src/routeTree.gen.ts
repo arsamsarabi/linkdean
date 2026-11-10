@@ -21,6 +21,11 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppBrokenLinksRouteImport } from './routes/_app/broken-links'
+import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
+import { Route as AppDuplicatesRouteImport } from './routes/_app/duplicates'
+import { Route as AppHistoryRouteImport } from './routes/_app/history'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppLibraryRouteImport } from './routes/_app/library'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
@@ -91,6 +96,31 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBrokenLinksRoute = AppBrokenLinksRouteImport.update({
+  id: '/broken-links',
+  path: '/broken-links',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCategoriesRoute = AppCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDuplicatesRoute = AppDuplicatesRouteImport.update({
+  id: '/duplicates',
+  path: '/duplicates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHistoryRoute = AppHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => AppRoute,
 } as any)
 const AppImportRoute = AppImportRouteImport.update({
@@ -166,6 +196,11 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AppAdminRoute
+  '/broken-links': typeof AppBrokenLinksRoute
+  '/categories': typeof AppCategoriesRoute
+  '/duplicates': typeof AppDuplicatesRoute
+  '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
   '/profile': typeof AppProfileRoute
@@ -190,6 +225,11 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AppAdminRoute
+  '/broken-links': typeof AppBrokenLinksRoute
+  '/categories': typeof AppCategoriesRoute
+  '/duplicates': typeof AppDuplicatesRoute
+  '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
   '/profile': typeof AppProfileRoute
@@ -217,6 +257,11 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/_app/admin': typeof AppAdminRoute
+  '/_app/broken-links': typeof AppBrokenLinksRoute
+  '/_app/categories': typeof AppCategoriesRoute
+  '/_app/duplicates': typeof AppDuplicatesRoute
+  '/_app/history': typeof AppHistoryRoute
   '/_app/import': typeof AppImportRoute
   '/_app/library': typeof AppLibraryRoute
   '/_app/profile': typeof AppProfileRoute
@@ -245,6 +290,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/verify-email'
+    | '/admin'
+    | '/broken-links'
+    | '/categories'
+    | '/duplicates'
+    | '/history'
     | '/import'
     | '/library'
     | '/profile'
@@ -269,6 +319,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/verify-email'
+    | '/admin'
+    | '/broken-links'
+    | '/categories'
+    | '/duplicates'
+    | '/history'
     | '/import'
     | '/library'
     | '/profile'
@@ -295,6 +350,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/verify-email'
+    | '/_app/admin'
+    | '/_app/broken-links'
+    | '/_app/categories'
+    | '/_app/duplicates'
+    | '/_app/history'
     | '/_app/import'
     | '/_app/library'
     | '/_app/profile'
@@ -411,6 +471,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/broken-links': {
+      id: '/_app/broken-links'
+      path: '/broken-links'
+      fullPath: '/broken-links'
+      preLoaderRoute: typeof AppBrokenLinksRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/categories': {
+      id: '/_app/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof AppCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/duplicates': {
+      id: '/_app/duplicates'
+      path: '/duplicates'
+      fullPath: '/duplicates'
+      preLoaderRoute: typeof AppDuplicatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/history': {
+      id: '/_app/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AppHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/import': {
       id: '/_app/import'
       path: '/import'
@@ -499,6 +594,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
+  AppBrokenLinksRoute: typeof AppBrokenLinksRoute
+  AppCategoriesRoute: typeof AppCategoriesRoute
+  AppDuplicatesRoute: typeof AppDuplicatesRoute
+  AppHistoryRoute: typeof AppHistoryRoute
   AppImportRoute: typeof AppImportRoute
   AppLibraryRoute: typeof AppLibraryRoute
   AppProfileRoute: typeof AppProfileRoute
@@ -514,6 +614,11 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
+  AppBrokenLinksRoute: AppBrokenLinksRoute,
+  AppCategoriesRoute: AppCategoriesRoute,
+  AppDuplicatesRoute: AppDuplicatesRoute,
+  AppHistoryRoute: AppHistoryRoute,
   AppImportRoute: AppImportRoute,
   AppLibraryRoute: AppLibraryRoute,
   AppProfileRoute: AppProfileRoute,

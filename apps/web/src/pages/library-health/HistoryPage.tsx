@@ -1,15 +1,10 @@
 import { useState, type ReactElement } from 'react'
-import { ActionIcon, Badge, Box, Drawer, Group, SegmentedControl, Skeleton, Stack, Text } from '@mantine/core'
+import { Badge, Group, Paper, SegmentedControl, Skeleton, Stack, Text } from '@mantine/core'
 import { IconHistory } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
-import { useActivity, usePrefetchActivity } from '@/hooks'
-import { useDrawerSize } from '@/hooks/render'
+import { useActivity } from '@/hooks'
 import type { ActivityAction, ActivitySubjectType } from '@/schemas'
-
-type Props = {
-  opened: boolean
-  onClose: () => void
-}
+import { LibraryHealthHeader } from './LibraryHealthHeader'
 
 function actionLabel(action: ActivityAction): string {
   switch (action) {
@@ -40,11 +35,10 @@ function actionColor(action: ActivityAction): string {
 type SubjectFilter = 'all' | ActivitySubjectType
 type ActionFilter = 'all' | ActivityAction
 
-export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
-  const drawerSize = useDrawerSize()
+export function HistoryPage(): ReactElement {
   const [subject, setSubject] = useState<SubjectFilter>('all')
   const [action, setAction] = useState<ActionFilter>('all')
-  const list = useActivity(opened, { subjectType: subject, action })
+  const list = useActivity(true, { subjectType: subject, action })
 
   // Skeleton only on true cold start (no cache / no placeholder). Prefetch + keepPreviousData
   // cover hover-open and filter hops — no delayed timer needed.
@@ -52,38 +46,41 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
   const swappingFilters = list.isFetching && list.isPlaceholderData
 
   return (
-    <Drawer opened={opened} onClose={onClose} position="right" size={drawerSize} title="History" padding="md">
+    <Stack gap="xl" maw={900}>
+      <LibraryHealthHeader
+        title="History"
+        description="Your own create, edit and delete log."
+        icon={IconHistory}
+        color="violet"
+      />
       <Stack gap="md">
-        <Text size="sm" c="dimmed">
-          Personal create / edit / delete log
-        </Text>
-
-        <SegmentedControl
-          size="xs"
-          fullWidth
-          value={subject}
-          onChange={(v) => setSubject(v as SubjectFilter)}
-          data={[
-            { label: 'All', value: 'all' },
-            { label: 'Bookmarks', value: 'bookmark' },
-            { label: 'Lists', value: 'category' },
-            { label: 'Boards', value: 'dashboard' },
-          ]}
-        />
-
-        <SegmentedControl
-          size="xs"
-          fullWidth
-          value={action}
-          onChange={(v) => setAction(v as ActionFilter)}
-          data={[
-            { label: 'All', value: 'all' },
-            { label: 'Created', value: 'created' },
-            { label: 'Updated', value: 'updated' },
-            { label: 'Deleted', value: 'deleted' },
-            { label: 'Restored', value: 'restored' },
-          ]}
-        />
+        <Group gap="sm" wrap="wrap">
+          <SegmentedControl
+            size="xs"
+            value={subject}
+            onChange={(v) => setSubject(v as SubjectFilter)}
+            aria-label="Filter by type"
+            data={[
+              { label: 'All', value: 'all' },
+              { label: 'Bookmarks', value: 'bookmark' },
+              { label: 'Lists', value: 'category' },
+              { label: 'Boards', value: 'dashboard' },
+            ]}
+          />
+          <SegmentedControl
+            size="xs"
+            value={action}
+            onChange={(v) => setAction(v as ActionFilter)}
+            aria-label="Filter by action"
+            data={[
+              { label: 'All', value: 'all' },
+              { label: 'Created', value: 'created' },
+              { label: 'Updated', value: 'updated' },
+              { label: 'Deleted', value: 'deleted' },
+              { label: 'Restored', value: 'restored' },
+            ]}
+          />
+        </Group>
 
         {list.isError && !list.data ? <QueryErrorAlert error={list.error} onRetry={() => void list.refetch()} /> : null}
 
@@ -109,14 +106,7 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
           }}
         >
           {(list.data?.events ?? []).map((e) => (
-            <Box
-              key={e.id}
-              p="sm"
-              style={{
-                borderRadius: 8,
-                border: '1px solid var(--mantine-color-default-border)',
-              }}
-            >
+            <Paper key={e.id} withBorder p="sm">
               <Stack gap={4}>
                 <Group gap="xs" justify="space-between" wrap="nowrap">
                   <Group gap={6} wrap="nowrap">
@@ -135,28 +125,10 @@ export function HistoryDrawer({ opened, onClose }: Props): ReactElement {
                   {e.summary}
                 </Text>
               </Stack>
-            </Box>
+            </Paper>
           ))}
         </Stack>
       </Stack>
-    </Drawer>
-  )
-}
-
-export function HistoryButton({ onClick }: { onClick: () => void }): ReactElement {
-  const prefetch = usePrefetchActivity()
-  return (
-    <ActionIcon
-      variant="subtle"
-      size="lg"
-      radius="md"
-      aria-label="History"
-      onClick={onClick}
-      onMouseEnter={prefetch}
-      onFocus={prefetch}
-      onPointerDown={prefetch}
-    >
-      <IconHistory size={20} stroke={1.5} />
-    </ActionIcon>
+    </Stack>
   )
 }

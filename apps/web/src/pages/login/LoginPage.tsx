@@ -191,7 +191,7 @@ export function LoginPage(): ReactElement {
         <LegalFooterLinks />
       </Stack>
       <Center visibleFrom="md" mih={420} style={{ flexShrink: 0 }}>
-        <MascotFigure src={MASCOT.standingLg} width={MASCOT_LOGIN_DISPLAY_PX} />
+        <MascotFigure src={MASCOT.standingLg} width={MASCOT_LOGIN_DISPLAY_PX} flip />
       </Center>
     </Group>
   )

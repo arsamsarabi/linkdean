@@ -1,29 +1,12 @@
 import { type ReactElement } from 'react'
-import { Group, Paper, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
+import { Group, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import {
-  IconArrowsExchange,
-  IconBell,
-  IconBolt,
-  IconFolder,
-  IconKey,
-  IconLock,
-  IconSettings,
-  IconShield,
-} from '@tabler/icons-react'
+import { IconArrowsExchange, IconBell, IconBolt, IconKey, IconLock, IconSettings } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import {
-  ApiKeysPanel,
-  CategoryManager,
-  ImportExportPanel,
-  QueryErrorAlert,
-  VaultPanel,
-  VaultPreferencesCard,
-} from '@/components'
+import { ApiKeysPanel, ImportExportPanel, QueryErrorAlert, VaultPanel, VaultPreferencesCard } from '@/components'
 import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
-import { AdminPlatformSettings } from './AdminPlatformSettings'
 import { DeleteAccountCard } from './DeleteAccountCard'
 import { FastCapturePanel } from './FastCapturePanel'
 import { GeneralSettingsPanel } from './GeneralSettingsPanel'
@@ -32,16 +15,7 @@ import classes from './SettingsPage.module.css'
 import { SettingsSkeleton } from './SettingsSkeleton'
 import { VaultAutoLockSettings } from './VaultAutoLockSettings'
 
-const SETTINGS_TABS = [
-  'general',
-  'notifications',
-  'categories',
-  'capture',
-  'import',
-  'vault',
-  'api-keys',
-  'admin',
-] as const
+const SETTINGS_TABS = ['general', 'notifications', 'capture', 'import', 'vault', 'api-keys'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function isSettingsTab(v: unknown): v is SettingsTab {
@@ -53,9 +27,7 @@ export function SettingsPage(): ReactElement {
   const search = useSearch({ strict: false }) as { tab?: string }
   const { setColorScheme } = useMantineColorScheme()
   const me = useMe()
-  const isAdmin = !!me.data?.user.is_admin
-  const requested: SettingsTab = isSettingsTab(search.tab) ? search.tab : 'general'
-  const tab: SettingsTab = requested === 'admin' && !isAdmin ? 'general' : requested
+  const tab: SettingsTab = isSettingsTab(search.tab) ? search.tab : 'general'
   const settings = me.data?.settings
   const save = useUpdateSettings()
   // Sections run down the side on wide screens, and as a scrolling row on phones.
@@ -74,7 +46,6 @@ export function SettingsPage(): ReactElement {
 
   function setTab(next: string | null): void {
     if (!isSettingsTab(next)) return
-    if (next === 'admin' && !isAdmin) return
     void nav({
       to: '/settings',
       search: next === 'general' ? {} : { tab: next },
@@ -106,9 +77,6 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="notifications" leftSection={<IconBell size={16} stroke={1.5} />}>
             Notifications
           </Tabs.Tab>
-          <Tabs.Tab value="categories" leftSection={<IconFolder size={16} stroke={1.5} />}>
-            Categories
-          </Tabs.Tab>
           <Tabs.Tab value="capture" leftSection={<IconBolt size={16} stroke={1.5} />}>
             Fast capture
           </Tabs.Tab>
@@ -121,11 +89,6 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="api-keys" leftSection={<IconKey size={16} stroke={1.5} />}>
             API keys
           </Tabs.Tab>
-          {isAdmin ? (
-            <Tabs.Tab value="admin" leftSection={<IconShield size={16} stroke={1.5} />}>
-              Admin
-            </Tabs.Tab>
-          ) : null}
         </Tabs.List>
 
         <Tabs.Panel value="general">
@@ -137,12 +100,6 @@ export function SettingsPage(): ReactElement {
 
         <Tabs.Panel value="notifications">
           <NotificationEmailsPanel />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="categories">
-          <Paper p="xl" withBorder>
-            <CategoryManager />
-          </Paper>
         </Tabs.Panel>
 
         <Tabs.Panel value="capture">
@@ -182,12 +139,6 @@ export function SettingsPage(): ReactElement {
         <Tabs.Panel value="api-keys">
           <ApiKeysPanel />
         </Tabs.Panel>
-
-        {isAdmin ? (
-          <Tabs.Panel value="admin">
-            <AdminPlatformSettings />
-          </Tabs.Panel>
-        ) : null}
       </Tabs>
     </Stack>
   )

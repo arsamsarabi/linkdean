@@ -4,6 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { ConfirmModal, QueryErrorAlert } from '@/components'
 import { useExposedContent, useModerate, useModerationActions } from '@/hooks'
 import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
+import { SettingsSkeleton } from '@/pages/settings'
 import {
   exposedGroups,
   MAX_BAN_REASON,
@@ -13,7 +14,6 @@ import {
   type ExposedGroup,
   type GroupAction,
 } from '@/services'
-import { SettingsSkeleton } from './SettingsSkeleton'
 
 type Props = {
   user: { id: string; label: string }

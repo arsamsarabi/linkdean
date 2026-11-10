@@ -38,6 +38,17 @@ export function categoryPath(cat: Category, byId: Map<string, Category>): string
   return parts.reverse().join(' / ')
 }
 
+/** Folders whose name holds `query`, any depth, with their full path, sorted by path. */
+export function filterFolders(cats: Category[], query: string): { cat: Category; path: string }[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return []
+  const byId = new Map(cats.map((c) => [c.id, c]))
+  return cats
+    .filter((c) => c.name.toLowerCase().includes(q))
+    .map((cat) => ({ cat, path: categoryPath(cat, byId) }))
+    .sort((a, b) => a.path.localeCompare(b.path))
+}
+
 /** Flat options for MultiSelect — label is nested path. */
 export function categorySelectData(cats: Category[]): CategorySelectOption[] {
   const byId = new Map(cats.map((c) => [c.id, c]))

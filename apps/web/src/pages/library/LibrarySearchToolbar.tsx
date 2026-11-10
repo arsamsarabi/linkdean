@@ -17,6 +17,10 @@ export function LibrarySearchToolbar(): ReactElement {
       <Group justify="space-between" align="stretch" wrap="wrap" gap="sm">
         <TextInput
           ref={searchRef}
+          type="search"
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           placeholder="Search bookmarks…"
           leftSection={<IconSearch {...iconSm} />}
           rightSection={

@@ -22,9 +22,6 @@ function writeNavCollapsed(value: boolean): void {
 type ShellUiState = {
   paletteOpen: boolean
   notifOpen: boolean
-  historyOpen: boolean
-  brokenOpen: boolean
-  dupesOpen: boolean
   navOpen: boolean
   /** Wide screens only: the sidebar is hidden. Remembered across reloads. */
   navCollapsed: boolean
@@ -33,12 +30,6 @@ type ShellUiState = {
   togglePalette: () => void
   openNotif: () => void
   closeNotif: () => void
-  openHistory: () => void
-  closeHistory: () => void
-  openBroken: () => void
-  closeBroken: () => void
-  openDupes: () => void
-  closeDupes: () => void
   toggleNav: () => void
   closeNav: () => void
   toggleNavCollapsed: () => void
@@ -47,9 +38,6 @@ type ShellUiState = {
 export const useShellUi = create<ShellUiState>((set) => ({
   paletteOpen: false,
   notifOpen: false,
-  historyOpen: false,
-  brokenOpen: false,
-  dupesOpen: false,
   navOpen: false,
   navCollapsed: readNavCollapsed(),
   openPalette: () => set({ paletteOpen: true }),
@@ -57,12 +45,6 @@ export const useShellUi = create<ShellUiState>((set) => ({
   togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
   openNotif: () => set({ notifOpen: true }),
   closeNotif: () => set({ notifOpen: false }),
-  openHistory: () => set({ historyOpen: true }),
-  closeHistory: () => set({ historyOpen: false }),
-  openBroken: () => set({ brokenOpen: true }),
-  closeBroken: () => set({ brokenOpen: false }),
-  openDupes: () => set({ dupesOpen: true }),
-  closeDupes: () => set({ dupesOpen: false }),
   toggleNav: () => set((s) => ({ navOpen: !s.navOpen })),
   closeNav: () => set({ navOpen: false }),
   toggleNavCollapsed: () =>

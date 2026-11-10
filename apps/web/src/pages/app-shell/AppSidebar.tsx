@@ -4,18 +4,20 @@ import {
   IconBookmark,
   IconBooks,
   IconCopy,
+  IconFolders,
   IconHistory,
   IconLayoutDashboard,
   IconLinkOff,
   IconLock,
   IconPin,
   IconSettings,
+  IconShield,
   IconStar,
   IconTrash,
   IconUsers,
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { usePrefetchBrokenLinks, useShareInvites } from '@/hooks'
+import { usePrefetchActivity, usePrefetchBrokenLinks, useShareInvites } from '@/hooks'
 import { asStringList, type FlagKey } from '@/lib'
 import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
@@ -34,6 +36,7 @@ type Props = {
   pathname: string
   search: Record<string, unknown>
   vaultUnlocked: boolean
+  isAdmin: boolean
 }
 
 function Group({ label, children }: { label: string; children: ReactNode }): ReactElement {
@@ -51,12 +54,10 @@ function Group({ label, children }: { label: string; children: ReactNode }): Rea
  * Primary navigation. A fixed column on wide screens; on phones the burger slides it in, and
  * any choice closes it again.
  */
-export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactElement {
+export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props): ReactElement {
   const closeNav = useShellUi((s) => s.closeNav)
-  const openBroken = useShellUi((s) => s.openBroken)
-  const openDupes = useShellUi((s) => s.openDupes)
-  const openHistory = useShellUi((s) => s.openHistory)
   const prefetchBroken = usePrefetchBrokenLinks()
+  const prefetchHistory = usePrefetchActivity()
   const invites = useShareInvites()
   const pendingInvites = (invites.data?.invites ?? []).filter((i) => !i.rejected_at).length
 
@@ -64,10 +65,6 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
   const flags = onLibrary ? asStringList(search.flag) : []
   const folder = onLibrary && typeof search.folder === 'string' && search.folder !== 'all' ? search.folder : undefined
   const plainLibrary = onLibrary && flags.length === 0 && !folder
-  const open = (fn: () => void) => () => {
-    closeNav()
-    fn()
-  }
 
   return (
     <>
@@ -137,30 +134,50 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
 
         <Group label="Library health">
           <NavLink
-            component="button"
+            component={Link}
+            activeOptions={EXACT}
+            to="/broken-links"
             label="Broken links"
             leftSection={<IconLinkOff {...iconProps} />}
-            onClick={open(openBroken)}
+            active={pathname === '/broken-links'}
+            onClick={closeNav}
             onMouseEnter={prefetchBroken}
             onFocus={prefetchBroken}
           />
           <NavLink
-            component="button"
+            component={Link}
+            activeOptions={EXACT}
+            to="/duplicates"
             label="Duplicates"
             leftSection={<IconCopy {...iconProps} />}
-            onClick={open(openDupes)}
+            active={pathname === '/duplicates'}
+            onClick={closeNav}
           />
           <NavLink
-            component="button"
+            component={Link}
+            activeOptions={EXACT}
+            to="/history"
             label="History"
             leftSection={<IconHistory {...iconProps} />}
-            onClick={open(openHistory)}
+            active={pathname === '/history'}
+            onClick={closeNav}
+            onMouseEnter={prefetchHistory}
+            onFocus={prefetchHistory}
           />
         </Group>
       </AppShell.Section>
 
       <AppShell.Section py="sm" className={classes.footer}>
         <Stack gap={2}>
+          <NavLink
+            component={Link}
+            activeOptions={EXACT}
+            to="/categories"
+            label="Categories"
+            leftSection={<IconFolders {...iconProps} />}
+            active={pathname === '/categories'}
+            onClick={closeNav}
+          />
           <NavLink
             component={Link}
             activeOptions={EXACT}
@@ -179,6 +196,17 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
             active={pathname === '/settings'}
             onClick={closeNav}
           />
+          {isAdmin ? (
+            <NavLink
+              component={Link}
+              activeOptions={EXACT}
+              to="/admin"
+              label="Admin"
+              leftSection={<IconShield {...iconProps} />}
+              active={pathname === '/admin'}
+              onClick={closeNav}
+            />
+          ) : null}
         </Stack>
       </AppShell.Section>
     </>

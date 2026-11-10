@@ -11,7 +11,7 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { IconFolderFilled, IconSearch, IconX } from '@tabler/icons-react'
-import { filterCategoryIcons, type CategoryIconKey } from '@/lib'
+import { CATEGORY_ICON_OPTIONS, CategoryIcon, filterCategoryIcons, type CategoryIconKey } from '@/lib'
 import styles from './CategoryIconPicker.module.css'
 
 const PAGE_SIZE = 48
@@ -32,6 +32,7 @@ export function CategoryIconPicker({ value, onChange, label = 'Icon' }: Props): 
   }
 
   const filtered = useMemo(() => filterCategoryIcons(query), [query])
+  const selected = value ? CATEGORY_ICON_OPTIONS.find((o) => o.key === value) : undefined
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const pageItems = useMemo(() => {
@@ -45,14 +46,24 @@ export function CategoryIconPicker({ value, onChange, label = 'Icon' }: Props): 
         <Text size="sm" fw={500}>
           {label}
         </Text>
-        {value ? (
-          <ActionIcon variant="subtle" color="gray" size="sm" aria-label="Clear icon" onClick={() => onChange(null)}>
-            <IconX size={14} stroke={1.5} />
-          </ActionIcon>
-        ) : null}
+        <Group gap={6} aria-live="polite">
+          <CategoryIcon icon={value} size={18} stroke={1.5} className={styles.current} aria-hidden />
+          <Text size="xs" c="dimmed">
+            {selected?.label ?? 'Default folder'}
+          </Text>
+          {value ? (
+            <ActionIcon variant="subtle" color="gray" size="sm" aria-label="Clear icon" onClick={() => onChange(null)}>
+              <IconX size={14} stroke={1.5} />
+            </ActionIcon>
+          ) : null}
+        </Group>
       </Group>
 
       <TextInput
+        type="search"
+        autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
         placeholder="Search icons"
         value={query}
         onChange={(e) => search(e.currentTarget.value)}

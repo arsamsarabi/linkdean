@@ -74,11 +74,37 @@ describe('NotificationsDrawer', () => {
     data.invites = [invite]
     const view = render(drawer(true))
     expect(screen.queryByText(inviteRow.body)).toBeNull()
-    expect(screen.queryByText('No notifications yet.')).toBeNull()
+    expect(screen.queryByText("You're all caught up")).toBeNull()
     view.unmount()
 
     data.invites = []
     render(drawer(true))
     expect(screen.getByText(inviteRow.body)).toBeTruthy()
+  })
+
+  it('groups rows by day and marks unread ones', () => {
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    data.rows = [
+      { ...inviteRow, id: 'a', kind: 'social_like', body: 'Ana liked it', created_at: today.toISOString() },
+      {
+        ...inviteRow,
+        id: 'b',
+        kind: 'user_followed',
+        body: 'Bo followed you',
+        created_at: yesterday.toISOString(),
+        read_at: yesterday.toISOString(),
+      },
+    ]
+    render(drawer(true))
+    expect(screen.getByRole('region', { name: 'Today' }).textContent).toContain('Ana liked it')
+    expect(screen.getByRole('region', { name: 'Yesterday' }).textContent).toContain('Bo followed you')
+    expect(screen.getAllByLabelText('Unread')).toHaveLength(1)
+  })
+
+  it('shows an empty state when there is nothing', () => {
+    render(drawer(true))
+    expect(screen.getByText("You're all caught up")).toBeTruthy()
   })
 })

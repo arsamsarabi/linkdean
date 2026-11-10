@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { useHotkeys, useWindowScroll } from '@mantine/hooks'
+import { useHotkeys } from '@mantine/hooks'
 import { useNavigate } from '@tanstack/react-router'
+import { useScrollY } from '@/hooks/render'
 import { buildLibrarySearch, type SortKey } from '@/lib'
 import type { ExplorerFolderId, FlagFilter, SinceFilter } from '@/services'
 import { isModalDialogOpen } from '../render'
@@ -46,7 +47,7 @@ export function useLibraryPageChrome({
 }: Input) {
   const nav = useNavigate()
   const searchRef = useRef<HTMLInputElement>(null)
-  const [scroll] = useWindowScroll()
+  const scrollY = useScrollY()
 
   useHotkeys([
     [
@@ -106,6 +107,6 @@ export function useLibraryPageChrome({
 
   return {
     searchRef,
-    scroll,
+    scrollY,
   }
 }

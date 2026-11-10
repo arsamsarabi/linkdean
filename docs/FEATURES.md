@@ -7,7 +7,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Library
 
 - Nested categories (folders) and tags
-- Optional category icons (large curated Tabler set; picker has search + scroll + pagination)
+- Optional category icons (large curated Tabler set; picker has search + scroll + pagination; the chosen icon is filled and named beside the label)
 - Edit category drawer (name, parent, icon, hidden) from folder menu
 - Bookmarks with title, URL, description, notes
 - Only `http://` and `https://` addresses are saved, on create, edit and import; an address typed without a scheme gets `https://`
@@ -26,11 +26,11 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
 - Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens. Select all asks the server for every id the current filter matches (not only loaded rows)
-- Duplicate detection and merge UI (sidebar → Library health → Duplicates)
-- Broken links in the sidebar's Library health group, opening a drawer where each link can be opened, edited, rechecked or removed (Remove bookmark moves it to Deleted items); red badges on confirmed dead / unreachable cards
+- Duplicate detection and merge page (`/duplicates`, sidebar → Library health → Duplicates)
+- Broken links page (`/broken-links`, sidebar → Library health), where each link can be opened, rechecked or removed (Remove bookmark moves it to Deleted items); red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
 - Reading list (unread), favorites, and pin-to-top; opening a link can mark unread as read
-- Category manager in Settings (explorer + create drawer)
+- Categories page (`/categories`, sidebar footer): the full tree with a name filter beside the chosen category's details, path, badges, subcategories and every action (open in library, edit, new subcategory, share, duplicate, move to vault, likes & comments, delete); `?id=` opens one, and phones show the tree or the details one at a time
 - Command palette (mod+K, from the header search field): add, search, jump category
 - `/` focuses the library search field on the Library and Vaults pages
 
@@ -42,8 +42,8 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Shared-folder visibility in search (owned + readable shared categories)
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot waits a week before the boot backfill retries it)
-- Admin reindex: rebuild Meili from Postgres (Settings → Admin)
-- Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; sidebar Library health entry → drawer + card badges; `POST /bookmarks/{id}/check-link`
+- Admin reindex: rebuild Meili from Postgres (Admin)
+- Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; sidebar Library health entry → page + card badges; `POST /bookmarks/{id}/check-link`
 
 ---
 
@@ -97,6 +97,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Shared activity & social
 
 - In-app notifications: share invite / access change / revoke, shared edits
+- Notifications drawer groups items by day (Today, Yesterday, then the date), gives each kind its own icon and colour, tints unread items with a dot, and shows an "all caught up" state when empty
 - Bell + drawer in the app shell (unread count)
 - Notification emails (needs mail): **Settings → Notifications** has an email switch per kind. Share invites and moderation changes are on by default; access changes, revoked shares, shared edits, likes, comments, ratings and new followers are off. The same block and mute rules apply, and each email links back to that settings tab. With mail off the tab says email needs outbound mail and the switches are disabled
 - Likes, comments, and 1–5 ratings on **shared** bookmarks, lists, and dashboards
@@ -112,7 +113,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Personal activity history
 
 - Per-user create / edit / delete / restore log for bookmarks, lists, and dashboards
-- History drawer, opened from the sidebar's Library health group (filter by subject + action)
+- History page (`/history`), linked from the sidebar's Library health group (filter by subject + action)
 - Distinct from shared-activity notifications; vault bookmark titles redacted
 - API `GET /activity`
 
@@ -135,7 +136,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Email verification (needs mail): a password registration emails a 24-hour, single-use link, and unverified accounts see a banner with **Resend email**. Opening the link verifies the address without signing in. OIDC accounts are verified when the provider reports the address as verified. Accounts that existed before verification shipped count as verified
 - Email change: **Profile → Edit profile → Change email** with the current password sends a link to the new address and a notice to the old one; the address changes only when the link is opened. Not for SSO-only accounts; with mail off it says to ask an admin
 - Admin verification controls: an **Unverified** badge in the accounts list, **Mark verified**, **Remove verification**, and **Change email** applied at once
-- **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate and locks the admin toggle
+- **Require verified email** (Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate and locks the admin toggle
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
 - Delete account (Settings → General): confirm email (and password when the account has one), 7-day grace with cancel, then hard purge of owned data including shared folders; last admin cannot schedule
@@ -144,7 +145,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Terms at sign-up: password sign-up and first-admin setup need a terms checkbox and the API refuses a missing or stale `terms_version`; SSO sign-in needs the checkbox too (`/auth/oidc/start?terms_version=`), and a new SSO account records it. The version and time are stored on the user (`users.terms_version`, `terms_accepted_at`); accounts from before are NULL and are not re-prompted
 - Beta banner on every page (no uptime promise, export regularly), dismissible for the browser session
 - Report abuse (signed-in users): a **Report** control on public lists (`/l/…`, sign-in link when signed out), other people's profiles and other people's comments, with a reason (spam, harassment, illegal, impersonation, other) and optional details. Reporting your own content is refused; a second report of the same target while yours is open returns the first; 10 reports per 15 minutes per user
-- Admin report queue (Settings → Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
+- Admin report queue (Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
 - Abuse contact: admins set an email in the same panel (`platform_settings.abuse_contact_email`); the report form shows it. Terms and Privacy tell people to use Report or that address. Marketing site footer also lists `contact@linkdean.app`
 - Banned users list with bulk unban and bulk change of reason or duration
 - A banned user's public lists stop loading for anyone while the ban lasts, and come back when it ends or is lifted
@@ -188,15 +189,15 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Public beta operations (`deploy/public-beta/`): restic backups to B2 with a scripted restore drill into a throwaway, network-isolated stack ([BACKUP.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/BACKUP.md)); external uptime check list ([MONITORING.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/MONITORING.md)); a sign-up controls check that creates no account (`scripts/check-signup-controls.sh`)
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Structured logs: `LOG_FORMAT=text|json` on stdout (default text); optional `LOG_FILE` appends JSONL; every response has `X-Request-Id` correlated into request log spans
-- Outbound email over SMTP (optional): an outbox with retries, Settings → Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
+- Outbound email over SMTP (optional): an outbox with retries, Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
 - Avatars and preview volumes; backup recipe in [SELF_HOSTED.md](./SELF_HOSTED.md)
 - Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in. On wide screens the header's sidebar button (or ⌘B / Ctrl+B) hides and shows it, remembered per browser
 - Shared page (sidebar → Shared, with a count of invites waiting): accept or decline invites, open folders and dashboards others share with you, and see what you share and with whom; `/?board=<id>` opens a given dashboard
-- Config options: sections (General, Categories, Import / Export, Vault, API keys, Admin) listed down the side on wide screens and as a scrolling row on phones; `?tab=` opens one
+- Config options: sections (General, Notifications, Fast capture, Import / Export, Vault, API keys) listed down the side on wide screens and as a scrolling row on phones; `?tab=` opens one
 - Sidebar Folders section collapses: collapsed it shows Unsorted, then the 3 folders with the latest activity (a bookmark added or changed in them, or the folder itself made or renamed) and the open folder; expanded it shows the whole tree with a filter field (matches at any depth, with their path). The choice is remembered per browser
 - Phone tab bar: Home, Library, Add (into the open folder), Search (command palette) and Me; the burger keeps the full sidebar
 - An open folder titles the library page, with a breadcrumb back to the whole library (Unsorted included); an empty folder offers Add bookmark here
-- The page, drawers and modals keep their scrollbar space reserved, so content does not shift sideways when a scrollbar appears or a panel opens
+- On systems whose scrollbars take up space, the page, drawers and modals scroll under a thin overlay scrollbar instead, so there is no empty gutter and content does not shift sideways when a scrollbar appears or a panel opens
 - Header search field opens the command palette (which can also add a bookmark); the library page's Add bookmark button, the phone tab bar's Add and paste-to-add open the new-bookmark form
 - Editing a shared bookmark: the side panel has Details and Discussion tabs, so likes, rating and comments sit next to the edit form (the card menu's Likes & comments still opens them on their own)
 - Paste a web address anywhere outside a text field to open the new-bookmark form with it filled in (in the open folder when on the library)
