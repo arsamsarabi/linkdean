@@ -7,7 +7,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Library
 
 - Nested categories (folders) and tags
-- Optional category icons (large curated Tabler set; picker has search + scroll + pagination)
+- Optional category icons (large curated Tabler set; picker has search + scroll + pagination; the chosen icon is filled and named beside the label)
 - Edit category drawer (name, parent, icon, hidden) from folder menu
 - Bookmarks with title, URL, description, notes
 - Only `http://` and `https://` addresses are saved, on create, edit and import; an address typed without a scheme gets `https://`

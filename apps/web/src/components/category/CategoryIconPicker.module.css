@@ -22,8 +22,14 @@
   border-color: var(--mantine-color-violet-4);
 }
 
-.selected {
-  color: var(--mantine-color-violet-filled);
+.selected,
+.selected:hover {
+  color: var(--mantine-color-white);
   border-color: var(--mantine-color-violet-filled);
-  background: var(--mantine-color-violet-light);
+  background: var(--mantine-color-violet-filled);
+  box-shadow: 0 0 0 2px var(--mantine-color-violet-light);
+}
+
+.current {
+  color: var(--mantine-color-violet-filled);
 }

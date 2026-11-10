@@ -1,3 +1,8 @@
+// Mantine's styles must load before any component CSS module, or its resets win ties.
+import '@mantine/core/styles.css'
+import '@mantine/notifications/styles.css'
+import '@/styles/fonts.css'
+import '@/styles/styles.css'
 import React from 'react'
 import { MantineProvider } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
@@ -8,10 +13,6 @@ import { registerSW } from 'virtual:pwa-register'
 import { dropLegacyToken } from '@/lib'
 import { routeTree } from '@/routeTree.gen'
 import { linkdeanCssVariables, linkdeanTheme } from '@/styles'
-import '@mantine/core/styles.css'
-import '@mantine/notifications/styles.css'
-import '@/styles/fonts.css'
-import '@/styles/styles.css'
 
 // Older versions kept the session token in localStorage; the cookie is enough now.
 dropLegacyToken()
