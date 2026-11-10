@@ -21,6 +21,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppBrokenLinksRouteImport } from './routes/_app/broken-links'
 import { Route as AppDuplicatesRouteImport } from './routes/_app/duplicates'
 import { Route as AppHistoryRouteImport } from './routes/_app/history'
@@ -94,6 +95,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBrokenLinksRoute = AppBrokenLinksRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AppAdminRoute
   '/broken-links': typeof AppBrokenLinksRoute
   '/duplicates': typeof AppDuplicatesRoute
   '/history': typeof AppHistoryRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AppAdminRoute
   '/broken-links': typeof AppBrokenLinksRoute
   '/duplicates': typeof AppDuplicatesRoute
   '/history': typeof AppHistoryRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/broken-links': typeof AppBrokenLinksRoute
   '/_app/duplicates': typeof AppDuplicatesRoute
   '/_app/history': typeof AppHistoryRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/verify-email'
+    | '/admin'
     | '/broken-links'
     | '/duplicates'
     | '/history'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/verify-email'
+    | '/admin'
     | '/broken-links'
     | '/duplicates'
     | '/history'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/verify-email'
+    | '/_app/admin'
     | '/_app/broken-links'
     | '/_app/duplicates'
     | '/_app/history'
@@ -447,6 +459,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/broken-links': {
       id: '/_app/broken-links'
       path: '/broken-links'
@@ -556,6 +575,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppBrokenLinksRoute: typeof AppBrokenLinksRoute
   AppDuplicatesRoute: typeof AppDuplicatesRoute
   AppHistoryRoute: typeof AppHistoryRoute
@@ -574,6 +594,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppBrokenLinksRoute: AppBrokenLinksRoute,
   AppDuplicatesRoute: AppDuplicatesRoute,
   AppHistoryRoute: AppHistoryRoute,

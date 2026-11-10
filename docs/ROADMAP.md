@@ -22,7 +22,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 6. **Legal pages and beta notice** (S). **Done:** draft Terms, Privacy and Acceptable Use pages (`/terms`, `/privacy`, `/acceptable-use`), required terms checkbox at sign-up and for SSO start (version + time stored on new accounts), and a dismissible beta banner. Remaining: counsel review of the copy before charging money; re-accept flow when `TERMS_VERSION` bumps.
 
-7. **Report abuse** (M). **Done:** signed-in users can **Report** a public list, a profile or a comment with a reason; admins work the queue under Settings → Admin (dismiss, hide content, warn, ban); the operator's abuse contact email is an admin setting shown in the report form; marketing footer lists `contact@linkdean.app`. Remaining: anonymous reports (out of scope for spam control).
+7. **Report abuse** (M). **Done:** signed-in users can **Report** a public list, a profile or a comment with a reason; admins work the queue under Admin (dismiss, hide content, warn, ban); the operator's abuse contact email is an admin setting shown in the report form; marketing footer lists `contact@linkdean.app`. Remaining: anonymous reports (out of scope for spam control).
 
 8. **Final UI/UX and mobile pass** (L). **Done:** mascot (Dean) on moment empty states, 404, onboarding and the wide sign-in panel; drawers full-width on phones; tighter shell padding and scrollable Deleted table; light polish on dashboard empty copy and glance density. Remaining: welcome-email avatar badge when a welcome template exists (security emails stay plain); deeper visual redesign stays out of scope for beta.
 

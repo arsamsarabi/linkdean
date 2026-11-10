@@ -42,7 +42,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Shared-folder visibility in search (owned + readable shared categories)
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot waits a week before the boot backfill retries it)
-- Admin reindex: rebuild Meili from Postgres (Settings → Admin)
+- Admin reindex: rebuild Meili from Postgres (Admin)
 - Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; sidebar Library health entry → page + card badges; `POST /bookmarks/{id}/check-link`
 
 ---
@@ -135,7 +135,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Email verification (needs mail): a password registration emails a 24-hour, single-use link, and unverified accounts see a banner with **Resend email**. Opening the link verifies the address without signing in. OIDC accounts are verified when the provider reports the address as verified. Accounts that existed before verification shipped count as verified
 - Email change: **Profile → Edit profile → Change email** with the current password sends a link to the new address and a notice to the old one; the address changes only when the link is opened. Not for SSO-only accounts; with mail off it says to ask an admin
 - Admin verification controls: an **Unverified** badge in the accounts list, **Mark verified**, **Remove verification**, and **Change email** applied at once
-- **Require verified email** (Settings → Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate and locks the admin toggle
+- **Require verified email** (Admin, needs mail): unverified accounts can only verify or sign out until they do. Admins are never held. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate and locks the admin toggle
 - Admin accounts list: promote / demote admin (last admin protected), per-user API-keys gate
 - Session auth; multi-device via server account
 - Delete account (Settings → General): confirm email (and password when the account has one), 7-day grace with cancel, then hard purge of owned data including shared folders; last admin cannot schedule
@@ -144,7 +144,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Terms at sign-up: password sign-up and first-admin setup need a terms checkbox and the API refuses a missing or stale `terms_version`; SSO sign-in needs the checkbox too (`/auth/oidc/start?terms_version=`), and a new SSO account records it. The version and time are stored on the user (`users.terms_version`, `terms_accepted_at`); accounts from before are NULL and are not re-prompted
 - Beta banner on every page (no uptime promise, export regularly), dismissible for the browser session
 - Report abuse (signed-in users): a **Report** control on public lists (`/l/…`, sign-in link when signed out), other people's profiles and other people's comments, with a reason (spam, harassment, illegal, impersonation, other) and optional details. Reporting your own content is refused; a second report of the same target while yours is open returns the first; 10 reports per 15 minutes per user
-- Admin report queue (Settings → Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
+- Admin report queue (Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
 - Abuse contact: admins set an email in the same panel (`platform_settings.abuse_contact_email`); the report form shows it. Terms and Privacy tell people to use Report or that address. Marketing site footer also lists `contact@linkdean.app`
 - Banned users list with bulk unban and bulk change of reason or duration
 - A banned user's public lists stop loading for anyone while the ban lasts, and come back when it ends or is lifted
@@ -188,7 +188,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Public beta operations (`deploy/public-beta/`): restic backups to B2 with a scripted restore drill into a throwaway, network-isolated stack ([BACKUP.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/BACKUP.md)); external uptime check list ([MONITORING.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/MONITORING.md)); a sign-up controls check that creates no account (`scripts/check-signup-controls.sh`)
 - Prometheus scrape: `GET /api/metrics` (HTTP counters / latency histograms by route template + process metrics), behind `METRICS_TOKEN`
 - Structured logs: `LOG_FORMAT=text|json` on stdout (default text); optional `LOG_FILE` appends JSONL; every response has `X-Request-Id` correlated into request log spans
-- Outbound email over SMTP (optional): an outbox with retries, Settings → Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
+- Outbound email over SMTP (optional): an outbox with retries, Admin → Email with status, delivery counts and a test send; Mailpit catches dev email and `/api/dev/emails` previews templates
 - Avatars and preview volumes; backup recipe in [SELF_HOSTED.md](./SELF_HOSTED.md)
 - Sidebar navigation (Dashboard, Library, Vaults, quick views, the folder tree with Unsorted, Library health, Deleted items, settings); on phones the burger slides it in. On wide screens the header's sidebar button (or ⌘B / Ctrl+B) hides and shows it, remembered per browser
 - Shared page (sidebar → Shared, with a count of invites waiting): accept or decline invites, open folders and dashboards others share with you, and see what you share and with whom; `/?board=<id>` opens a given dashboard

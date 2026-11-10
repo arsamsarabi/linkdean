@@ -486,4 +486,4 @@ Migrations run when the new API starts. Read the release notes for steps a relea
 
 ## Data
 
-Four named volumes hold everything: `pgdata` (Postgres), `meili` (search index, which can be rebuilt from **Settings → Admin → Reindex search**), `avatars` and `previews`. Back up `pgdata`, `avatars` and `previews`. `docker compose down` keeps them; `docker compose down -v` deletes them.
+Four named volumes hold everything: `pgdata` (Postgres), `meili` (search index, which can be rebuilt from **Admin → Reindex search**), `avatars` and `previews`. Back up `pgdata`, `avatars` and `previews`. `docker compose down` keeps them; `docker compose down -v` deletes them.

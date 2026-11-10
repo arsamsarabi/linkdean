@@ -92,7 +92,7 @@ export function AppShell(): ReactElement {
       </MantineAppShell.Header>
 
       <MantineAppShell.Navbar aria-label="Main">
-        <AppSidebar pathname={pathname} search={search} vaultUnlocked={vaultUnlocked} />
+        <AppSidebar pathname={pathname} search={search} vaultUnlocked={vaultUnlocked} isAdmin={!!user?.is_admin} />
       </MantineAppShell.Navbar>
 
       <MantineAppShell.Main>

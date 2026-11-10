@@ -40,7 +40,9 @@ beforeAll(() => {
   )
 })
 
-function renderSidebar(opts: { vaultUnlocked?: boolean; pathname?: string; search?: Record<string, unknown> } = {}) {
+function renderSidebar(
+  opts: { vaultUnlocked?: boolean; isAdmin?: boolean; pathname?: string; search?: Record<string, unknown> } = {}
+) {
   return render(
     <MantineProvider env="test">
       <AppShell navbar={{ width: 248, breakpoint: 'sm' }}>
@@ -49,6 +51,7 @@ function renderSidebar(opts: { vaultUnlocked?: boolean; pathname?: string; searc
             pathname={opts.pathname ?? '/'}
             search={opts.search ?? {}}
             vaultUnlocked={opts.vaultUnlocked ?? false}
+            isAdmin={opts.isAdmin ?? false}
           />
         </AppShell.Navbar>
       </AppShell>
@@ -108,6 +111,14 @@ describe('AppSidebar', () => {
     renderSidebar()
     expect(screen.getByRole('link', { name: 'Deleted items' }).getAttribute('href')).toBe('/trash')
     expect(screen.getByRole('link', { name: 'Config options' }).getAttribute('href')).toBe('/settings')
+  })
+
+  it('links Admin for admins only', () => {
+    renderSidebar()
+    expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()
+    cleanup()
+    renderSidebar({ isAdmin: true })
+    expect(screen.getByRole('link', { name: 'Admin' }).getAttribute('href')).toBe('/admin')
   })
 
   it('links Shared, with the number of invites waiting', () => {

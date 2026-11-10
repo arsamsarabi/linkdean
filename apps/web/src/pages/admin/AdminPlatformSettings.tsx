@@ -4,12 +4,12 @@ import { notifications } from '@mantine/notifications'
 import { IconRefresh } from '@tabler/icons-react'
 import { QueryErrorAlert, TwoColumnLayout } from '@/components'
 import { useBootstrap, usePlatformSettings, useReindexSearch, useUpdatePlatformSettings } from '@/hooks'
+import { SettingsSkeleton } from '@/pages/settings'
 import { AdminEmailPanel } from './AdminEmailPanel'
 import { AdminInvitesPanel } from './AdminInvitesPanel'
 import { AdminReportsPanel } from './AdminReportsPanel'
 import { AdminUsersPanel } from './AdminUsersPanel'
 import { BannedUsersPanel } from './BannedUsersPanel'
-import { SettingsSkeleton } from './SettingsSkeleton'
 
 function QuotaNumberInput({
   label,

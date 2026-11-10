@@ -51,7 +51,7 @@ Set `BOOTSTRAP_TOKEN` to a long random string (`openssl rand -hex 32`) to requir
 
 ### Per-user quotas
 
-Under **Settings → Admin**, optional caps apply to every account (leave blank for unlimited):
+Under **Admin**, optional caps apply to every account (leave blank for unlimited):
 
 - Max bookmarks (owned, not deleted). An import that would exceed the cap is refused entirely.
 - Max stored image bytes (avatar + preview/favicon/OG files on disk).
@@ -146,7 +146,7 @@ Examples:
 - **Fastmail:** `SMTP_HOST=smtp.fastmail.com`, `SMTP_TLS=tls` (port `465`), with an app password.
 - **Postmark:** `SMTP_HOST=smtp.postmarkapp.com`, port `587`. `SMTP_USERNAME` and `SMTP_PASSWORD` are both the server API token, and the `MAIL_FROM` address needs a verified sender signature.
 
-Check it works: **Settings → Admin → Email → Send test email**. The panel shows the settings in use (never the username or password), sent, queued and failed counts for the last 24 hours, and the latest error. The test goes straight to SMTP, skipping the queue, to the admin's own address, and shows the server's answer. Each admin can send 5 tests per 15 minutes.
+Check it works: **Admin → Email → Send test email**. The panel shows the settings in use (never the username or password), sent, queued and failed counts for the last 24 hours, and the latest error. The test goes straight to SMTP, skipping the queue, to the admin's own address, and shows the server's answer. Each admin can send 5 tests per 15 minutes.
 
 Delivery:
 
@@ -160,7 +160,7 @@ SPF, DKIM and DMARC are set up with your mail provider and DNS, not in Linkdean.
 Password reset:
 
 - With mail on, the login page links to **Forgot password?**. The emailed link works once, for 30 minutes. Links are built from `APP_URL`, so set it to the address people open Linkdean at.
-- With mail off, the login page tells people to ask an admin. An admin opens **Settings → Admin → Accounts**, picks the user and chooses **Reset link**. The link is shown once, works once, for 24 hours, and must be sent privately: anyone with it can set the password. With mail on, the user is also told by email that an admin made one.
+- With mail off, the login page tells people to ask an admin. An admin opens **Admin → Accounts**, picks the user and chooses **Reset link**. The link is shown once, works once, for 24 hours, and must be sent privately: anyone with it can set the password. With mail on, the user is also told by email that an admin made one.
 - A new link voids the previous one, and so does a normal password change. A reset ends every session, signs in the browser that reset, and leaves every vault locked; vault passphrases do not change.
 - Accounts that sign in only with OIDC have no password to reset. They get an email saying so, and the admin link is refused for them.
 - Each email address can request 3 links per 15 minutes, and each client IP 10. Each client IP can try 10 links per 15 minutes.
@@ -172,12 +172,12 @@ Email verification:
 - A folder or dashboard share to an unverified account does not reach it. The invite waits for the address and attaches when the account verifies, after which the account still accepts it as usual.
 - With mail off, new accounts stay unverified, there is no banner, and invites to them wait as pending invites. The invite's claim link still works, now also while signed in, when the signed-in account's address matches the invite. An admin can also mark the account verified.
 - People change their own address under **Profile → Edit profile → Change email**, with their current password. The link goes to the new address and the old one gets a notice; the address only changes when the link is opened. Accounts that sign in only with OIDC cannot change it here. With mail off the option says to ask an admin.
-- **Settings → Admin → Accounts** has **Mark verified**, **Remove verification** and **Change email** for each account. An admin email change applies at once and counts as verified. Removing verification keeps shares already accepted; only new invites wait.
-- **Require verified email** under **Settings → Admin** holds unverified accounts at a verify screen with **Resend email** and **Sign out**, and the API answers `403` with `{"code":"email_unverified"}` on every route outside `/api/auth/`. It can only be turned on while mail is on, and it never applies to admins, so it cannot lock everyone out. If you turn mail off while it is on, the gate stops applying until mail is back. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate (OR with the setting) and shows the toggle on and disabled.
+- **Admin → Accounts** has **Mark verified**, **Remove verification** and **Change email** for each account. An admin email change applies at once and counts as verified. Removing verification keeps shares already accepted; only new invites wait.
+- **Require verified email** under **Admin** holds unverified accounts at a verify screen with **Resend email** and **Sign out**, and the API answers `403` with `{"code":"email_unverified"}` on every route outside `/api/auth/`. It can only be turned on while mail is on, and it never applies to admins, so it cannot lock everyone out. If you turn mail off while it is on, the gate stops applying until mail is back. Host env `REQUIRE_VERIFIED_EMAIL=true` forces the same gate (OR with the setting) and shows the toggle on and disabled.
 - **Turnstile** (`TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`, both or neither): password registration shows Cloudflare Turnstile and the API verifies the token; OIDC is unchanged. Unset, registration works as before.
 - **Disposable emails** (`BLOCK_DISPOSABLE_EMAILS=true`): registration and email-change refuse addresses on an embedded throwaway-domain list with `400` "Use a lasting email address."
 - Each account can send 3 verification or email change emails per 15 minutes, and each client IP 10. Each client IP can try 10 verification or email change links per 15 minutes.
-- **Upgrading:** every account that exists when you upgrade counts as verified (migration `042`). If you do not trust an account's address, remove its verification under **Settings → Admin → Accounts**.
+- **Upgrading:** every account that exists when you upgrade counts as verified (migration `042`). If you do not trust an account's address, remove its verification under **Admin → Accounts**.
 
 Share invites and notifications:
 
@@ -194,7 +194,7 @@ Accounts are matched to the identity provider by issuer and subject, never by em
 - The waiting link lives on the server for 10 minutes and is tied to the browser by an HttpOnly cookie (`linkdean_oidc_link`); nothing identifying goes in the URL. It is used up by the next password sign-in in that browser, whether or not it linked. Nothing links when the password is wrong, the link expired, or the password belongs to a different account than the one holding the provider's address. The usual login limits apply.
 - The account's address gets a "Single sign-on was connected" email (when mail is on), so a link nobody expected can be undone by resetting the password and telling the admin.
 - Linking marks the account verified only when the provider reports that same address as verified.
-- If the person does not know the account's password, the page says to ask the admin. An admin can reset that account's password, or change its address under **Settings → Admin → Accounts → Change email**, which frees the address for a normal single sign-on.
+- If the person does not know the account's password, the page says to ask the admin. An admin can reset that account's password, or change its address under **Admin → Accounts → Change email**, which frees the address for a normal single sign-on.
 - An account that signs in only with OIDC, or that is already connected to a different identity, is not linked: the login page says why.
 
 Signed-in people manage it under **Profile → Edit profile → Single sign-on** (shown when OIDC is configured):
@@ -205,7 +205,7 @@ Signed-in people manage it under **Profile → Edit profile → Single sign-on**
 
 ### API clients
 
-The browser extension (`apps/extension`) signs in to any instance: people type its address in the extension, approve it on `/connect/extension`, and the extension gets an API key. That needs API keys enabled, platform-wide and for the account (**Settings → Admin**). The extension asks the browser for access to the instance's host only. Self-hosted instances must be served over `https://`; plain `http://` works only for `localhost`.
+The browser extension (`apps/extension`) signs in to any instance: people type its address in the extension, approve it on `/connect/extension`, and the extension gets an API key. That needs API keys enabled, platform-wide and for the account (**Admin**). The extension asks the browser for access to the instance's host only. Self-hosted instances must be served over `https://`; plain `http://` works only for `localhost`.
 
 `PATCH` bodies distinguish a missing field from `null`:
 
@@ -226,7 +226,7 @@ Earlier builds ran as root with a default database password. Before upgrading pa
    ```
 
    The API refuses the old `linkdean:linkdean` login, so skipping this step stops it at startup.
-2. **Meilisearch key.** A new `MEILI_MASTER_KEY` takes effect when Meilisearch restarts. If search is empty afterwards, run **Settings → Admin → Reindex search**.
+2. **Meilisearch key.** A new `MEILI_MASTER_KEY` takes effect when Meilisearch restarts. If search is empty afterwards, run **Admin → Reindex search**.
 3. **Volume ownership.** Files written by the old root container stay owned by root, and the new UID 10001 process cannot write them. Fix once:
 
    ```bash
@@ -294,4 +294,4 @@ docker run --rm \
   tar czf /out/linkdean-files-$(date +%F).tgz -C / avatars previews
 ```
 
-Restore Postgres with `pg_restore` into a fresh DB, restore Meili dump per [Meilisearch dump docs](https://www.meilisearch.com/docs/learn/dump), then extract the files tarball back onto the named volumes and run the `chown` from [Upgrading](#upgrading-an-existing-install) step 3 if the tarball was made as root. After restore, use **Settings → Admin → Reindex search** if the Meili dump was skipped.
+Restore Postgres with `pg_restore` into a fresh DB, restore Meili dump per [Meilisearch dump docs](https://www.meilisearch.com/docs/learn/dump), then extract the files tarball back onto the named volumes and run the `chown` from [Upgrading](#upgrading-an-existing-install) step 3 if the tarball was made as root. After restore, use **Admin → Reindex search** if the Meili dump was skipped.

@@ -10,6 +10,7 @@ import {
   IconLock,
   IconPin,
   IconSettings,
+  IconShield,
   IconStar,
   IconTrash,
   IconUsers,
@@ -34,6 +35,7 @@ type Props = {
   pathname: string
   search: Record<string, unknown>
   vaultUnlocked: boolean
+  isAdmin: boolean
 }
 
 function Group({ label, children }: { label: string; children: ReactNode }): ReactElement {
@@ -51,7 +53,7 @@ function Group({ label, children }: { label: string; children: ReactNode }): Rea
  * Primary navigation. A fixed column on wide screens; on phones the burger slides it in, and
  * any choice closes it again.
  */
-export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactElement {
+export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props): ReactElement {
   const closeNav = useShellUi((s) => s.closeNav)
   const prefetchBroken = usePrefetchBrokenLinks()
   const prefetchHistory = usePrefetchActivity()
@@ -184,6 +186,17 @@ export function AppSidebar({ pathname, search, vaultUnlocked }: Props): ReactEle
             active={pathname === '/settings'}
             onClick={closeNav}
           />
+          {isAdmin ? (
+            <NavLink
+              component={Link}
+              activeOptions={EXACT}
+              to="/admin"
+              label="Admin"
+              leftSection={<IconShield {...iconProps} />}
+              active={pathname === '/admin'}
+              onClick={closeNav}
+            />
+          ) : null}
         </Stack>
       </AppShell.Section>
     </>

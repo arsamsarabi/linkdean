@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { IconCopy, IconTicket } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
 import { useCreateRegistrationInvite, useRegistrationInvites, useRevokeRegistrationInvite } from '@/hooks'
-import { SettingsSkeleton } from './SettingsSkeleton'
+import { SettingsSkeleton } from '@/pages/settings'
 
 export function AdminInvitesPanel(): ReactElement {
   const invites = useRegistrationInvites(true)
