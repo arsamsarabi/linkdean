@@ -3,6 +3,8 @@ import { defineConfig } from 'wxt'
 // One codebase for Chrome (and Edge) and Firefox, Manifest V3 for both.
 export default defineConfig({
   srcDir: 'src',
+  // The AMO source upload needs the code and build files only, not the store images.
+  zip: { excludeSources: ['store/**'] },
   // Firefox defaults to Manifest V2 in WXT; V3 keeps the optional site permission and matches Chrome.
   manifestVersion: 3,
   modules: ['@wxt-dev/module-react'],

@@ -26,10 +26,10 @@ An unpacked Chrome build gets an extension ID from its folder path, so its addre
 ## Check
 
 ```bash
-pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm build:firefox
+pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm build:firefox && pnpm lint:firefox
 ```
 
-CI runs the same on every push.
+CI runs the same on every push. `lint:firefox` is Mozilla's add-on linter, the checks AMO runs on upload.
 
 ## Release
 
@@ -39,6 +39,8 @@ pnpm zip:firefox    # the Firefox zip and the sources zip AMO asks for
 ```
 
 Bump `version` in `package.json` first; the stores refuse a version they already have.
+
+Listing text, permission justifications, privacy answers, reviewer notes and images for both stores: [store/README.md](store/README.md).
 
 ## Building from source (for addons.mozilla.org review)
 

@@ -120,6 +120,8 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm build:firefox
+      # Mozilla's add-on linter, the same checks AMO runs on upload. Fails on errors only.
+      - run: pnpm lint:firefox
 
   docs-site:
     name: Docs site (Docusaurus build)

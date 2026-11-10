@@ -1,0 +1,264 @@
+<!doctype html>
+<!-- Store screenshot frame: a drawn browser with the real popup (store/render/render.sh). -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+      body {
+        background: linear-gradient(140deg, #8458b3 0%, #6b3f9c 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 48px;
+        padding: 0 56px;
+        color: #fff;
+      }
+      .copy {
+        width: 380px;
+        flex: none;
+      }
+      .copy img {
+        height: 76px;
+        margin: 0 0 36px -10px;
+      }
+      h1 {
+        font-size: 42px;
+        line-height: 1.12;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+        margin-bottom: 18px;
+      }
+      p {
+        font-size: 19px;
+        line-height: 1.5;
+        color: #e5eaf5;
+      }
+      .win {
+        flex: 1;
+        height: 640px;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(20, 8, 40, 0.35);
+        position: relative;
+        overflow: hidden;
+        color: #1a1618;
+      }
+      .bar {
+        height: 52px;
+        background: #f1f0f4;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 16px;
+        border-bottom: 1px solid #e2dfe8;
+      }
+      .dots {
+        display: flex;
+        gap: 7px;
+      }
+      .dots i {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #d6d2dc;
+        display: block;
+      }
+      .addr {
+        flex: 1;
+        height: 32px;
+        border-radius: 16px;
+        background: #fff;
+        border: 1px solid #e2dfe8;
+        font-size: 14px;
+        color: #5d5763;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: #e5eaf5;
+        position: relative;
+      }
+      .btn img {
+        width: 20px;
+        height: 20px;
+      }
+      .btn b {
+        position: absolute;
+        right: -3px;
+        bottom: -3px;
+        background: #2f9e44;
+        color: #fff;
+        font-size: 10px;
+        border-radius: 6px;
+        padding: 0 4px;
+        line-height: 15px;
+      }
+      .page {
+        padding: 40px 48px;
+      }
+      .page small {
+        font-size: 13px;
+        color: #8458b3;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .page h2 {
+        font-size: 30px;
+        margin: 10px 0 18px;
+        letter-spacing: -0.01em;
+        width: 330px;
+      }
+      .page .t {
+        font-size: 15px;
+        line-height: 1.7;
+        color: #4a4450;
+        width: 300px;
+        margin-bottom: 14px;
+      }
+      .page mark {
+        background: #a0d2eb;
+        color: #1a1618;
+      }
+      .pop {
+        position: absolute;
+        top: 58px;
+        right: 12px;
+        width: 380px;
+        border-radius: 10px;
+        box-shadow: 0 10px 34px rgba(26, 22, 24, 0.22);
+        border: 1px solid #e2dfe8;
+        overflow: hidden;
+        background: #fff;
+      }
+      .pop iframe {
+        width: 380px;
+        height: 420px;
+        border: 0;
+        display: block;
+      }
+      .menu {
+        position: absolute;
+        top: 236px;
+        left: 250px;
+        width: 300px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(26, 22, 24, 0.22);
+        border: 1px solid #e2dfe8;
+        padding: 6px 0;
+        font-size: 14px;
+      }
+      .menu div {
+        padding: 7px 16px;
+        color: #3a343f;
+      }
+      .menu hr {
+        border: 0;
+        border-top: 1px solid #ece9f0;
+        margin: 5px 0;
+      }
+      .menu .on {
+        background: #e5eaf5;
+        color: #1a1618;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .menu .on img {
+        width: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="copy">
+      <img src="linkdean-horizontal-white.svg" alt="Linkdean" />
+      <h1 id="h"></h1>
+      <p id="p"></p>
+    </div>
+    <div class="win">
+      <div class="bar">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="addr">fieldnotes.example/designing-calm-interfaces</div>
+        <div class="btn"><img src="icon32.png" alt="" /><b id="badge" hidden>✓</b></div>
+      </div>
+      <div class="page">
+        <small>Field Notes · Essay</small>
+        <h2>Designing calm interfaces</h2>
+        <div class="t" id="sel">
+          Most software competes for attention.
+          <mark>Calm software asks for attention only when it matters, and gives it back the moment it is done.</mark>
+        </div>
+        <div class="t">
+          That changes what we build: fewer alerts, defaults that are already right, and screens that say one thing at a
+          time.
+        </div>
+        <div class="t">A calm tool feels finished before you have to think about it.</div>
+      </div>
+      <div class="pop" id="pop"><iframe id="f"></iframe></div>
+    </div>
+    <script>
+      const q = new URLSearchParams(location.search)
+      const s = q.get('s') || 'save'
+      const text = {
+        save: [
+          'Save any page in two clicks',
+          'Title, the text you selected, your last folder and tags, filled in for you. Save, or drop it in Unsorted to file later.',
+        ],
+        saved: [
+          'Knows what you already saved',
+          'Open a page that is already in your library and Linkdean takes you to it, instead of saving a second copy.',
+        ],
+        signin: [
+          'Your Linkdean, or your own',
+          'Sign in to linkdean.app or a self-hosted Linkdean. The extension gets its own key, which you can revoke at any time.',
+        ],
+        menu: [
+          'Right-click to save to Unsorted',
+          'Save the page or any link without opening anything. A check on the toolbar button says it is in.',
+        ],
+      }[s]
+      document.getElementById('h').textContent = text[0]
+      document.getElementById('p').textContent = text[1]
+      if (s !== 'save') document.querySelector('#sel mark').outerHTML = document.querySelector('#sel mark').textContent
+      if (s === 'menu') {
+        document.getElementById('pop').remove()
+        document.getElementById('badge').hidden = false
+        document
+          .querySelector('.win')
+          .insertAdjacentHTML(
+            'beforeend',
+            '<div class="menu"><div>Back</div><div>Reload</div><hr><div>Save as…</div><div>Print…</div><hr><div class="on"><img src="icon32.png" alt="">Save page to Linkdean (Unsorted)</div><hr><div>Inspect</div></div>'
+          )
+      } else {
+        const f = document.getElementById('f')
+        f.src = '/ext/popup.html?s=' + s
+        const fit = () => {
+          try {
+            const h = f.contentDocument.getElementById('root').scrollHeight
+            if (h) f.style.height = h + 'px'
+          } catch {}
+        }
+        setInterval(fit, 100)
+      }
+    </script>
+  </body>
+</html>
