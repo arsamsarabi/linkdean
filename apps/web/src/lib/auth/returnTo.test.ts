@@ -10,9 +10,15 @@ describe('return after sign-in', () => {
     expect(takeReturnTo()).toBeNull()
   })
 
+  it('keeps the extension sign-in too', () => {
+    rememberReturnTo('/connect/extension?state=x')
+    expect(takeReturnTo()).toBe('/connect/extension?state=x')
+  })
+
   it('ignores every other page', () => {
     rememberReturnTo('/settings')
     rememberReturnTo('/saved-searches')
+    rememberReturnTo('/connect/extensions')
     rememberReturnTo('https://evil.example/save')
     expect(takeReturnTo()).toBeNull()
   })

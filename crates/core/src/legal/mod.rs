@@ -3,7 +3,7 @@
 
 use crate::{Error, Result};
 
-pub const TERMS_VERSION: &str = "2026-11-06";
+pub const TERMS_VERSION: &str = "2026-11-10";
 
 /// Accepts only the current terms version. `None` and stale versions are a `BadRequest`.
 pub fn require_current_terms(version: Option<&str>) -> Result<()> {

@@ -205,6 +205,8 @@ Signed-in people manage it under **Profile → Edit profile → Single sign-on**
 
 ### API clients
 
+The browser extension (`apps/extension`) signs in to any instance: people type its address in the extension, approve it on `/connect/extension`, and the extension gets an API key. That needs API keys enabled, platform-wide and for the account (**Settings → Admin**). The extension asks the browser for access to the instance's host only. Self-hosted instances must be served over `https://`; plain `http://` works only for `localhost`.
+
 `PATCH` bodies distinguish a missing field from `null`:
 
 - Field omitted → left unchanged.

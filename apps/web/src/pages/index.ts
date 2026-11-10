@@ -1,5 +1,6 @@
 export * from './app-shell'
 export * from './banned'
+export * from './connect-extension'
 export * from './dashboard'
 export * from './legal'
 export * from './library'

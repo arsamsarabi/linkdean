@@ -1,6 +1,21 @@
 # Saving pages fast
 
-Three ways to save the page you are on without opening Linkdean and pasting a link. All of them end on the quick save form (`/save`): the address and title are filled in, the page's description and keyword tags are fetched when no title came along, and the folder you used last is already picked. **Save to Unsorted** saves in one tap so you can file it later. A page that is already in your library opens that bookmark instead of saving a second copy.
+Four ways to save the page you are on without opening Linkdean and pasting a link. All of them end on the quick save form (`/save`): the address and title are filled in, the page's description and keyword tags are fetched when no title came along, and the folder you used last is already picked. **Save to Unsorted** saves in one tap so you can file it later. A page that is already in your library opens that bookmark instead of saving a second copy.
+
+## Browser extension (Chrome, Edge, Firefox)
+
+Not in the browser stores yet; until it is, build it from `apps/extension` and load it unpacked (its README says how).
+
+1. Click the Linkdean button in the toolbar and choose **Sign in**. Keep `app.linkdean.app`, or type the address of your own Linkdean.
+2. Allow the extension to reach that site when the browser asks. It asks for that one site only.
+3. A Linkdean window opens. Sign in if you need to, then choose **Allow**.
+
+Then, on any page:
+
+- **The toolbar button** (or **Alt+Shift+S**) shows the page's title, the text you selected as the description, your folders and tags. **Save** files it; **Save to Unsorted** saves it with no folder. A page you already saved shows **Open in Linkdean** instead.
+- **Right-click → Save page to Linkdean**, or **Save link to Linkdean** on a link, saves to Unsorted at once. A ✓ on the toolbar button confirms it.
+
+The extension holds its own API key, listed as "Browser extension" under **Settings → API keys**. **Sign out** in the extension revokes it.
 
 ## Bookmarklet (desktop browsers)
 

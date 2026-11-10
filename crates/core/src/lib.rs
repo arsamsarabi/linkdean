@@ -1,6 +1,7 @@
 pub mod avatar;
 pub mod crypto;
 pub mod error;
+pub mod extension_connect;
 pub mod import_export;
 pub mod legal;
 pub mod models;

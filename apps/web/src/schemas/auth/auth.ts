@@ -107,6 +107,9 @@ export const apiKeysEnvelopeSchema = z.object({
   keys: z.array(apiKeySchema),
 })
 
+/** The single-use code for the extension, with the state it sent. */
+export const extensionAuthorizeSchema = z.object({ code: z.string(), state: z.string().nullish() })
+
 export const createApiKeyResponseSchema = z.object({
   key: apiKeySchema,
   token: z.string(),

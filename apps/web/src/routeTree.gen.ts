@@ -31,6 +31,7 @@ import { Route as AppTrashRouteImport } from './routes/_app/trash'
 import { Route as AppVaultRouteImport } from './routes/_app/vault'
 import { Route as AppVaultsRouteImport } from './routes/_app/vaults'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
+import { Route as AppConnectExtensionRouteImport } from './routes/_app/connect/extension'
 import { Route as AppUIdRouteImport } from './routes/_app/u.$id'
 
 const AppRoute = AppRouteImport.update({
@@ -142,6 +143,11 @@ const LSlugRoute = LSlugRouteImport.update({
   path: '/l/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppConnectExtensionRoute = AppConnectExtensionRouteImport.update({
+  id: '/connect/extension',
+  path: '/connect/extension',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppUIdRoute = AppUIdRouteImport.update({
   id: '/u/$id',
   path: '/u/$id',
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/vault': typeof AppVaultRoute
   '/vaults': typeof AppVaultsRoute
   '/l/$slug': typeof LSlugRoute
+  '/connect/extension': typeof AppConnectExtensionRoute
   '/u/$id': typeof AppUIdRoute
 }
 export interface FileRoutesByTo {
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/vaults': typeof AppVaultsRoute
   '/l/$slug': typeof LSlugRoute
   '/': typeof AppIndexRoute
+  '/connect/extension': typeof AppConnectExtensionRoute
   '/u/$id': typeof AppUIdRoute
 }
 export interface FileRoutesById {
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/_app/vaults': typeof AppVaultsRoute
   '/l/$slug': typeof LSlugRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/connect/extension': typeof AppConnectExtensionRoute
   '/_app/u/$id': typeof AppUIdRoute
 }
 export interface FileRouteTypes {
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/vault'
     | '/vaults'
     | '/l/$slug'
+    | '/connect/extension'
     | '/u/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/vaults'
     | '/l/$slug'
     | '/'
+    | '/connect/extension'
     | '/u/$id'
   id:
     | '__root__'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/_app/vaults'
     | '/l/$slug'
     | '/_app/'
+    | '/_app/connect/extension'
     | '/_app/u/$id'
   fileRoutesById: FileRoutesById
 }
@@ -469,6 +481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/connect/extension': {
+      id: '/_app/connect/extension'
+      path: '/connect/extension'
+      fullPath: '/connect/extension'
+      preLoaderRoute: typeof AppConnectExtensionRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/u/$id': {
       id: '/_app/u/$id'
       path: '/u/$id'
@@ -490,6 +509,7 @@ interface AppRouteChildren {
   AppVaultRoute: typeof AppVaultRoute
   AppVaultsRoute: typeof AppVaultsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppConnectExtensionRoute: typeof AppConnectExtensionRoute
   AppUIdRoute: typeof AppUIdRoute
 }
 
@@ -504,6 +524,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppVaultRoute: AppVaultRoute,
   AppVaultsRoute: AppVaultsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppConnectExtensionRoute: AppConnectExtensionRoute,
   AppUIdRoute: AppUIdRoute,
 }
 

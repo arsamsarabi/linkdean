@@ -28,6 +28,9 @@ const IMPORT_USER: u32 = 10;
 /// Each one makes an outbound request, so the instance cannot be used as a fetch relay.
 const PAGE_DETAILS_USER: u32 = 60;
 /// Reset link requests for one address, so nobody floods an inbox.
+/// Extension sign-ins one account may approve, and code trades one address may try.
+const EXTENSION_CONNECT_USER: u32 = 20;
+const EXTENSION_TOKEN_ADDRESS: u32 = 30;
 const RESET_REQUEST_ACCOUNT: u32 = 3;
 const RESET_REQUEST_ADDRESS: u32 = 10;
 /// Attempts to use a reset link, from one address.
@@ -69,6 +72,17 @@ pub fn reset_request_limits(ip: IpAddr, email: &str) -> [Limit; 2] {
         ),
         (format!("reset-request-address:{ip}"), RESET_REQUEST_ADDRESS),
     ]
+}
+
+pub fn extension_connect_limit(user_id: uuid::Uuid) -> [Limit; 1] {
+    [(
+        format!("extension-connect:{user_id}"),
+        EXTENSION_CONNECT_USER,
+    )]
+}
+
+pub fn extension_token_limit(ip: IpAddr) -> [Limit; 1] {
+    [(format!("extension-token:{ip}"), EXTENSION_TOKEN_ADDRESS)]
 }
 
 pub fn reset_attempt_limit(ip: IpAddr) -> [Limit; 1] {

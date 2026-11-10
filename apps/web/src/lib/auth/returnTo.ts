@@ -2,11 +2,12 @@
 const returnToKey = 'linkdean_return_to'
 
 /**
- * Only quick save comes back after sign-in: it carries the page being saved, which would
- * otherwise be lost. Every other page lands where sign-in always lands.
+ * Only quick save and the extension's sign-in come back after sign-in: they carry what the
+ * person was in the middle of, which would otherwise be lost. Every other page lands where
+ * sign-in always lands.
  */
 function isReturnPath(path: string): boolean {
-  return path === '/save' || path.startsWith('/save?')
+  return ['/save', '/connect/extension'].some((p) => path === p || path.startsWith(`${p}?`))
 }
 
 export function rememberReturnTo(path: string): void {

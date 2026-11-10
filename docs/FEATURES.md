@@ -15,6 +15,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - **Quick save** at `/save?url=…&title=…&text=…`: opens the bookmark form filled in from the link (a link inside `text` is found when `url` is missing), fetches the page details when no title came with it, starts in the last folder used, and offers **Save to Unsorted** for one-tap saving. A URL already in the library opens that bookmark instead of saving a second copy (`GET /api/bookmarks/lookup?url=`). Signed out, it signs in (password or single sign-on) and comes back to the same save
 - **Bookmarklet** in **Settings → Fast capture**: drag **Save to Linkdean** to the bookmarks bar (or paste the copied code into a bookmark on Safari and phones). On any page it opens quick save in a small window with the address, title and selected text, and the window closes after saving. Uses the signed-in session, no API key; falls back to the same tab when popups are blocked
 - **Share → Linkdean**: the installed app (Android, desktop Chrome and Edge) is a share target that opens quick save with the shared link, title and text. iOS has no web share targets, so [Saving pages fast](FAST_CAPTURE.md) shows two Shortcuts: one opens quick save, one saves straight to Unsorted with an API key
+- **Browser extension** for Chrome (and Edge) and Firefox, in `apps/extension`: the toolbar popup saves the current tab with title, selected text as description, folder (the last one used is remembered) and tags, or **Save to Unsorted**; a page already in the library shows **Open in Linkdean** instead. Right-click **Save page** / **Save link to Linkdean** saves to Unsorted, and Alt+Shift+S opens the popup. Works with app.linkdean.app or any self-hosted instance; asks for access to that one site only, at sign-in. Not in the stores yet
 - Bookmark cards / glance tiles: title primary, full URL muted beneath
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)
@@ -158,6 +159,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - A key cannot create more keys or use admin routes, even an admin's, so revoking a leaked key ends its access
 - Secret hashed at rest; plaintext shown once at creation
 - Platform-wide and per-user enable/disable (Admin)
+- **Browser extension sign-in** without handling a key: the extension opens `/connect/extension` in a window of its own, the person signs in as usual and chooses **Allow**, the page hands a single-use code to the extension's script on that page, and the extension trades it (two minutes, PKCE S256, bound to the extension's `chrome-extension://` or `moz-extension://` address) at `POST /api/auth/extension/token` for a key named "Browser extension · Chrome" or "· Firefox". Approving needs a login session, never a key. Signing out in the extension revokes its key. Needs API keys enabled for the account
 
 ---
 

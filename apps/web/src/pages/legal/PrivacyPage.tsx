@@ -75,14 +75,26 @@ export function PrivacyPage(): ReactElement {
           report, your account and your reason are visible to the instance administrators.
         </Text>
       </LegalSection>
-      <LegalSection heading="6. Your choices">
+      <LegalSection heading="6. Browser extension">
+        <Text>
+          The Linkdean extension for Chrome and Firefox works only with the Linkdean you sign it in to, such as
+          app.linkdean.app or your own instance. It sends that instance the address, title and the text you selected of
+          pages you choose to save, when you use its button, menu or shortcut, and reads your folders and tags to offer
+          them. It does not read or send the pages you visit otherwise, and it sends nothing to anyone else.
+        </Text>
+        <Text>
+          Signing in creates an API key for the extension, kept in the extension&apos;s own storage in your browser.
+          Signing out of the extension revokes it, and you can revoke it under Settings → API keys.
+        </Text>
+      </LegalSection>
+      <LegalSection heading="7. Your choices">
         <Text>
           You can export your bookmarks, change your profile and email, and delete your account from your settings.
           Deleting removes your account and content after a short grace period. For anything else, ask the administrator
           of this instance.
         </Text>
       </LegalSection>
-      <LegalSection heading="7. Changes">
+      <LegalSection heading="8. Changes">
         <Text>If this policy changes, the version date above changes with it.</Text>
       </LegalSection>
     </LegalLayout>
