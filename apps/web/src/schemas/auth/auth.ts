@@ -107,8 +107,8 @@ export const apiKeysEnvelopeSchema = z.object({
   keys: z.array(apiKeySchema),
 })
 
-/** Where to send the extension's sign-in window: its redirect address with a single-use code. */
-export const extensionAuthorizeSchema = z.object({ redirect: z.string() })
+/** The single-use code for the extension, with the state it sent. */
+export const extensionAuthorizeSchema = z.object({ code: z.string(), state: z.string().nullish() })
 
 export const createApiKeyResponseSchema = z.object({
   key: apiKeySchema,

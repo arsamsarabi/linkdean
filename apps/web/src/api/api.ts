@@ -285,9 +285,9 @@ export const api = {
   revokeRegistrationInvite: (id: string): Promise<{ ok: boolean }> =>
     req(`/admin/invites/${id}`, { method: 'DELETE' }, okSchema),
 
-  /** Approves the browser extension's sign-in; the reply is where to send its window. */
+  /** Approves the browser extension's sign-in; the reply is the code to hand to it. */
   authorizeExtension: (body: {
-    redirect_uri: string
+    extension_origin: string
     code_challenge: string
     code_challenge_method: string
     state?: string

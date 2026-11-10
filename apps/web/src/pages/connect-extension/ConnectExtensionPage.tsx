@@ -5,16 +5,21 @@ import { useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { useMe } from '@/hooks'
 
+/** The message the extension's script on this page listens for. */
+export const EXTENSION_CODE_MESSAGE = 'linkdean-extension-code'
+
 export type ConnectExtensionSearch = {
-  redirect_uri?: string
+  extension_origin?: string
   code_challenge?: string
   code_challenge_method?: string
   state?: string
 }
 
 /**
- * The browser extension's sign-in window lands here. Allow sends the window back to the
- * extension with a single-use code, which the extension trades for its own key.
+ * The browser extension's sign-in window lands here. Allow posts a single-use code into this
+ * window, where a script the extension placed on this page picks it up; the extension trades
+ * it for its own key and closes the window. The code is useless without the verifier only the
+ * extension holds.
  */
 export function ConnectExtensionPage(): ReactElement {
   const search: ConnectExtensionSearch = useSearch({ from: '/_app/connect/extension' })
@@ -22,23 +27,29 @@ export function ConnectExtensionPage(): ReactElement {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cancelled, setCancelled] = useState(false)
-  const complete = !!search.redirect_uri && !!search.code_challenge
+  const [connected, setConnected] = useState(false)
+  const complete = !!search.extension_origin && !!search.code_challenge
 
   async function allow(): Promise<void> {
-    if (!search.redirect_uri || !search.code_challenge) return
+    if (!search.extension_origin || !search.code_challenge) return
     setBusy(true)
     setError(null)
     try {
-      const { redirect } = await api.authorizeExtension({
-        redirect_uri: search.redirect_uri,
+      const { code, state } = await api.authorizeExtension({
+        extension_origin: search.extension_origin,
         code_challenge: search.code_challenge,
         code_challenge_method: search.code_challenge_method ?? 'S256',
         state: search.state,
       })
-      // The browser hands this address to the extension and closes the window.
-      window.location.assign(redirect)
+      // Same window, same origin only: other sites and frames never see it. Also left on the
+      // page, in case the extension's script arrives after the click.
+      const message = { type: EXTENSION_CODE_MESSAGE, code, state }
+      document.documentElement.dataset.linkdeanExtensionCode = JSON.stringify(message)
+      window.postMessage(message, window.location.origin)
+      setConnected(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
+    } finally {
       setBusy(false)
     }
   }
@@ -64,6 +75,8 @@ export function ConnectExtensionPage(): ReactElement {
             </Alert>
           ) : cancelled ? (
             <Text>Cancelled. You can close this window.</Text>
+          ) : connected ? (
+            <Text>Connected. This window closes by itself; if it does not, close it and open the extension again.</Text>
           ) : (
             <>
               <Text>

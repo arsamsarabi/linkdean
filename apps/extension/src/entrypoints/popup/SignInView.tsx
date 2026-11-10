@@ -3,15 +3,18 @@ import { Alert, Button, Stack, Text, TextInput, Title } from '@mantine/core'
 import { browser } from 'wxt/browser'
 import { DEFAULT_INSTANCE, normalizeInstance, originPattern } from '@/lib/instance'
 import { lastInstanceItem } from '@/lib/session'
+import { signInErrorItem } from '@/lib/signIn'
 import type { SignInMessage, SignInReply } from '../background'
 
 export function SignInView(): ReactElement {
   const [instance, setInstance] = useState(DEFAULT_INSTANCE)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState(false)
 
   useEffect(() => {
     void lastInstanceItem.getValue().then((last) => last && setInstance(last))
+    void signInErrorItem.getValue().then((e) => e && setError(e))
   }, [])
 
   async function start(): Promise<void> {
@@ -34,6 +37,7 @@ export function SignInView(): ReactElement {
       SignInReply | undefined
     setBusy(false)
     if (reply && !reply.ok) setError(reply.error)
+    else setWaiting(true)
   }
 
   return (
@@ -57,8 +61,9 @@ export function SignInView(): ReactElement {
         Sign in
       </Button>
       <Text size="xs" c="dimmed">
-        A Linkdean window opens: sign in there and choose Allow. The extension gets its own key, which you can revoke
-        under Settings → API keys.
+        {waiting
+          ? 'Finish in the Linkdean window: sign in there and choose Allow.'
+          : 'A Linkdean window opens: sign in there and choose Allow. The extension gets its own key, which you can revoke under Settings → API keys.'}
       </Text>
     </Stack>
   )

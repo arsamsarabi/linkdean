@@ -1,1 +1,1 @@
-export { ConnectExtensionPage, type ConnectExtensionSearch } from './ConnectExtensionPage'
+export { ConnectExtensionPage, EXTENSION_CODE_MESSAGE, type ConnectExtensionSearch } from './ConnectExtensionPage'

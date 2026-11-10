@@ -1,4 +1,4 @@
-//! Extension sign-in codes are single-use, short-lived and bound to their verifier and redirect.
+//! Extension sign-in codes are single-use, short-lived and bound to their verifier and extension.
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
@@ -28,8 +28,8 @@ async fn user(pool: &PgPool) -> User {
 const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 const OTHER_VERIFIER: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-fn redirect() -> String {
-    format!("https://{}.chromiumapp.org/", "a".repeat(32))
+fn origin() -> String {
+    format!("chrome-extension://{}/", "a".repeat(32))
 }
 
 async fn code(pool: &PgPool, owner: &User) -> String {
@@ -37,7 +37,7 @@ async fn code(pool: &PgPool, owner: &User) -> String {
         pool,
         owner.id,
         &pkce_challenge(VERIFIER),
-        &redirect(),
+        &origin(),
         "Browser extension · Chrome",
     )
     .await
@@ -51,41 +51,41 @@ async fn a_code_works_once_with_its_verifier() {
     };
     let owner = user(&pool).await;
     let c = code(&pool, &owner).await;
-    let grant = db::take_extension_code(&pool, &c, VERIFIER, &redirect())
+    let grant = db::take_extension_code(&pool, &c, VERIFIER, &origin())
         .await
         .expect("take")
         .expect("grant");
     assert_eq!(grant.user_id, owner.id);
     assert_eq!(grant.key_name, "Browser extension · Chrome");
-    assert!(db::take_extension_code(&pool, &c, VERIFIER, &redirect())
+    assert!(db::take_extension_code(&pool, &c, VERIFIER, &origin())
         .await
         .expect("again")
         .is_none());
 }
 
 #[tokio::test]
-async fn a_wrong_verifier_or_redirect_burns_the_code() {
+async fn a_wrong_verifier_or_extension_burns_the_code() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
     let owner = user(&pool).await;
     let c = code(&pool, &owner).await;
     assert!(
-        db::take_extension_code(&pool, &c, OTHER_VERIFIER, &redirect())
+        db::take_extension_code(&pool, &c, OTHER_VERIFIER, &origin())
             .await
             .expect("wrong verifier")
             .is_none()
     );
-    assert!(db::take_extension_code(&pool, &c, VERIFIER, &redirect())
+    assert!(db::take_extension_code(&pool, &c, VERIFIER, &origin())
         .await
         .expect("after burn")
         .is_none());
 
     let c = code(&pool, &owner).await;
-    let other = format!("https://{}.chromiumapp.org/", "b".repeat(32));
+    let other = format!("chrome-extension://{}/", "b".repeat(32));
     assert!(db::take_extension_code(&pool, &c, VERIFIER, &other)
         .await
-        .expect("wrong redirect")
+        .expect("wrong extension")
         .is_none());
 }
 
@@ -101,7 +101,7 @@ async fn an_expired_code_is_refused() {
         .execute(&pool)
         .await
         .expect("expire");
-    assert!(db::take_extension_code(&pool, &c, VERIFIER, &redirect())
+    assert!(db::take_extension_code(&pool, &c, VERIFIER, &origin())
         .await
         .expect("expired")
         .is_none());

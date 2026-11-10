@@ -21,7 +21,7 @@ To load a build in your everyday browser instead:
 - **Chrome:** `pnpm build`, then `chrome://extensions` → Developer mode → **Load unpacked** → `.output/chrome-mv3`.
 - **Firefox:** `pnpm build:firefox`, then `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → `.output/firefox-mv3/manifest.json`.
 
-An unpacked Chrome build gets an extension ID from its folder path, so its sign-in redirect address (`https://<id>.chromiumapp.org/`) differs from the store build's. The server accepts any Chrome or Firefox extension redirect address, so both work.
+An unpacked Chrome build gets an extension ID from its folder path, so its address (`chrome-extension://<id>/`) differs from the store build's. The server accepts any Chrome or Firefox extension address, so both work.
 
 ## Check
 

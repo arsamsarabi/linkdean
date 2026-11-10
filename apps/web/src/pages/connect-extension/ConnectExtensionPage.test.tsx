@@ -11,7 +11,7 @@ vi.mock('@tanstack/react-router', () => ({ useSearch: () => search.value }))
 vi.mock('@/api', () => ({ api: { authorizeExtension: authorize } }))
 vi.mock('@/hooks', () => ({ useMe: () => ({ data: { user: { email: 'sam@example.com' } } }) }))
 
-const redirect = `https://${'a'.repeat(32)}.chromiumapp.org/`
+const origin = `chrome-extension://${'a'.repeat(32)}/`
 const challenge = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'
 
 function renderPage(): void {
@@ -23,30 +23,34 @@ function renderPage(): void {
 }
 
 describe('ConnectExtensionPage', () => {
-  const assign = vi.fn()
   beforeEach(() => {
-    vi.stubGlobal('location', { ...window.location, assign })
-    search.value = { redirect_uri: redirect, code_challenge: challenge, state: 's1' }
+    search.value = { extension_origin: origin, code_challenge: challenge, state: 's1' }
   })
   afterEach(() => {
     cleanup()
-    vi.unstubAllGlobals()
     authorize.mockReset()
-    assign.mockReset()
   })
 
-  it('names the account and sends the window back to the extension on Allow', async () => {
-    authorize.mockResolvedValue({ redirect: `${redirect}?code=c1&state=s1` })
+  it('names the account and posts the code into this window on Allow', async () => {
+    authorize.mockResolvedValue({ code: 'c1', state: 's1' })
+    const post = vi.spyOn(window, 'postMessage')
     renderPage()
     expect(screen.getByText('sam@example.com')).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Allow' }))
     expect(authorize).toHaveBeenCalledWith({
-      redirect_uri: redirect,
+      extension_origin: origin,
       code_challenge: challenge,
       code_challenge_method: 'S256',
       state: 's1',
     })
-    expect(assign).toHaveBeenCalledWith(`${redirect}?code=c1&state=s1`)
+    expect(post).toHaveBeenCalledWith(
+      { type: 'linkdean-extension-code', code: 'c1', state: 's1' },
+      window.location.origin
+    )
+    expect(await screen.findByText(/Connected/)).toBeTruthy()
+    expect(JSON.parse(document.documentElement.dataset.linkdeanExtensionCode ?? '{}')).toMatchObject({ code: 'c1' })
+    delete document.documentElement.dataset.linkdeanExtensionCode
+    post.mockRestore()
   })
 
   it('shows why the server refused, and stays on the page', async () => {
@@ -54,7 +58,6 @@ describe('ConnectExtensionPage', () => {
     renderPage()
     await userEvent.click(screen.getByRole('button', { name: 'Allow' }))
     expect((await screen.findByRole('alert')).textContent).toContain('did not come from the Linkdean extension')
-    expect(assign).not.toHaveBeenCalled()
   })
 
   it('asks to start from the extension when the request is incomplete', () => {

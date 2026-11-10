@@ -2,10 +2,11 @@ import { browser } from 'wxt/browser'
 import { defineBackground } from 'wxt/utils/define-background'
 import { createBookmark, savableUrl } from '@/lib/api'
 import { sessionItem } from '@/lib/session'
-import { signIn } from '@/lib/signIn'
+import { abandonSignIn, finishSignIn, injectRelay, RELAY_MESSAGE, startSignIn } from '@/lib/signIn'
 
 export type SignInMessage = { type: 'sign-in'; instance: string }
 export type SignInReply = { ok: true } | { ok: false; error: string }
+type RelayMessage = { type: typeof RELAY_MESSAGE; code: string; state: unknown }
 
 const MENU_PAGE = 'save-page'
 const MENU_LINK = 'save-link'
@@ -21,6 +22,8 @@ async function flash(tabId: number | undefined, ok: boolean, title: string): Pro
   }, 4000)
 }
 
+// Every listener is registered at the top level, so the browser can stop this worker while the
+// person signs in and wake it again for the next event. Sign-in state lives in storage.
 export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => {
     void browser.contextMenus.removeAll().then(() => {
@@ -45,11 +48,24 @@ export default defineBackground(() => {
     })()
   })
 
-  // Sign-in runs here, not in the popup: the popup closes when the sign-in window takes focus.
-  browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse: (r: SignInReply) => void) => {
-    const msg = message as SignInMessage
+  // The sign-in window's page: place the relay once it is on the instance, after every load
+  // and every in-app navigation (signing in moves through /login and back).
+  browser.tabs.onUpdated.addListener((tabId, change, tab) => {
+    if (change.status === 'complete' || change.url) void injectRelay(tabId, tab.url)
+  })
+
+  browser.windows.onRemoved.addListener((windowId) => {
+    void abandonSignIn(windowId)
+  })
+
+  browser.runtime.onMessage.addListener((message: unknown, sender, sendResponse: (r: SignInReply) => void) => {
+    const msg = message as SignInMessage | RelayMessage | undefined
+    if (msg?.type === RELAY_MESSAGE) {
+      void finishSignIn(msg.code, msg.state, sender.tab?.id)
+      return false
+    }
     if (msg?.type !== 'sign-in') return false
-    signIn(msg.instance).then(
+    startSignIn(msg.instance).then(
       () => sendResponse({ ok: true }),
       (e: unknown) => sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) })
     )

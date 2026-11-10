@@ -1,9 +1,8 @@
-//! Rules for connecting the browser extension: which redirect addresses may receive a code,
+//! Rules for connecting the browser extension: which extension addresses may ask for a code,
 //! and the PKCE check that ties the code to the extension that asked for it.
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
-use url::{Host, Url};
 
 /// `base64url(SHA-256(verifier))` without padding: the PKCE `S256` challenge for `verifier`.
 pub fn pkce_challenge(verifier: &str) -> String {
@@ -27,42 +26,32 @@ pub fn valid_challenge(challenge: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
 }
 
-/// The browser whose extension sign-in flow owns `redirect_uri`, or `None` for any other
-/// address. Only these hosts can receive a code: browsers route them back to the extension
-/// that opened the sign-in window and never load them as web pages.
-///
-/// - Chrome and Edge: `https://<32 letters a–p>.chromiumapp.org/…` (`chrome.identity`)
-/// - Firefox: `https://<40 hex>.extensions.allizom.org/…` (`browser.identity`)
-pub fn extension_browser(redirect_uri: &str) -> Option<&'static str> {
-    let url = Url::parse(redirect_uri).ok()?;
-    if url.scheme() != "https"
-        || url.port().is_some()
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.fragment().is_some()
+/// The browser of an extension's base address, `chrome-extension://<id>/` (Chrome, Edge) or
+/// `moz-extension://<uuid>/` (Firefox), exactly as `runtime.getURL("/")` returns it. Anything
+/// else is `None`. The address only binds a code to the extension that asked for it; the code
+/// itself reaches the extension inside the sign-in window, never through this address.
+pub fn extension_browser(extension_origin: &str) -> Option<&'static str> {
+    if let Some(id) = extension_origin
+        .strip_prefix("chrome-extension://")
+        .and_then(|rest| rest.strip_suffix('/'))
     {
+        if id.len() == 32 && id.bytes().all(|b| (b'a'..=b'p').contains(&b)) {
+            return Some("Chrome");
+        }
         return None;
     }
-    let Some(Host::Domain(host)) = url.host() else {
-        return None;
-    };
-    let (label, rest) = host.split_once('.')?;
-    match rest {
-        "chromiumapp.org"
-            if label.len() == 32 && label.bytes().all(|b| (b'a'..=b'p').contains(&b)) =>
-        {
-            Some("Chrome")
-        }
-        "extensions.allizom.org"
-            if label.len() == 40
-                && label
-                    .bytes()
-                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()) =>
-        {
-            Some("Firefox")
-        }
-        _ => None,
-    }
+    let uuid = extension_origin
+        .strip_prefix("moz-extension://")
+        .and_then(|rest| rest.strip_suffix('/'))?;
+    let groups: Vec<&str> = uuid.split('-').collect();
+    let lengths = [8, 4, 4, 4, 12];
+    let ok = groups.len() == 5
+        && groups.iter().zip(lengths).all(|(g, n)| {
+            g.len() == n
+                && g.bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        });
+    ok.then_some("Firefox")
 }
 
 #[cfg(test)]
@@ -88,22 +77,20 @@ mod tests {
     }
 
     #[test]
-    fn only_extension_redirects_are_allowed() {
-        let chrome = format!("https://{}.chromiumapp.org/", "a".repeat(32));
-        let firefox = format!("https://{}.extensions.allizom.org/cb", "0f".repeat(20));
+    fn only_extension_base_addresses_are_allowed() {
+        let chrome = format!("chrome-extension://{}/", "a".repeat(32));
+        let firefox = "moz-extension://0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b/";
         assert_eq!(extension_browser(&chrome), Some("Chrome"));
-        assert_eq!(extension_browser(&firefox), Some("Firefox"));
+        assert_eq!(extension_browser(firefox), Some("Firefox"));
         for bad in [
             "https://evil.example/".to_string(),
-            format!("http://{}.chromiumapp.org/", "a".repeat(32)),
-            format!("https://{}.chromiumapp.org/", "z".repeat(32)),
-            format!("https://{}.chromiumapp.org/", "a".repeat(31)),
-            format!("https://{}.chromiumapp.org.evil.example/", "a".repeat(32)),
-            format!("https://x.{}.chromiumapp.org/", "a".repeat(32)),
-            format!("https://{}.chromiumapp.org:8443/", "a".repeat(32)),
-            format!("https://u:p@{}.chromiumapp.org/", "a".repeat(32)),
-            format!("https://{}.chromiumapp.org/#frag", "a".repeat(32)),
-            format!("https://{}.extensions.allizom.org/", "g".repeat(40)),
+            format!("chrome-extension://{}", "a".repeat(32)),
+            format!("chrome-extension://{}/page.html", "a".repeat(32)),
+            format!("chrome-extension://{}/", "z".repeat(32)),
+            format!("chrome-extension://{}/", "a".repeat(31)),
+            "moz-extension://0F1E2D3C-4B5A-6978-8A9B-0C1D2E3F4A5B/".to_string(),
+            "moz-extension://0f1e2d3c4b5a69788a9b0c1d2e3f4a5b/".to_string(),
+            "moz-extension://0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b/x".to_string(),
             "javascript:alert(1)".to_string(),
         ] {
             assert_eq!(extension_browser(&bad), None, "{bad}");

@@ -159,7 +159,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - A key cannot create more keys or use admin routes, even an admin's, so revoking a leaked key ends its access
 - Secret hashed at rest; plaintext shown once at creation
 - Platform-wide and per-user enable/disable (Admin)
-- **Browser extension sign-in** without handling a key: the extension opens `/connect/extension` in the browser's sign-in window, the person signs in as usual and chooses **Allow**, and the extension trades the single-use code (two minutes, PKCE S256, only Chrome and Firefox extension redirect addresses) at `POST /api/auth/extension/token` for a key named "Browser extension · Chrome" or "· Firefox". Approving needs a login session, never a key. Signing out in the extension revokes its key. Needs API keys enabled for the account
+- **Browser extension sign-in** without handling a key: the extension opens `/connect/extension` in a window of its own, the person signs in as usual and chooses **Allow**, the page hands a single-use code to the extension's script on that page, and the extension trades it (two minutes, PKCE S256, bound to the extension's `chrome-extension://` or `moz-extension://` address) at `POST /api/auth/extension/token` for a key named "Browser extension · Chrome" or "· Firefox". Approving needs a login session, never a key. Signing out in the extension revokes its key. Needs API keys enabled for the account
 
 ---
 

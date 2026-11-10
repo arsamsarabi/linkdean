@@ -1,8 +1,9 @@
-//! Signing the browser extension in, PKCE style. The extension opens
-//! `/connect/extension` on the web app in its sign-in window; the person signs in as usual and
-//! approves; `authorize` hands back the extension's redirect address with a single-use code;
-//! the extension trades the code and its verifier at `token` for an API key. The person never
-//! sees the key, and it is listed and revocable under Settings → API keys like any other.
+//! Signing the browser extension in, PKCE style. The extension opens `/connect/extension` on
+//! the web app in a window of its own; the person signs in as usual and approves; `authorize`
+//! returns a single-use code to that page, which posts it to a small script the extension
+//! placed on the page; the extension trades the code and its verifier at `token` for an API
+//! key. The person never sees the key, and it is listed and revocable under Settings → API keys
+//! like any other.
 
 use crate::auth::SessionUser;
 use crate::error::ApiResult;
@@ -23,7 +24,8 @@ const SPENT: &str =
 
 #[derive(Deserialize)]
 pub struct AuthorizeRequest {
-    pub redirect_uri: String,
+    /// The extension's base address, `chrome-extension://<id>/` or `moz-extension://<uuid>/`.
+    pub extension_origin: String,
     pub code_challenge: String,
     #[serde(default)]
     pub code_challenge_method: Option<String>,
@@ -37,7 +39,7 @@ pub async fn authorize(
     SessionUser(user): SessionUser,
     Json(req): Json<AuthorizeRequest>,
 ) -> ApiResult<Json<Value>> {
-    let Some(browser) = extension_browser(&req.redirect_uri) else {
+    let Some(browser) = extension_browser(&req.extension_origin) else {
         return Err(Error::BadRequest(
             "this sign-in did not come from the Linkdean extension".into(),
         )
@@ -65,27 +67,18 @@ pub async fn authorize(
         &state.pool,
         user.id,
         &req.code_challenge,
-        &req.redirect_uri,
+        &req.extension_origin,
         &key_name,
     )
     .await?;
-    let mut redirect = url::Url::parse(&req.redirect_uri)
-        .map_err(|_| Error::BadRequest("invalid redirect address".into()))?;
-    {
-        let mut q = redirect.query_pairs_mut();
-        q.append_pair("code", &code);
-        if let Some(s) = &req.state {
-            q.append_pair("state", s);
-        }
-    }
-    Ok(Json(json!({ "redirect": redirect.as_str() })))
+    Ok(Json(json!({ "code": code, "state": req.state })))
 }
 
 #[derive(Deserialize)]
 pub struct TokenRequest {
     pub code: String,
     pub code_verifier: String,
-    pub redirect_uri: String,
+    pub extension_origin: String,
 }
 
 /// No session: the extension proves itself with the verifier only it holds.
@@ -106,7 +99,7 @@ pub async fn token(
         &state.pool,
         &req.code,
         &req.code_verifier,
-        &req.redirect_uri,
+        &req.extension_origin,
     )
     .await?
     else {

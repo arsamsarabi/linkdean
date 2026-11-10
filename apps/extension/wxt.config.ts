@@ -11,9 +11,10 @@ export default defineConfig({
     description: 'Save the page you are on to your Linkdean library, on linkdean.app or your own instance.',
     homepage_url: 'https://linkdean.app',
     // activeTab: the current tab's address and title, only when the toolbar button, menu or
-    // shortcut is used. scripting: read the selected text in that tab. identity: the sign-in
-    // window. The instance itself is asked for at sign-in, so no site is reachable before that.
-    permissions: ['activeTab', 'contextMenus', 'scripting', 'storage', 'identity'],
+    // shortcut is used. scripting: read the selected text in that tab, and hand the sign-in
+    // code from the instance's approve page to the extension. The instance itself is asked for
+    // at sign-in, so no site is reachable before that.
+    permissions: ['activeTab', 'contextMenus', 'scripting', 'storage'],
     optional_host_permissions: ['https://*/*', 'http://localhost/*', 'http://127.0.0.1/*'],
     action: { default_title: 'Save to Linkdean' },
     commands: {
