@@ -28,3 +28,7 @@
   pointer-events: none;
   user-select: none;
 }
+
+.flip {
+  transform: scaleX(-1);
+}
