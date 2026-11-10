@@ -1,6 +1,30 @@
 import { useEffect, useRef, type ReactElement } from 'react'
-import { ActionIcon, Badge, Button, Drawer, Group, Skeleton, Stack, Text, UnstyledButton } from '@mantine/core'
-import { IconBell, IconCheck } from '@tabler/icons-react'
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Drawer,
+  Group,
+  Skeleton,
+  Stack,
+  Text,
+  ThemeIcon,
+  UnstyledButton,
+} from '@mantine/core'
+import {
+  IconBell,
+  IconBellOff,
+  IconCheck,
+  IconHeart,
+  IconKey,
+  IconLinkOff,
+  IconMailShare,
+  IconMessageCircle,
+  IconPencil,
+  IconShieldExclamation,
+  IconStar,
+  IconUserPlus,
+} from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import {
@@ -12,6 +36,7 @@ import {
 } from '@/hooks'
 import { useDrawerSize } from '@/hooks/render'
 import type { Notification, ShareInvite } from '@/schemas'
+import styles from './NotificationsDrawer.module.css'
 import { ShareInvitesList } from './ShareInvitesList'
 
 type Props = {
@@ -38,27 +63,45 @@ function hrefFor(n: Notification): string {
   }
 }
 
-function kindLabel(kind: Notification['kind']): string {
-  switch (kind) {
-    case 'share_invite':
-      return 'Invite'
-    case 'share_access_changed':
-      return 'Access'
-    case 'share_revoked':
-      return 'Revoked'
-    case 'shared_edit':
-      return 'Edit'
-    case 'social_like':
-      return 'Like'
-    case 'social_comment':
-      return 'Comment'
-    case 'social_rating':
-      return 'Rating'
-    case 'user_followed':
-      return 'Follow'
-    case 'moderation_changes':
-      return 'Moderation'
+const KINDS: Record<Notification['kind'], { label: string; icon: typeof IconBell; color: string }> = {
+  share_invite: { label: 'Invite', icon: IconMailShare, color: 'violet' },
+  share_access_changed: { label: 'Access changed', icon: IconKey, color: 'blue' },
+  share_revoked: { label: 'Access removed', icon: IconLinkOff, color: 'gray' },
+  shared_edit: { label: 'Edit', icon: IconPencil, color: 'teal' },
+  social_like: { label: 'Like', icon: IconHeart, color: 'pink' },
+  social_comment: { label: 'Comment', icon: IconMessageCircle, color: 'cyan' },
+  social_rating: { label: 'Rating', icon: IconStar, color: 'yellow' },
+  user_followed: { label: 'New follower', icon: IconUserPlus, color: 'grape' },
+  moderation_changes: { label: 'Moderation', icon: IconShieldExclamation, color: 'red' },
+}
+
+function dayLabel(iso: string, now: Date): string {
+  const d = new Date(iso)
+  const days = Math.round(
+    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) /
+      86_400_000
+  )
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return d.toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric',
+  })
+}
+
+/** Rows arrive newest first, so consecutive runs of one day form a group. */
+function groupByDay(rows: Notification[], now = new Date()): { day: string; rows: Notification[] }[] {
+  const groups: { day: string; rows: Notification[] }[] = []
+  for (const n of rows) {
+    const day = dayLabel(n.created_at, now)
+    const last = groups.at(-1)
+    if (last?.day === day) last.rows.push(n)
+    else groups.push({ day, rows: [n] })
   }
+  return groups
 }
 
 export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
@@ -101,9 +144,15 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
     <Drawer opened={opened} onClose={onClose} position="right" size={drawerSize} title="Notifications" padding="md">
       <Stack gap="md">
         <Group justify="space-between">
-          <Text size="sm" c="dimmed">
-            Shared activity
-          </Text>
+          {unreadCount > 0 ? (
+            <Badge variant="light" color="violet" tt="none">
+              {unreadCount} unread
+            </Badge>
+          ) : (
+            <Text size="sm" c="dimmed">
+              Shares, comments and follows
+            </Text>
+          )}
           <Button
             size="compact-xs"
             variant="subtle"
@@ -128,47 +177,52 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
           </Stack>
         ) : null}
 
-        {!list.isLoading && rows.length === 0 && !hasPendingInvite ? (
-          <Text size="sm" c="dimmed">
-            No notifications yet.
-          </Text>
+        {!list.isLoading && !list.isError && rows.length === 0 && !hasPendingInvite ? (
+          <Stack align="center" gap="xs" py="xl">
+            <ThemeIcon variant="light" color="gray" size={56} radius="xl">
+              <IconBellOff size={28} stroke={1.5} />
+            </ThemeIcon>
+            <Text fw={600}>You're all caught up</Text>
+            <Text size="sm" c="dimmed" ta="center" maw={280}>
+              Invites, comments, likes and new followers will show up here.
+            </Text>
+          </Stack>
         ) : null}
 
-        <Stack gap="xs">
-          {rows.map((n) => {
-            const read = !!n.read_at
-            return (
-              <UnstyledButton
-                key={n.id}
-                onClick={() => void openItem(n)}
-                p="sm"
-                style={{
-                  borderRadius: 8,
-                  border: '1px solid var(--mantine-color-default-border)',
-                  borderLeft: read
-                    ? '4px solid var(--mantine-color-gray-5)'
-                    : '4px solid var(--mantine-color-violet-6)',
-                  background: read ? undefined : 'var(--mantine-color-violet-light)',
-                  opacity: read ? 0.72 : 1,
-                }}
-              >
-                <Stack gap={4}>
-                  <Group gap="xs" justify="space-between" wrap="nowrap">
-                    <Badge size="xs" variant="light" color={read ? 'gray' : 'violet'}>
-                      {kindLabel(n.kind)}
-                    </Badge>
-                    <Text size="xs" c="dimmed">
-                      {new Date(n.created_at).toLocaleString()}
+        {groupByDay(rows).map((group) => (
+          <Stack key={group.day} gap={4} component="section" aria-label={group.day}>
+            <Text size="xs" fw={600} c="dimmed" tt="uppercase" className={styles.day}>
+              {group.day}
+            </Text>
+            {group.rows.map((n) => {
+              const read = !!n.read_at
+              const kind = KINDS[n.kind]
+              const Icon = kind.icon
+              return (
+                <UnstyledButton
+                  key={n.id}
+                  onClick={() => void openItem(n)}
+                  className={styles.row}
+                  data-unread={read ? undefined : true}
+                >
+                  <ThemeIcon variant="light" color={kind.color} size={36} radius="xl" aria-hidden>
+                    <Icon size={18} stroke={1.5} />
+                  </ThemeIcon>
+                  <div className={styles.body}>
+                    <Text size="sm" fw={read ? 400 : 600} c={read ? 'dimmed' : undefined}>
+                      {n.body}
                     </Text>
-                  </Group>
-                  <Text size="sm" fw={read ? 400 : 560} c={read ? 'dimmed' : undefined}>
-                    {n.body}
-                  </Text>
-                </Stack>
-              </UnstyledButton>
-            )
-          })}
-        </Stack>
+                    <Text size="xs" c="dimmed">
+                      {kind.label} ·{' '}
+                      {new Date(n.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                    </Text>
+                  </div>
+                  {read ? null : <span className={styles.dot} aria-label="Unread" />}
+                </UnstyledButton>
+              )
+            })}
+          </Stack>
+        ))}
       </Stack>
     </Drawer>
   )

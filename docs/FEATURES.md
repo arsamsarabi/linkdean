@@ -97,6 +97,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 ## Shared activity & social
 
 - In-app notifications: share invite / access change / revoke, shared edits
+- Notifications drawer groups items by day (Today, Yesterday, then the date), gives each kind its own icon and colour, tints unread items with a dot, and shows an "all caught up" state when empty
 - Bell + drawer in the app shell (unread count)
 - Notification emails (needs mail): **Settings → Notifications** has an email switch per kind. Share invites and moderation changes are on by default; access changes, revoked shares, shared edits, likes, comments, ratings and new followers are off. The same block and mute rules apply, and each email links back to that settings tab. With mail off the tab says email needs outbound mail and the switches are disabled
 - Likes, comments, and 1–5 ratings on **shared** bookmarks, lists, and dashboards
