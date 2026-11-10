@@ -72,6 +72,11 @@ export function AdminUsersPanel(): ReactElement {
           </Text>
         </div>
         <TextInput
+          type="search"
+          name="user-filter"
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           placeholder="Filter by name or email"
           leftSection={<IconSearch size={16} stroke={1.5} />}
           value={userQuery}

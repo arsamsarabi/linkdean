@@ -121,6 +121,8 @@ export function CategoryTree({ owned, shared, all, selectedId, loading, onSelect
           type="search"
           name="category-filter"
           autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           placeholder="Filter categories"
           aria-label="Filter categories"
           value={query}

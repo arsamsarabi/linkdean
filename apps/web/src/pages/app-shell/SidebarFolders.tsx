@@ -192,6 +192,11 @@ export function SidebarFolders({ activeFolder, onNavigate }: Props): ReactElemen
           size="xs"
           mx="sm"
           mb={4}
+          type="search"
+          name="folder-filter"
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           placeholder="Filter folders"
           aria-label="Filter folders"
           value={query}

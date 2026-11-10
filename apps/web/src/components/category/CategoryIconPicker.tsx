@@ -60,6 +60,10 @@ export function CategoryIconPicker({ value, onChange, label = 'Icon' }: Props): 
       </Group>
 
       <TextInput
+        type="search"
+        autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
         placeholder="Search icons"
         value={query}
         onChange={(e) => search(e.currentTarget.value)}
