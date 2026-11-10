@@ -68,7 +68,9 @@ export function useLibraryList({
 
   // `since` must be stable: a fresh timestamp per render would be a fresh query key.
   const sinceIso = useMemo(() => sinceFilterToIso(filterSince), [filterSince])
-  const { folder, clientCats } = splitFolderFilter(folderId, filterCats)
+  // A fresh clientCats per render would rebuild the search list every render, and the selection's
+  // render-time sync would loop on it.
+  const { folder, clientCats } = useMemo(() => splitFolderFilter(folderId, filterCats), [folderId, filterCats])
   const filter = useMemo(
     (): LibraryPageFilter => ({
       folder,
