@@ -30,7 +30,7 @@ What Linkdean can do today. For planned work see [ROADMAP.md](./ROADMAP.md). For
 - Broken links page (`/broken-links`, sidebar → Library health), where each link can be opened, rechecked or removed (Remove bookmark moves it to Deleted items); red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
 - Reading list (unread), favorites, and pin-to-top; opening a link can mark unread as read
-- Categories page (`/categories`, sidebar footer): the full tree with a name filter beside the chosen category's details, path, badges, subcategories and every action (open in library, edit, new subcategory, share, duplicate, move to vault, likes & comments, delete); `?id=` opens one, and phones show the tree or the details one at a time
+- Categories page (`/categories`, in the sidebar under Shared): the full tree with a name filter beside the chosen category's details, path, badges, subcategories and every action (open in library, edit, new subcategory, share, duplicate, move to vault, likes & comments, delete); `?id=` opens one, and phones show the tree or the details one at a time
 - Command palette (mod+K, from the header search field): add, search, jump category
 - `/` focuses the library search field on the Library and Vaults pages
 
