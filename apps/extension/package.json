@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint:firefox": "web-ext lint --source-dir .output/firefox-mv3 --no-config-discovery"
   },
   "dependencies": {
     "@mantine/core": "^9.7.4",
@@ -38,6 +39,7 @@
     "prettier": "^3.9.10",
     "typescript": "~7.0.2",
     "vitest": "^5.1.0",
+    "web-ext": "^8.10.0",
     "wxt": "^0.21.5"
   }
 }
