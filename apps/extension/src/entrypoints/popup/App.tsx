@@ -26,7 +26,7 @@ export function App(): ReactElement | null {
       {session ? (
         <>
           <SaveView session={session} />
-          <Group justify="space-between" mt="md" gap="xs" wrap="nowrap">
+          <Group justify="space-between" mt="md" gap="md" wrap="nowrap">
             <Stack gap={0} miw={0}>
               {[session.email, new URL(session.instance).host].map((line) => (
                 <Tooltip
