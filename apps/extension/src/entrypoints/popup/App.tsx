@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { Anchor, Box, Group, Text } from '@mantine/core'
+import { ActionIcon, Box, Group, Stack, Text, Tooltip } from '@mantine/core'
+import { IconLogout } from '@tabler/icons-react'
 import { revokeOwnKey } from '@/lib/api'
 import { sessionItem, type Session } from '@/lib/session'
 import { SaveView } from './SaveView'
@@ -26,12 +27,27 @@ export function App(): ReactElement | null {
         <>
           <SaveView session={session} />
           <Group justify="space-between" mt="md" gap="xs" wrap="nowrap">
-            <Text size="xs" c="dimmed" truncate>
-              {session.email} · {new URL(session.instance).host}
-            </Text>
-            <Anchor component="button" size="xs" onClick={() => void signOut(session)}>
-              Sign out
-            </Anchor>
+            <Stack gap={0} miw={0}>
+              {[session.email, new URL(session.instance).host].map((line) => (
+                <Tooltip
+                  key={line}
+                  label={line}
+                  openDelay={400}
+                  multiline
+                  maw={340}
+                  style={{ overflowWrap: 'anywhere' }}
+                >
+                  <Text size="xs" c="dimmed" truncate>
+                    {line}
+                  </Text>
+                </Tooltip>
+              ))}
+            </Stack>
+            <Tooltip label="Sign out">
+              <ActionIcon variant="subtle" color="red.6" aria-label="Sign out" onClick={() => void signOut(session)}>
+                <IconLogout size={18} />
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </>
       ) : (
