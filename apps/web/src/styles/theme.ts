@@ -1,5 +1,6 @@
 import {
   createTheme,
+  ScrollArea,
   type CSSVariablesResolver,
   type MantineColorsTuple,
   type MantineThemeOverride,
@@ -175,15 +176,20 @@ export const linkdeanTheme: MantineThemeOverride = createTheme({
     pageMaxWidth: 1440,
   },
   components: {
-    // The page keeps its scrollbar gutter (styles.css), so locking scroll needs no padding
-    // to make up for a vanishing scrollbar; that padding would shift the page instead.
+    // Overlay scrollbars take no width, so content never shifts when a panel starts to scroll,
+    // and locking the page needs no padding to make up for a vanishing scrollbar.
     Modal: {
-      defaultProps: { centered: true, removeScrollProps: { removeScrollBar: false } },
+      defaultProps: {
+        centered: true,
+        scrollAreaComponent: ScrollArea.Autosize,
+        removeScrollProps: { removeScrollBar: false },
+      },
     },
     Drawer: {
       // Side panels keep the page behind them readable, so you can see what you are editing.
       defaultProps: {
         overlayProps: { backgroundOpacity: 0.2, blur: 0 },
+        scrollAreaComponent: ScrollArea.Autosize,
         removeScrollProps: { removeScrollBar: false },
       },
     },

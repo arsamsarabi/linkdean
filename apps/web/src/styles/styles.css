@@ -7,14 +7,6 @@
   font-family: Satoshi, system-ui, sans-serif;
 }
 
-/* Reserve the scrollbar's space whether or not content overflows, so the page and side
-   panels do not shift sideways when a scrollbar appears. */
-html,
-.mantine-Drawer-content,
-.mantine-Modal-content {
-  scrollbar-gutter: stable;
-}
-
 /* Filters are type="search" so autofill leaves them alone; they draw their own clear button. */
 input[type='search']::-webkit-search-cancel-button {
   appearance: none;
