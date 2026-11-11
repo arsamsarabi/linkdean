@@ -3,8 +3,8 @@ import { Button, Group, NumberInput, Paper, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconCameraRotate } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
-import { useRetryScreenshots, useScreenshotRetryStatus, useUpdatePlatformSettings } from '@/hooks'
-import type { PlatformSettings, ScreenshotRetryStatus } from '@/schemas'
+import { usePlatformSettings, useRetryScreenshots, useScreenshotRetryStatus, useUpdatePlatformSettings } from '@/hooks'
+import type { ScreenshotRetryStatus } from '@/schemas'
 
 /** A whole number in a range, saved on blur. An empty or out-of-range entry snaps back. */
 function RangeInput({
@@ -63,7 +63,9 @@ function blockedReason(status: ScreenshotRetryStatus): string | null {
   return null
 }
 
-export function AdminScreenshotRetryPanel({ settings }: { settings: PlatformSettings }): ReactElement {
+export function AdminScreenshotRetryPanel(): ReactElement {
+  const platform = usePlatformSettings(true)
+  const settings = platform.data?.settings
   const status = useScreenshotRetryStatus()
   const retry = useRetryScreenshots()
   const save = useUpdatePlatformSettings()
@@ -127,26 +129,30 @@ export function AdminScreenshotRetryPanel({ settings }: { settings: PlatformSett
             Retry failed screenshots
           </Button>
         </Group>
-        <RangeInput
-          label="Retry cooldown"
-          description="Time between manual retries. A retry takes only screenshots that failed longer ago than this."
-          value={settings.screenshot_retry_cooldown_hours}
-          min={1}
-          max={720}
-          suffix=" hours"
-          disabled={save.isPending}
-          onSave={(screenshot_retry_cooldown_hours) => saveSetting({ screenshot_retry_cooldown_hours })}
-        />
-        <RangeInput
-          label="Retry automatically after"
-          description="Failed screenshots older than this are retried by the check that runs every 6 hours."
-          value={settings.screenshot_auto_retry_days}
-          min={1}
-          max={90}
-          suffix=" days"
-          disabled={save.isPending}
-          onSave={(screenshot_auto_retry_days) => saveSetting({ screenshot_auto_retry_days })}
-        />
+        {settings ? (
+          <>
+            <RangeInput
+              label="Retry cooldown"
+              description="Time between manual retries. A retry takes only screenshots that failed longer ago than this."
+              value={settings.screenshot_retry_cooldown_hours}
+              min={1}
+              max={720}
+              suffix=" hours"
+              disabled={save.isPending}
+              onSave={(screenshot_retry_cooldown_hours) => saveSetting({ screenshot_retry_cooldown_hours })}
+            />
+            <RangeInput
+              label="Retry automatically after"
+              description="Failed screenshots older than this are retried by the check that runs every 6 hours."
+              value={settings.screenshot_auto_retry_days}
+              min={1}
+              max={90}
+              suffix=" days"
+              disabled={save.isPending}
+              onSave={(screenshot_auto_retry_days) => saveSetting({ screenshot_auto_retry_days })}
+            />
+          </>
+        ) : null}
       </Stack>
     </Paper>
   )

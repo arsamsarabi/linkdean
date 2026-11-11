@@ -12,20 +12,24 @@ const state = vi.hoisted(() => ({
 }))
 
 vi.mock('@/hooks', () => ({
+  usePlatformSettings: () => ({ data: { settings } }),
   useScreenshotRetryStatus: () => ({ isError: false, data: state.status, refetch: vi.fn() }),
   useRetryScreenshots: () => ({ isPending: false, mutate: state.retry }),
   useUpdatePlatformSettings: () => ({ isPending: false, mutate: state.save }),
 }))
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 
-const settings = {
-  registration_open: true,
-  api_keys_enabled: true,
-  require_verified_email: false,
-  screenshot_retry_cooldown_hours: 24,
-  screenshot_auto_retry_days: 7,
-  updated_at: '2026-01-01T00:00:00Z',
-} as PlatformSettings
+const settings = vi.hoisted(
+  () =>
+    ({
+      registration_open: true,
+      api_keys_enabled: true,
+      require_verified_email: false,
+      screenshot_retry_cooldown_hours: 24,
+      screenshot_auto_retry_days: 7,
+      updated_at: '2026-01-01T00:00:00Z',
+    }) as PlatformSettings
+)
 
 const ready: ScreenshotRetryStatus = {
   failed: 12,
@@ -39,7 +43,7 @@ const ready: ScreenshotRetryStatus = {
 function renderPanel(): void {
   render(
     <MantineProvider>
-      <AdminScreenshotRetryPanel settings={settings} />
+      <AdminScreenshotRetryPanel />
     </MantineProvider>
   )
 }
