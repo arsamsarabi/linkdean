@@ -1,15 +1,15 @@
 use linkdean_core::import_export::ParsedImport;
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
-    BookmarkExport, CategoryExport, CreateCategory, CreateDashboard, DashboardExport,
-    DashboardSectionExport, Error, ImportJob, PutDashboardLayout, PutDashboardSection, Result,
+    BookmarkExport, CategoryExport, CreateDashboard, DashboardExport, DashboardSectionExport,
+    Error, ImportJob, PutDashboardLayout, PutDashboardSection, Result,
 };
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use super::bookmarks::{create_bookmark, list_bookmarks};
-use super::categories::{create_category, list_owned_categories};
+use super::categories::list_owned_categories;
 use super::dashboards::{create_dashboard, put_dashboard};
 
 pub async fn create_import_job(pool: &PgPool, user_id: Uuid, source: &str) -> Result<ImportJob> {
@@ -80,24 +80,13 @@ pub async fn apply_parsed_import_counted(
     parsed: ParsedImport,
     counts: &mut ImportCounts,
 ) -> Result<()> {
-    // Parsers list each parent before its children, so its id is known by then.
-    let mut folder_ids: Vec<Uuid> = Vec::with_capacity(parsed.categories.len());
-    for (cat, parent) in parsed.categories.into_iter().zip(parsed.category_parents) {
-        let parent_id = parent.and_then(|i| folder_ids.get(i).copied());
-        let created = create_category(
-            pool,
-            user_id,
-            CreateCategory {
-                name: cat.name,
-                parent_id,
-                is_hidden: cat.is_hidden,
-                vault_id: None,
-                icon: cat.icon,
-            },
-        )
-        .await?;
-        folder_ids.push(created.id);
-    }
+    let folder_ids = super::import_folders::resolve_folders(
+        pool,
+        user_id,
+        parsed.categories,
+        parsed.category_parents,
+    )
+    .await?;
 
     counts.total = parsed.bookmarks.len() as i32;
     let mut new_ids: HashMap<Uuid, Uuid> = HashMap::new();

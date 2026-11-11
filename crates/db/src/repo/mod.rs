@@ -15,6 +15,7 @@ mod email_verification;
 mod extension_connect;
 mod follows;
 mod import;
+mod import_folders;
 mod invites;
 mod moderation;
 mod notification_email;
