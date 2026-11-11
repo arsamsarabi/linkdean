@@ -13,6 +13,9 @@ pub enum DuplicateAction {
     Skip,
     /// Update the existing bookmark in place from the file.
     Replace,
+    /// Keep the existing bookmark's values, fill the ones it lacks from the file, and add
+    /// the file's tags and folders to its own.
+    Merge,
     /// Create a second copy, as imports always did.
     #[default]
     Keep,
@@ -86,16 +89,18 @@ mod tests {
 
     #[test]
     fn overrides_win_over_the_default_and_take_string_keys() {
-        let d: DuplicateDecisions =
-            serde_json::from_str(r#"{"default":"skip","overrides":{"3":"replace","4":"keep"}}"#)
-                .unwrap();
+        let d: DuplicateDecisions = serde_json::from_str(
+            r#"{"default":"skip","overrides":{"3":"replace","4":"keep","5":"merge"}}"#,
+        )
+        .unwrap();
         assert_eq!(d.action_for(0), DuplicateAction::Skip);
         assert_eq!(d.action_for(3), DuplicateAction::Replace);
         assert_eq!(d.action_for(4), DuplicateAction::Keep);
+        assert_eq!(d.action_for(5), DuplicateAction::Merge);
     }
 
     #[test]
     fn an_unknown_action_is_refused() {
-        assert!(serde_json::from_str::<DuplicateDecisions>(r#"{"default":"merge"}"#).is_err());
+        assert!(serde_json::from_str::<DuplicateDecisions>(r#"{"default":"combine"}"#).is_err());
     }
 }

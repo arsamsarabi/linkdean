@@ -9,7 +9,7 @@ use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-use super::bookmarks::{create_bookmark, list_bookmarks, update_bookmark};
+use super::bookmarks::{create_bookmark, get_bookmark_raw, list_bookmarks, update_bookmark};
 use super::categories::list_owned_categories;
 use super::dashboards::{create_dashboard, put_dashboard};
 use super::import_plan::{ImportPlan, RowPlan};
@@ -68,6 +68,8 @@ pub struct ImportCounts {
     pub skipped: i32,
     /// Existing bookmarks updated by Replace.
     pub replaced: i32,
+    /// Existing bookmarks topped up by Merge.
+    pub merged: i32,
 }
 
 /// An import with no duplicate decisions: every bookmark is created, as before.
@@ -110,18 +112,28 @@ pub async fn apply_parsed_import_counted(
             RowPlan::Skip => {
                 counts.skipped += 1;
             }
-            RowPlan::Replace(existing_id) => {
-                match replace_from_import(pool, user_id, existing_id, &item.bookmark, category_ids)
-                    .await
-                {
+            RowPlan::Replace(existing_id) | RowPlan::Merge(existing_id) => {
+                let merge = matches!(plan.rows[index], RowPlan::Merge(_));
+                let done = if merge {
+                    merge_from_import(pool, user_id, existing_id, &item.bookmark, category_ids)
+                        .await
+                } else {
+                    replace_from_import(pool, user_id, existing_id, &item.bookmark, category_ids)
+                        .await
+                };
+                match done {
                     Ok(()) => {
-                        counts.replaced += 1;
+                        if merge {
+                            counts.merged += 1;
+                        } else {
+                            counts.replaced += 1;
+                        }
                         if let Some(source) = item.source_id {
                             new_ids.insert(source, existing_id);
                         }
                     }
                     Err(e) => {
-                        tracing::warn!(?e, "import replace failed");
+                        tracing::warn!(?e, merge, "import update of an existing bookmark failed");
                         counts.failed += 1;
                     }
                 }
@@ -212,12 +224,6 @@ async fn replace_from_import(
     incoming: &CreateBookmark,
     category_ids: Vec<Uuid>,
 ) -> Result<()> {
-    let non_empty = |s: &Option<String>| {
-        s.as_deref()
-            .map(str::trim)
-            .filter(|t| !t.is_empty())
-            .map(str::to_string)
-    };
     let req = UpdateBookmark {
         title: non_empty(&incoming.title),
         description: non_empty(&incoming.description).map(Some),
@@ -231,6 +237,52 @@ async fn replace_from_import(
         && req.category_ids.is_none()
     {
         // Nothing in the file to take; the bookmark already matches it.
+        return Ok(());
+    }
+    update_bookmark(pool, user_id, id, req, &VaultKeyring::default()).await?;
+    Ok(())
+}
+
+fn non_empty(s: &Option<String>) -> Option<String> {
+    s.as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_string)
+}
+
+/// Merge: the existing bookmark keeps its title and description, and takes the file's only
+/// where its own is empty. The file's tags and folders are added to its own.
+async fn merge_from_import(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+    incoming: &CreateBookmark,
+    category_ids: Vec<Uuid>,
+) -> Result<()> {
+    let existing = get_bookmark_raw(pool, user_id, id).await?;
+    let has_description = existing
+        .description
+        .as_deref()
+        .is_some_and(|d| !d.trim().is_empty());
+    let req = UpdateBookmark {
+        title: existing
+            .title
+            .trim()
+            .is_empty()
+            .then(|| non_empty(&incoming.title))
+            .flatten(),
+        description: (!has_description)
+            .then(|| non_empty(&incoming.description).map(Some))
+            .flatten(),
+        add_tags: (!incoming.tags.is_empty()).then(|| incoming.tags.clone()),
+        add_category_ids: (!category_ids.is_empty()).then_some(category_ids),
+        ..Default::default()
+    };
+    if req.title.is_none()
+        && req.description.is_none()
+        && req.add_tags.is_none()
+        && req.add_category_ids.is_none()
+    {
         return Ok(());
     }
     update_bookmark(pool, user_id, id, req, &VaultKeyring::default()).await?;

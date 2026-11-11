@@ -212,6 +212,7 @@ async fn import(
         "failed": counts.failed,
         "skipped": counts.skipped,
         "replaced": counts.replaced,
+        "merged": counts.merged,
         "status": job.status,
     })))
 }

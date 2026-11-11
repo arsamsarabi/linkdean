@@ -17,6 +17,7 @@ pub enum RowPlan {
     Create,
     Skip,
     Replace(Uuid),
+    Merge(Uuid),
 }
 
 /// One `RowPlan` per parsed bookmark, in file order.
@@ -65,6 +66,7 @@ pub async fn plan_import(
                 DuplicateAction::Keep => RowPlan::Create,
                 DuplicateAction::Skip => RowPlan::Skip,
                 DuplicateAction::Replace => RowPlan::Replace(view.id),
+                DuplicateAction::Merge => RowPlan::Merge(view.id),
             },
         })
         .collect();

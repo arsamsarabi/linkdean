@@ -430,3 +430,32 @@ async fn a_bookmark_added_after_the_preview_gets_the_default() {
     let c = import_with(&pool, &me, &file, all(DuplicateAction::Skip)).await;
     assert_eq!((c.imported, c.skipped), (0, 1));
 }
+
+#[tokio::test]
+async fn merge_keeps_your_values_and_adds_the_files_tags_and_folders() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let old = folder(&pool, &me, "Old", None).await;
+    let url = format!("https://m.example/{}", Uuid::new_v4());
+    // The library copy has a title and the tag "old", but no description.
+    let id = bookmark(&pool, &me, &url, "Mine", vec![old]).await;
+    let file = html(&h3(
+        "New",
+        &format!("<DT><A HREF=\"{url}\" TAGS=\"fresh,old\">Theirs</A>\n<DD>Their notes\n"),
+    ));
+    let c = import_with(&pool, &me, &file, all(DuplicateAction::Merge)).await;
+    assert_eq!((c.imported, c.merged, c.replaced), (0, 1, 0));
+    assert_eq!(bookmark_count(&pool, &me).await, 1);
+
+    let view = view_of(&pool, &me, id).await;
+    assert_eq!(view.title, "Mine");
+    assert_eq!(view.description.as_deref(), Some("Their notes"));
+    let mut tags = view.tags.clone();
+    tags.sort();
+    assert_eq!(tags, vec!["fresh".to_string(), "old".to_string()]);
+    let mut paths: Vec<&str> = view.categories.iter().map(|c| c.path.as_str()).collect();
+    paths.sort();
+    assert_eq!(paths, vec!["New", "Old"]);
+}
