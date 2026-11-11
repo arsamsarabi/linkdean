@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use linkdean_core::{Error, PlatformSettings, Result};
 use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
@@ -5,7 +6,9 @@ use sqlx::PgPool;
 const PLATFORM_COLS: &str = r#"
     registration_open, api_keys_enabled, require_verified_email,
     max_bookmarks, max_stored_image_bytes, max_enrich_actions_per_day,
-    max_import_bytes, max_upload_image_bytes, abuse_contact_email, updated_at
+    max_import_bytes, max_upload_image_bytes, abuse_contact_email,
+    screenshot_retry_cooldown_hours, screenshot_auto_retry_days, screenshot_retry_last_run_at,
+    updated_at
 "#;
 
 pub async fn get_platform_settings(pool: &PgPool) -> Result<PlatformSettings> {
@@ -129,4 +132,49 @@ pub async fn set_abuse_contact_email(
     .await
     .map_err(|e| Error::msg(e.to_string()))?
     .ok_or_else(|| Error::msg("platform_settings row missing"))
+}
+
+/// Change the screenshot retry cooldown (hours) or automatic retry window (days). `None`
+/// leaves a value alone. Values out of range are refused by the table's checks.
+pub async fn set_screenshot_retry_settings(
+    pool: &PgPool,
+    cooldown_hours: Option<i32>,
+    auto_retry_days: Option<i32>,
+) -> Result<PlatformSettings> {
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
+        r#"
+        UPDATE platform_settings
+        SET screenshot_retry_cooldown_hours = COALESCE($1, screenshot_retry_cooldown_hours),
+            screenshot_auto_retry_days = COALESCE($2, screenshot_auto_retry_days),
+            updated_at = now()
+        WHERE id = TRUE
+        RETURNING {PLATFORM_COLS}
+        "#
+    )))
+    .bind(cooldown_hours)
+    .bind(auto_retry_days)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or_else(|| Error::msg("platform_settings row missing"))
+}
+
+/// Start a manual screenshot retry if the cooldown has passed since the last one. Returns
+/// the start time, or `None` while the cooldown runs. One statement, so two admins clicking
+/// at once start one retry.
+pub async fn claim_screenshot_retry(pool: &PgPool) -> Result<Option<DateTime<Utc>>> {
+    sqlx::query_scalar(
+        r#"
+        UPDATE platform_settings
+        SET screenshot_retry_last_run_at = now()
+        WHERE id = TRUE
+          AND (screenshot_retry_last_run_at IS NULL
+               OR screenshot_retry_last_run_at
+                  <= now() - make_interval(hours => screenshot_retry_cooldown_hours))
+        RETURNING screenshot_retry_last_run_at
+        "#,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
 }
