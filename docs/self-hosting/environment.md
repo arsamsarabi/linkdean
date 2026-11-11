@@ -51,6 +51,7 @@ Off by default. Public beta hosts usually set all three with SMTP.
 | --- | --- | --- |
 | `TURNSTILE_SITE_KEY` | unset | Cloudflare Turnstile site key. With `TURNSTILE_SECRET_KEY`, password registration shows a captcha and the API checks the token with Siteverify. OIDC sign-in is unchanged |
 | `TURNSTILE_SECRET_KEY` | unset | Turnstile secret. Set together with `TURNSTILE_SITE_KEY`, or leave both unset |
+| `GOATCOUNTER_URL` | unset | Origin of a [GoatCounter](https://www.goatcounter.com/) instance, such as `https://stats.example.com`, to count page views in the web app. Only route names are sent (`/library`, `/bookmarks/$id`), never ids, search terms or titles; no cookies; browsers with Do Not Track or Global Privacy Control are not counted. Added to the CSP's `connect-src`. Must be https (http only on localhost) with no path. Unset, nothing is counted |
 | `REQUIRE_VERIFIED_EMAIL` | `false` | When `true` and mail is on, the verified-email hard gate applies even if the admin toggle is off. The admin UI shows the toggle on and disabled |
 | `BLOCK_DISPOSABLE_EMAILS` | `false` | When `true`, registration and email-change refuse addresses on an embedded disposable-domain list (`400` "Use a lasting email address.") |
 

@@ -23,10 +23,26 @@ base-uri 'self'; \
 form-action 'self'; \
 object-src 'none'";
 
+/// The CSP, with the analytics origin (already validated as a bare origin) allowed as a
+/// `sendBeacon` target when one is configured.
+pub fn content_security_policy(analytics_origin: Option<&str>) -> HeaderValue {
+    match analytics_origin {
+        Some(origin) => {
+            let csp = CONTENT_SECURITY_POLICY.replace(
+                "connect-src 'self';",
+                &format!("connect-src 'self' {origin};"),
+            );
+            HeaderValue::from_str(&csp)
+                .unwrap_or_else(|_| HeaderValue::from_static(CONTENT_SECURITY_POLICY))
+        }
+        None => HeaderValue::from_static(CONTENT_SECURITY_POLICY),
+    }
+}
+
 const PERMISSIONS_POLICY: &str = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
 
 /// Build the baseline security headers. `hsts_max_age` is seconds; `None` skips HSTS.
-pub fn security_headers(hsts_max_age: Option<u64>) -> HeaderMap {
+pub fn security_headers(hsts_max_age: Option<u64>, csp: &HeaderValue) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(
         header::X_CONTENT_TYPE_OPTIONS,
@@ -41,10 +57,7 @@ pub fn security_headers(hsts_max_age: Option<u64>) -> HeaderMap {
         HeaderValue::from_static(PERMISSIONS_POLICY),
     );
     headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
-    headers.insert(
-        header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static(CONTENT_SECURITY_POLICY),
-    );
+    headers.insert(header::CONTENT_SECURITY_POLICY, csp.clone());
     if let Some(secs) = hsts_max_age {
         let value = format!("max-age={secs}; includeSubDomains");
         if let Ok(hv) = HeaderValue::from_str(&value) {
@@ -55,8 +68,12 @@ pub fn security_headers(hsts_max_age: Option<u64>) -> HeaderMap {
 }
 
 /// Apply baseline headers to a response. Does not replace an existing CSP (asset sandbox).
-pub fn apply_security_headers(headers: &mut HeaderMap, hsts_max_age: Option<u64>) {
-    let baseline = security_headers(hsts_max_age);
+pub fn apply_security_headers(
+    headers: &mut HeaderMap,
+    hsts_max_age: Option<u64>,
+    csp: &HeaderValue,
+) {
+    let baseline = security_headers(hsts_max_age, csp);
     for (name, value) in baseline.iter() {
         if name == header::CONTENT_SECURITY_POLICY && headers.contains_key(name) {
             continue;
@@ -67,11 +84,12 @@ pub fn apply_security_headers(headers: &mut HeaderMap, hsts_max_age: Option<u64>
 
 pub async fn security_headers_middleware(
     hsts_max_age: Option<u64>,
+    csp: HeaderValue,
     request: Request,
     next: Next,
 ) -> Response {
     let mut response = next.run(request).await;
-    apply_security_headers(response.headers_mut(), hsts_max_age);
+    apply_security_headers(response.headers_mut(), hsts_max_age, &csp);
     response
 }
 
@@ -112,7 +130,7 @@ mod tests {
 
     #[test]
     fn baseline_headers_cover_the_roadmap() {
-        let h = security_headers(None);
+        let h = security_headers(None, &content_security_policy(None));
         assert_eq!(h[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
         assert_eq!(
             h[header::REFERRER_POLICY],
@@ -138,8 +156,20 @@ mod tests {
     }
 
     #[test]
+    fn csp_allows_beacons_to_the_analytics_origin_only_when_set() {
+        let off = content_security_policy(None);
+        assert!(off.to_str().unwrap().contains("connect-src 'self';"));
+        let on = content_security_policy(Some("https://stats.example.com"));
+        let on = on.to_str().unwrap();
+        assert!(on.contains("connect-src 'self' https://stats.example.com;"));
+        // Beacons only: no scripts or images from there.
+        assert!(on.contains("script-src 'self' https://challenges.cloudflare.com;"));
+        assert!(on.contains("img-src 'self' data: blob:;"));
+    }
+
+    #[test]
     fn hsts_is_optional() {
-        let h = security_headers(Some(31_536_000));
+        let h = security_headers(Some(31_536_000), &content_security_policy(None));
         assert_eq!(
             h[header::STRICT_TRANSPORT_SECURITY],
             "max-age=31536000; includeSubDomains"
@@ -153,7 +183,7 @@ mod tests {
             header::CONTENT_SECURITY_POLICY,
             HeaderValue::from_static("sandbox; default-src 'none'"),
         );
-        apply_security_headers(&mut headers, None);
+        apply_security_headers(&mut headers, None, &content_security_policy(None));
         assert_eq!(
             headers[header::CONTENT_SECURITY_POLICY],
             "sandbox; default-src 'none'"
@@ -183,7 +213,7 @@ mod tests {
         let app = Router::new()
             .route("/ping", get_route(|| async { "ok" }))
             .layer(axum::middleware::from_fn(|req, next| async move {
-                security_headers_middleware(None, req, next).await
+                security_headers_middleware(None, content_security_policy(None), req, next).await
             }));
         let res = app
             .oneshot(Request::builder().uri("/ping").body(Body::empty()).unwrap())

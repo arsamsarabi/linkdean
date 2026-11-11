@@ -70,6 +70,7 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),
         "turnstile_site_key": state.cfg.turnstile_site_key,
+        "goatcounter_url": state.cfg.goatcounter_url,
     })))
 }
 
