@@ -68,6 +68,30 @@ export function fillFromPage(draft: BookmarkDraft, details: PageDetails): Bookma
   }
 }
 
+/**
+ * What **Import from URL** does when pressed: the page's title and description replace what
+ * the draft had, and its tags join the draft's. `before` is the draft when the button was
+ * pressed; a field the person changed while the page loaded keeps their edit. A field the
+ * page left empty stays as it is.
+ */
+export function replaceFromPage(before: BookmarkDraft, current: BookmarkDraft, details: PageDetails): BookmarkDraft {
+  const title = details.title?.trim()
+  const description = details.description?.trim()
+  const seen = new Set(current.tags.map((t) => t.toLowerCase()))
+  const newTags = details.tags.filter((t) => {
+    const key = t.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  return {
+    ...current,
+    title: title && current.title === before.title ? title : current.title,
+    description: description && current.description === before.description ? description : current.description,
+    tags: newTags.length > 0 ? [...current.tags, ...newTags] : current.tags,
+  }
+}
+
 /** True when saving this draft puts the bookmark in a vault, whose URLs never leave the instance. */
 export function draftHeadsToVault(draft: BookmarkDraft, categories: Category[], vaultRequired = false): boolean {
   if (vaultRequired || draft.is_vault || draft.vault_id) return true

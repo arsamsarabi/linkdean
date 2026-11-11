@@ -7,6 +7,7 @@ import {
   emptyDraft,
   fillFromPage,
   isFetchableUrl,
+  replaceFromPage,
 } from './bookmarks'
 
 describe('bookmarks drafts', () => {
@@ -87,6 +88,26 @@ describe('filling a draft from the page', () => {
     const spaced = { ...emptyDraft(), title: '   ' }
     expect(fillFromPage(spaced, details).title).toBe('Page title')
     expect(fillFromPage(spaced, { title: null, description: null, tags: [] }).title).toBe('   ')
+  })
+
+  it('replaces the title and description when asked, and adds new tags', () => {
+    const typed = { ...emptyDraft(), title: 'Mine', description: 'My notes', tags: ['keep', 'A'] }
+    expect(replaceFromPage(typed, typed, details)).toMatchObject({
+      title: 'Page title',
+      description: 'Page text',
+      tags: ['keep', 'A', 'b'],
+    })
+  })
+
+  it('keeps fields edited while the page loaded, and fields the page left empty', () => {
+    const before = { ...emptyDraft(), title: 'Old', description: 'Notes' }
+    const edited = { ...before, title: 'Edited' }
+    expect(replaceFromPage(before, edited, details)).toMatchObject({ title: 'Edited', description: 'Page text' })
+    expect(replaceFromPage(before, before, { title: '  ', description: null, tags: [] })).toMatchObject({
+      title: 'Old',
+      description: 'Notes',
+      tags: [],
+    })
   })
 
   it('knows when a draft is going into a vault', () => {

@@ -86,7 +86,7 @@ describe('BookmarkDrawer Import from URL', () => {
     pageDetails.mutateAsync.mockReset()
   })
 
-  it('stays disabled until the URL is a web address, then fills only the empty fields', async () => {
+  it('stays disabled until the URL is a web address, then replaces the title and description', async () => {
     pageDetails.mutateAsync.mockResolvedValue({ title: 'From page', description: 'About it', tags: ['x'] })
     renderDrawer({})
     const button = screen.getByRole('button', { name: /Import from URL/ })
@@ -98,8 +98,22 @@ describe('BookmarkDrawer Import from URL', () => {
     await userEvent.click(button)
 
     expect(pageDetails.mutateAsync).toHaveBeenCalledWith('https://example.com/post')
-    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('My title')
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('From page')
     expect((screen.getByLabelText('Description') as HTMLTextAreaElement).value).toBe('About it')
+  })
+
+  it('keeps a field typed into while the page was loading', async () => {
+    let resolve: (v: unknown) => void = () => undefined
+    pageDetails.mutateAsync.mockReturnValue(new Promise((r) => (resolve = r)))
+    renderDrawer({})
+    await userEvent.type(screen.getByLabelText(/^URL/), 'example.com/post')
+    await userEvent.type(screen.getByLabelText('Title'), 'Old')
+    await userEvent.click(screen.getByRole('button', { name: /Import from URL/ }))
+    await userEvent.type(screen.getByLabelText('Title'), ' and new')
+    resolve({ title: 'From page', description: 'About it', tags: [] })
+
+    expect(await screen.findByDisplayValue('About it')).toBeTruthy()
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Old and new')
   })
 
   it('shows why a page could not be fetched, and keeps the form usable', async () => {

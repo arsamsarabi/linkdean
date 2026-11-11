@@ -11,7 +11,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Edit category drawer (name, parent, icon, hidden) from folder menu
 - Bookmarks with title, URL, description, notes
 - Only `http://` and `https://` addresses are saved, on create, edit and import; an address typed without a scheme gets `https://`
-- **Import from URL** on the bookmark form: the server fetches the page (plain HTTP, public addresses only) and fills in the title, description and tags the person has left empty. Not offered for bookmarks going into a vault. Counts as one enrich action and is limited to 60 per user every 15 minutes
+- **Import from URL** on the bookmark form: the server fetches the page (plain HTTP, public addresses only) and replaces the form's title and description with the page's, adding its tags to the ones already there. A field edited while the page loads keeps the edit; the automatic fetch on the quick save page fills only empty fields. Not offered for bookmarks going into a vault. Counts as one enrich action and is limited to 60 per user every 15 minutes
 - **Quick save** at `/save?url=…&title=…&text=…`: opens the bookmark form filled from the link, fetches page details when needed, remembers the last folder, and offers **Save to Unsorted**. A URL already in the library opens that bookmark instead of a duplicate
 - **Fast capture** — browser extension, bookmarklet, share target, and iOS Shortcuts: how to set each up is in [Saving pages fast](../guides/fast-capture.md)
 - Bookmark cards / glance tiles: title primary, full URL muted beneath
