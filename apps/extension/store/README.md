@@ -150,8 +150,8 @@ After the first manual submissions, the Release workflow submits each new versio
 1. In the [Google Cloud console](https://console.cloud.google.com/), signed in as the publisher account (`dev.linkdean@gmail.com`), create a project (for example `linkdean-extension`) and enable the **Chrome Web Store API** in it.
 2. **IAM & Admin → Service accounts → Create service account**, for example `cws-publisher`. Grant it no roles.
 3. Open the service account, **Keys → Add key → Create new key → JSON**. Keep the downloaded file private; delete it once the secrets are set.
-4. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), **Account**: add the service account's email (`client_email` in the JSON). A publisher can have only one. The publisher account needs 2-step verification.
-5. Note the **publisher ID** (Dashboard → Publisher → Settings) and the **item ID** (32 letters, on the item's Package tab).
+4. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), signed in as the publisher account, open **Publisher → Settings** in the left sidebar (not Account → Profile) and add the service account's email (`client_email` in the JSON) in its service account section. A publisher can have only one. The publisher account needs 2-step verification.
+5. Note the **publisher ID** (same page, Publisher → Settings) and the **item ID** (32 letters, on the item's Package tab).
 
 **AMO:** at [addons.mozilla.org/developers/addon/api/key/](https://addons.mozilla.org/developers/addon/api/key/), signed in as the add-on's owner, generate credentials: a JWT issuer and a JWT secret. The add-on ID, `firefox@linkdean.app`, is in the workflow.
 
