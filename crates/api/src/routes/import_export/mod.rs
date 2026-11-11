@@ -115,7 +115,9 @@ async fn import(
 
     let job = db::create_import_job(&state.pool, user.id, &format).await?;
     let mut counts = db::ImportCounts::default();
-    let applied = db::apply_parsed_import_counted(&state.pool, user.id, parsed, &mut counts).await;
+    let plan = db::ImportPlan::create_all(parsed.bookmarks.len());
+    let applied =
+        db::apply_parsed_import_counted(&state.pool, user.id, parsed, &plan, &mut counts).await;
 
     // Whatever landed is searchable, even when the import stopped part way.
     match db::list_bookmarks(

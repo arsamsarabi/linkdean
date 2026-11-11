@@ -3,7 +3,7 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
-use linkdean_core::import_export::parse_netscape;
+use linkdean_core::import_export::{parse_netscape, DuplicateAction, DuplicateDecisions};
 use linkdean_core::{CreateBookmark, CreateCategory, User, VaultKeyring};
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -253,4 +253,180 @@ async fn several_copies_in_the_library_report_the_latest() {
         .await
         .unwrap();
     assert_eq!(preview.duplicates[0].existing.id, newer);
+}
+
+async fn import_with(
+    pool: &PgPool,
+    me: &User,
+    file: &str,
+    decisions: DuplicateDecisions,
+) -> db::ImportCounts {
+    let parsed = parse_netscape(file).unwrap();
+    let plan = db::plan_import(pool, me.id, &parsed, &decisions)
+        .await
+        .unwrap();
+    let mut counts = db::ImportCounts::default();
+    db::apply_parsed_import_counted(pool, me.id, parsed, &plan, &mut counts)
+        .await
+        .unwrap();
+    counts
+}
+
+fn all(action: DuplicateAction) -> DuplicateDecisions {
+    DuplicateDecisions {
+        default: action,
+        ..Default::default()
+    }
+}
+
+#[tokio::test]
+async fn skip_creates_nothing_for_the_duplicate() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let url = format!("https://s.example/{}", Uuid::new_v4());
+    bookmark(&pool, &me, &url, "Mine", vec![]).await;
+    let file = html(&format!(
+        "{}{}",
+        a(&url, "Theirs"),
+        a("https://s-new.example", "New")
+    ));
+    let c = import_with(&pool, &me, &file, all(DuplicateAction::Skip)).await;
+    assert_eq!((c.total, c.imported, c.skipped, c.replaced), (2, 1, 1, 0));
+    assert_eq!(bookmark_count(&pool, &me).await, 2);
+}
+
+#[tokio::test]
+async fn keep_creates_a_second_copy_and_is_the_default() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let url = format!("https://k.example/{}", Uuid::new_v4());
+    bookmark(&pool, &me, &url, "Mine", vec![]).await;
+    let c = import_with(
+        &pool,
+        &me,
+        &html(&a(&url, "Theirs")),
+        DuplicateDecisions::default(),
+    )
+    .await;
+    assert_eq!((c.imported, c.skipped, c.replaced), (1, 0, 0));
+    assert_eq!(bookmark_count(&pool, &me).await, 2);
+}
+
+#[tokio::test]
+async fn replace_updates_in_place_and_keeps_the_id() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let old = folder(&pool, &me, "Old", None).await;
+    let url = format!("https://r.example/{}", Uuid::new_v4());
+    let id = bookmark(&pool, &me, &url, "Mine", vec![old]).await;
+    db::update_bookmark(
+        &pool,
+        me.id,
+        id,
+        linkdean_core::UpdateBookmark {
+            is_favorite: Some(true),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .unwrap();
+    let file = html(&h3(
+        "New",
+        &format!("<DT><A HREF=\"{url}\" TAGS=\"fresh\">Theirs</A>\n<DD>Their notes\n"),
+    ));
+    let c = import_with(&pool, &me, &file, all(DuplicateAction::Replace)).await;
+    assert_eq!((c.imported, c.replaced), (0, 1));
+    assert_eq!(bookmark_count(&pool, &me).await, 1);
+
+    let view = view_of(&pool, &me, id).await;
+    assert_eq!(view.title, "Theirs");
+    assert_eq!(view.description.as_deref(), Some("Their notes"));
+    assert_eq!(view.tags, vec!["fresh".to_string()]);
+    assert_eq!(
+        view.categories
+            .iter()
+            .map(|c| c.path.as_str())
+            .collect::<Vec<_>>(),
+        vec!["New"]
+    );
+    assert!(view.is_favorite);
+}
+
+#[tokio::test]
+async fn replace_keeps_values_the_file_does_not_have() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let old = folder(&pool, &me, "Old", None).await;
+    let url = format!("https://r2.example/{}", Uuid::new_v4());
+    let id = bookmark(&pool, &me, &url, "Mine", vec![old]).await;
+    // No title, no tags, no folder in the file.
+    let c = import_with(
+        &pool,
+        &me,
+        &html(&format!("<DT><A HREF=\"{url}\"></A>\n")),
+        all(DuplicateAction::Replace),
+    )
+    .await;
+    assert_eq!(c.replaced, 1);
+    let view = view_of(&pool, &me, id).await;
+    assert_eq!(view.title, "Mine");
+    assert_eq!(view.tags, vec!["old".to_string()]);
+    assert_eq!(
+        view.categories
+            .iter()
+            .map(|c| c.path.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Old"]
+    );
+}
+
+#[tokio::test]
+async fn an_override_beats_the_default_and_the_plan_counts_creates() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let u1 = format!("https://o1.example/{}", Uuid::new_v4());
+    let u2 = format!("https://o2.example/{}", Uuid::new_v4());
+    bookmark(&pool, &me, &u1, "One", vec![]).await;
+    bookmark(&pool, &me, &u2, "Two", vec![]).await;
+    let file = html(&format!(
+        "{}{}{}",
+        a(&u1, "1"),
+        a(&u2, "2"),
+        a("https://o3.example", "3")
+    ));
+    let parsed = parse_netscape(&file).unwrap();
+    let mut decisions = all(DuplicateAction::Skip);
+    decisions.overrides.insert(1, DuplicateAction::Keep);
+    let plan = db::plan_import(&pool, me.id, &parsed, &decisions)
+        .await
+        .unwrap();
+    assert_eq!(plan.creates(), 2);
+}
+
+#[tokio::test]
+async fn a_bookmark_added_after_the_preview_gets_the_default() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let url = format!("https://late.example/{}", Uuid::new_v4());
+    let file = html(&a(&url, "Late"));
+    let preview = db::preview_import(&pool, me.id, &parse_netscape(&file).unwrap())
+        .await
+        .unwrap();
+    assert!(preview.duplicates.is_empty());
+    bookmark(&pool, &me, &url, "Added meanwhile", vec![]).await;
+    let c = import_with(&pool, &me, &file, all(DuplicateAction::Skip)).await;
+    assert_eq!((c.imported, c.skipped), (0, 1));
 }

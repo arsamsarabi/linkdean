@@ -1,16 +1,18 @@
 use linkdean_core::import_export::ParsedImport;
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
-    BookmarkExport, CategoryExport, CreateDashboard, DashboardExport, DashboardSectionExport,
-    Error, ImportJob, PutDashboardLayout, PutDashboardSection, Result,
+    BookmarkExport, CategoryExport, CreateBookmark, CreateDashboard, DashboardExport,
+    DashboardSectionExport, Error, ImportJob, PutDashboardLayout, PutDashboardSection, Result,
+    UpdateBookmark,
 };
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-use super::bookmarks::{create_bookmark, list_bookmarks};
+use super::bookmarks::{create_bookmark, list_bookmarks, update_bookmark};
 use super::categories::list_owned_categories;
 use super::dashboards::{create_dashboard, put_dashboard};
+use super::import_plan::{ImportPlan, RowPlan};
 
 pub async fn create_import_job(pool: &PgPool, user_id: Uuid, source: &str) -> Result<ImportJob> {
     sqlx::query_as::<_, ImportJob>(
@@ -59,17 +61,24 @@ pub async fn finish_import_job(
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ImportCounts {
     pub total: i32,
+    /// Bookmarks created.
     pub imported: i32,
     pub failed: i32,
+    /// Duplicates dropped by Skip.
+    pub skipped: i32,
+    /// Existing bookmarks updated by Replace.
+    pub replaced: i32,
 }
 
+/// An import with no duplicate decisions: every bookmark is created, as before.
 pub async fn apply_parsed_import(
     pool: &PgPool,
     user_id: Uuid,
     parsed: ParsedImport,
 ) -> Result<(i32, i32, i32)> {
     let mut counts = ImportCounts::default();
-    apply_parsed_import_counted(pool, user_id, parsed, &mut counts).await?;
+    let plan = ImportPlan::create_all(parsed.bookmarks.len());
+    apply_parsed_import_counted(pool, user_id, parsed, &plan, &mut counts).await?;
     Ok((counts.total, counts.imported, counts.failed))
 }
 
@@ -78,6 +87,7 @@ pub async fn apply_parsed_import_counted(
     pool: &PgPool,
     user_id: Uuid,
     parsed: ParsedImport,
+    plan: &ImportPlan,
     counts: &mut ImportCounts,
 ) -> Result<()> {
     let folder_ids = super::import_folders::resolve_folders(
@@ -90,43 +100,68 @@ pub async fn apply_parsed_import_counted(
 
     counts.total = parsed.bookmarks.len() as i32;
     let mut new_ids: HashMap<Uuid, Uuid> = HashMap::new();
-    for item in parsed.bookmarks {
-        let mut bm = item.bookmark;
-        bm.category_id = None;
-        bm.category_ids = item
+    for (index, item) in parsed.bookmarks.into_iter().enumerate() {
+        let category_ids: Vec<Uuid> = item
             .categories
             .iter()
             .filter_map(|&i| folder_ids.get(i).copied())
             .collect();
-        let created = match create_bookmark(pool, user_id, bm, &VaultKeyring::default()).await {
-            Ok(view) => view,
-            Err(e) => {
-                tracing::warn!(?e, "import bookmark failed");
-                counts.failed += 1;
-                continue;
+        match plan.rows.get(index).copied().unwrap_or(RowPlan::Create) {
+            RowPlan::Skip => {
+                counts.skipped += 1;
             }
-        };
-        counts.imported += 1;
-        if let Some(source) = item.source_id {
-            new_ids.insert(source, created.id);
-        }
-        if item.is_private || item.created_at.is_some() || item.updated_at.is_some() {
-            sqlx::query(
-                r#"
-                UPDATE bookmarks
-                SET is_private = $2,
-                    created_at = COALESCE($3, created_at),
-                    updated_at = COALESCE($4, updated_at)
-                WHERE id = $1
-                "#,
-            )
-            .bind(created.id)
-            .bind(item.is_private)
-            .bind(item.created_at)
-            .bind(item.updated_at)
-            .execute(pool)
-            .await
-            .map_err(|e| Error::msg(e.to_string()))?;
+            RowPlan::Replace(existing_id) => {
+                match replace_from_import(pool, user_id, existing_id, &item.bookmark, category_ids)
+                    .await
+                {
+                    Ok(()) => {
+                        counts.replaced += 1;
+                        if let Some(source) = item.source_id {
+                            new_ids.insert(source, existing_id);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(?e, "import replace failed");
+                        counts.failed += 1;
+                    }
+                }
+            }
+            RowPlan::Create => {
+                let mut bm = item.bookmark;
+                bm.category_id = None;
+                bm.category_ids = category_ids;
+                let created =
+                    match create_bookmark(pool, user_id, bm, &VaultKeyring::default()).await {
+                        Ok(view) => view,
+                        Err(e) => {
+                            tracing::warn!(?e, "import bookmark failed");
+                            counts.failed += 1;
+                            continue;
+                        }
+                    };
+                counts.imported += 1;
+                if let Some(source) = item.source_id {
+                    new_ids.insert(source, created.id);
+                }
+                if item.is_private || item.created_at.is_some() || item.updated_at.is_some() {
+                    sqlx::query(
+                        r#"
+                        UPDATE bookmarks
+                        SET is_private = $2,
+                            created_at = COALESCE($3, created_at),
+                            updated_at = COALESCE($4, updated_at)
+                        WHERE id = $1
+                        "#,
+                    )
+                    .bind(created.id)
+                    .bind(item.is_private)
+                    .bind(item.created_at)
+                    .bind(item.updated_at)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| Error::msg(e.to_string()))?;
+                }
+            }
         }
     }
 
@@ -165,6 +200,40 @@ pub async fn apply_parsed_import_counted(
         )
         .await?;
     }
+    Ok(())
+}
+
+/// Replace: the file's title, description, tags and folders win when the file has them.
+/// Everything else on the existing bookmark stays.
+async fn replace_from_import(
+    pool: &PgPool,
+    user_id: Uuid,
+    id: Uuid,
+    incoming: &CreateBookmark,
+    category_ids: Vec<Uuid>,
+) -> Result<()> {
+    let non_empty = |s: &Option<String>| {
+        s.as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_string)
+    };
+    let req = UpdateBookmark {
+        title: non_empty(&incoming.title),
+        description: non_empty(&incoming.description).map(Some),
+        tags: (!incoming.tags.is_empty()).then(|| incoming.tags.clone()),
+        category_ids: (!category_ids.is_empty()).then_some(category_ids),
+        ..Default::default()
+    };
+    if req.title.is_none()
+        && req.description.is_none()
+        && req.tags.is_none()
+        && req.category_ids.is_none()
+    {
+        // Nothing in the file to take; the bookmark already matches it.
+        return Ok(());
+    }
+    update_bookmark(pool, user_id, id, req, &VaultKeyring::default()).await?;
     Ok(())
 }
 
