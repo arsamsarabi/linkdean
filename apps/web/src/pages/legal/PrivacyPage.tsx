@@ -40,6 +40,30 @@ export function PrivacyPage(): ReactElement {
           your browser&apos;s session storage, which never leaves your device.
         </Text>
       </LegalSection>
+      <LegalSection heading="2a. Page view statistics">
+        <Text>
+          An instance can count page views with GoatCounter, without cookies and without storing anything in your
+          browser. linkdean.app does, on its own GoatCounter at stats.linkdean.app, for the app, this site and the docs.
+          Each page you open sends:
+        </Text>
+        <List>
+          <List.Item>
+            In the app, the name of the page only, such as &quot;/library&quot; or &quot;/bookmarks/$id&quot;: never
+            bookmark ids, folder names, search terms or titles. On the marketing site and docs, the page&apos;s address
+            and the site you came from.
+          </List.Item>
+          <List.Item>Your screen size.</List.Item>
+          <List.Item>
+            Your browser&apos;s user agent and IP address, which GoatCounter uses to work out the browser, operating
+            system and country and to tell repeat visits apart with a hash that changes every day. It does not store the
+            IP address.
+          </List.Item>
+        </List>
+        <Text>
+          Nothing is sent if your browser sends Do Not Track or Global Privacy Control. The statistics are counts only
+          and are not linked to your account.
+        </Text>
+      </LegalSection>
       <LegalSection heading="3. Why we use it">
         <Text>
           To run the service you asked for: sign you in, store and search your bookmarks, send the emails you trigger
@@ -80,7 +104,12 @@ export function PrivacyPage(): ReactElement {
           The Linkdean extension for Chrome and Firefox works only with the Linkdean you sign it in to, such as
           app.linkdean.app or your own instance. It sends that instance the address, title and the text you selected of
           pages you choose to save, when you use its button, menu or shortcut, and reads your folders and tags to offer
-          them. It does not read or send the pages you visit otherwise, and it sends nothing to anyone else.
+          them. It does not send the pages you visit otherwise, and it sends nothing to anyone else.
+        </Text>
+        <Text>
+          If you turn on &quot;Color the icon on saved pages&quot;, the extension reads the address of each tab and
+          checks it in your browser against short hashes of the addresses you saved, which it downloads from your
+          instance. The addresses of the pages you visit are not sent.
         </Text>
         <Text>
           Signing in creates an API key for the extension, kept in the extension&apos;s own storage in your browser.
