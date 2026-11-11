@@ -210,7 +210,7 @@ function FilingCard({
         </Stack>
 
         <Switch
-          label="Favourite"
+          label="Favorite"
           checked={draft.favorite}
           onChange={(e) => {
             const favorite = e.currentTarget.checked
