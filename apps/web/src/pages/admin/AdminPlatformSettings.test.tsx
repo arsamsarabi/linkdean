@@ -26,6 +26,7 @@ vi.mock('@/hooks', () => ({
 vi.mock('./AdminEmailPanel', () => ({ AdminEmailPanel: () => null }))
 vi.mock('./AdminInvitesPanel', () => ({ AdminInvitesPanel: () => null }))
 vi.mock('./AdminReportsPanel', () => ({ AdminReportsPanel: () => null }))
+vi.mock('./AdminScreenshotRetryPanel', () => ({ AdminScreenshotRetryPanel: () => null }))
 vi.mock('./AdminUsersPanel', () => ({ AdminUsersPanel: () => null }))
 vi.mock('./BannedUsersPanel', () => ({ BannedUsersPanel: () => null }))
 

@@ -8,6 +8,7 @@ import { SettingsSkeleton } from '@/pages/settings'
 import { AdminEmailPanel } from './AdminEmailPanel'
 import { AdminInvitesPanel } from './AdminInvitesPanel'
 import { AdminReportsPanel } from './AdminReportsPanel'
+import { AdminScreenshotRetryPanel } from './AdminScreenshotRetryPanel'
 import { AdminUsersPanel } from './AdminUsersPanel'
 import { BannedUsersPanel } from './BannedUsersPanel'
 
@@ -246,6 +247,7 @@ export function AdminPlatformSettings(): ReactElement {
               </Button>
             </Stack>
           </Paper>
+          <AdminScreenshotRetryPanel settings={platform.data.settings} />
           <AdminInvitesPanel />
           <AdminEmailPanel />
         </>
