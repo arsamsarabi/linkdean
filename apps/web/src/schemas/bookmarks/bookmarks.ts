@@ -123,11 +123,18 @@ export const bookmarkListPageSchema = z.object({
 
 export const bookmarkIdsSchema = z.object({ ids: z.array(z.string()) })
 
+/** `GET /bookmarks/{id}/filing-suggestions`: what the person uses on the same site. */
+export const filingSuggestionsSchema = z.object({
+  folders: z.array(z.object({ id: z.string(), count: z.number() })),
+  tags: z.array(z.object({ name: z.string(), count: z.number() })),
+})
+
 /** `GET /tags` rows; the library filter only needs the names. */
 export const tagNamesSchema = z.array(z.object({ name: z.string() }))
 
 export type BookmarkListPage = z.infer<typeof bookmarkListPageSchema>
 export type BookmarkIdsResponse = z.infer<typeof bookmarkIdsSchema>
+export type FilingSuggestions = z.infer<typeof filingSuggestionsSchema>
 export type CategoryRef = z.infer<typeof categoryRefSchema>
 export type Bookmark = z.infer<typeof bookmarkSchema>
 export type LinkCheckStatus = z.infer<typeof linkCheckStatusSchema>
