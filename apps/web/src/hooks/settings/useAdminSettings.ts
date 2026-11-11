@@ -12,6 +12,7 @@ import type {
   EmailStatus,
   PlatformSettings,
   RegistrationInvite,
+  ScreenshotRetryStatus,
   TestEmailResult,
 } from '@/schemas'
 
@@ -38,6 +39,8 @@ export type PlatformSettingsPatch = {
   max_import_bytes?: number | null
   max_upload_image_bytes?: number | null
   abuse_contact_email?: string | null
+  screenshot_retry_cooldown_hours?: number
+  screenshot_auto_retry_days?: number
 }
 
 export function useUpdatePlatformSettings(): UseMutationResult<PlatformEnvelope, Error, PlatformSettingsPatch> {
@@ -46,6 +49,7 @@ export function useUpdatePlatformSettings(): UseMutationResult<PlatformEnvelope,
     mutationFn: (body) => api.updatePlatformSettings(body),
     onSuccess: (res) => {
       qc.setQueryData(['admin', 'platform-settings'], res)
+      void qc.invalidateQueries({ queryKey: ['admin', 'screenshot-retry'] })
       void qc.invalidateQueries({ queryKey: ['bootstrap'] })
       void qc.invalidateQueries({ queryKey: ['me'] })
     },
@@ -72,6 +76,27 @@ export function useUpdateAdminUser(): UseMutationResult<
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
       void qc.invalidateQueries({ queryKey: ['me'] })
     },
+  })
+}
+
+const RETRY_KEY = ['admin', 'screenshot-retry'] as const
+
+/** Failed screenshots and the retry cooldown. Polls while screenshots are being taken. */
+export function useScreenshotRetryStatus(enabled = true): UseQueryResult<ScreenshotRetryStatus> {
+  return useQuery({
+    queryKey: RETRY_KEY,
+    queryFn: () => api.screenshotRetryStatus(),
+    enabled,
+    refetchInterval: (q) => (q.state.data?.running ? 10_000 : false),
+  })
+}
+
+export function useRetryScreenshots(): UseMutationResult<ScreenshotRetryStatus, Error, void> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.retryScreenshots(),
+    onSuccess: (res) => qc.setQueryData(RETRY_KEY, res),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ['admin', 'platform-settings'] }),
   })
 }
 

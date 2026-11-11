@@ -39,6 +39,10 @@ pub fn router() -> Router<AppState> {
         .route("/admin/invites", get(list_invites).post(create_invite))
         .route("/admin/invites/{id}", axum::routing::delete(revoke_invite))
         .route("/admin/search/reindex", post(reindex_search))
+        .route(
+            "/admin/screenshots/retry",
+            get(screenshot_retry_status).post(retry_screenshots),
+        )
         .merge(email::router())
         .merge(reports::router())
 }
@@ -98,6 +102,32 @@ async fn patch_platform_settings(
             req.max_enrich_actions_per_day,
             req.max_import_bytes,
             req.max_upload_image_bytes,
+        )
+        .await?;
+    }
+    if req.screenshot_retry_cooldown_hours.is_some() || req.screenshot_auto_retry_days.is_some() {
+        if req
+            .screenshot_retry_cooldown_hours
+            .is_some_and(|h| !(1..=720).contains(&h))
+        {
+            return Err(linkdean_core::Error::BadRequest(
+                "the retry cooldown must be between 1 and 720 hours".into(),
+            )
+            .into());
+        }
+        if req
+            .screenshot_auto_retry_days
+            .is_some_and(|d| !(1..=90).contains(&d))
+        {
+            return Err(linkdean_core::Error::BadRequest(
+                "the automatic retry window must be between 1 and 90 days".into(),
+            )
+            .into());
+        }
+        settings = db::set_screenshot_retry_settings(
+            &state.pool,
+            req.screenshot_retry_cooldown_hours,
+            req.screenshot_auto_retry_days,
         )
         .await?;
     }
@@ -354,4 +384,75 @@ async fn reindex_search(
         "upserted": upserted,
         "failed": failed,
     })))
+}
+
+/// What the retry button needs: how many failed screenshots a retry would take, and when it
+/// is next allowed.
+async fn screenshot_retry_status(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+) -> ApiResult<Json<Value>> {
+    let settings = db::get_platform_settings(&state.pool).await?;
+    retry_status_json(&state, &settings).await
+}
+
+async fn retry_status_json(
+    state: &AppState,
+    settings: &linkdean_core::PlatformSettings,
+) -> ApiResult<Json<Value>> {
+    let cooldown = settings.screenshot_retry_cooldown_hours;
+    let failed = db::count_failed_previews(&state.pool, cooldown).await?;
+    let next_available_at = settings
+        .screenshot_retry_last_run_at
+        .map(|t| t + chrono::Duration::hours(i64::from(cooldown)))
+        .filter(|t| *t > chrono::Utc::now());
+    Ok(Json(json!({
+        "failed": failed,
+        "cooldown_hours": cooldown,
+        "last_run_at": settings.screenshot_retry_last_run_at,
+        "next_available_at": next_available_at,
+        "running": linkdean_worker::backfill_running(),
+        "browser_configured": state.enrich_opts().browser_ws_url.is_some(),
+    })))
+}
+
+/// Queue failed screenshots for another try, at most once per cooldown. Only failures older
+/// than the cooldown are taken, so a page that just failed is not tried again at once.
+async fn retry_screenshots(
+    State(state): State<AppState>,
+    AdminUser(_admin): AdminUser,
+) -> ApiResult<Json<Value>> {
+    let opts = state.enrich_opts();
+    if opts.browser_ws_url.is_none() {
+        return Err(linkdean_core::Error::BadRequest(
+            "screenshots are off on this server (BROWSER_WS_URL is not set)".into(),
+        )
+        .into());
+    }
+    let Some(guard) = linkdean_worker::try_begin_backfill() else {
+        return Err(linkdean_core::Error::Conflict(
+            "screenshots are already being taken; try again when they finish".into(),
+        )
+        .into());
+    };
+    if db::claim_screenshot_retry(&state.pool).await?.is_none() {
+        return Err(linkdean_core::Error::Conflict(
+            "failed screenshots were retried recently; wait for the cooldown".into(),
+        )
+        .into());
+    }
+    let settings = db::get_platform_settings(&state.pool).await?;
+    let rows =
+        db::list_failed_previews(&state.pool, settings.screenshot_retry_cooldown_hours).await?;
+    let queued = rows.len();
+    tokio::spawn(linkdean_worker::retry_failed_previews(
+        guard,
+        state.pool.clone(),
+        state.search.clone(),
+        opts,
+        rows,
+    ));
+    let Json(mut status) = retry_status_json(&state, &settings).await?;
+    status["queued"] = json!(queued);
+    Ok(Json(status))
 }

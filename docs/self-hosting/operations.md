@@ -45,7 +45,7 @@ Set `BOOTSTRAP_TOKEN` to a long random string (`openssl rand -hex 32`) to requir
 
 ### Per-user quotas
 
-Under **Admin**, optional caps apply to every account (leave blank for unlimited):
+Under **Admin → Quotas**, optional caps apply to every account (leave blank for unlimited):
 
 - Max bookmarks (owned, not deleted). An import that would exceed the cap is refused entirely.
 - Max stored image bytes (avatar + preview/favicon/OG files on disk).
@@ -54,6 +54,12 @@ Under **Admin**, optional caps apply to every account (leave blank for unlimited
 - Max uploaded image bytes (cannot exceed the avatar/preview hard caps).
 
 When a cap is hit the API answers `403` with `{"code":"quota_exceeded","meter":…}`. Users see current usage under **Settings → General** when any limit is set. Membership plans are not wired yet; limits go through one resolver so plans can plug in later.
+
+### Failed screenshots
+
+A screenshot that times out, common right after a large import, leaves the bookmark on its Open Graph image or favicon. Linkdean retries failed screenshots on its own once they are older than the automatic retry window (7 days by default), in a check that runs at start and every 6 hours.
+
+To retry sooner, open **Admin → Screenshots** and press **Retry failed screenshots**. It shows how many would be retried, takes them two at a time, and can be used once per cooldown (24 hours by default). It only retries screenshots that failed longer ago than the cooldown, so pages that just failed are left alone. Both the cooldown and the automatic window are set in the same panel.
 
 ### Reverse proxy
 

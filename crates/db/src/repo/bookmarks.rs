@@ -4,6 +4,7 @@ use linkdean_core::{
     Bookmark, BookmarkView, Category, CategoryRef, CreateBookmark, Error, LinkCheckStatus, Result,
     UpdateBookmark, VaultPayload,
 };
+use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -1681,17 +1682,56 @@ pub async fn bookmark_wants_preview(pool: &PgPool, id: Uuid) -> Result<bool> {
     Ok(wants.unwrap_or(false))
 }
 
-/// Non-vault bookmarks that still need a local screenshot (owner_id, bookmark_id).
-pub async fn list_bookmarks_needing_preview(pool: &PgPool) -> Result<Vec<(Uuid, Uuid)>> {
+const FAILED_PREVIEWS: &str = r#"
+    is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
+    AND NOT preview_dismissed
+    AND preview_failed_at IS NOT NULL
+    AND preview_failed_at <= now() - make_interval(hours => $1)
+"#;
+
+/// Bookmarks whose screenshot failed at least `older_than_hours` ago (owner_id, bookmark_id),
+/// oldest failure first. A manual retry takes these.
+pub async fn list_failed_previews(
+    pool: &PgPool,
+    older_than_hours: i32,
+) -> Result<Vec<(Uuid, Uuid)>> {
+    sqlx::query_as(AssertSqlSafe(format!(
+        "SELECT owner_user_id, id FROM bookmarks WHERE {FAILED_PREVIEWS} ORDER BY preview_failed_at ASC"
+    )))
+    .bind(older_than_hours)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
+/// How many bookmarks a manual retry would take now.
+pub async fn count_failed_previews(pool: &PgPool, older_than_hours: i32) -> Result<i64> {
+    sqlx::query_scalar(AssertSqlSafe(format!(
+        "SELECT COUNT(*) FROM bookmarks WHERE {FAILED_PREVIEWS}"
+    )))
+    .bind(older_than_hours)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
+/// Non-vault bookmarks that still need a local screenshot (owner_id, bookmark_id): never
+/// tried, or failed more than `retry_after_days` ago.
+pub async fn list_bookmarks_needing_preview(
+    pool: &PgPool,
+    retry_after_days: i32,
+) -> Result<Vec<(Uuid, Uuid)>> {
     let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(
         r#"
         SELECT owner_user_id, id FROM bookmarks
         WHERE is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
           AND NOT preview_dismissed
-          AND (preview_failed_at IS NULL OR preview_failed_at < now() - interval '7 days')
+          AND (preview_failed_at IS NULL
+               OR preview_failed_at < now() - make_interval(days => $1))
         ORDER BY created_at ASC
         "#,
     )
+    .bind(retry_after_days)
     .fetch_all(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;

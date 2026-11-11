@@ -6,6 +6,7 @@
 
 - Create a category from the bookmark form: type a name that matches no category, pick **Create "name"**, and choose where it goes.
 - Import checks for bookmarks already in your library and lets you skip, replace, merge or import each one again; folders that already exist are reused.
+- Admins can retry failed screenshots from **Admin → Screenshots**, once per cooldown, and set how long failed screenshots wait before the automatic retry, which now runs every 6 hours instead of only at start.
 
 ### Changed
 

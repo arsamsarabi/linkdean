@@ -62,12 +62,6 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
     - Passkeys / WebAuthn.
     - Preset SSO providers: Authentik, Google, Microsoft, GitHub. OIDC with any standard issuer already works; GitHub needs OAuth, not OIDC.
 
-20. **Retry failed screenshots** (S). A screenshot that times out (common right after a large import, when Chrome gets a burst of pages) leaves the bookmark on its Open Graph image or favicon. Today the only retry is automatic: when the API starts, it retries failures older than 7 days, so in practice they wait for the next restart.
-    - A **Retry failed screenshots** button on the admin settings page, with the number of bookmarks that would be retried. It queues them through the existing backfill, which runs two screenshots at a time.
-    - A cooldown between retries so Chrome and the sites it visits are not hammered: the button is disabled, showing when it is next available, until the cooldown has passed since the last run. Default 24 hours, admin-configurable in platform settings.
-    - Retry only bookmarks whose last failure is older than the cooldown, so a manual run never retries a page that just failed.
-    - Make the 7-day automatic retry window admin-configurable in the same place, and run it on a schedule instead of only at API start.
-
 21. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
     - An OpenAPI spec generated from the routes, published as the API reference.
     - One error body shape (`code`, `message`, details) across every route.

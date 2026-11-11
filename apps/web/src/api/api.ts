@@ -71,6 +71,7 @@ import {
   reportFiledSchema,
   resendVerificationResponseSchema,
   scheduleDeletionResponseSchema,
+  screenshotRetryStatusSchema,
   searchResponseSchema,
   settingsEnvelopeSchema,
   shareInvitesEnvelopeSchema,
@@ -148,6 +149,7 @@ import {
   type ResendVerificationResponse,
   type ResolveAbuseReport,
   type ScheduleDeletionResponse,
+  type ScreenshotRetryStatus,
   type ShareAccess,
   type ShareInvite,
   type SocialSubjectType,
@@ -206,6 +208,8 @@ export const api = {
     max_import_bytes?: number | null
     max_upload_image_bytes?: number | null
     abuse_contact_email?: string | null
+    screenshot_retry_cooldown_hours?: number
+    screenshot_auto_retry_days?: number
   }): Promise<{
     settings: PlatformSettings
     require_verified_email_forced: boolean
@@ -270,6 +274,12 @@ export const api = {
 
   resolveAbuseReport: (id: string, body: ResolveAbuseReport): Promise<{ report: AbuseReport }> =>
     req(`/admin/reports/${id}/resolve`, { method: 'POST', body: JSON.stringify(body) }, abuseReportEnvelopeSchema),
+
+  screenshotRetryStatus: (): Promise<ScreenshotRetryStatus> =>
+    req('/admin/screenshots/retry', {}, screenshotRetryStatusSchema),
+
+  retryScreenshots: (): Promise<ScreenshotRetryStatus> =>
+    req('/admin/screenshots/retry', { method: 'POST' }, screenshotRetryStatusSchema),
 
   reindexSearch: (): Promise<{ ok: boolean; upserted: number; failed: number }> =>
     req('/admin/search/reindex', { method: 'POST' }, adminReindexSchema),

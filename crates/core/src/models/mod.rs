@@ -176,6 +176,12 @@ pub struct PlatformSettings {
     pub max_upload_image_bytes: Option<i64>,
     /// Where to send abuse and takedown reports. `None` until an admin sets it.
     pub abuse_contact_email: Option<String>,
+    /// Hours between manual retries of failed screenshots.
+    pub screenshot_retry_cooldown_hours: i32,
+    /// Failed screenshots older than this many days are retried automatically.
+    pub screenshot_auto_retry_days: i32,
+    /// When an admin last retried failed screenshots by hand.
+    pub screenshot_retry_last_run_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -230,6 +236,10 @@ pub struct UpdatePlatformSettings {
     /// `Some(None)` clears; `Some(Some(email))` sets; omit = no change.
     #[serde(default, deserialize_with = "deserialize_option_option_string")]
     pub abuse_contact_email: Option<Option<String>>,
+    /// 1 to 720.
+    pub screenshot_retry_cooldown_hours: Option<i32>,
+    /// 1 to 90.
+    pub screenshot_auto_retry_days: Option<i32>,
 }
 
 fn deserialize_option_option_string<'de, D>(

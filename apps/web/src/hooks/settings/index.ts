@@ -4,6 +4,8 @@ export {
   useAdminUsers,
   useUpdateAdminUser,
   useReindexSearch,
+  useScreenshotRetryStatus,
+  useRetryScreenshots,
   useRegistrationInvites,
   useCreateRegistrationInvite,
   useRevokeRegistrationInvite,

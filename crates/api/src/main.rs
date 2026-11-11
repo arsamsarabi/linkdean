@@ -50,11 +50,7 @@ async fn main() -> anyhow::Result<()> {
         let search = state.search.clone();
         let opts = state.enrich_opts();
         if opts.browser_ws_url.is_some() {
-            tokio::spawn(async move {
-                // Give Chrome a moment when compose starts together.
-                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-                linkdean_worker::backfill_previews(pool, search, opts).await;
-            });
+            tokio::spawn(linkdean_worker::run_preview_backfill(pool, search, opts));
         }
     }
 

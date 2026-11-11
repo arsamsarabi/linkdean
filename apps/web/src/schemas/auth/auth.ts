@@ -69,6 +69,9 @@ export const platformSettingsSchema = z.object({
   max_import_bytes: z.number().int().positive().nullish(),
   max_upload_image_bytes: z.number().int().positive().nullish(),
   abuse_contact_email: z.string().nullish(),
+  screenshot_retry_cooldown_hours: z.number().int().default(24),
+  screenshot_auto_retry_days: z.number().int().default(7),
+  screenshot_retry_last_run_at: z.string().nullish(),
   updated_at: z.string(),
 })
 
@@ -135,6 +138,20 @@ export const adminUsersEnvelopeSchema = z.object({
 
 export const adminUserEnvelopeSchema = z.object({
   user: adminUserSummarySchema,
+})
+
+export const screenshotRetryStatusSchema = z.object({
+  /** Failed screenshots a retry would take now. */
+  failed: z.number().int(),
+  cooldown_hours: z.number().int(),
+  last_run_at: z.string().nullish(),
+  /** Set while the cooldown runs. */
+  next_available_at: z.string().nullish(),
+  /** A retry or the automatic backfill is taking screenshots now. */
+  running: z.boolean(),
+  browser_configured: z.boolean(),
+  /** Only on a retry: how many were queued. */
+  queued: z.number().int().optional(),
 })
 
 export const adminReindexSchema = z.object({
@@ -241,6 +258,7 @@ export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
 export type PendingOidcLink = z.infer<typeof pendingOidcLinkSchema>
 export type PlatformSettings = z.infer<typeof platformSettingsSchema>
+export type ScreenshotRetryStatus = z.infer<typeof screenshotRetryStatusSchema>
 export type QuotaUsage = z.infer<typeof quotaUsageSchema>
 export type ApiKey = z.infer<typeof apiKeySchema>
 export type CreateApiKeyResponse = z.infer<typeof createApiKeyResponseSchema>

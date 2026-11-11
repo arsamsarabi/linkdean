@@ -727,12 +727,80 @@ pub async fn run_link_checker(pool: PgPool, opts: LinkCheckOpts) {
     }
 }
 
-/// Rate-limited backfill for bookmarks missing local screenshots.
+static BACKFILL_RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Held while a screenshot backfill or retry runs, so two never overlap and hammer Chrome.
+pub struct BackfillGuard(());
+
+impl Drop for BackfillGuard {
+    fn drop(&mut self) {
+        BACKFILL_RUNNING.store(false, std::sync::atomic::Ordering::Release);
+    }
+}
+
+/// Take the backfill slot, or `None` while another backfill or retry runs.
+pub fn try_begin_backfill() -> Option<BackfillGuard> {
+    BACKFILL_RUNNING
+        .compare_exchange(
+            false,
+            true,
+            std::sync::atomic::Ordering::AcqRel,
+            std::sync::atomic::Ordering::Acquire,
+        )
+        .ok()
+        .map(|_| BackfillGuard(()))
+}
+
+/// Whether a backfill or retry is running now.
+pub fn backfill_running() -> bool {
+    BACKFILL_RUNNING.load(std::sync::atomic::Ordering::Acquire)
+}
+
+/// How often the automatic backfill runs.
+const BACKFILL_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
+
+/// Rate-limited backfill for bookmarks missing local screenshots: never tried, or failed
+/// longer ago than the admin's automatic retry window.
 pub async fn backfill_previews(pool: PgPool, search: SearchClient, opts: EnrichOpts) {
-    match db::list_bookmarks_needing_preview(&pool).await {
+    let Some(guard) = try_begin_backfill() else {
+        info!("preview backfill skipped: another one is running");
+        return;
+    };
+    let days = match db::get_platform_settings(&pool).await {
+        Ok(s) => s.screenshot_auto_retry_days,
+        Err(e) => {
+            warn!("preview backfill: platform settings: {e}");
+            return;
+        }
+    };
+    match db::list_bookmarks_needing_preview(&pool, days).await {
         Ok(rows) => enrich_rows(pool, search, opts, rows).await,
         Err(e) => warn!("list bookmarks needing previews: {e}"),
     }
+    drop(guard);
+}
+
+/// Run the backfill shortly after start, then every few hours.
+pub async fn run_preview_backfill(pool: PgPool, search: SearchClient, opts: EnrichOpts) {
+    // Give Chrome a moment when compose starts together.
+    tokio::time::sleep(Duration::from_secs(3)).await;
+    loop {
+        backfill_previews(pool.clone(), search.clone(), opts.clone()).await;
+        tokio::time::sleep(BACKFILL_EVERY).await;
+    }
+}
+
+/// Retry the given failed screenshots while holding `guard`, two at a time.
+pub async fn retry_failed_previews(
+    guard: BackfillGuard,
+    pool: PgPool,
+    search: SearchClient,
+    opts: EnrichOpts,
+    rows: Vec<(Uuid, Uuid)>,
+) {
+    info!(count = rows.len(), "retrying failed screenshots");
+    enrich_rows(pool, search, opts, rows).await;
+    drop(guard);
 }
 
 /// Enrich one user's bookmarks that have no preview yet, such as after an import.
@@ -1164,6 +1232,16 @@ async fn fetch_details_with(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn only_one_backfill_runs_at_a_time() {
+        let first = super::try_begin_backfill().expect("free");
+        assert!(super::backfill_running());
+        assert!(super::try_begin_backfill().is_none());
+        drop(first);
+        assert!(!super::backfill_running());
+        assert!(super::try_begin_backfill().is_some());
+    }
+
     #[test]
     fn sniffing_accepts_images_only() {
         let png = [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n'];
