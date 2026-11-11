@@ -95,6 +95,24 @@ const description =
     <link rel="stylesheet" href="/assets/ui/terminal-run/fragment.css" />
     <link rel="stylesheet" href="/assets/ui/notify/fragment.css" />
     <script is:inline src="/assets/backgrounds/backgrounds.js"></script>
+    <script is:inline>
+      // Page views on Linkdean's own GoatCounter: no cookies, nothing stored in the browser.
+      // Skipped when the browser sends Do Not Track or Global Privacy Control.
+      ;(function () {
+        var n = navigator
+        if (n.doNotTrack === '1' || n.globalPrivacyControl === true) return
+        window.goatcounter = {
+          path: function () {
+            return location.host + location.pathname
+          },
+        }
+        var s = document.createElement('script')
+        s.async = true
+        s.dataset.goatcounter = 'https://stats.linkdean.app/count'
+        s.src = 'https://stats.linkdean.app/count.js'
+        document.head.appendChild(s)
+      })()
+    </script>
   </head>
   <body>
     <!-- type: software
