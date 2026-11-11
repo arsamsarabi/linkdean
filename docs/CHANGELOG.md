@@ -2,9 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- Create a category from the bookmark form: type a name that matches no category, pick **Create "name"**, and choose where it goes.
+
 ### Changed
 
+- **Import from URL** on the bookmark form now replaces the title and description with the page's, and adds its tags, instead of filling only empty fields.
 - Restructured `docs/` into purpose folders (`self-hosting/`, `product/`, `guides/`, `ops/`, `design/`); install split into quick start, environment, and operations.
+
+### Fixed
+
+- Docs edits trigger a docs-site deploy again after the restructure; fixed links the move broke.
 
 
 ## [0.0.2] - 2026-11-06

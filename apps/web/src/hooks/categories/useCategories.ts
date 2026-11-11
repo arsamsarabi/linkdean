@@ -6,7 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { Category, CategoryVisibility } from '@/schemas'
+import type { Category, CategoryVisibility, CreateCategoryBody } from '@/schemas'
 import { useUi } from '@/stores'
 
 export function useCategories(includeHidden?: boolean, includeVault?: boolean): UseQueryResult<Category[]> {
@@ -19,8 +19,6 @@ export function useCategories(includeHidden?: boolean, includeVault?: boolean): 
     queryFn: () => api.categories(hidden, vault),
   })
 }
-
-type CreateCategoryBody = Partial<Category> & { name: string }
 
 export function useCreateCategory(): UseMutationResult<Category, Error, CreateCategoryBody> {
   const qc = useQueryClient()

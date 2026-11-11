@@ -7,7 +7,6 @@ import {
   Group,
   Loader,
   LoadingOverlay,
-  MultiSelect,
   Select,
   Stack,
   Switch,
@@ -31,9 +30,17 @@ import {
   useVaults,
 } from '@/hooks'
 import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
-import { categorySelectData, withWebScheme, writableCategories } from '@/lib'
+import { withWebScheme } from '@/lib'
 import type { Category } from '@/schemas'
-import { draftHeadsToVault, emptyDraft, fillFromPage, isFetchableUrl, type BookmarkDraft } from '@/services'
+import {
+  draftHeadsToVault,
+  emptyDraft,
+  fillFromPage,
+  isFetchableUrl,
+  replaceFromPage,
+  type BookmarkDraft,
+} from '@/services'
+import { BookmarkCategoriesField } from './BookmarkCategoriesField'
 import { BookmarkPreviewField } from './BookmarkPreviewField'
 
 export type { BookmarkDraft }
@@ -102,14 +109,22 @@ export function BookmarkDrawer({
     setFetchNote(null)
   })
 
-  async function importFromUrl(): Promise<void> {
+  /**
+   * `replace` is the Import from URL button: the page's details replace the title and
+   * description. The automatic quick-save import fills only what is empty.
+   */
+  async function importFromUrl(replace: boolean): Promise<void> {
     const url = fetchUrl
+    const before = draft
     setFetchNote(null)
     try {
       const details = await pageDetails.mutateAsync(url)
-      // Typing goes on while the page loads: fill only what is still empty, and only for
-      // the address that was fetched.
-      setDraft((d) => (withWebScheme(d.url) === url ? fillFromPage(d, details) : d))
+      // Typing goes on while the page loads: keep any field edited meanwhile, and apply
+      // only to the address that was fetched.
+      setDraft((d) => {
+        if (withWebScheme(d.url) !== url) return d
+        return replace ? replaceFromPage(before, d, details) : fillFromPage(d, details)
+      })
       if (!details.title && !details.description && details.tags.length === 0) {
         setFetchNote({ error: false, text: 'The page did not share a title, description or tags.' })
       }
@@ -123,7 +138,7 @@ export function BookmarkDrawer({
   const runAutoImport = useEffectEvent(() => {
     if (autoImported.current || !showFetch || !canFetch || draft.id || draft.title.trim()) return
     autoImported.current = true
-    void importFromUrl()
+    void importFromUrl(false)
   })
   useEffect(() => {
     if (!opened) {
@@ -221,7 +236,7 @@ export function BookmarkDrawer({
                 variant="light"
                 size="xs"
                 leftSection={<IconWorldDownload size={14} />}
-                onClick={() => void importFromUrl()}
+                onClick={() => void importFromUrl(true)}
                 disabled={!canFetch || pending}
                 loading={fetching}
               >
@@ -287,14 +302,11 @@ export function BookmarkDrawer({
             disabled={pending}
           />
         ) : null}
-        <MultiSelect
-          label="Categories"
-          description="Can pick several. Nested path shown in label. Read-only shared folders are omitted."
-          data={categorySelectData(writableCategories(categories))}
+        <BookmarkCategoriesField
+          categories={categories}
           value={draft.category_ids}
           onChange={(category_ids) => setDraft((d) => ({ ...d, category_ids }))}
-          searchable
-          clearable
+          canCreate={draft.can_write !== false}
         />
         {!editing && draft.category_ids.length === 0 ? (
           <Select

@@ -86,7 +86,7 @@ Rows carry `owner_user_id`. Milestone 1 adds `category_shares` (invitee + `read`
 ## HTTP security headers
 
 - Every response from the outer router (`crates/api/src/security.rs`) gets `Content-Security-Policy` (SPA-safe: `'self'` scripts plus `https://challenges.cloudflare.com` for the Turnstile script and iframe, `'unsafe-inline'` styles for Mantine, `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/microphone/geolocation/payment/usb off), and `X-Frame-Options: DENY`. Optional `Strict-Transport-Security` when `HSTS_MAX_AGE` is set (seconds). Image asset routes keep their own sandbox CSP; the middleware does not replace an existing CSP
-- `GET /.well-known/security.txt` and `GET /security.txt` publish the project contact from [SECURITY.md](../.github/SECURITY.md)
+- `GET /.well-known/security.txt` and `GET /security.txt` publish the project contact from [SECURITY.md](../../.github/SECURITY.md)
 
 ## API conventions
 

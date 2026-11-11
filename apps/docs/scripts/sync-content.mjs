@@ -114,6 +114,10 @@ function rewriteLinks(body) {
         `](${githubBlob}/deploy/public-beta/MONITORING.md$1)`,
       )
       .replace(
+        /\]\(\.\.\/\.\.\/\.github\/SECURITY\.md(#[^)]*)?\)/g,
+        `](${githubBlob}/.github/SECURITY.md$1)`,
+      )
+      .replace(
         /\]\(\.\.\/\.github\/SECURITY\.md(#[^)]*)?\)/g,
         `](${githubBlob}/.github/SECURITY.md$1)`,
       )
