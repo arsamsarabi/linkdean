@@ -38,7 +38,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
    - Write the model into [managed-service.md](../ops/managed-service.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
 13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Guest `.env` SoT is Infisical `/linkdean-public`; off-site backups are restic → B2 bucket `linkdean-public` ([BACKUP.md](../../deploy/public-beta/BACKUP.md)). Checklist: [managed-service.md](../ops/managed-service.md#public-beta-on-a-home-server).
-   - Go-live checklist. **Done** 2026-11-09: sign-up controls checked on the live beta with `deploy/public-beta/scripts/check-signup-controls.sh` (Turnstile, disposable-domain block, outbound mail) and `REQUIRE_VERIFIED_EMAIL=true` confirmed in Infisical; first restic restore drill passed on Nova ([drill log](../deploy/public-beta/BACKUP.md#drill-log)). External uptime monitoring moved to Later (#28).
+   - Go-live checklist. **Done** 2026-11-09: sign-up controls checked on the live beta with `deploy/public-beta/scripts/check-signup-controls.sh` (Turnstile, disposable-domain block, outbound mail) and `REQUIRE_VERIFIED_EMAIL=true` confirmed in Infisical; first restic restore drill passed on Nova ([drill log](../../deploy/public-beta/BACKUP.md#drill-log)). External uptime monitoring moved to Later (#28).
 ---
 
 ## Next: high value after release
@@ -48,7 +48,11 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
     - **Slice 1, quick save page.** **Done:** `/save` (see [features.md](./features.md)). URL matching is exact, so `https://a.com` and `https://a.com/` count as different pages, as in Library health → Duplicates.
     - **Slice 2, bookmarklet.** **Done:** **Settings → Fast capture** (see [features.md](./features.md)).
     - **Slice 3, share target.** **Done:** `share_target` in `site.webmanifest`, and the iOS Shortcuts in [Saving pages fast](../guides/fast-capture.md) (see [features.md](./features.md)).
-    - **Slice 4, browser extension.** **Submitted to both stores, in review:** `apps/extension` 0.1.0 (see [features.md](./features.md)). The Release workflow submits later versions on a tag. Remaining: approval, then the store links in the web app and docs.
+    - **Slice 4, browser extension.** **0.1.0 live on the Chrome Web Store, in review on AMO:** `apps/extension` (see [features.md](./features.md)). The Release workflow submits later versions on a tag, with its secrets set in the `extension-stores` environment but not yet used. Remaining:
+        a. **Arsam:** wait for AMO to approve 0.1.0 (email from Mozilla).
+        b. **Prep** (needs a): bump `apps/extension/package.json` to 0.1.1, which ships the popup footer change from #94.
+        c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
+        d. **Prep:** add the Chrome Web Store and AMO links to the web app (Settings → Fast capture) and the docs.
 
 16. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.
     - Let the Categories field in the bookmark drawer create one: typing a name that matches nothing offers **Create "name"**, which creates it and selects it.
