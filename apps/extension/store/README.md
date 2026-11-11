@@ -49,14 +49,15 @@ Everything the Chrome Web Store and addons.mozilla.org (AMO) ask for on the firs
 
 **Images:**
 
-| File                             | Use                                                                    |
-| -------------------------------- | ---------------------------------------------------------------------- |
-| `images/screenshot-save.png`     | Screenshot 1 (1280×800)                                                |
-| `images/screenshot-menu.png`     | Screenshot 2                                                           |
-| `images/screenshot-saved.png`    | Screenshot 3                                                           |
-| `images/screenshot-signin.png`   | Screenshot 4                                                           |
-| `images/promo-small-440x280.png` | Chrome small promo tile                                                |
-| `public/icon/128.png`            | Store icon (Chrome takes it from the zip; AMO uses the manifest icons) |
+| File                                | Use                                                                    |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| `images/screenshot-save.png`        | Screenshot 1 (1280×800)                                                |
+| `images/screenshot-menu.png`        | Screenshot 2                                                           |
+| `images/screenshot-saved.png`       | Screenshot 3                                                           |
+| `images/screenshot-signin.png`      | Screenshot 4                                                           |
+| `images/promo-small-440x280.png`    | Chrome small promo tile                                                |
+| `images/promo-marquee-1400x560.png` | Chrome marquee promo tile                                              |
+| `public/icon/128.png`               | Store icon (Chrome takes it from the zip; AMO uses the manifest icons) |
 
 ## Chrome Web Store
 
@@ -66,7 +67,7 @@ Upload `linkdean-extension-<version>-chrome.zip` at the [developer dashboard](ht
 
 - Category: **Productivity → Tools**.
 - Language: English.
-- Description, icon, screenshots, small promo tile: as above. The marquee tile is optional; skip it.
+- Description, icon, screenshots, small promo tile, marquee promo tile: as above.
 - Official URL: leave unset unless linkdean.app is verified in Search Console under the publisher account.
 - Homepage URL: `https://linkdean.app`. Support URL: the GitHub issues link.
 
@@ -90,7 +91,8 @@ Upload `linkdean-extension-<version>-chrome.zip` at the [developer dashboard](ht
 - **Data usage**, check:
   - Personally identifiable information: the account email, shown in the popup.
   - Authentication information: the API key the extension uses.
-  - Website content: the address, title and selected text of pages the user saves.
+  - Web history: the address and title of pages the user saves, and of the current tab when the popup checks whether it is already saved.
+  - Website content: the text the user selects, saved as the description.
 
   Then tick all three certifications (not sold, not used for unrelated purposes, not used for creditworthiness).
 
@@ -112,13 +114,13 @@ Publisher: `dev.linkdean@gmail.com`, non-trader. After the item is approved, not
 
 Submit at [addons.mozilla.org/developers](https://addons.mozilla.org/developers/) with arsam@linkdean.app → Submit a New Add-on → **On this site** (listed).
 
-1. Upload `linkdean-extension-<version>-firefox.zip`. Compatibility: Firefox only. Android is not supported; it has no window for the sign-in.
+1. Upload `linkdean-extension-<version>-firefox.zip`. Compatible platforms: Firefox only. Android is not supported; it has no window for the sign-in. The manifest needs Firefox 140 or later, the first version that shows the built-in data collection consent; older versions would need a consent screen of our own.
 2. **Source code:** Yes, upload `linkdean-extension-<version>-sources.zip`. The build is bundled and minified, so Mozilla requires it.
 3. Listing:
    - Name, summary, description: as above.
    - Categories: **Bookmarks**. Optional second: Other.
    - Support email or site, homepage: as above.
-   - License: **All Rights Reserved / custom**. Paste the repository's `LICENSE` (PolyForm Noncommercial 1.0.0 with its notice). It is not in AMO's list.
+   - License: **All Rights Reserved**. PolyForm Noncommercial is not in AMO's list, and it is not an open source license either.
    - Privacy policy: Yes, link `https://app.linkdean.app/privacy` or paste its "Browser extension" section.
    - Screenshots: the four images above. AMO has no promo tile.
 4. **Data collection:** the manifest declares `browsingActivity` and `websiteContent` as required. If the form asks again, confirm those two and nothing else.
@@ -139,6 +141,42 @@ Submit at [addons.mozilla.org/developers](https://addons.mozilla.org/developers/
    >
    > Test account: <email> / <password>
 
-## After the first approvals
+## Publishing from release tags
 
-Set up publishing from tags: Chrome Web Store API credentials and AMO API keys as GitHub secrets, then an `extension-v*` release job. Ask Claude for the step-by-step.
+After the first manual submissions, the Release workflow submits each new version (see [the extension README](../README.md#release)). It runs `wxt submit` in the `extension-stores` GitHub environment and needs the secrets below. The Chrome Web Store API can't create an item, so the first upload to each store stays manual.
+
+**Chrome Web Store** (API v2, with a service account, so there is no OAuth refresh token to expire):
+
+1. In the [Google Cloud console](https://console.cloud.google.com/), signed in as the publisher account (`dev.linkdean@gmail.com`), create a project (for example `linkdean-extension`) and enable the **Chrome Web Store API** in it.
+2. **IAM & Admin → Service accounts → Create service account**, for example `cws-publisher`. Grant it no roles.
+3. Open the service account, **Keys → Add key → Create new key → JSON**. Keep the downloaded file private; delete it once the secrets are set.
+4. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), **Account**: add the service account's email (`client_email` in the JSON). A publisher can have only one. The publisher account needs 2-step verification.
+5. Note the **publisher ID** (Dashboard → Publisher → Settings) and the **item ID** (32 letters, on the item's Package tab).
+
+**AMO:** at [addons.mozilla.org/developers/addon/api/key/](https://addons.mozilla.org/developers/addon/api/key/), signed in as the add-on's owner, generate credentials: a JWT issuer and a JWT secret. The add-on ID, `firefox@linkdean.app`, is in the workflow.
+
+**GitHub:** create the environment and set its secrets with `gh`, from the folder holding the key file:
+
+```bash
+repo=arsamsarabi/linkdean
+env=extension-stores
+gh api -X PUT "repos/$repo/environments/$env" >/dev/null
+gh secret set CHROME_PUBLISHER_ID --repo "$repo" --env "$env"                  # paste the publisher ID
+gh secret set CHROME_EXTENSION_ID --repo "$repo" --env "$env"                  # paste the item ID
+jq -r .client_email key.json | gh secret set CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL --repo "$repo" --env "$env"
+jq -r .private_key key.json | gh secret set CHROME_SERVICE_ACCOUNT_PRIVATE_KEY --repo "$repo" --env "$env"
+gh secret set FIREFOX_JWT_ISSUER --repo "$repo" --env "$env"                   # paste the JWT issuer
+gh secret set FIREFOX_JWT_SECRET --repo "$repo" --env "$env"                   # paste the JWT secret
+```
+
+`jq -r` writes the private key with real line breaks, which the signer needs. To approve each submission by hand, add yourself as a required reviewer under **Settings → Environments → extension-stores**.
+
+**Check the credentials without submitting**, from `apps/extension` after `pnpm zip && pnpm zip:firefox`, with the same values exported as environment variables plus `CHROME_API_VERSION=v2` and `FIREFOX_EXTENSION_ID=firefox@linkdean.app`:
+
+```bash
+v=$(jq -r .version package.json)
+pnpm exec wxt submit --dry-run \
+  --chrome-zip .output/linkdean-extension-$v-chrome.zip \
+  --firefox-zip .output/linkdean-extension-$v-firefox.zip \
+  --firefox-sources-zip .output/linkdean-extension-$v-sources.zip
+```

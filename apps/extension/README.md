@@ -33,12 +33,16 @@ CI runs the same on every push. `lint:firefox` is Mozilla's add-on linter, the c
 
 ## Release
 
+The Release workflow (`.github/workflows/release.yml`) submits the extension to the Chrome Web Store and AMO on a `v*.*.*` tag, but only when its build inputs changed since the previous tag and `version` in `package.json` went up. Tests, `store/` and this README don't count. A build change without a version bump is skipped with a warning, because the stores refuse a version they already have. So to ship the extension, bump `version` in the same PR as the change, then tag a release as usual. Both stores still review each version before it goes live.
+
+Setting up the store credentials: [store/README.md](store/README.md#publishing-from-release-tags).
+
+To build the uploads by hand:
+
 ```bash
 pnpm zip            # .output/linkdean-extension-<version>-chrome.zip
 pnpm zip:firefox    # the Firefox zip and the sources zip AMO asks for
 ```
-
-Bump `version` in `package.json` first; the stores refuse a version they already have.
 
 Listing text, permission justifications, privacy answers, reviewer notes and images for both stores: [store/README.md](store/README.md).
 
