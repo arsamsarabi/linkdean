@@ -1,9 +1,9 @@
 import { useState, type ReactElement } from 'react'
-import { CloseButton, Group, NavLink, Skeleton, Stack, Text, TextInput, UnstyledButton } from '@mantine/core'
+import { Badge, CloseButton, Group, NavLink, Skeleton, Stack, Text, TextInput, UnstyledButton } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import { IconChevronDown, IconFolder, IconInbox, IconSearch, IconUsers } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { useCategories } from '@/hooks'
+import { useCategories, useUnsortedCount } from '@/hooks'
 import { buildCategoryTree, CategoryIcon, filterFolders, isCategoryIconKey, type CatNode } from '@/lib'
 import type { Category } from '@/schemas'
 import { FOLDER_UNCATEGORIZED } from '@/services'
@@ -85,6 +85,7 @@ export function SidebarFolders({ activeFolder, onNavigate }: Props): ReactElemen
     getInitialValueInEffect: false,
   })
   const [query, setQuery] = useState('')
+  const unsortedCount = useUnsortedCount().data ?? 0
 
   const folders = (cats.data || []).filter((c) => !c.is_vault && !c.deleted_at)
   const matches = expanded ? filterFolders(folders, query) : []
@@ -102,6 +103,13 @@ export function SidebarFolders({ activeFolder, onNavigate }: Props): ReactElemen
       )}
       label="Unsorted"
       leftSection={<IconInbox {...iconProps} />}
+      rightSection={
+        unsortedCount > 0 ? (
+          <Badge size="sm" variant="light" color="gray" radius="sm" aria-label={`${unsortedCount} unsorted`}>
+            {unsortedCount > 999 ? '999+' : unsortedCount}
+          </Badge>
+        ) : undefined
+      }
       active={activeFolder === FOLDER_UNCATEGORIZED}
       onClick={onNavigate}
     />

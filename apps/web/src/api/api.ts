@@ -38,6 +38,7 @@ import {
   emailStatusSchema,
   exposedContentEnvelopeSchema,
   extensionAuthorizeSchema,
+  filingSuggestionsSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
   forgotPasswordResponseSchema,
@@ -119,6 +120,7 @@ import {
   type EmailChangeResponse,
   type EmailStatus,
   type ExposedContent,
+  type FilingSuggestions,
   type FollowRelation,
   type FollowUser,
   type ForgotPasswordResponse,
@@ -614,6 +616,10 @@ export const api = {
     req(`/bookmarks?${bookmarksQuery(params)}`, {}, bookmarkListPageSchema),
 
   bookmark: (id: string): Promise<Bookmark> => req(`/bookmarks/${id}`, {}, bookmarkSchema),
+
+  /** Folders and tags the person already uses on this bookmark's site. */
+  filingSuggestions: (id: string): Promise<FilingSuggestions> =>
+    req(`/bookmarks/${id}/filing-suggestions`, {}, filingSuggestionsSchema),
 
   /** Ids matching the same filters as `bookmarksPage` (server caps at 10k). */
   bookmarkIds: async (params: BookmarksListParams): Promise<string[]> =>

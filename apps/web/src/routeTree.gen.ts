@@ -25,6 +25,7 @@ import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppBrokenLinksRouteImport } from './routes/_app/broken-links'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 import { Route as AppDuplicatesRouteImport } from './routes/_app/duplicates'
+import { Route as AppFileRouteImport } from './routes/_app/file'
 import { Route as AppHistoryRouteImport } from './routes/_app/history'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppLibraryRouteImport } from './routes/_app/library'
@@ -118,6 +119,11 @@ const AppDuplicatesRoute = AppDuplicatesRouteImport.update({
   path: '/duplicates',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFileRoute = AppFileRouteImport.update({
+  id: '/file',
+  path: '/file',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppHistoryRoute = AppHistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/broken-links': typeof AppBrokenLinksRoute
   '/categories': typeof AppCategoriesRoute
   '/duplicates': typeof AppDuplicatesRoute
+  '/file': typeof AppFileRoute
   '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/broken-links': typeof AppBrokenLinksRoute
   '/categories': typeof AppCategoriesRoute
   '/duplicates': typeof AppDuplicatesRoute
+  '/file': typeof AppFileRoute
   '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/_app/broken-links': typeof AppBrokenLinksRoute
   '/_app/categories': typeof AppCategoriesRoute
   '/_app/duplicates': typeof AppDuplicatesRoute
+  '/_app/file': typeof AppFileRoute
   '/_app/history': typeof AppHistoryRoute
   '/_app/import': typeof AppImportRoute
   '/_app/library': typeof AppLibraryRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/broken-links'
     | '/categories'
     | '/duplicates'
+    | '/file'
     | '/history'
     | '/import'
     | '/library'
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
     | '/broken-links'
     | '/categories'
     | '/duplicates'
+    | '/file'
     | '/history'
     | '/import'
     | '/library'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/_app/broken-links'
     | '/_app/categories'
     | '/_app/duplicates'
+    | '/_app/file'
     | '/_app/history'
     | '/_app/import'
     | '/_app/library'
@@ -499,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDuplicatesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/file': {
+      id: '/_app/file'
+      path: '/file'
+      fullPath: '/file'
+      preLoaderRoute: typeof AppFileRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/history': {
       id: '/_app/history'
       path: '/history'
@@ -598,6 +617,7 @@ interface AppRouteChildren {
   AppBrokenLinksRoute: typeof AppBrokenLinksRoute
   AppCategoriesRoute: typeof AppCategoriesRoute
   AppDuplicatesRoute: typeof AppDuplicatesRoute
+  AppFileRoute: typeof AppFileRoute
   AppHistoryRoute: typeof AppHistoryRoute
   AppImportRoute: typeof AppImportRoute
   AppLibraryRoute: typeof AppLibraryRoute
@@ -618,6 +638,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBrokenLinksRoute: AppBrokenLinksRoute,
   AppCategoriesRoute: AppCategoriesRoute,
   AppDuplicatesRoute: AppDuplicatesRoute,
+  AppFileRoute: AppFileRoute,
   AppHistoryRoute: AppHistoryRoute,
   AppImportRoute: AppImportRoute,
   AppLibraryRoute: AppLibraryRoute,

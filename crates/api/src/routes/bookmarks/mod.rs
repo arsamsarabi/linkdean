@@ -31,6 +31,10 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/page-details", post(page_details))
         .route("/bookmarks/lookup", get(lookup))
         .route("/bookmarks/{id}/check-link", post(check_link))
+        .route(
+            "/bookmarks/{id}/filing-suggestions",
+            get(filing_suggestions),
+        )
         .route("/bookmarks/{id}/save", post(save_copy))
         .route(
             "/bookmarks/{id}/preview",
@@ -496,4 +500,15 @@ async fn save_copy(
         });
     }
     Ok(Json(view))
+}
+
+/// Folders and tags the person already uses on this bookmark's site, for the filing queue.
+async fn filing_suggestions(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<db::FilingSuggestions>> {
+    Ok(Json(
+        db::filing_suggestions(&state.pool, user.id, id).await?,
+    ))
 }

@@ -5,12 +5,14 @@ import {
   IconBookmark,
   IconBookmarkPlus,
   IconCheck,
+  IconFolderCheck,
   IconFolders,
   IconLayoutGrid,
   IconList,
   IconPin,
   IconStar,
 } from '@tabler/icons-react'
+import { useNavigate } from '@tanstack/react-router'
 import type { LibraryViewMode } from '@/hooks'
 import { FOLDER_ALL, FOLDER_UNCATEGORIZED, type FlagFilter } from '@/services'
 import styles from './LibraryPage.module.css'
@@ -65,6 +67,7 @@ function ToolbarButton({ label, Icon, compact, active, pressed, disabled, onClic
 export function LibraryPageHeader(): ReactElement {
   const compact = useMediaQuery('(max-width: 48em)') ?? false
   const lib = useLibraryPageModel()
+  const nav = useNavigate()
   const { loading, viewMode, searching, selectMode, canCreateInContext: canCreate } = lib
   const listCount = lib.list.length
   const unsorted = lib.folderId === FOLDER_UNCATEGORIZED
@@ -96,6 +99,17 @@ export function LibraryPageHeader(): ReactElement {
         </Text>
       </Stack>
       <Group gap="sm" wrap="wrap">
+        {unsorted && !selectMode && listCount > 0 ? (
+          <Tooltip label="Give each bookmark a folder, one at a time">
+            <Button
+              variant="light"
+              leftSection={<IconFolderCheck size={16} stroke={1.75} />}
+              onClick={() => void nav({ to: '/file' })}
+            >
+              File one by one
+            </Button>
+          </Tooltip>
+        ) : null}
         <Button.Group aria-label="Quick filters">
           {FLAG_FILTERS.map(({ flag, label, Icon }) => {
             const active = lib.filterFlags.includes(flag)

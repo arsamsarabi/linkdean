@@ -21,7 +21,10 @@ const folders = vi.hoisted(() => [
   { id: 'v1', name: 'Secret', parent_id: null, is_hidden: false, is_vault: true, access: 'owner', shared_out: false },
 ])
 
+const unsorted = vi.hoisted(() => ({ count: 0 }))
+
 vi.mock('@/hooks', () => ({
+  useUnsortedCount: () => ({ data: unsorted.count }),
   usePrefetchBrokenLinks: () => () => undefined,
   usePrefetchActivity: () => () => undefined,
   useCategories: () => ({ isLoading: false, data: folders }),
@@ -105,6 +108,14 @@ describe('AppSidebar', () => {
     expect(screen.getByLabelText('Shared')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Secret' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Library' }).hasAttribute('data-active')).toBe(false)
+  })
+
+  it('shows how many bookmarks wait in Unsorted', async () => {
+    unsorted.count = 4
+    renderSidebar({ pathname: '/library' })
+    await userEvent.click(screen.getByRole('button', { name: 'Folders' }))
+    expect(screen.getByRole('link', { name: /^Unsorted.*4 unsorted$/ })).toBeTruthy()
+    unsorted.count = 0
   })
 
   it('keeps Deleted items and settings reachable', () => {
