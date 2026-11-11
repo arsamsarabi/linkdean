@@ -30,7 +30,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 10. **Marketing site** (M). **Done:** Astro site in `apps/site`, live at [linkdean.app](https://linkdean.app) via `deploy/public-beta/static/site` — product pitch, features, self-host CTA to the docs site, sign-up / sign-in, legal + GitHub links, `contact@linkdean.app`. Static and cached at Cloudflare. Remaining: pricing section waits on item 12.
 
-11. **Documentation site** (M). **Done:** [Docusaurus](https://docusaurus.io/) at [`apps/docs`](../apps/docs), live at [docs.linkdean.app](https://docs.linkdean.app). Builds from repo `docs/` (self-hosting quick start / environment / operations, Features, Fast capture, Architecture) via `pnpm sync` + `pnpm build` into `deploy/public-beta/static/docs`. Remaining: API reference once **API platform** ships OpenAPI; optional FAQ pages.
+11. **Documentation site** (M). **Done:** [Docusaurus](https://docusaurus.io/) at [`apps/docs`](../../apps/docs), live at [docs.linkdean.app](https://docs.linkdean.app). Builds from repo `docs/` (self-hosting quick start / environment / operations, Features, Fast capture, Architecture) via `pnpm sync` + `pnpm build` into `deploy/public-beta/static/docs`. Remaining: API reference once **API platform** ships OpenAPI; optional FAQ pages.
 
 12. **Membership tiers and pricing** (M, explore). After go-live hardening (#13), before anyone pays and before Stripe or plan gates land in code.
    - Start from the plan sketch in the [organizations and teams design](../design/organizations-and-teams.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
@@ -119,7 +119,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 27. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
 
 28. **External uptime monitoring for the public beta** (S). Nothing outside the homelab notices when Nova, the guest or the home connection goes down, so an outage lasts until someone happens to look.
-    - Set up the checks in [MONITORING.md](../deploy/public-beta/MONITORING.md): `/api/ready` keyword check as the main one, plus health, marketing and docs, every 5 minutes, alerting after 2 failures.
+    - Set up the checks in [MONITORING.md](../../deploy/public-beta/MONITORING.md): `/api/ready` keyword check as the main one, plus health, marketing and docs, every 5 minutes, alerting after 2 failures.
     - Push alerts to a phone app; email alone is too easy to miss.
     - Add Cloudflare's Tunnel Health Alert for the `linkdean-public` tunnel.
     - Test one alert end to end by stopping the api for 15 minutes in a quiet hour.
