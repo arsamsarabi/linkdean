@@ -54,8 +54,6 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
         c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
         d. **Prep:** add the Chrome Web Store and AMO links to the web app (Settings → Fast capture) and the docs.
 
-17. **Duplicates on import** (M). Import adds every bookmark it reads, even when the library already has that URL, so importing the same file twice doubles the library. **Designed:** [import duplicates](../design/import-duplicates.md). A preview call lists exact-URL duplicates; the person picks **Skip**, **Replace** (update in place) or **Import anyway** per row or for all; folders with a matching path are reused instead of duplicated. Vault bookmarks are not checked.
-
 18. **Dashboard upgrades** (M). Make boards more useful at a glance.
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
     - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.

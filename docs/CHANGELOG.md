@@ -5,6 +5,7 @@
 ### Added
 
 - Create a category from the bookmark form: type a name that matches no category, pick **Create "name"**, and choose where it goes.
+- Import checks for bookmarks already in your library and lets you skip, replace or import each one again; folders that already exist are reused.
 
 ### Changed
 
