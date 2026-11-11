@@ -45,7 +45,7 @@ Set `BOOTSTRAP_TOKEN` to a long random string (`openssl rand -hex 32`) to requir
 
 ### Per-user quotas
 
-Under **Admin**, optional caps apply to every account (leave blank for unlimited):
+Under **Admin → Quotas**, optional caps apply to every account (leave blank for unlimited):
 
 - Max bookmarks (owned, not deleted). An import that would exceed the cap is refused entirely.
 - Max stored image bytes (avatar + preview/favicon/OG files on disk).

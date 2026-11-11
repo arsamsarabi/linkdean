@@ -42,7 +42,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot is retried automatically once it is older than the admin's retry window, 7 days by default, by a check that runs at start and every 6 hours)
 - Admin **Retry failed screenshots** (Admin → Screenshots): shows how many failed screenshots would be retried and queues them two at a time. Allowed once per cooldown (24 hours by default, 1 to 720) and takes only failures older than the cooldown; the button says when it is next available. The cooldown and the automatic retry window (1 to 90 days) are platform settings
-- Admin reindex: rebuild Meili from Postgres (Admin)
+- Admin reindex: rebuild Meili from Postgres (Admin → Search index)
 - Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; sidebar Library health entry → page + card badges; `POST /bookmarks/{id}/check-link`
 
 ---
@@ -125,6 +125,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Optional OIDC sign-in with any standard issuer (discovery, PKCE, nonce and ID token checks)
 - Single sign-on linking: an OIDC sign-in whose address belongs to a password account asks for that account's password once, then connects; the account gets a "Single sign-on was connected" email. **Profile → Edit profile → Single sign-on** shows the connected provider, with **Connect** (any provider address) and **Disconnect** (needs the password; not offered to SSO-only accounts)
 - First registered user becomes admin (bootstrap)
+- Admin page in sections, like Config options: General, Users, Reports, Bans, Invites, Quotas, Email, Screenshots and Search index (`/admin?tab=…`), down the side on wide screens and as a scrolling row on phones
 - Open registration toggle (Admin); public beta keeps registration open and relies on the protections below
 - Admin registration invites: one-time `ldi_…` codes / copyable `/register?invite=` links (optional email bind); required when registration closed
 - Optional Cloudflare Turnstile on password registration (`TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`); off when unset; OIDC uncapped by Turnstile
