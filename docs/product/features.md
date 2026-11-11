@@ -40,7 +40,8 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Meilisearch full-text search for **non-vault** bookmarks
 - Shared-folder visibility in search (owned + readable shared categories)
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
-- Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot waits a week before the boot backfill retries it)
+- Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot is retried automatically once it is older than the admin's retry window, 7 days by default, by a check that runs at start and every 6 hours)
+- Admin **Retry failed screenshots** (Admin → Screenshots): shows how many failed screenshots would be retried and queues them two at a time. Allowed once per cooldown (24 hours by default, 1 to 720) and takes only failures older than the cooldown; the button says when it is next available. The cooldown and the automatic retry window (1 to 90 days) are platform settings
 - Admin reindex: rebuild Meili from Postgres (Admin)
 - Broken-link checker (in-process rate-limited worker): HEAD→GET probe, per-host pacing, private-host skip; vault excluded; confirmed after 2 soft fails or immediate 404/410; sidebar Library health entry → page + card badges; `POST /bookmarks/{id}/check-link`
 
