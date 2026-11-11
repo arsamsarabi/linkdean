@@ -1,13 +1,22 @@
 import { useState } from 'react'
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { ImportResult } from '@/schemas'
+import type { DuplicateDecisions, ImportPreview, ImportResult } from '@/schemas'
 
-type ImportVars = { format: string; content: string }
+type ImportVars = { format: string; content: string; duplicates?: DuplicateDecisions }
 
 export function useImportBookmarks(): UseMutationResult<ImportResult, Error, ImportVars> {
   return useMutation({
-    mutationFn: ({ format, content }: ImportVars) => api.import(format, content),
+    mutationFn: ({ format, content, duplicates }: ImportVars) => api.import(format, content, duplicates),
+  })
+}
+
+type PreviewVars = { format: string; content: string }
+
+/** Which bookmarks in a file are already in the library. Writes nothing. */
+export function useImportPreview(): UseMutationResult<ImportPreview, Error, PreviewVars> {
+  return useMutation({
+    mutationFn: ({ format, content }: PreviewVars) => api.importPreview(format, content),
   })
 }
 

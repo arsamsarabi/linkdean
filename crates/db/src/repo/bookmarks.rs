@@ -1954,6 +1954,34 @@ pub async fn find_own_bookmark_by_url(
         .next())
 }
 
+/// For each of `urls`, the person's own live bookmark at exactly that URL outside any
+/// vault, the most recently updated when there are several. Import uses it to find
+/// duplicates, with the same rule as quick save.
+pub async fn find_own_bookmarks_by_urls(
+    pool: &PgPool,
+    user_id: Uuid,
+    urls: &[String],
+) -> Result<HashMap<String, BookmarkView>> {
+    if urls.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let rows = sqlx::query_as::<_, Bookmark>(
+        r#"
+        SELECT DISTINCT ON (url) * FROM bookmarks
+        WHERE owner_user_id = $1 AND is_vault = FALSE AND deleted_at IS NULL AND url = ANY($2)
+        ORDER BY url, updated_at DESC, created_at DESC
+        "#,
+    )
+    .bind(user_id)
+    .bind(urls)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let none = VaultKeyring::default();
+    let views = bookmarks_to_views(pool, rows, user_id, |_| &none).await?;
+    Ok(views.into_iter().map(|v| (v.url.clone(), v)).collect())
+}
+
 /// Which of `ids` are live bookmarks outside any vault. Search hits are checked against
 /// this, so a document the index failed to drop is never served.
 pub async fn live_plain_bookmark_ids(

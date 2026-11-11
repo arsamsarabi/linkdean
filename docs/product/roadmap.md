@@ -54,12 +54,6 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
         c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
         d. **Prep:** add the Chrome Web Store and AMO links to the web app (Settings → Fast capture) and the docs.
 
-17. **Duplicates on import** (M, explore first). Import adds every bookmark it reads, even when the library already has that URL, so importing the same file twice doubles the library. Let the person decide instead.
-    - Before anything is written, warn that the file has bookmarks whose URLs are already in the library, with the count.
-    - For each duplicate, show the existing bookmark next to the one being imported (title, URL, folder, tags, notes) and ask: **Replace** the existing one, **Skip** the imported one, or **Import anyway** as a second copy.
-    - Apply-to-all shortcuts for large imports, so nobody clicks through hundreds of rows.
-    - To explore: what counts as the same URL (Library health → Duplicates matches exact URLs only, so `https://a.com` and `https://a.com/` differ); whether Replace keeps the existing bookmark's ID, shares, pins and activity or swaps them for the imported one; vault bookmarks; and how the review step works with the import API, which today runs in one request.
-
 18. **Dashboard upgrades** (M). Make boards more useful at a glance.
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
     - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.

@@ -7,10 +7,10 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use linkdean_core::import_export::{
     build_linkdean_export, export_netscape, parse_linkdean_json, parse_netscape, parse_pocket_csv,
-    parse_raindrop_csv,
+    parse_raindrop_csv, DuplicateDecisions, ImportPreview, ParsedImport,
 };
 use linkdean_core::Error;
-use linkdean_core::VaultKeyring;
+use linkdean_core::{ResolvedLimits, VaultKeyring};
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -21,6 +21,10 @@ pub fn router() -> Router<AppState> {
             "/import",
             post(import).layer(DefaultBodyLimit::max(MAX_IMPORT_BODY)),
         )
+        .route(
+            "/import/preview",
+            post(preview).layer(DefaultBodyLimit::max(MAX_IMPORT_BODY)),
+        )
         .route("/export", get(export))
 }
 
@@ -28,6 +32,9 @@ pub fn router() -> Router<AppState> {
 pub struct ImportBody {
     pub format: String,
     pub content: String,
+    /// What to do with bookmarks already in the library. Missing: create them all, as before.
+    #[serde(default)]
+    pub duplicates: DuplicateDecisions,
 }
 
 #[derive(Deserialize)]
@@ -74,27 +81,24 @@ impl Drop for ImportSlot {
     }
 }
 
-async fn import(
-    State(state): State<AppState>,
-    AuthUser(user): AuthUser,
-    Json(body): Json<ImportBody>,
-) -> ApiResult<Json<Value>> {
-    let rate = crate::rate_limit::import_limit(user.id);
-    state.limiter.check(&rate)?;
-    let _slot = ImportSlot::acquire(user.id)?;
-    state.limiter.record(&rate);
+/// Checks the size against the import limit, picks the parser for `format` and parses off
+/// the async runtime. Returns the lower-cased format, the parsed file and the limits.
+async fn parse_import(
+    state: &AppState,
+    format: &str,
+    content: String,
+) -> ApiResult<(String, ParsedImport, ResolvedLimits)> {
     let limits = crate::quotas::limits_for(&state.pool).await?;
     let max_bytes = crate::quotas::effective_import_max(&limits);
-    if body.content.len() > max_bytes {
+    if content.len() > max_bytes {
         return Err(Error::QuotaExceeded {
             meter: db::METER_IMPORT,
             limit: max_bytes as i64,
-            used: body.content.len() as i64,
+            used: content.len() as i64,
         }
         .into());
     }
-    let format = body.format.to_ascii_lowercase();
-    let content = body.content;
+    let format = format.to_ascii_lowercase();
     let parser = match format.as_str() {
         "netscape" | "html" => parse_netscape,
         "json" | "linkdean" => parse_linkdean_json,
@@ -109,13 +113,46 @@ async fn import(
     let parsed = tokio::task::spawn_blocking(move || parser(&content))
         .await
         .map_err(|e| Error::msg(format!("import parse: {e}")))??;
+    Ok((format, parsed, limits))
+}
 
-    // Refuse the whole import when the bookmark gauge would overflow.
-    db::refuse_bookmark_quota(&state.pool, user.id, &limits, parsed.bookmarks.len() as i64).await?;
+/// What an import of this file would do: which bookmarks are already in the library, and
+/// how many folders would be reused. Writes nothing.
+async fn preview(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Json(body): Json<ImportBody>,
+) -> ApiResult<Json<ImportPreview>> {
+    let rate = crate::rate_limit::import_preview_limit(user.id);
+    state.limiter.check(&rate)?;
+    let _slot = ImportSlot::acquire(user.id)?;
+    state.limiter.record(&rate);
+    let (_, parsed, _) = parse_import(&state, &body.format, body.content).await?;
+    Ok(Json(
+        db::preview_import(&state.pool, user.id, &parsed).await?,
+    ))
+}
+
+async fn import(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Json(body): Json<ImportBody>,
+) -> ApiResult<Json<Value>> {
+    let rate = crate::rate_limit::import_limit(user.id);
+    state.limiter.check(&rate)?;
+    let _slot = ImportSlot::acquire(user.id)?;
+    state.limiter.record(&rate);
+    let (format, parsed, limits) = parse_import(&state, &body.format, body.content).await?;
+    let plan = db::plan_import(&state.pool, user.id, &parsed, &body.duplicates).await?;
+
+    // Refuse the whole import when the bookmark gauge would overflow. Skipped and replaced
+    // duplicates add nothing.
+    db::refuse_bookmark_quota(&state.pool, user.id, &limits, plan.creates() as i64).await?;
 
     let job = db::create_import_job(&state.pool, user.id, &format).await?;
     let mut counts = db::ImportCounts::default();
-    let applied = db::apply_parsed_import_counted(&state.pool, user.id, parsed, &mut counts).await;
+    let applied =
+        db::apply_parsed_import_counted(&state.pool, user.id, parsed, &plan, &mut counts).await;
 
     // Whatever landed is searchable, even when the import stopped part way.
     match db::list_bookmarks(
@@ -160,8 +197,6 @@ async fn import(
         None,
     )
     .await?;
-    let (total, imported, failed) = (counts.total, counts.imported, counts.failed);
-
     // Imports can be large, so fetch metadata and previews after responding.
     tokio::spawn(linkdean_worker::enrich_user_bookmarks(
         state.pool.clone(),
@@ -172,9 +207,12 @@ async fn import(
 
     Ok(Json(json!({
         "job_id": job.id,
-        "total": total,
-        "imported": imported,
-        "failed": failed,
+        "total": counts.total,
+        "imported": counts.imported,
+        "failed": counts.failed,
+        "skipped": counts.skipped,
+        "replaced": counts.replaced,
+        "merged": counts.merged,
         "status": job.status,
     })))
 }

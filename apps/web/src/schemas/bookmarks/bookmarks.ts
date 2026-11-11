@@ -66,6 +66,33 @@ export const importResultSchema = z.object({
   total: z.number(),
   imported: z.number(),
   failed: z.number(),
+  skipped: z.number().default(0),
+  replaced: z.number().default(0),
+  merged: z.number().default(0),
+})
+
+export const duplicateActionSchema = z.enum(['skip', 'replace', 'merge', 'keep'])
+
+const duplicateSideSchema = z.object({
+  title: z.string().nullish(),
+  description: z.string().nullish(),
+  tags: z.array(z.string()),
+  folders: z.array(z.string()),
+})
+
+/** `POST /import/preview`: which bookmarks in a file are already in the library. */
+export const importPreviewSchema = z.object({
+  total: z.number(),
+  new: z.number(),
+  duplicates: z.array(
+    z.object({
+      index: z.number(),
+      url: z.string(),
+      existing: duplicateSideSchema.extend({ id: z.string(), updated_at: z.string() }),
+      incoming: duplicateSideSchema,
+    })
+  ),
+  folders: z.object({ reused: z.number(), created: z.number() }),
 })
 
 /** The person's own bookmark at a URL, for quick save. */
@@ -107,6 +134,11 @@ export type LinkCheckStatus = z.infer<typeof linkCheckStatusSchema>
 export type SearchHit = z.infer<typeof searchHitSchema>
 export type SearchResponse = z.infer<typeof searchResponseSchema>
 export type ImportResult = z.infer<typeof importResultSchema>
+export type DuplicateAction = z.infer<typeof duplicateActionSchema>
+export type ImportPreview = z.infer<typeof importPreviewSchema>
+export type ImportDuplicate = ImportPreview['duplicates'][number]
+/** The import body's `duplicates`: an action for all rows, and the rows that differ. */
+export type DuplicateDecisions = { default: DuplicateAction; overrides: Record<number, DuplicateAction> }
 export type PageDetails = z.infer<typeof pageDetailsSchema>
 export type DuplicateGroup = z.infer<typeof duplicateGroupSchema>
 export type DuplicatesResponse = z.infer<typeof duplicatesSchema>

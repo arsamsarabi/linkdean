@@ -201,7 +201,8 @@ async fn a_failed_import_reports_what_it_got_through() {
         "dashboards": [{"title": "D", "is_default": false, "sections": [{"title": " ", "bookmark_ids": []}]}]}"#;
     let parsed = parse_linkdean_json(raw).expect("parse");
     let mut counts = db::ImportCounts::default();
-    let result = db::apply_parsed_import_counted(&pool, to.id, parsed, &mut counts).await;
+    let plan = db::ImportPlan::create_all(parsed.bookmarks.len());
+    let result = db::apply_parsed_import_counted(&pool, to.id, parsed, &plan, &mut counts).await;
     assert!(result.is_err());
     assert_eq!((counts.total, counts.imported, counts.failed), (1, 1, 0));
 }

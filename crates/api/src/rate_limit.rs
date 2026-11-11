@@ -24,6 +24,9 @@ const REPORT_USER: u32 = 10;
 /// Imports one user may start per window. Each one reindexes the library and starts a
 /// metadata and screenshot pass, so a loop of tiny files would cost far more than it sends.
 const IMPORT_USER: u32 = 10;
+/// Import previews one user may ask for per window. Each parses the whole file but writes
+/// nothing, so it has room for a few tries per import.
+const IMPORT_PREVIEW_USER: u32 = 30;
 /// Page details fetches one user may ask for per window, for auto-filling the bookmark form.
 /// Each one makes an outbound request, so the instance cannot be used as a fetch relay.
 const PAGE_DETAILS_USER: u32 = 60;
@@ -115,6 +118,10 @@ pub fn report_limit(user_id: uuid::Uuid) -> [Limit; 1] {
 
 pub fn import_limit(user_id: uuid::Uuid) -> [Limit; 1] {
     [(format!("import:{user_id}"), IMPORT_USER)]
+}
+
+pub fn import_preview_limit(user_id: uuid::Uuid) -> [Limit; 1] {
+    [(format!("import-preview:{user_id}"), IMPORT_PREVIEW_USER)]
 }
 
 pub fn page_details_limit(user_id: uuid::Uuid) -> [Limit; 1] {

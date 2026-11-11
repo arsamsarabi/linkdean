@@ -7,6 +7,9 @@ use crate::{
     LinkdeanExport, Result,
 };
 
+pub mod duplicates;
+pub use duplicates::*;
+
 /// The Linkdean JSON format this build writes.
 pub const EXPORT_VERSION: u32 = 2;
 
