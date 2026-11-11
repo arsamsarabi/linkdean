@@ -15,7 +15,7 @@ export type DashboardDraft = {
 export function emptyDashboardDraft(): DashboardDraft {
   return {
     title: 'Home',
-    sections: [{ key: newClientId(), title: 'Favourites', bookmark_ids: [] }],
+    sections: [{ key: newClientId(), title: 'Favorites', bookmark_ids: [] }],
   }
 }
 

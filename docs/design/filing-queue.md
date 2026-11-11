@@ -17,7 +17,7 @@ Design agreed with the product owner on 2026-11-11 for roadmap item 3 (Now). Fas
 - **Per card:**
   - Folders: the bookmark form's folder field, including **Create "name"**.
   - Tags: the bookmark form's tag input.
-  - A favourite toggle.
+  - A favorite toggle.
 - **Actions:**
   - **File:** saves and moves on. Disabled until a folder is chosen.
   - **Skip:** leaves the bookmark in Unsorted and moves on. A skipped bookmark is not shown again until the page is reloaded.

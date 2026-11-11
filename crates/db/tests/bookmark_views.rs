@@ -119,7 +119,7 @@ async fn listed_views_match_single_views_for_owner_and_invitee() {
         &VaultKeyring::default(),
     )
     .await
-    .expect("favourite");
+    .expect("favorite");
 
     db::create_share(
         &pool,
