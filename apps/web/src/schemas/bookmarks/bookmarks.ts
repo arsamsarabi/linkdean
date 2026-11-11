@@ -68,9 +68,10 @@ export const importResultSchema = z.object({
   failed: z.number(),
   skipped: z.number().default(0),
   replaced: z.number().default(0),
+  merged: z.number().default(0),
 })
 
-export const duplicateActionSchema = z.enum(['skip', 'replace', 'keep'])
+export const duplicateActionSchema = z.enum(['skip', 'replace', 'merge', 'keep'])
 
 const duplicateSideSchema = z.object({
   title: z.string().nullish(),

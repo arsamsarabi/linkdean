@@ -54,7 +54,7 @@ function renderDrawer(onConfirm = vi.fn(), onClose = vi.fn()) {
 describe('ImportDuplicatesDrawer', () => {
   it('says how many are already in the library and skips them by default', async () => {
     const { onConfirm } = renderDrawer()
-    expect(screen.getByText('2 of 10 bookmarks are already in your library.')).toBeTruthy()
+    expect(screen.getByText(/2 of 10 bookmarks are already in your library/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Import' }))
     expect(onConfirm).toHaveBeenCalledWith({ default: 'skip', overrides: {} })
   })

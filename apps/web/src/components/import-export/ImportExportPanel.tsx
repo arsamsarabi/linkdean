@@ -12,6 +12,7 @@ const iconSm = { size: 16, stroke: 1.5 } as const
 function resultMessage(res: ImportResult): string {
   const parts = [`Imported ${res.imported} of ${res.total}`]
   if (res.replaced) parts.push(`replaced ${res.replaced}`)
+  if (res.merged) parts.push(`merged ${res.merged}`)
   if (res.skipped) parts.push(`skipped ${res.skipped}`)
   if (res.failed) parts.push(`failed ${res.failed}`)
   return parts.join(', ')

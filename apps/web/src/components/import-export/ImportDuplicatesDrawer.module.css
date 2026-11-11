@@ -1,0 +1,238 @@
+/* Full-height panel: header and footer stay put, the list scrolls between them. */
+.content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-xl) var(--mantine-spacing-lg);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mantine-color-dimmed);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-xs) var(--mantine-spacing-lg);
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statValue {
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Mantine lays scroll content out as a table, which grows to fit nowrap text; a block
+   keeps every row inside the panel's width. */
+.scrollContent {
+  display: block !important;
+}
+
+.list {
+  padding: var(--mantine-spacing-lg) var(--mantine-spacing-xl) var(--mantine-spacing-xl);
+}
+
+/* Each choice brings its own colour; rows and the side that wins pick it up. */
+[data-action='skip'] {
+  --action: var(--mantine-color-gray-5);
+}
+
+[data-action='replace'] {
+  --action: var(--mantine-color-violet-5);
+}
+
+[data-action='merge'] {
+  --action: var(--mantine-color-green-5);
+}
+
+[data-action='keep'] {
+  --action: var(--mantine-color-ice-5);
+}
+
+.row {
+  padding: var(--mantine-spacing-lg);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--mantine-color-body);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.row:not([data-action='skip']) {
+  border-color: color-mix(in srgb, var(--action) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--action) 25%, transparent);
+}
+
+.rowHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+}
+
+.favicon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mantine-radius-md);
+  background: var(--ld-canvas);
+}
+
+.urlBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.sides {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--mantine-spacing-sm);
+  margin-top: var(--mantine-spacing-md);
+}
+
+.side {
+  min-width: 0;
+  padding: var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  background: var(--ld-canvas);
+  transition:
+    opacity 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+/* The side whose values end up in the library. */
+.side[data-state='winner'] {
+  background: color-mix(in srgb, var(--action) 14%, var(--mantine-color-body));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--action) 45%, transparent);
+}
+
+.side[data-state='muted'] {
+  opacity: 0.45;
+}
+
+.sideHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-xs);
+  margin-bottom: var(--mantine-spacing-xs);
+}
+
+.status {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--mantine-color-dimmed);
+}
+
+.side[data-state='winner'] .status {
+  color: var(--action);
+}
+
+.sideTitle {
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-top: var(--mantine-spacing-xs);
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.choices {
+  margin-top: var(--mantine-spacing-md);
+}
+
+/* The selected segment takes the choice's colour. */
+.indicator {
+  background: color-mix(in srgb, var(--action) 22%, var(--mantine-color-body));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--action) 55%, transparent);
+}
+
+.segmentLabel[data-active] {
+  color: var(--mantine-color-text);
+}
+
+.footer {
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-xl);
+  border-top: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-body);
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: var(--action);
+}
+
+@media (max-width: 36em) {
+  .header,
+  .list,
+  .footer {
+    padding-left: var(--mantine-spacing-md);
+    padding-right: var(--mantine-spacing-md);
+  }
+
+  .row {
+    padding: var(--mantine-spacing-md);
+  }
+
+  .sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Four labels do not fit a phone; the row's choices show icons, named for screen readers. */
+  .compactLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .side {
+    transition: none;
+  }
+}
