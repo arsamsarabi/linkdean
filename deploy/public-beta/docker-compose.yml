@@ -1,5 +1,5 @@
 # Public beta stack for the LXD guest on Nova.
-# See README.md and docs/superpowers/specs/2026-11-06-public-beta-homelab-design.md
+# See README.md and docs/ops/managed-service.md
 name: linkdean-public
 
 services:

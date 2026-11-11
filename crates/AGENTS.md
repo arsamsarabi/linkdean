@@ -210,7 +210,7 @@ cargo fmt --all -- --check
 - Modules: `snake_case`; types: `PascalCase`; consts: `SCREAMING_SNAKE` or const fns
 - Route files named by domain, not by HTTP verb bags
 - No grab-bag `utils.rs` / `helpers.rs` — name by purpose (`crypto`, `import_export`, `avatar`)
-- Mirror domain language from `docs/ARCHITECTURE.md` (Hidden vs Vault, etc.)
+- Mirror domain language from `docs/product/architecture.md` (Hidden vs Vault, etc.)
 
 ### Folder layout (mandatory)
 

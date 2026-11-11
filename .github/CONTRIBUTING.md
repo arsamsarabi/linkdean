@@ -8,8 +8,8 @@ Linkdean is maintained by one person. Issues and pull requests are welcome, and 
 
 ## Before you start
 
-- Skim the [README](../README.md) so you know what Linkdean is (and isn't), and [docs/FEATURES.md](../docs/FEATURES.md) for what already ships.
-- Check [docs/ROADMAP.md](../docs/ROADMAP.md) and [existing issues](https://github.com/arsamsarabi/linkdean/issues) before starting something new.
+- Skim the [README](../README.md) so you know what Linkdean is (and isn't), and [docs/product/features.md](../docs/product/features.md) for what already ships.
+- Check [docs/product/roadmap.md](../docs/product/roadmap.md) and [existing issues](https://github.com/arsamsarabi/linkdean/issues) before starting something new.
 - For larger ideas, open an issue first so we can agree on the approach.
 
 ## Project layout
@@ -27,7 +27,7 @@ Linkdean is maintained by one person. Issues and pull requests are welcome, and 
 | `deploy/docker` | Production image, production and dev Compose files |
 | `docs` | Architecture, features, roadmap, install and self-hosting guides |
 
-More detail: [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md), [crates/AGENTS.md](../crates/AGENTS.md) and [apps/web/AGENTS.md](../apps/web/AGENTS.md).
+More detail: [docs/product/architecture.md](../docs/product/architecture.md), [crates/AGENTS.md](../crates/AGENTS.md) and [apps/web/AGENTS.md](../apps/web/AGENTS.md).
 
 ## Development setup
 
@@ -60,7 +60,7 @@ CI runs all of these on every push and pull request. Run the ones your change to
 | `cd apps/web && pnpm lint` | oxlint |
 | `cd apps/web && pnpm test` | Vitest |
 | `cd apps/web && pnpm build` | Route generation, TypeScript and production build |
-| `python3 deploy/scripts/sync_install_seccomp.py --check` | The Chrome seccomp profile copied into `docs/INSTALL.md` matches `deploy/docker/chrome-seccomp.json` |
+| `python3 deploy/scripts/sync_install_seccomp.py --check` | The Chrome seccomp profile copied into `docs/self-hosting/quick-start.md` matches `deploy/docker/chrome-seccomp.json` |
 
 ### Database tests
 
@@ -86,8 +86,8 @@ nextest runs every test in its own process, in parallel. A test that changes ins
 - **Leave a check behind.** Non-trivial logic gets a test that fails if the behavior regresses: a Rust unit or `crates/db/tests` integration test, or a Vitest + React Testing Library test in the web app. Trivial one-liners don't need ceremony.
 - **Migrations are append-only.** Add a new numbered file in `migrations/` using the next free number. Never edit a migration that has already shipped.
 - **Docs move with the code.**
-  - A user-visible change adds or updates its bullet in [docs/FEATURES.md](../docs/FEATURES.md). If it finishes a roadmap item, move that item out of [docs/ROADMAP.md](../docs/ROADMAP.md).
-  - A new or changed environment variable, port, volume or deployment step updates [docs/INSTALL.md](../docs/INSTALL.md) and [docs/SELF_HOSTED.md](../docs/SELF_HOSTED.md). Every variable the docs mention must also reach the API in `deploy/docker/docker-compose.yml`.
+  - A user-visible change adds or updates its bullet in [docs/product/features.md](../docs/product/features.md). If it finishes a roadmap item, move that item out of [docs/product/roadmap.md](../docs/product/roadmap.md).
+  - A new or changed environment variable, port, volume or deployment step updates [docs/self-hosting/quick-start.md](../docs/self-hosting/quick-start.md), [docs/self-hosting/environment.md](../docs/self-hosting/environment.md), and [docs/self-hosting/operations.md](../docs/self-hosting/operations.md) as needed. Every variable the docs mention must also reach the API in `deploy/docker/docker-compose.yml`.
 - **Known defects live in the code.** If you find a problem you won't fix in your PR, leave a `Known issue:` comment above the code it concerns, describing the problem and a suggested fix.
 - **American spelling** in code, UI text, API fields and docs ("organization", "color").
 

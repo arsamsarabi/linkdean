@@ -9,10 +9,11 @@
 .cache-loader
 
 # Synced from repo docs/ (pnpm sync) — do not edit
-/docs/self-hosting/install.md
+/docs/self-hosting/quick-start.md
+/docs/self-hosting/environment.md
 /docs/self-hosting/operations.md
 /docs/features.md
-/docs/fast-capture.md
+/docs/guides/fast-capture.md
 /docs/architecture.md
 
 # Misc
