@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser'
 import { defineBackground } from 'wxt/utils/define-background'
 import { createBookmark, savableUrl } from '@/lib/api'
+import { forgetSaved, paintAllTabs, paintTab, rememberSaved, savedIconItem } from '@/lib/savedPages'
 import { sessionItem } from '@/lib/session'
 import { abandonSignIn, finishSignIn, injectRelay, RELAY_MESSAGE, startSignIn } from '@/lib/signIn'
 
@@ -18,7 +19,12 @@ async function flash(tabId: number | undefined, ok: boolean, title: string): Pro
   await browser.action.setTitle({ title, tabId })
   setTimeout(() => {
     void browser.action.setBadgeText({ text: '', tabId })
-    void browser.action.setTitle({ title: 'Save to Linkdean', tabId })
+    // Put back the saved / not saved title (and icon) for the page the tab shows now.
+    if (tabId === undefined) return
+    void browser.tabs.get(tabId).then(
+      (t) => paintTab(tabId, t.url),
+      () => undefined
+    )
   }, 4000)
 }
 
@@ -41,6 +47,7 @@ export default defineBackground(() => {
       if (!savableUrl(url)) return flash(tab?.id, false, 'Linkdean saves only http and https pages.')
       try {
         await createBookmark(session, { url, title, category_ids: [], tags: [] })
+        await rememberSaved(url)
         await flash(tab?.id, true, 'Saved to Unsorted in Linkdean')
       } catch (e) {
         await flash(tab?.id, false, e instanceof Error ? e.message : String(e))
@@ -51,7 +58,28 @@ export default defineBackground(() => {
   // The sign-in window's page: place the relay once it is on the instance, after every load
   // and every in-app navigation (signing in moves through /login and back).
   browser.tabs.onUpdated.addListener((tabId, change, tab) => {
-    if (change.status === 'complete' || change.url) void injectRelay(tabId, tab.url)
+    if (change.status === 'complete' || change.url) {
+      void injectRelay(tabId, tab.url)
+      void paintTab(tabId, tab.url)
+    }
+  })
+
+  // Saved-page icon: repaint when the person switches tabs, and every tab when the setting,
+  // the session or the permission changes.
+  browser.tabs.onActivated.addListener(({ tabId }) => {
+    void browser.tabs.get(tabId).then(
+      (t) => paintTab(tabId, t.url),
+      () => undefined
+    )
+  })
+  savedIconItem.watch(() => void paintAllTabs())
+  sessionItem.watch(() => void forgetSaved().then(paintAllTabs))
+  // The popup can close while the browser asks for the permission, so the grant is caught here.
+  browser.permissions.onAdded.addListener((p) => {
+    if (p.permissions?.includes('tabs')) void savedIconItem.setValue(true)
+  })
+  browser.permissions.onRemoved.addListener((p) => {
+    if (p.permissions?.includes('tabs')) void savedIconItem.setValue(false)
   })
 
   browser.windows.onRemoved.addListener((windowId) => {

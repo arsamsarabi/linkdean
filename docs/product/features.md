@@ -21,7 +21,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Grid, compact list and explorer library views (preference persisted). The list shows each bookmark on one row: site icon, title, site and description, folders, badges and the same menu
 - Library list is keyset-paginated (infinite scroll); folder, tag, flag, created-within, vault-only and sort run on the server with a total match count
 - Unsorted / uncategorized filter; the sidebar's Unsorted entry shows how many bookmarks wait there
-- **Filing queue** (`/file`, or **File one by one** on Unsorted): steps through Unsorted newest first, one card at a time, to pick folders (or create one), add tags, fix the title and mark favourite. **File** needs a folder; **Skip** leaves the bookmark for later; **Delete** moves it to Deleted items. Folders and tags already used on the same site are one-click suggestions. Keys on desktop: 1–5 pick a suggested folder, Enter files, S skips, D deletes; on phones swipe left to skip, right to file
+- **Filing queue** (`/file`, or **File one by one** on Unsorted): steps through Unsorted newest first, one card at a time, to pick folders (or create one), add tags, fix the title and mark it a favorite. **File** needs a folder; **Skip** leaves the bookmark for later; **Delete** moves it to Deleted items. Folders and tags already used on the same site are one-click suggestions. Keys on desktop: 1–5 pick a suggested folder, Enter files, S skips, D deletes; on phones swipe left to skip, right to file
 - Library filters: category, tag, created-within (7d/30d/90d/year), vault-only
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
@@ -163,6 +163,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Secret hashed at rest; plaintext shown once at creation
 - Platform-wide and per-user enable/disable (Admin)
 - **Browser extension sign-in** without handling a key: the extension opens `/connect/extension` in a window of its own, the person signs in as usual and chooses **Allow**, the page hands a single-use code to the extension's script on that page, and the extension trades it (two minutes, PKCE S256, bound to the extension's `chrome-extension://` or `moz-extension://` address) at `POST /api/auth/extension/token` for a key named "Browser extension · Chrome" or "· Firefox". Approving needs a login session, never a key. Signing out in the extension revokes its key. Needs API keys enabled for the account
+- **Saved-page icon** (opt-in, in the extension's popup): the toolbar icon is in color on pages already in your library and grey elsewhere. Turning it on asks for the `tabs` permission; turning it off gives it back. The extension downloads short hashes of your saved addresses (`GET /api/bookmarks/url-hashes`: the first 16 hex digits of SHA-256 over each exact URL, outside vaults and the trash), refreshes them every 5 minutes, and checks each tab on the device, so pages you only visit are never sent
 
 ---
 
@@ -171,7 +172,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Import: Netscape HTML, Linkdean JSON, Pocket CSV, Raindrop CSV
 - Imported bookmarks get metadata and previews in the background
 - Export: Netscape HTML, Linkdean JSON (full account export of owned folders, bookmarks and dashboards; vault items included while unlocked)
-- Linkdean JSON (version 2) keeps every folder of a bookmark, its favourite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
+- Linkdean JSON (version 2) keeps every folder of a bookmark, its favorite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
 - Netscape HTML lists a bookmark under each folder it is in, and reads `<DD>` descriptions on import
 - Duplicates on import: before anything is written, Settings → Import checks the file against your bookmarks outside vaults by exact URL. When some are already in the library, a review lists each one beside the existing bookmark with **Skip** (the default), **Replace** (update the existing bookmark in place with the file's title, description, tags and folders, only those the file has, keeping its shares, pins and activity), **Merge** (keep the existing title and description, fill only empty ones from the file, and add the file's tags and folders to the bookmark's own) or **Import anyway**, per row or for all. The API takes the same choices: `POST /api/import/preview`, then `duplicates` on `POST /api/import`; without them every bookmark is created
 - Folders in an imported file whose full path already exists (exact names, outside vaults) are reused instead of created again, so importing the same file twice does not duplicate them

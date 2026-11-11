@@ -25,7 +25,7 @@ function buildEditDraft(data: Dashboard | undefined): DashboardDraft {
   if (!data) return emptyDashboardDraft()
   const next = draftFromDashboard(data)
   if (next.sections.length > 0) return next
-  return { ...next, sections: [newDraftSection('Favourites')] }
+  return { ...next, sections: [newDraftSection('Favorites')] }
 }
 
 type Input = {

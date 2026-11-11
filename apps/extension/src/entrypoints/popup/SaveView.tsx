@@ -11,6 +11,7 @@ import {
   SignedOutError,
   type Bookmark,
 } from '@/lib/api'
+import { rememberSaved } from '@/lib/savedPages'
 import { lastFolderItem, type Session } from '@/lib/session'
 
 type Page = { url: string; title: string; selection: string }
@@ -94,6 +95,7 @@ export function SaveView({ session }: { session: Session }): ReactElement {
         tags: tags.map((t) => t.trim()).filter(Boolean),
       })
       if (!unsorted) await lastFolderItem.setValue(folder)
+      await rememberSaved(page.url)
       setSaved(true)
       setTimeout(() => window.close(), 900)
     } catch (e) {

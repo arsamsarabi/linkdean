@@ -1964,6 +1964,29 @@ pub async fn find_duplicate_groups(
     Ok(groups)
 }
 
+/// Length of the hex SHA-256 prefix in [`own_url_hashes`]: 64 bits, enough that two
+/// different URLs in one library practically never share one.
+pub const URL_HASH_HEX_LEN: i32 = 16;
+
+/// The first [`URL_HASH_HEX_LEN`] hex digits of SHA-256 over each exact URL the person has
+/// saved outside vaults and the trash, once each. The browser extension checks pages against
+/// these locally, so the pages someone merely visits never reach the server.
+pub async fn own_url_hashes(pool: &PgPool, user_id: Uuid) -> Result<Vec<String>> {
+    sqlx::query_scalar(
+        r#"
+        SELECT DISTINCT left(encode(sha256(convert_to(url, 'UTF8')), 'hex'), $2)
+        FROM bookmarks
+        WHERE owner_user_id = $1 AND is_vault = FALSE AND deleted_at IS NULL AND url <> ''
+        ORDER BY 1
+        "#,
+    )
+    .bind(user_id)
+    .bind(URL_HASH_HEX_LEN)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
 /// The person's own live bookmark at exactly `url`, outside any vault, most recently
 /// updated first. Quick save uses it to open the existing bookmark instead of a second copy.
 pub async fn find_own_bookmark_by_url(

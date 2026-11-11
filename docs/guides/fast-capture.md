@@ -12,7 +12,7 @@ Four ways to save the page you are on without opening Linkdean and pasting a lin
 
 Then, on any page:
 
-- **The toolbar button** (or **Alt+Shift+S**) shows the page's title, the text you selected as the description, your folders and tags. **Save** files it; **Save to Unsorted** saves it with no folder. A page you already saved shows **Open in Linkdean** instead.
+- **The toolbar button** (or **Alt+Shift+S**) shows the page's title, the text you selected as the description, your folders and tags. **Save** files it; **Save to Unsorted** saves it with no folder. A page you already saved shows **Open in Linkdean** instead. Turn on **Color the icon on saved pages** in the popup to see this at a glance: the icon is in color on pages you have saved and grey elsewhere. The check happens in your browser; the pages you visit are not sent to Linkdean.
 - **Right-click → Save page to Linkdean**, or **Save link to Linkdean** on a link, saves to Unsorted at once. A ✓ on the toolbar button confirms it.
 
 The extension holds its own API key, listed as "Browser extension" under **Settings → API keys**. **Sign out** in the extension revokes it.
