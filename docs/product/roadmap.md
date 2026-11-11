@@ -4,72 +4,73 @@ What is still planned. Shipped capabilities live in [features.md](./features.md)
 
 Items are ranked by importance and by the value they add to the app, highest first, within each stage. Effort is a rough guess: **S** is days, **M** is one to two weeks, **L** is several weeks.
 
-Open defects are not listed here. They are `Known issue:` comments at the code they concern: `grep -rn "Known issue:" crates apps/web/src deploy`. None of them block a public release today.
+Open defects are not listed here. They are `Known issue:` comments at the code they concern: `grep -rn "Known issue:" crates apps/web/src deploy`.
 
-The first public release is a **free beta on the homelab** (`app.linkdean.app`). A cheap VPS and a full GCP deployment stay Far out; see [managed-service.md](../ops/managed-service.md).
+The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `docs.linkdean.app` and the marketing site at `linkdean.app`, with off-site backups and a passed restore drill ([BACKUP.md](../../deploy/public-beta/BACKUP.md)). A cheap VPS and a full GCP deployment stay Far out; see [managed-service.md](../ops/managed-service.md).
 
 ---
 
-## Now: before the first public release
+## Now: running the public beta well
 
-2. **Sign-up protection** (S–M). **Done:** public beta keeps **open registration**. Misuse controls: optional Cloudflare Turnstile on password registration (`TURNSTILE_*`), host-forced verified-email gate (`REQUIRE_VERIFIED_EMAIL`, ORs with the admin toggle), and optional disposable-domain blocking (`BLOCK_DISPOSABLE_EMAILS`). Invite-only remains an admin toggle. Registration rate limits and email verification were already in place.
+1. **Browser extension in both stores** (S). The extension is the fastest way to save a page, but 0.1.0 is only live on the Chrome Web Store, and the store submission in the Release workflow has never run for real.
+    a. **Arsam:** wait for AMO to approve 0.1.0 (email from Mozilla).
+    b. **Prep** (needs a): bump `apps/extension/package.json` to 0.1.1, which ships the popup footer change from #94.
+    c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
+    d. **Prep:** add the Chrome Web Store link to **Settings → Fast capture** and the docs now, and the AMO link once a is done.
 
-3. **Per-user quotas** (M). **Done:** platform-default limits (null = unlimited) for bookmarks, stored image bytes, enrich actions per UTC day, import bytes, and upload image bytes. Enforced at create/import/upload/enrich; `resolve_limits` + period-keyed usage leave room for membership plans. Usage in Settings when any limit is set. No per-user overrides in v1.
+2. **External uptime monitoring** (S). Nothing outside the homelab notices when Nova, the guest or the home connection goes down, so an outage on the live beta lasts until someone happens to look.
+    - Set up the checks in [MONITORING.md](../../deploy/public-beta/MONITORING.md): `/api/ready` keyword check as the main one, plus health, marketing and docs, every 5 minutes, alerting after 2 failures.
+    - Push alerts to a phone app; email alone is too easy to miss.
+    - Add Cloudflare's Tunnel Health Alert for the `linkdean-public` tunnel.
+    - Test one alert end to end by stopping the api for 15 minutes in a quiet hour.
 
-4. **Page the library list** (L). **Done:** `GET /bookmarks` returns a keyset page (`items`, `next_cursor`, `total`) with folder / tag / flag / since / sort filters; `GET /bookmarks/ids` backs select-all. The SPA uses infinite scroll; Explorer loads the open folder's page. Remaining: push the keyset into SQL (today the filtered set is paged in memory — see `bookmark_page.rs`), and restore Explorer folder counts without a full fetch.
+3. **Filing queue for Unsorted** (M). Fast capture makes saving one tap, so links pile up in Unsorted with no folder, few tags and sometimes no title. A place to work through them one at a time turns that pile into a filed library.
+    - A **File** view that steps through Unsorted bookmarks newest first, one card at a time: title, URL, preview, description.
+    - Per card: pick a folder (or create one, as the bookmark form does), add tags, fix the title, mark favourite, or delete. **Next** saves and moves on; **Skip** leaves it in Unsorted.
+    - Suggestions: folders and tags already used for bookmarks on the same site, and the page's keyword tags from the page-details fetch.
+    - Keyboard first on desktop (number keys pick a suggested folder, Enter files, S skips, D deletes); swipe on phones.
+    - A count of unsorted bookmarks on the sidebar's Unsorted entry, and an empty state when the queue is clear.
+    - To explore: whether bulk filing (select several, one folder) belongs here or in the library list, and whether a bookmark counts as "filed" once it has tags but no folder.
 
-5. **Account deletion and full export** (M). **Done:** Settings → General danger zone schedules deletion (email confirm + password when local; 7-day grace; cancel anytime before purge). Hourly maintenance hard-deletes the user row (FK cascade) and cleans Meili + preview assets. Export includes vault items as plaintext while the vault is unlocked. Owned shared folders are deleted (no hand-off). Remaining: fresh OIDC step-up for SSO-only accounts; last-admin check at purge as well as schedule.
+4. **Library paging in SQL** (M). The library list pages with a keyset cursor, but the filtered set is still loaded and paged in memory, so large libraries cost more on every scroll as the beta grows.
+    - Push the keyset and filters into the SQL query.
+    - Restore Explorer folder counts without fetching every bookmark.
 
-6. **Legal pages and beta notice** (S). **Done:** draft Terms, Privacy and Acceptable Use pages (`/terms`, `/privacy`, `/acceptable-use`), required terms checkbox at sign-up and for SSO start (version + time stored on new accounts), and a dismissible beta banner. Remaining: counsel review of the copy before charging money; re-accept flow when `TERMS_VERSION` bumps.
-
-7. **Report abuse** (M). **Done:** signed-in users can **Report** a public list, a profile or a comment with a reason; admins work the queue under Admin (dismiss, hide content, warn, ban); the operator's abuse contact email is an admin setting shown in the report form; marketing footer lists `contact@linkdean.app`. Remaining: anonymous reports (out of scope for spam control).
-
-8. **Final UI/UX and mobile pass** (L). **Done:** mascot (Dean) on moment empty states, 404, onboarding and the wide sign-in panel; drawers full-width on phones; tighter shell padding and scrollable Deleted table; light polish on dashboard empty copy and glance density. Remaining: welcome-email avatar badge when a welcome template exists (security emails stay plain); deeper visual redesign stays out of scope for beta.
-
-9. **Structured logs** (S–M). **Done:** `LOG_FORMAT=text|json` (default text) for stdout; optional `LOG_FILE` appends JSONL regardless of stdout format; every response has `X-Request-Id` (valid inbound ids kept, else a UUID), with the same id on the HTTP request span. Remaining: log rotation stays with the operator; OpenTelemetry exporters stay in Backlog.
-
-10. **Marketing site** (M). **Done:** Astro site in `apps/site`, live at [linkdean.app](https://linkdean.app) via `deploy/public-beta/static/site` — product pitch, features, self-host CTA to the docs site, sign-up / sign-in, legal + GitHub links, `contact@linkdean.app`. Static and cached at Cloudflare. Remaining: pricing section waits on item 12.
-
-11. **Documentation site** (M). **Done:** [Docusaurus](https://docusaurus.io/) at [`apps/docs`](../../apps/docs), live at [docs.linkdean.app](https://docs.linkdean.app). Builds from repo `docs/` (self-hosting quick start / environment / operations, Features, Fast capture, Architecture) via `pnpm sync` + `pnpm build` into `deploy/public-beta/static/docs`. Remaining: API reference once **API platform** ships OpenAPI; optional FAQ pages.
-
-12. **Membership tiers and pricing** (M, explore). After go-live hardening (#13), before anyone pays and before Stripe or plan gates land in code.
-   - Start from the plan sketch in the [organizations and teams design](../design/organizations-and-teams.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
-   - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats).
-   - Write the model into [managed-service.md](../ops/managed-service.md) and the marketing site's pricing section. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
-
-13. **Public beta on the homelab** (S). **In progress:** stand-alone LXD guest on Nova (`deploy/public-beta/`), Cloudflare Tunnel for `app.linkdean.app`, `docs.linkdean.app`, and apex/www. App, docs, and marketing are live. Guest `.env` SoT is Infisical `/linkdean-public`; off-site backups are restic → B2 bucket `linkdean-public` ([BACKUP.md](../../deploy/public-beta/BACKUP.md)). Checklist: [managed-service.md](../ops/managed-service.md#public-beta-on-a-home-server).
-   - Go-live checklist. **Done** 2026-11-09: sign-up controls checked on the live beta with `deploy/public-beta/scripts/check-signup-controls.sh` (Turnstile, disposable-domain block, outbound mail) and `REQUIRE_VERIFIED_EMAIL=true` confirmed in Infisical; first restic restore drill passed on Nova ([drill log](../../deploy/public-beta/BACKUP.md#drill-log)). External uptime monitoring moved to Later (#28).
----
-
-## Next: high value after release
-
-14. **Fast capture, with auto-fill** (M–L). Saving a page is the core action of a bookmark manager, and today it means opening Linkdean and pasting a URL, then typing a title the server would have found anyway. Absorbs the former item 15 (Auto-fill). Built in slices, each shippable:
-    - **Slice 0, page details from a URL.** **Done:** `POST /api/bookmarks/page-details` and the **Import from URL** button on the bookmark form (see [features.md](./features.md)). The fetch is plain HTTP only, never Chrome, so pages that build their title in JavaScript come back empty.
-    - **Slice 1, quick save page.** **Done:** `/save` (see [features.md](./features.md)). URL matching is exact, so `https://a.com` and `https://a.com/` count as different pages, as in Library health → Duplicates.
-    - **Slice 2, bookmarklet.** **Done:** **Settings → Fast capture** (see [features.md](./features.md)).
-    - **Slice 3, share target.** **Done:** `share_target` in `site.webmanifest`, and the iOS Shortcuts in [Saving pages fast](../guides/fast-capture.md) (see [features.md](./features.md)).
-    - **Slice 4, browser extension.** **0.1.0 live on the Chrome Web Store, in review on AMO:** `apps/extension` (see [features.md](./features.md)). The Release workflow submits later versions on a tag, with its secrets set in the `extension-stores` environment but not yet used. Remaining:
-        a. **Arsam:** wait for AMO to approve 0.1.0 (email from Mozilla).
-        b. **Prep** (needs a): bump `apps/extension/package.json` to 0.1.1, which ships the popup footer change from #94.
-        c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
-        d. **Prep:** add the Chrome Web Store and AMO links to the web app (Settings → Fast capture) and the docs.
-
-18. **Dashboard upgrades** (M). Make boards more useful at a glance.
+5. **Dashboard upgrades** (M). Make boards more useful at a glance.
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
     - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.
 
-19. **More sign-in options** (M).
+---
+
+## Next: high value after the beta settles
+
+6. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
+    - A daily digest for the noisy kinds.
+    - A one-click unsubscribe link per kind in every notification email, with the `List-Unsubscribe` and `List-Unsubscribe-Post` headers.
+
+7. **Account and legal follow-ups** (S). Gaps left when account deletion and the legal pages shipped.
+    - Fresh OIDC step-up before an SSO-only account schedules deletion.
+    - Check for the last admin when the purge runs, not only when deletion is scheduled.
+    - A re-accept flow when `TERMS_VERSION` changes.
+    - Counsel review of the Terms, Privacy and Acceptable Use copy before charging money.
+
+8. **More sign-in options** (M).
     - Passkeys / WebAuthn.
     - Preset SSO providers: Authentik, Google, Microsoft, GitHub. OIDC with any standard issuer already works; GitHub needs OAuth, not OIDC.
 
-21. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
-    - An OpenAPI spec generated from the routes, published as the API reference.
+9. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
+    - An OpenAPI spec generated from the routes, published as the API reference on the docs site.
     - One error body shape (`code`, `message`, details) across every route.
     - `ETag` / `Cache-Control` on read endpoints that are safe to cache.
-    - Optional OpenTelemetry tracing, tied to the request ID from **Structured logs**.
+    - Optional OpenTelemetry tracing, tied to the request ID from the structured logs.
     - API tests per route for auth, authorization and error responses.
 
-22. **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
+10. **Membership tiers and pricing** (M, explore). Before anyone pays and before Stripe or plan gates land in code.
+    - Start from the plan sketch in the [organizations and teams design](../design/organizations-and-teams.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
+    - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats). Limits plug into the existing quota resolver.
+    - Write the model into [managed-service.md](../ops/managed-service.md) and add a pricing section to the marketing site. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
+
+11. **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
     - Aggregate counts only (active users, bookmarks saved, features used), no personal data, page content or URLs, and nothing per person.
     - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the tracing in **API platform**.
     - The managed service uses the same hooks with its own backend.
@@ -79,17 +80,13 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 ## Later
 
-23. **Archive & downloads** (L). Protects against link rot, which is the main reason people keep bookmarks in a self-hosted app. Heavy infrastructure.
+12. **Archive & downloads** (L). Protects against link rot, which is the main reason people keep bookmarks in a self-hosted app. Heavy infrastructure.
     - Opt-in local cache of bookmarked pages.
     - Download / export: PDF, Markdown (reader mode), images, audio, video.
     - Separate storage volume and a background job queue.
     - Deploy: archive worker and volume mount convention.
 
-24. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
-    - A daily digest for the noisy kinds.
-    - A one-click unsubscribe link per kind in every notification email, with the `List-Unsubscribe` and `List-Unsubscribe-Post` headers.
-
-25. **Organizations and teams** (L). Organizations own shared content in team spaces, with owner, admin, member and guest roles, team roles, restricted folders, email invites, lifecycle rules and a basic audit log. Personal libraries stay private and unchanged. Requirements: [organizations and teams design](../design/organizations-and-teams.md). After v1:
+13. **Organizations and teams** (L). Organizations own shared content in team spaces, with owner, admin, member and guest roles, team roles, restricted folders, email invites, lifecycle rules and a basic audit log. Personal libraries stay private and unchanged. Requirements: [organizations and teams design](../design/organizations-and-teams.md). After v1:
     - Invite links (role, expiry, use limit; off by default).
     - Verified domains (DNS TXT proof), then auto-join for matching verified addresses.
     - SSO (SAML / per-organization OIDC) and SCIM provisioning.
@@ -97,23 +94,9 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
     - Audit log: every content edit and restricted-folder view, configurable retention, SIEM or webhook streaming, hash-chained tamper evidence.
     - Custom roles and a Billing manager role, when a customer needs them.
 
-26. **Localization** (M). i18n-ready strings first, then locale packs.
+14. **Localization** (M). i18n-ready strings first, then locale packs.
 
-27. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
-
-28. **External uptime monitoring for the public beta** (S). Nothing outside the homelab notices when Nova, the guest or the home connection goes down, so an outage lasts until someone happens to look.
-    - Set up the checks in [MONITORING.md](../../deploy/public-beta/MONITORING.md): `/api/ready` keyword check as the main one, plus health, marketing and docs, every 5 minutes, alerting after 2 failures.
-    - Push alerts to a phone app; email alone is too easy to miss.
-    - Add Cloudflare's Tunnel Health Alert for the `linkdean-public` tunnel.
-    - Test one alert end to end by stopping the api for 15 minutes in a quiet hour.
-
-29. **Filing queue for Unsorted** (M). Fast capture (item 14) makes saving one tap, so links pile up in Unsorted with no folder, few tags and sometimes no title. A place to work through them one at a time turns that pile into a filed library.
-    - A **File** view that steps through Unsorted bookmarks newest first, one card at a time: title, URL, preview, description.
-    - Per card: pick a folder (or create one, as the bookmark form does), add tags, fix the title, mark favourite, or delete. **Next** saves and moves on; **Skip** leaves it in Unsorted.
-    - Suggestions: folders and tags already used for bookmarks on the same site, and the page's keyword tags from item 14's fetch.
-    - Keyboard first on desktop (number keys pick a suggested folder, Enter files, S skips, D deletes); swipe on phones.
-    - A count of unsorted bookmarks on the sidebar's Unsorted entry, and an empty state when the queue is clear.
-    - To explore: whether bulk filing (select several, one folder) belongs here or in the library list, and whether a bookmark counts as "filed" once it has tags but no folder.
+15. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
 
 ---
 
@@ -129,4 +112,6 @@ Revisit once the stages above are done.
 - **Desktop app** (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
 - **Gamification** (M). Points and badges on top of likes and ratings.
 - **Previews for sites behind bot protection** (M). Some sites, such as those behind Cloudflare, block the screenshot and metadata fetch. Investigate allowed options, such as falling back to the site's own OG data or a user-uploaded preview.
+- **Welcome email** (S). A welcome email for new accounts, with Dean's avatar badge. Security emails stay plain.
+- **Docs FAQ** (S). Frequently asked questions on the docs site.
 - **Easter eggs** (S). Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), which needs React 19 support first).
