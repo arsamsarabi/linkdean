@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- Store marquee promo tile, 1400x560 (store/render/render.sh). The popup is cropped from
+     screenshot-save.png, so render the screenshots first. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1400px;
+        height: 560px;
+        overflow: hidden;
+      }
+      body {
+        background: linear-gradient(140deg, #8458b3 0%, #6b3f9c 100%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 120px 0 110px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        color: #fff;
+      }
+      .copy {
+        width: 600px;
+      }
+      .copy img {
+        height: 92px;
+        margin: 0 0 30px -12px;
+      }
+      h1 {
+        font-size: 54px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+      }
+      p {
+        margin-top: 20px;
+        font-size: 22px;
+        line-height: 1.45;
+        color: #e5eaf5;
+      }
+      /* The popup from screenshot-save.png: 380x422 at (832, 138). */
+      .pop {
+        width: 380px;
+        height: 422px;
+        border-radius: 10px;
+        background: url('screenshot-save.png') -832px -138px no-repeat;
+        box-shadow: 0 24px 60px rgba(20, 8, 40, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="copy">
+      <img src="linkdean-horizontal-white.svg" alt="Linkdean" />
+      <h1>Save any page<br />to your library</h1>
+      <p>Title, selected text, folder and tags filled in for you. On linkdean.app or your own server.</p>
+    </div>
+    <div class="pop"></div>
+  </body>
+</html>
