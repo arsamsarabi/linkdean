@@ -96,3 +96,50 @@ async fn create_and_update_refuse_other_schemes() {
         .expect("url");
     assert_eq!(url, "https://ok.example/");
 }
+
+#[tokio::test]
+async fn url_hashes_cover_only_your_live_bookmarks_outside_vaults() {
+    let Ok(url) = std::env::var("DATABASE_URL") else {
+        eprintln!("skipping url hash test: DATABASE_URL unset");
+        return;
+    };
+    let pool = linkdean_db::connect(&url).await.expect("connect");
+    linkdean_db::migrate(&pool).await.expect("migrate");
+    let me = linkdean_db::create_user(
+        &pool,
+        &format!("hash-{}@urls.test", uuid::Uuid::new_v4()),
+        Some("password-long"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("user");
+    let save = |u: &str| linkdean_core::CreateBookmark {
+        url: u.into(),
+        ..Default::default()
+    };
+    let keys = linkdean_core::VaultKeyring::default();
+    linkdean_db::create_bookmark(&pool, me.id, save("https://saved.example/page"), &keys)
+        .await
+        .expect("saved");
+    // Saved twice: listed once.
+    linkdean_db::create_bookmark(&pool, me.id, save("https://saved.example/page"), &keys)
+        .await
+        .expect("copy");
+    let trashed =
+        linkdean_db::create_bookmark(&pool, me.id, save("https://trashed.example/"), &keys)
+            .await
+            .expect("trashed");
+    sqlx::query("UPDATE bookmarks SET deleted_at = now() WHERE id = $1")
+        .bind(trashed.id)
+        .execute(&pool)
+        .await
+        .expect("trash");
+
+    let hashes = linkdean_db::own_url_hashes(&pool, me.id)
+        .await
+        .expect("hashes");
+    // The first 16 hex digits of SHA-256 over the exact URL.
+    assert_eq!(hashes, vec!["d41412cfea200948".to_string()]);
+}

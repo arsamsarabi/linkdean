@@ -30,6 +30,7 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/ids", get(list_ids))
         .route("/bookmarks/page-details", post(page_details))
         .route("/bookmarks/lookup", get(lookup))
+        .route("/bookmarks/url-hashes", get(url_hashes))
         .route("/bookmarks/{id}/check-link", post(check_link))
         .route(
             "/bookmarks/{id}/filing-suggestions",
@@ -511,4 +512,17 @@ async fn filing_suggestions(
     Ok(Json(
         db::filing_suggestions(&state.pool, user.id, id).await?,
     ))
+}
+
+/// Hashes of every URL the person has saved, for the browser extension's saved-page icon.
+async fn url_hashes(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Value>> {
+    let hashes = db::own_url_hashes(&state.pool, user.id).await?;
+    Ok(Json(json!({
+        "algorithm": "sha256",
+        "hex_length": db::URL_HASH_HEX_LEN,
+        "hashes": hashes,
+    })))
 }
