@@ -3,6 +3,7 @@ import { ActionIcon, Box, Group, Stack, Text, Tooltip } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
 import { revokeOwnKey } from '@/lib/api'
 import { sessionItem, type Session } from '@/lib/session'
+import { SavedIconSwitch } from './SavedIconSwitch'
 import { SaveView } from './SaveView'
 import { SignInView } from './SignInView'
 
@@ -26,6 +27,9 @@ export function App(): ReactElement | null {
       {session ? (
         <>
           <SaveView session={session} />
+          <Box mt="md">
+            <SavedIconSwitch />
+          </Box>
           <Group justify="space-between" mt="md" gap="md" wrap="nowrap">
             <Stack gap={0} miw={0}>
               {[session.email, new URL(session.instance).host].map((line) => (

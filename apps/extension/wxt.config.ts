@@ -17,6 +17,8 @@ export default defineConfig({
     // code from the instance's approve page to the extension. The instance itself is asked for
     // at sign-in, so no site is reachable before that.
     permissions: ['activeTab', 'contextMenus', 'scripting', 'storage'],
+    // tabs: only when the person turns on the saved-page icon, to read each tab's address.
+    optional_permissions: ['tabs'],
     optional_host_permissions: ['https://*/*', 'http://localhost/*', 'http://127.0.0.1/*'],
     action: { default_title: 'Save to Linkdean' },
     commands: {
