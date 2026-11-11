@@ -43,6 +43,7 @@ import {
   forgotPasswordResponseSchema,
   forkCategoryResultSchema,
   globalPassphraseSchema,
+  importPreviewSchema,
   importResultSchema,
   markAllReadSchema,
   meResponseSchema,
@@ -112,6 +113,7 @@ import {
   type DashboardShare,
   type DashboardSharesEnvelope,
   type DashboardSummary,
+  type DuplicateDecisions,
   type DuplicateGroup,
   type EmailChangeResponse,
   type EmailStatus,
@@ -120,6 +122,8 @@ import {
   type FollowUser,
   type ForgotPasswordResponse,
   type ForkCategoryResult,
+  type ImportPreview,
+  type ImportResult,
   type ModerateItem,
   type ModerateOutcome,
   type ModerationAction,
@@ -676,8 +680,15 @@ export const api = {
 
   search: (q: string) => req(`/search?q=${encodeURIComponent(q)}`, {}, searchResponseSchema),
 
-  import: (format: string, content: string): Promise<{ total: number; imported: number; failed: number }> =>
-    req('/import', { method: 'POST', body: JSON.stringify({ format, content }) }, importResultSchema),
+  importPreview: (format: string, content: string): Promise<ImportPreview> =>
+    req('/import/preview', { method: 'POST', body: JSON.stringify({ format, content }) }, importPreviewSchema),
+
+  import: (format: string, content: string, duplicates?: DuplicateDecisions): Promise<ImportResult> =>
+    req(
+      '/import',
+      { method: 'POST', body: JSON.stringify(duplicates ? { format, content, duplicates } : { format, content }) },
+      importResultSchema
+    ),
 
   exportUrl: (format: string): string => `/api/export?format=${format}`,
 
