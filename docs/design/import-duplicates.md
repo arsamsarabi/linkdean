@@ -18,6 +18,7 @@ For each imported bookmark whose URL is already in the library:
 
 - **Skip**: the imported bookmark is dropped. The default.
 - **Replace**: the existing bookmark takes the file's values (see below).
+- **Merge**: the existing bookmark keeps its values, takes the file's title or description only where its own is empty, and gains the file's tags and folders (see below).
 - **Import anyway**: a second copy is created, as every import does today.
 
 ## API
@@ -77,11 +78,19 @@ Body gains an optional `duplicates` field:
 }
 ```
 
-- Actions: `skip`, `replace`, `keep` (Import anyway).
+- Actions: `skip`, `replace`, `merge`, `keep` (Import anyway).
 - No `duplicates` field means `keep` for every row: today's behavior, so onboarding and API clients do not change.
 - Duplicates are found again when the import is applied, not taken from the preview. A bookmark that became a duplicate after the preview gets `default`. One that stopped being a duplicate is created. An override for an index that is not a duplicate is ignored.
 - The bookmark quota check (`refuse_bookmark_quota`) counts only the bookmarks that will be created: new ones plus `keep` duplicates.
-- The response gains `skipped` and `replaced` beside `total`, `imported` and `failed`. `imported` counts bookmarks created. The `import_jobs` row keeps its current columns, so no migration is needed.
+- The response gains `skipped`, `replaced` and `merged` beside `total`, `imported` and `failed`. `imported` counts bookmarks created. The `import_jobs` row keeps its current columns, so no migration is needed.
+
+## Merge
+
+Merge never removes anything from the existing bookmark:
+
+- **Title** and **description** stay; the file's fill one only when the bookmark's is empty.
+- **Tags** and **folders** from the file are added to the bookmark's own.
+- Like Replace, it keeps the bookmark's ID, shares, pins and activity, and a failed merge counts as `failed`.
 
 ## Replace
 
@@ -112,8 +121,8 @@ In Settings → Import (`ImportExportPanel`):
 2. No duplicates: it goes straight on to the import, as today.
 3. Duplicates: a **Review duplicates** drawer opens.
    - Header: "12 of 340 bookmarks are already in your library."
-   - An apply-to-all choice: **Skip** (selected), **Replace**, **Import anyway**. Changing it sets every row that has not been changed by hand.
-   - One row per duplicate: the URL, then the existing bookmark and the imported one side by side (title, description, tags, folders), with its own Skip / Replace / Import anyway choice.
+   - An apply-to-all choice: **Skip** (selected), **Replace**, **Merge**, **Import anyway**. Changing it sets every row that has not been changed by hand.
+   - One row per duplicate: the URL, then the existing bookmark and the imported one side by side (title, description, tags, folders), with its own Skip / Replace / Merge / Import anyway choice.
    - Rows are paged 50 at a time, so a file with hundreds of duplicates stays usable.
    - **Import** sends the file with the decisions. **Cancel** imports nothing.
 4. The result message adds the skipped and replaced counts, for example "Imported 328 of 340, replaced 4, skipped 8".
@@ -132,7 +141,7 @@ Rust (database tests, run with `DATABASE_URL` set):
 
 - Preview lists exact-URL duplicates with the right index, existing and incoming values, and writes nothing.
 - Vault bookmarks and trashed bookmarks are not duplicates.
-- Each action: `skip` creates nothing, `replace` updates in place and keeps ID, shares and pins, `keep` creates a copy.
+- Each action: `skip` creates nothing, `replace` updates in place and keeps ID, shares and pins, `merge` adds tags and folders and fills empty fields, `keep` creates a copy.
 - Replace leaves the title, tags and folders alone when the file has none.
 - No `duplicates` field behaves as `keep`.
 - The quota counts only bookmarks that will be created.
