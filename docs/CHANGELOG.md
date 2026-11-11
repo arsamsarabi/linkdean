@@ -4,6 +4,7 @@
 
 ### Added
 
+- Optional page-view statistics: set `GOATCOUNTER_URL` to count which pages of the app are used, by route name only, without cookies, and never from browsers that send Do Not Track or Global Privacy Control.
 - Browser extension: an opt-in toolbar icon that is in color on pages already in your library and grey elsewhere, checked in the browser against hashes of your saved addresses.
 - **File one by one**: a filing queue that walks through Unsorted bookmarks, suggesting folders and tags you already use on the same site, with keyboard shortcuts and swipes. The sidebar shows how many bookmarks are in Unsorted.
 - Create a category from the bookmark form: type a name that matches no category, pick **Create "name"**, and choose where it goes.
@@ -12,6 +13,7 @@
 
 ### Changed
 
+- Privacy Policy (version 2026-11-11): describes page-view statistics, and what the extension's saved-page icon reads.
 - **Import from URL** on the bookmark form now replaces the title and description with the page's, and adds its tags, instead of filling only empty fields.
 - Restructured `docs/` into purpose folders (`self-hosting/`, `product/`, `guides/`, `ops/`, `design/`); install split into quick start, environment, and operations.
 
