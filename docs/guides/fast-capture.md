@@ -1,6 +1,6 @@
 # Saving pages fast
 
-Four ways to save the page you are on without opening Linkdean and pasting a link. All of them end on the quick save form (`/save`): the address and title are filled in, the page's description and keyword tags are fetched when no title came along, and the folder you used last is already picked. **Save to Unsorted** saves in one tap so you can file it later. A page that is already in your library opens that bookmark instead of saving a second copy.
+Four ways to save the page you are on without opening Linkdean and pasting a link. All of them end on the quick save form (`/save`): the address and title are filled in, the page's description and keyword tags are fetched when no title came along, and the folder you used last is already picked. **Save to Unsorted** saves in one tap so you can file it later, one at a time, with **File one by one** on Unsorted. A page that is already in your library opens that bookmark instead of saving a second copy.
 
 ## Browser extension (Chrome, Edge, Firefox)
 

@@ -24,14 +24,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     - Add Cloudflare's Tunnel Health Alert for the `linkdean-public` tunnel.
     - Test one alert end to end by stopping the api for 15 minutes in a quiet hour.
 
-3. **Filing queue for Unsorted** (M). Fast capture makes saving one tap, so links pile up in Unsorted with no folder, few tags and sometimes no title. A place to work through them one at a time turns that pile into a filed library.
-    - A **File** view that steps through Unsorted bookmarks newest first, one card at a time: title, URL, preview, description.
-    - Per card: pick a folder (or create one, as the bookmark form does), add tags, fix the title, mark favourite, or delete. **Next** saves and moves on; **Skip** leaves it in Unsorted.
-    - Suggestions: folders and tags already used for bookmarks on the same site, and the page's keyword tags from the page-details fetch.
-    - Keyboard first on desktop (number keys pick a suggested folder, Enter files, S skips, D deletes); swipe on phones.
-    - A count of unsorted bookmarks on the sidebar's Unsorted entry, and an empty state when the queue is clear.
-    - To explore: whether bulk filing (select several, one folder) belongs here or in the library list, and whether a bookmark counts as "filed" once it has tags but no folder.
-
 4. **Library paging in SQL** (M). The library list pages with a keyset cursor, but the filtered set is still loaded and paged in memory, so large libraries cost more on every scroll as the beta grows.
     - Push the keyset and filters into the SQL query.
     - Restore Explorer folder counts without fetching every bookmark.

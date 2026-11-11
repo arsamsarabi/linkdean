@@ -20,7 +20,8 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Create a category from the bookmark form: typing a name that matches no category offers **Create "name"**, which creates it at the top level or under a writable parent picked inline, and selects it. A subcategory follows its parent's vault. Not offered on read-only shared bookmarks
 - Grid, compact list and explorer library views (preference persisted). The list shows each bookmark on one row: site icon, title, site and description, folders, badges and the same menu
 - Library list is keyset-paginated (infinite scroll); folder, tag, flag, created-within, vault-only and sort run on the server with a total match count
-- Unsorted / uncategorized filter
+- Unsorted / uncategorized filter; the sidebar's Unsorted entry shows how many bookmarks wait there
+- **Filing queue** (`/file`, or **File one by one** on Unsorted): steps through Unsorted newest first, one card at a time, to pick folders (or create one), add tags, fix the title and mark favourite. **File** needs a folder; **Skip** leaves the bookmark for later; **Delete** moves it to Deleted items. Folders and tags already used on the same site are one-click suggestions. Keys on desktop: 1–5 pick a suggested folder, Enter files, S skips, D deletes; on phones swipe left to skip, right to file
 - Library filters: category, tag, created-within (7d/30d/90d/year), vault-only
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
