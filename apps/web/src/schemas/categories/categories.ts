@@ -26,6 +26,15 @@ export const categorySchema = z.object({
 
 export const categoriesSchema = z.array(categorySchema)
 
+/** `POST /categories`, matching the server's `CreateCategory`: `is_hidden` is required. */
+export type CreateCategoryBody = {
+  name: string
+  parent_id: string | null
+  is_hidden: boolean
+  vault_id?: string | null
+  icon?: string | null
+}
+
 export const forkCategoryResultSchema = z.object({
   category: categorySchema,
   bookmarks_copied: z.number(),

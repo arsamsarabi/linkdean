@@ -59,6 +59,7 @@ export function BookmarkCategoriesField({ categories, value, onChange, canCreate
       const cat = await createCategory.mutateAsync({
         name,
         parent_id: parent?.id ?? null,
+        is_hidden: false,
         // A subcategory lives in its parent's vault, as in the New category drawer.
         vault_id: parent?.vault_id ?? null,
       })

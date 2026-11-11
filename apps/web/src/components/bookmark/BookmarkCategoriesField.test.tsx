@@ -98,7 +98,12 @@ describe('BookmarkCategoriesField', () => {
     expect((screen.getByRole('textbox', { name: 'New category' }) as HTMLInputElement).value).toBe('Recipes')
     await userEvent.click(screen.getByRole('button', { name: 'Create and select' }))
 
-    expect(createCategory.mutateAsync).toHaveBeenCalledWith({ name: 'Recipes', parent_id: null, vault_id: null })
+    expect(createCategory.mutateAsync).toHaveBeenCalledWith({
+      name: 'Recipes',
+      parent_id: null,
+      is_hidden: false,
+      vault_id: null,
+    })
     await waitFor(() => expect(selected).toEqual(['new1']))
     expect(screen.queryByRole('textbox', { name: 'New category' })).toBeNull()
     // The new category shows as a chosen pill even before the category list refetches.
@@ -114,7 +119,12 @@ describe('BookmarkCategoriesField', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Secrets (vault)' }))
     await userEvent.click(screen.getByRole('button', { name: 'Create and select' }))
 
-    expect(createCategory.mutateAsync).toHaveBeenCalledWith({ name: 'Keys', parent_id: 'c3', vault_id: 'v1' })
+    expect(createCategory.mutateAsync).toHaveBeenCalledWith({
+      name: 'Keys',
+      parent_id: 'c3',
+      is_hidden: false,
+      vault_id: 'v1',
+    })
     await waitFor(() => expect(selected).toEqual(['new2']))
   })
 

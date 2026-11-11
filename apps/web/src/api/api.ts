@@ -103,6 +103,7 @@ import {
   type CategorySharesEnvelope,
   type CategoryVisibility,
   type CreateApiKeyResponse,
+  type CreateCategoryBody,
   type CreateCategoryShareOutcome,
   type CreateDashboard,
   type CreateDashboardShareOutcome,
@@ -523,7 +524,7 @@ export const api = {
   categories: (include_hidden = false, include_vault = false): Promise<Category[]> =>
     req(`/categories?include_hidden=${include_hidden}&include_vault=${include_vault}`, {}, categoriesSchema),
 
-  createCategory: (body: Partial<Category> & { name: string }): Promise<Category> =>
+  createCategory: (body: CreateCategoryBody): Promise<Category> =>
     req('/categories', { method: 'POST', body: JSON.stringify(body) }, categorySchema),
 
   updateCategory: (
