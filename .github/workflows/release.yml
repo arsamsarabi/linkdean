@@ -6,7 +6,9 @@ name: Release
 #   3. builds and pushes the app image only when the app changed,
 #   4. rolls the public-beta guest forward to the tag, refreshing only the changed apps,
 #   5. checks on the guest and over the public URLs that each changed app is live,
-#   6. creates the GitHub release.
+#   6. submits the browser extension to the Chrome Web Store and AMO when its build inputs
+#      changed and apps/extension/package.json has a higher version than at the previous tag,
+#   7. creates the GitHub release.
 #
 # Deploy needs the repository variable NOVA_DEPLOY_ENABLED=true and a self-hosted runner
 # labelled linkdean-nova on the Nova host (it runs `lxc exec linkdean-public` locally).
@@ -40,6 +42,8 @@ jobs:
       app: ${{ steps.diff.outputs.app }}
       docs: ${{ steps.diff.outputs.docs }}
       site: ${{ steps.diff.outputs.site }}
+      extension: ${{ steps.diff.outputs.extension }}
+      extension_version: ${{ steps.diff.outputs.extension_version }}
       previous: ${{ steps.diff.outputs.previous }}
     steps:
       - uses: actions/checkout@v7
@@ -64,16 +68,37 @@ jobs:
           out() { echo "$1=$2" >> "$GITHUB_OUTPUT"; echo "$1=$2"; }
           previous=$(git describe --tags --abbrev=0 --match 'v*.*.*' "$GITHUB_SHA^" 2>/dev/null || true)
           out previous "$previous"
+          version=$(jq -r .version apps/extension/package.json)
+          out extension_version "$version"
           if [ -z "$previous" ] || [ "$ALL" = true ]; then
             out app true; out docs true; out site true
-            exit 0
+          else
+            files=$(git diff --name-only "$previous" "$GITHUB_SHA")
+            has() { if grep -Eq "$1" <<<"$files"; then echo true; else echo false; fi; }
+            # Keep these patterns in step with deploy/public-beta/scripts/pull-update.sh.
+            out app  "$(has '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)')"
+            out docs "$(has '^(apps/docs/|deploy/public-beta/static/docs/|docs/(INSTALL|SELF_HOSTED|FEATURES|FAST_CAPTURE|ARCHITECTURE)\.md$)')"
+            out site "$(has '^(apps/site/|deploy/public-beta/static/site/)')"
           fi
-          files=$(git diff --name-only "$previous" "$GITHUB_SHA")
-          has() { if grep -Eq "$1" <<<"$files"; then echo true; else echo false; fi; }
-          # Keep these patterns in step with deploy/public-beta/scripts/pull-update.sh.
-          out app  "$(has '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)')"
-          out docs "$(has '^(apps/docs/|deploy/public-beta/static/docs/|docs/(INSTALL|SELF_HOSTED|FEATURES|FAST_CAPTURE|ARCHITECTURE)\.md$)')"
-          out site "$(has '^(apps/site/|deploy/public-beta/static/site/)')"
+
+          # The extension goes to the stores only when its build inputs changed since the
+          # previous tag (not tests, the store kit or the README) and its version went up,
+          # since both stores refuse a version they already have. "Deploy every app" does
+          # not resubmit it. A build change without a version bump is skipped with a warning.
+          extension=false
+          if [ -n "$previous" ]; then
+            ext_files=$(git diff --name-only "$previous" "$GITHUB_SHA" -- apps/extension |
+              grep -Ev '^apps/extension/(store/|README\.md$)|\.test\.tsx?$' || true)
+            before=$(git show "$previous:apps/extension/package.json" 2>/dev/null | jq -r '.version // empty' || true)
+            if [ -z "$ext_files" ]; then
+              echo "Extension build inputs unchanged since $previous"
+            elif [ -n "$before" ] && [ "$(printf '%s\n%s\n' "$before" "$version" | sort -V | tail -n1)" = "$before" ]; then
+              echo "::warning::The extension changed since $previous but its version is still $version (was $before). Bump apps/extension/package.json to submit it to the stores."
+            else
+              extension=true
+            fi
+          fi
+          out extension "$extension"
 
   ci:
     uses: ./.github/workflows/ci.yml
@@ -210,16 +235,59 @@ jobs:
           if [ "$DOCS" = true ]; then get "https://docs.linkdean.app/?release=$GITHUB_SHA" >/dev/null && echo "docs.linkdean.app ok"; fi
           if [ "$SITE" = true ]; then get "https://linkdean.app/?release=$GITHUB_SHA" >/dev/null && echo "linkdean.app ok"; fi
 
+  extension:
+    name: Submit the extension to the stores
+    needs: [changes, ci]
+    if: needs.changes.outputs.extension == 'true'
+    runs-on: ubuntu-24.04
+    # Secrets live in this environment; add required reviewers there to approve each submission.
+    environment: extension-stores
+    defaults:
+      run:
+        working-directory: apps/extension
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/extension/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/extension/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm zip
+      - run: pnpm zip:firefox
+      - name: Submit for review
+        env:
+          VERSION: ${{ needs.changes.outputs.extension_version }}
+          # Chrome Web Store API v2, signed in as a service account added to the publisher.
+          CHROME_API_VERSION: v2
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
+          FIREFOX_EXTENSION_ID: firefox@linkdean.app
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+        run: |
+          pnpm exec wxt submit \
+            --chrome-zip ".output/linkdean-extension-$VERSION-chrome.zip" \
+            --firefox-zip ".output/linkdean-extension-$VERSION-firefox.zip" \
+            --firefox-sources-zip ".output/linkdean-extension-$VERSION-sources.zip"
+
   github-release:
     name: Create GitHub release
-    needs: [changes, ci, image, deploy]
-    # Publish once CI passed, the image (if any) pushed and the deploy (if enabled) succeeded.
+    needs: [changes, ci, image, deploy, extension]
+    # Publish once CI passed, the image (if any) pushed, the deploy (if enabled) succeeded and
+    # the extension (if changed) went to the stores.
     if: >
       always() &&
       github.event_name == 'push' &&
       needs.ci.result == 'success' &&
       (needs.image.result == 'success' || needs.image.result == 'skipped') &&
-      (needs.deploy.result == 'success' || needs.deploy.result == 'skipped')
+      (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') &&
+      (needs.extension.result == 'success' || needs.extension.result == 'skipped')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -231,6 +299,8 @@ jobs:
           APP: ${{ needs.changes.outputs.app }}
           DOCS: ${{ needs.changes.outputs.docs }}
           SITE: ${{ needs.changes.outputs.site }}
+          EXTENSION: ${{ needs.changes.outputs.extension }}
+          EXTENSION_VERSION: ${{ needs.changes.outputs.extension_version }}
           PREVIOUS: ${{ needs.changes.outputs.previous }}
         run: |
           prerelease=""
@@ -240,6 +310,9 @@ jobs:
           [ "$DOCS" = true ] && apps="$apps docs"
           [ "$SITE" = true ] && apps="$apps site"
           notes="Changed since ${PREVIOUS:-the first commit}:${apps:- nothing deployable}."
+          if [ "$EXTENSION" = true ]; then
+            notes="$notes Browser extension $EXTENSION_VERSION submitted to the Chrome Web Store and AMO for review."
+          fi
           if [ "$APP" = true ]; then
             notes="$notes Image: \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkdean:${GITHUB_REF_NAME#v}\`."
           fi

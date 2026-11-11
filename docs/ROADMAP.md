@@ -48,7 +48,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
     - **Slice 1, quick save page.** **Done:** `/save` (see FEATURES). URL matching is exact, so `https://a.com` and `https://a.com/` count as different pages, as in Library health → Duplicates.
     - **Slice 2, bookmarklet.** **Done:** **Settings → Fast capture** (see FEATURES).
     - **Slice 3, share target.** **Done:** `share_target` in `site.webmanifest`, and the iOS Shortcuts in [Saving pages fast](./FAST_CAPTURE.md) (see FEATURES).
-    - **Slice 4, browser extension.** **Built, not yet in the stores:** `apps/extension` (see FEATURES); remaining: first store submissions, then automated publishing from tags.
+    - **Slice 4, browser extension.** **Submitted to both stores, in review:** `apps/extension` 0.1.0 (see FEATURES). The Release workflow submits later versions on a tag. Remaining: approval, then the store links in the web app and docs.
 
 16. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.
     - Let the Categories field in the bookmark drawer create one: typing a name that matches nothing offers **Create "name"**, which creates it and selects it.
