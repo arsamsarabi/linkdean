@@ -11,7 +11,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import ReactDOM from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import { SCROLL_ROOT_ID } from '@/hooks/render'
-import { dropLegacyToken } from '@/lib'
+import { dropLegacyToken, startPageCounting } from '@/lib'
 import { routeTree } from '@/routeTree.gen'
 import { linkdeanCssVariables, linkdeanTheme } from '@/styles'
 
@@ -28,6 +28,7 @@ declare module '@tanstack/react-router' {
 }
 
 registerSW({ immediate: true })
+void startPageCounting(router)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
