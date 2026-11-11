@@ -17,8 +17,8 @@
 - [ ] Non-trivial logic has a test that fails without the change
 - [ ] New migrations use the next free number; no shipped migration was edited
 - [ ] A test that changes instance-wide state is in the `db-global-state` group in `.config/nextest.toml`
-- [ ] User-visible change: `docs/FEATURES.md` updated (and `docs/ROADMAP.md` if it finishes an item)
-- [ ] New or changed env var, port, volume or deploy step: `docs/INSTALL.md`, `docs/SELF_HOSTED.md` and `deploy/docker/docker-compose.yml` updated
+- [ ] User-visible change: `docs/product/features.md` updated (and `docs/product/roadmap.md` if it finishes an item)
+- [ ] New or changed env var, port, volume or deploy step: `docs/self-hosting/quick-start.md` / `environment.md` / `operations.md` and `deploy/docker/docker-compose.yml` updated as needed
 - [ ] User-facing change noted in `docs/CHANGELOG.md`
 - [ ] Defects left unfixed are marked with a `Known issue:` comment
 

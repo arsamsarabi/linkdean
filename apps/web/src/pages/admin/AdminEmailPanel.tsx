@@ -4,7 +4,7 @@ import { IconMail, IconSend } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
 import { useEmailStatus, useSendTestEmail } from '@/hooks'
 
-const SETUP_GUIDE = 'https://github.com/arsamsarabi/linkdean/blob/main/docs/SELF_HOSTED.md#email'
+const SETUP_GUIDE = 'https://github.com/arsamsarabi/linkdean/blob/main/docs/self-hosting/operations.md#email'
 
 function Stat({ label, value }: { label: string; value: number }): ReactElement {
   return (

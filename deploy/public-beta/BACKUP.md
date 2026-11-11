@@ -1,6 +1,6 @@
 # Public beta backups
 
-Off-site backups for the LXD guest `linkdean-public` on Nova. Design: [public-beta-restic-infisical](../../docs/superpowers/specs/2026-11-07-public-beta-restic-infisical-design.md).
+Off-site backups for the LXD guest `linkdean-public` on Nova. Operator notes: [managed-service.md](../../docs/ops/managed-service.md).
 
 ## What is backed up
 

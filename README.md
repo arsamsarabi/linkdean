@@ -66,7 +66,7 @@ Linkdean is a small, self-hosted bookmarks server: Postgres, optional Meilisearc
 | **Import / export** | Netscape, JSON, Pocket, Raindrop |
 | **Ops** | Compose healthchecks, ready probe, backup recipe, admin reindex, optional SMTP email |
 
-Full list: [docs/FEATURES.md](docs/FEATURES.md).
+Full list: [docs/product/features.md](docs/product/features.md).
 
 ---
 
@@ -74,7 +74,7 @@ Full list: [docs/FEATURES.md](docs/FEATURES.md).
 
 ### Released image (recommended)
 
-Run a published image from the GitHub Container Registry with a Compose file you write yourself, no checkout or build needed. [docs/INSTALL.md](docs/INSTALL.md) has the Compose file, optional Chrome screenshots, and every environment variable: which are required and what each does.
+Run a published image from the GitHub Container Registry with a Compose file you write yourself, no checkout or build needed. [docs/self-hosting/quick-start.md](docs/self-hosting/quick-start.md) has the Compose file and optional Chrome screenshots; [docs/self-hosting/environment.md](docs/self-hosting/environment.md) lists every environment variable.
 
 ### Build from source with Docker Compose
 
@@ -89,9 +89,9 @@ docker compose --env-file deploy/docker/.env -f deploy/docker/docker-compose.yml
 
 Open **http://localhost:8080**. The first registered user becomes admin. On a server others can reach before you, set `BOOTSTRAP_TOKEN` so only you can create that account.
 
-Production Compose refuses to start without `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET`, and the API refuses the default values published in this repo. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`. Required secrets, proxy setup, limits and upgrade steps: [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md#production-deployment).
+Production Compose refuses to start without `POSTGRES_PASSWORD`, `MEILI_MASTER_KEY` and `SESSION_SECRET`, and the API refuses the default values published in this repo. Behind a reverse proxy, also set `TRUST_FORWARDED_FOR=true`. Required secrets, proxy setup, limits and upgrade steps: [docs/self-hosting/operations.md](docs/self-hosting/operations.md#production-deployment).
 
-Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
+Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/ready`](http://localhost:8080/api/ready) (Postgres + Meili). Backup recipe in [docs/self-hosting/operations.md](docs/self-hosting/operations.md).
 
 ### Stack services
 
@@ -103,13 +103,13 @@ Probes: [`/api/health`](http://localhost:8080/api/health) (liveness) · [`/api/r
 | `chrome` | Optional CDP for page previews. Sandboxed, non-root, off the data network | Internal only (dev: `127.0.0.1:9222`) |
 | `mailpit` | Dev only: catches outgoing email | Dev: `127.0.0.1:8025` |
 
-See [docs/SELF_HOSTED.md](docs/SELF_HOSTED.md).
+See [docs/self-hosting/operations.md](docs/self-hosting/operations.md).
 
 ---
 
 ## Configuration
 
-Runtime configuration is environment variables only. The full reference, with defaults and required ones marked, is in [docs/INSTALL.md](docs/INSTALL.md#environment-variables); local development uses [`.env.example`](.env.example).
+Runtime configuration is environment variables only. The full reference, with defaults and required ones marked, is in [docs/self-hosting/quick-start.md](docs/self-hosting/environment.md); local development uses [`.env.example`](.env.example).
 
 | Variable | Required | Description |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ Runtime configuration is environment variables only. The full reference, with de
 | `BROWSER_WS_URL` | | Chrome CDP URL for screenshots |
 | `BROWSER_PROXY_BIND` | With Chrome | Where the API serves the egress proxy Chrome must use (`0.0.0.0:3128`). Chrome's network has no other route out |
 | `BOOTSTRAP_TOKEN` | | When set, the first account (the admin) must enter it on the setup page, and that account must use a password, not OIDC. Unset, whoever registers first becomes admin. Ignored once any account exists |
-| `SMTP_HOST` | | Mail server. Mail is on when this and `MAIL_FROM` are set; unset, nothing is emailed. See [Email](docs/SELF_HOSTED.md#email) |
+| `SMTP_HOST` | | Mail server. Mail is on when this and `MAIL_FROM` are set; unset, nothing is emailed. See [Email](docs/self-hosting/operations.md#email) |
 | `SMTP_PORT` | | Default `587`, or `465` with `SMTP_TLS=tls` |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | | Set both or neither |
 | `SMTP_TLS` | | `starttls` (default), `tls`, or `none` (local servers only) |
@@ -206,7 +206,7 @@ Browser ──► Vite (dev) or static SPA
 | Enrichment | `crates/worker` |
 | SPA | `apps/web` |
 
-Full write-up: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Full write-up: [docs/product/architecture.md](docs/product/architecture.md).
 
 ---
 
@@ -228,22 +228,25 @@ Published site: [docs.linkdean.app](https://docs.linkdean.app) (built from the f
 
 | Doc | Contents |
 | --- | --- |
-| [Install](docs/INSTALL.md) | Released image, Compose, environment variables |
-| [Self-host](docs/SELF_HOSTED.md) | Production secrets, reverse proxy, limits, upgrades, backup, development setup |
-| [Features](docs/FEATURES.md) | What the app can do today |
-| [Architecture](docs/ARCHITECTURE.md) | Stack, domain model, auth, vault vs hidden |
-| [Roadmap](docs/ROADMAP.md) | Planned milestones / backlog |
-| [Managed service](docs/MANAGED_SERVICE.md) | Homelab public beta, VPS, GCP notes |
+| [Docs index](docs/README.md) | Map of the docs tree |
+| [Quick start](docs/self-hosting/quick-start.md) | Released image and Compose |
+| [Environment](docs/self-hosting/environment.md) | Environment variable reference |
+| [Operations](docs/self-hosting/operations.md) | Secrets, proxy, limits, upgrades, backup, development |
+| [Features](docs/product/features.md) | What the app can do today |
+| [Fast capture](docs/guides/fast-capture.md) | Extension, bookmarklet, share, Shortcuts |
+| [Architecture](docs/product/architecture.md) | Stack, domain model, auth, vault vs hidden |
+| [Roadmap](docs/product/roadmap.md) | Planned milestones / backlog |
+| [Managed service](docs/ops/managed-service.md) | Homelab public beta and hosted notes |
 | [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---
 
 ## Roadmap
 
-**Where we are:** product Now items 1–11 are shipped; `app` / `docs` / marketing are live on the homelab. **Before announce:** go-live hardening — SMTP + DNS auth, Turnstile, backups, uptime ([ROADMAP](docs/ROADMAP.md) #13 / [MANAGED_SERVICE](docs/MANAGED_SERVICE.md)). After that: membership pricing explore (#12), then post-release work (browser extension, …).
+**Where we are:** product Now items 1–11 are shipped; `app` / `docs` / marketing are live on the homelab. **Before announce:** go-live hardening — SMTP + DNS auth, Turnstile, backups, uptime ([ROADMAP](docs/product/roadmap.md) #13 / [MANAGED_SERVICE](docs/ops/managed-service.md)). After that: membership pricing explore (#12), then post-release work (browser extension, …).
 
-- Capabilities: [docs/FEATURES.md](docs/FEATURES.md)
-- Plan: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Capabilities: [docs/product/features.md](docs/product/features.md)
+- Plan: [docs/product/roadmap.md](docs/product/roadmap.md)
 
 ---
 

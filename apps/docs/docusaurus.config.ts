@@ -36,10 +36,12 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           editUrl: ({ docPath }) => {
             const sourceByDoc: Record<string, string> = {
-              'self-hosting/install.md': 'docs/INSTALL.md',
-              'self-hosting/operations.md': 'docs/SELF_HOSTED.md',
-              'features.md': 'docs/FEATURES.md',
-              'architecture.md': 'docs/ARCHITECTURE.md',
+              'self-hosting/quick-start.md': 'docs/self-hosting/quick-start.md',
+              'self-hosting/environment.md': 'docs/self-hosting/environment.md',
+              'self-hosting/operations.md': 'docs/self-hosting/operations.md',
+              'features.md': 'docs/product/features.md',
+              'guides/fast-capture.md': 'docs/guides/fast-capture.md',
+              'architecture.md': 'docs/product/architecture.md',
               'intro.md': 'apps/docs/docs/intro.md',
             };
             const path =
@@ -91,7 +93,7 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            { label: 'Install', to: '/docs/self-hosting/install' },
+            { label: 'Quick start', to: '/docs/self-hosting/quick-start' },
             { label: 'Features', to: '/docs/features' },
             { label: 'Architecture', to: '/docs/architecture' },
           ],

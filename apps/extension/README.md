@@ -2,7 +2,7 @@
 
 Save the current tab to Linkdean from Chrome (and Edge) or Firefox. One codebase, built with [WXT](https://wxt.dev) as Manifest V3 for both browsers. Works with app.linkdean.app or any self-hosted instance.
 
-What it does, and the sign-in flow: [docs/FAST_CAPTURE.md](../../docs/FAST_CAPTURE.md) and the "Browser extension" bullets in [docs/FEATURES.md](../../docs/FEATURES.md).
+What it does, and the sign-in flow: [docs/guides/fast-capture.md](../../docs/guides/fast-capture.md) and the "Browser extension" bullets in [docs/product/features.md](../../docs/product/features.md).
 
 ## Develop
 

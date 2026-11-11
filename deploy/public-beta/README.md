@@ -1,6 +1,6 @@
 # Public beta deploy (Nova LXD guest)
 
-Isolated stack for `linkdean.app`, `app.linkdean.app`, and `docs.linkdean.app`. Design: [public-beta-homelab-design](../../docs/superpowers/specs/2026-11-06-public-beta-homelab-design.md). Operator checklist: [MANAGED_SERVICE.md](../../docs/MANAGED_SERVICE.md).
+Isolated stack for `linkdean.app`, `app.linkdean.app`, and `docs.linkdean.app`. Operator checklist: [managed-service.md](../../docs/ops/managed-service.md).
 
 Do **not** run this Compose project on the Nova host next to personal services. Use a dedicated LXD VM.
 
@@ -76,7 +76,7 @@ Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `s
 | App | Paths | Deploy |
 | --- | --- | --- |
 | app | `crates/`, `apps/web/`, `migrations/`, `deploy/docker/`, `Cargo.toml`, `Cargo.lock` | GHCR `:x.y.z`, `:x.y`, `:latest`; the guest's `LINKDEAN_VERSION` set to the tag, api pulled and restarted |
-| docs | `apps/docs/`, `static/docs/`, `docs/INSTALL.md`, `docs/SELF_HOSTED.md`, `docs/FEATURES.md`, `docs/FAST_CAPTURE.md`, `docs/ARCHITECTURE.md` | guest checks out the tag; Caddy restarted |
+| docs | `apps/docs/`, `static/docs/`, `docs/self-hosting/`, `docs/product/`, `docs/guides/` | guest checks out the tag; Caddy restarted |
 | site | `apps/site/`, `static/site/` | guest checks out the tag; Caddy restarted |
 
 An app release needs the tag to match the version in `Cargo.toml` and `apps/web/package.json`; a docs- or site-only release does not.
@@ -110,7 +110,7 @@ RELEASE_TAG=v0.2.0 CHECK_APP=true CHECK_DOCS=true CHECK_SITE=true bash deploy/pu
 
 ## 5. Before announce
 
-Remaining go-live items are tracked in [ROADMAP.md](../../docs/ROADMAP.md) (item 13). Tools for them:
+Remaining go-live items are tracked in [ROADMAP.md](../../docs/product/roadmap.md) (item 13). Tools for them:
 
 - Sign-up controls: `bash deploy/public-beta/scripts/check-signup-controls.sh` checks Turnstile, the disposable-domain block and outbound mail against the live app, without creating an account.
 - Restore drill: [BACKUP.md](./BACKUP.md#restore-drill) (`scripts/restore-drill.sh` on Nova).

@@ -1,4 +1,4 @@
-"""Keep the chrome-seccomp.json copy in docs/INSTALL.md in step with deploy/docker.
+"""Keep the chrome-seccomp.json copy in docs/self-hosting/quick-start.md in step with deploy/docker.
 
 Usage:
   python3 deploy/scripts/sync_install_seccomp.py          # rewrite the docs block
@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = ROOT / "deploy/docker/chrome-seccomp.json"
-DOC = ROOT / "docs/INSTALL.md"
+DOC = ROOT / "docs/self-hosting/quick-start.md"
 BLOCK = re.compile(r"(<!-- seccomp:start -->\n).*?(<!-- seccomp:end -->)", re.S)
 
 
@@ -48,7 +48,7 @@ def main() -> int:
             same = False
         if not same:
             print(
-                "docs/INSTALL.md seccomp block differs from deploy/docker/chrome-seccomp.json; "
+                "docs/self-hosting/quick-start.md seccomp block differs from deploy/docker/chrome-seccomp.json; "
                 "run python3 deploy/scripts/sync_install_seccomp.py",
                 file=sys.stderr,
             )

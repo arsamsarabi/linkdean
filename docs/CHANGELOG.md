@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Restructured `docs/` into purpose folders (`self-hosting/`, `product/`, `guides/`, `ops/`, `design/`); install split into quick start, environment, and operations.
+
+
 ## [0.0.2] - 2026-11-06
 
 ### Added
@@ -21,4 +26,4 @@
 
 ### Added
 
-- Initial release: the Docker image `ghcr.io/arsamsarabi/linkdean:0.0.1` and the install guide in `docs/INSTALL.md`.
+- Initial release: the Docker image `ghcr.io/arsamsarabi/linkdean:0.0.1` and the install guide (now `docs/self-hosting/quick-start.md`).
