@@ -7,7 +7,6 @@ import {
   Group,
   Loader,
   LoadingOverlay,
-  MultiSelect,
   Select,
   Stack,
   Switch,
@@ -31,9 +30,10 @@ import {
   useVaults,
 } from '@/hooks'
 import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
-import { categorySelectData, withWebScheme, writableCategories } from '@/lib'
+import { withWebScheme } from '@/lib'
 import type { Category } from '@/schemas'
 import { draftHeadsToVault, emptyDraft, fillFromPage, isFetchableUrl, type BookmarkDraft } from '@/services'
+import { BookmarkCategoriesField } from './BookmarkCategoriesField'
 import { BookmarkPreviewField } from './BookmarkPreviewField'
 
 export type { BookmarkDraft }
@@ -287,14 +287,11 @@ export function BookmarkDrawer({
             disabled={pending}
           />
         ) : null}
-        <MultiSelect
-          label="Categories"
-          description="Can pick several. Nested path shown in label. Read-only shared folders are omitted."
-          data={categorySelectData(writableCategories(categories))}
+        <BookmarkCategoriesField
+          categories={categories}
           value={draft.category_ids}
           onChange={(category_ids) => setDraft((d) => ({ ...d, category_ids }))}
-          searchable
-          clearable
+          canCreate={draft.can_write !== false}
         />
         {!editing && draft.category_ids.length === 0 ? (
           <Select

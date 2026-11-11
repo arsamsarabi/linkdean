@@ -17,6 +17,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Bookmark cards / glance tiles: title primary, full URL muted beneath
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)
+- Create a category from the bookmark form: typing a name that matches no category offers **Create "name"**, which creates it at the top level or under a writable parent picked inline, and selects it. A subcategory follows its parent's vault. Not offered on read-only shared bookmarks
 - Grid, compact list and explorer library views (preference persisted). The list shows each bookmark on one row: site icon, title, site and description, folders, badges and the same menu
 - Library list is keyset-paginated (infinite scroll); folder, tag, flag, created-within, vault-only and sort run on the server with a total match count
 - Unsorted / uncategorized filter

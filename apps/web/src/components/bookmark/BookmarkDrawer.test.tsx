@@ -18,6 +18,7 @@ vi.mock('@/hooks', async (orig) => ({
   useMe: () => ({ data: { user: { id: 'me' } } }),
   useVaults: () => ({ data: { vaults: [] } }),
   usePageDetails: () => pageDetails,
+  useCreateCategory: () => idle,
 }))
 
 vi.mock('@/components/social', () => ({

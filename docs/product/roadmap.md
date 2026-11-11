@@ -54,11 +54,6 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
         c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
         d. **Prep:** add the Chrome Web Store and AMO links to the web app (Settings → Fast capture) and the docs.
 
-16. **Create a category from the bookmark form** (S). Filing a bookmark into a folder that does not exist yet means closing the drawer, creating the category, and starting again.
-    - Let the Categories field in the bookmark drawer create one: typing a name that matches nothing offers **Create "name"**, which creates it and selects it.
-    - Choose where it goes: at the top level by default, or under a parent picked inline.
-    - Only offered where the person can write, so not inside read-only shared folders.
-
 17. **Duplicates on import** (M, explore first). Import adds every bookmark it reads, even when the library already has that URL, so importing the same file twice doubles the library. Let the person decide instead.
     - Before anything is written, warn that the file has bookmarks whose URLs are already in the library, with the count.
     - For each duplicate, show the existing bookmark next to the one being imported (title, URL, folder, tags, notes) and ask: **Replace** the existing one, **Skip** the imported one, or **Import anyway** as a second copy.
@@ -126,7 +121,7 @@ The first public release is a **free beta on the homelab** (`app.linkdean.app`).
 
 29. **Filing queue for Unsorted** (M). Fast capture (item 14) makes saving one tap, so links pile up in Unsorted with no folder, few tags and sometimes no title. A place to work through them one at a time turns that pile into a filed library.
     - A **File** view that steps through Unsorted bookmarks newest first, one card at a time: title, URL, preview, description.
-    - Per card: pick a folder (or create one, see item 16), add tags, fix the title, mark favourite, or delete. **Next** saves and moves on; **Skip** leaves it in Unsorted.
+    - Per card: pick a folder (or create one, as the bookmark form does), add tags, fix the title, mark favourite, or delete. **Next** saves and moves on; **Skip** leaves it in Unsorted.
     - Suggestions: folders and tags already used for bookmarks on the same site, and the page's keyword tags from item 14's fetch.
     - Keyboard first on desktop (number keys pick a suggested folder, Enter files, S skips, D deletes); swipe on phones.
     - A count of unsorted bookmarks on the sidebar's Unsorted entry, and an empty state when the queue is clear.
