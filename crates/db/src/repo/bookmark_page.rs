@@ -453,6 +453,74 @@ pub async fn list_bookmark_ids_matching(
         .map_err(|e| Error::msg(e.to_string()))
 }
 
+/// Live bookmarks per folder the person can open, and in their Unsorted.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct FolderCounts {
+    /// Direct bookmarks per folder (not counting subfolders). Folders with none are absent.
+    pub folders: std::collections::HashMap<Uuid, i64>,
+    pub uncategorized: i64,
+}
+
+/// Counts for Explorer's folder tiles in two aggregate queries, without loading bookmarks.
+/// A folder counts the bookmarks the person would see in it: not deleted, and no one
+/// else's vault items. Unsorted leaves vault items out, as the list does.
+pub async fn folder_bookmark_counts(pool: &PgPool, user_id: Uuid) -> Result<FolderCounts> {
+    let shared: Vec<Uuid> = list_shared_categories(pool, user_id, true)
+        .await?
+        .into_iter()
+        .map(|(c, _)| c.id)
+        .collect();
+    let rows: Vec<(Uuid, i64)> = sqlx::query_as(
+        r#"
+        WITH visible AS (
+            SELECT id FROM categories WHERE owner_user_id = $1 AND deleted_at IS NULL
+            UNION
+            SELECT unnest($2::uuid[])
+        ),
+        placed AS (
+            SELECT b.id AS bookmark_id, b.category_id AS category_id
+            FROM bookmarks b
+            WHERE b.category_id IS NOT NULL
+              AND b.deleted_at IS NULL
+              AND (b.owner_user_id = $1 OR b.is_vault = FALSE)
+            UNION
+            SELECT bc.bookmark_id, bc.category_id
+            FROM bookmark_categories bc
+            JOIN bookmarks b ON b.id = bc.bookmark_id
+            WHERE b.deleted_at IS NULL
+              AND (b.owner_user_id = $1 OR b.is_vault = FALSE)
+        )
+        SELECT p.category_id, count(*)
+        FROM placed p
+        JOIN visible v ON v.id = p.category_id
+        GROUP BY p.category_id
+        "#,
+    )
+    .bind(user_id)
+    .bind(&shared)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let uncategorized: i64 = sqlx::query_scalar(
+        r#"
+        SELECT count(*) FROM bookmarks b
+        WHERE b.owner_user_id = $1
+          AND b.deleted_at IS NULL
+          AND b.is_vault = FALSE
+          AND b.category_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM bookmark_categories bc WHERE bc.bookmark_id = b.id)
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(FolderCounts {
+        folders: rows.into_iter().collect(),
+        uncategorized,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

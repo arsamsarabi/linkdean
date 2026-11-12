@@ -30,6 +30,7 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/ids", get(list_ids))
         .route("/bookmarks/page-details", post(page_details))
         .route("/bookmarks/lookup", get(lookup))
+        .route("/bookmarks/folder-counts", get(folder_counts))
         .route("/bookmarks/url-hashes", get(url_hashes))
         .route("/bookmarks/{id}/check-link", post(check_link))
         .route(
@@ -525,4 +526,14 @@ async fn url_hashes(
         "hex_length": db::URL_HASH_HEX_LEN,
         "hashes": hashes,
     })))
+}
+
+/// Live bookmarks per folder and in Unsorted, for Explorer's folder tiles.
+async fn folder_counts(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<db::FolderCounts>> {
+    Ok(Json(
+        db::folder_bookmark_counts(&state.pool, user.id).await?,
+    ))
 }

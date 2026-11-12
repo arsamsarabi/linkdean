@@ -508,3 +508,82 @@ async fn a_cursor_from_another_sort_is_refused() {
         .await
         .is_err());
 }
+
+#[tokio::test]
+async fn folder_counts_cover_your_folders_shared_folders_and_unsorted() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let friend = person(&pool).await;
+    let rust = folder(&pool, &me, "Rust").await;
+    let reading = folder(&pool, &me, "Reading").await;
+    let empty = folder(&pool, &me, "Empty").await;
+    let theirs = folder(&pool, &friend, "Shared").await;
+    let closed = folder(&pool, &friend, "Not shared").await;
+    share(&pool, &friend, theirs, &me).await;
+
+    // In two folders: counts once in each.
+    seed(
+        &pool,
+        &me,
+        Seed {
+            folders: vec![rust, reading],
+            ..Default::default()
+        },
+    )
+    .await;
+    seed(
+        &pool,
+        &me,
+        Seed {
+            folders: vec![rust],
+            ..Default::default()
+        },
+    )
+    .await;
+    let gone = seed(
+        &pool,
+        &me,
+        Seed {
+            folders: vec![rust],
+            ..Default::default()
+        },
+    )
+    .await;
+    db::delete_bookmark(&pool, me.id, gone)
+        .await
+        .expect("trash");
+    seed(&pool, &me, Seed::default()).await;
+    seed(&pool, &me, Seed::default()).await;
+    seed(
+        &pool,
+        &friend,
+        Seed {
+            folders: vec![theirs],
+            ..Default::default()
+        },
+    )
+    .await;
+    seed(
+        &pool,
+        &friend,
+        Seed {
+            folders: vec![closed],
+            ..Default::default()
+        },
+    )
+    .await;
+
+    let counts = db::folder_bookmark_counts(&pool, me.id)
+        .await
+        .expect("counts");
+    let of = |id: Uuid| counts.folders.get(&id).copied().unwrap_or(0);
+    assert_eq!(of(rust), 2);
+    assert_eq!(of(reading), 1);
+    assert_eq!(of(empty), 0);
+    assert_eq!(of(theirs), 1);
+    // Folders you cannot open are not listed at all.
+    assert!(!counts.folders.contains_key(&closed));
+    assert_eq!(counts.uncategorized, 2);
+}
