@@ -49,7 +49,7 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     - Optional OpenTelemetry tracing, tied to the request ID from the structured logs.
     - API tests per route for auth, authorization and error responses.
 
-10. **Membership tiers and pricing** (M, explore). Before anyone pays and before Stripe or plan gates land in code.
+10. **Membership tiers and pricing for managed services** (M, explore). Before anyone pays and before Stripe or plan gates land in code.
     - Start from the plan sketch in the [organizations and teams design](../design/organizations-and-teams.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
     - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats). Limits plug into the existing quota resolver.
     - Write the model into [managed-service.md](../ops/managed-service.md) and add a pricing section to the marketing site. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
