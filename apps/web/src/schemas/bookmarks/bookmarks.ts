@@ -129,12 +129,19 @@ export const filingSuggestionsSchema = z.object({
   tags: z.array(z.object({ name: z.string(), count: z.number() })),
 })
 
+/** `GET /bookmarks/folder-counts`: live bookmarks per folder id, and in Unsorted. */
+export const folderCountsSchema = z.object({
+  folders: z.record(z.string(), z.number()),
+  uncategorized: z.number(),
+})
+
 /** `GET /tags` rows; the library filter only needs the names. */
 export const tagNamesSchema = z.array(z.object({ name: z.string() }))
 
 export type BookmarkListPage = z.infer<typeof bookmarkListPageSchema>
 export type BookmarkIdsResponse = z.infer<typeof bookmarkIdsSchema>
 export type FilingSuggestions = z.infer<typeof filingSuggestionsSchema>
+export type FolderCounts = z.infer<typeof folderCountsSchema>
 export type CategoryRef = z.infer<typeof categoryRefSchema>
 export type Bookmark = z.infer<typeof bookmarkSchema>
 export type LinkCheckStatus = z.infer<typeof linkCheckStatusSchema>

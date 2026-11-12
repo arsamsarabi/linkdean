@@ -39,6 +39,7 @@ import {
   exposedContentEnvelopeSchema,
   extensionAuthorizeSchema,
   filingSuggestionsSchema,
+  folderCountsSchema,
   followEnvelopeSchema,
   followUsersEnvelopeSchema,
   forgotPasswordResponseSchema,
@@ -121,6 +122,7 @@ import {
   type EmailStatus,
   type ExposedContent,
   type FilingSuggestions,
+  type FolderCounts,
   type FollowRelation,
   type FollowUser,
   type ForgotPasswordResponse,
@@ -620,6 +622,9 @@ export const api = {
   /** Folders and tags the person already uses on this bookmark's site. */
   filingSuggestions: (id: string): Promise<FilingSuggestions> =>
     req(`/bookmarks/${id}/filing-suggestions`, {}, filingSuggestionsSchema),
+
+  /** Live bookmarks per folder and in Unsorted, for Explorer's folder tiles. */
+  folderCounts: (): Promise<FolderCounts> => req('/bookmarks/folder-counts', {}, folderCountsSchema),
 
   /** Ids matching the same filters as `bookmarksPage` (server caps at 10k). */
   bookmarkIds: async (params: BookmarksListParams): Promise<string[]> =>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { SortKey } from '@/lib'
-import type { Bookmark, Category } from '@/schemas'
+import type { Bookmark, Category, FolderCounts } from '@/schemas'
 import {
   filterAndSortLibraryItems,
   FOLDER_ALL,
@@ -21,6 +21,7 @@ type Input = {
   sort: SortKey
   showHidden: boolean
   filterFlags: FlagFilter[]
+  folderCounts?: FolderCounts
 }
 
 /** Derive explorer folder/bookmark lists for the current folder + search hits. */
@@ -32,6 +33,7 @@ export function useLibraryExplorerContents({
   sort,
   showHidden,
   filterFlags,
+  folderCounts,
 }: Input) {
   const selectedId: ExplorerFolderId = folderId || FOLDER_ALL
   const atAll = selectedId === FOLDER_ALL
@@ -39,8 +41,8 @@ export function useLibraryExplorerContents({
   const byId = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
   const crumbs = useMemo(() => folderBreadcrumb(selectedId, byId), [selectedId, byId])
   const contents = useMemo(
-    () => listFolderContents(selectedId, categories, bookmarks, showHidden),
-    [selectedId, categories, bookmarks, showHidden]
+    () => listFolderContents(selectedId, categories, bookmarks, showHidden, folderCounts),
+    [selectedId, categories, bookmarks, showHidden, folderCounts]
   )
   const sortedFolders = useMemo(() => sortExplorerFolders(contents.folders, sort), [contents.folders, sort])
   const ownedFolders = useMemo(
