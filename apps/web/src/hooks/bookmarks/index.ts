@@ -15,3 +15,4 @@ export { useBulkAddCategories, useBulkTagBookmarks, useBulkDeleteBookmarks, type
 export { useDuplicates, useMergeDuplicateGroup } from './useDuplicates'
 export { brokenLinksQueryKey, useBrokenLinks, usePrefetchBrokenLinks, useRecheckBookmarkLink } from './useBrokenLinks'
 export { useUnsortedQueue, useUnsortedCount, useFilingSuggestions } from './useFilingQueue'
+export { useFolderCounts } from './useFolderCounts'

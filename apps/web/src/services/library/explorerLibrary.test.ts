@@ -114,11 +114,19 @@ describe('listFolderContents', () => {
     const c = listFolderContents(FOLDER_ALL, cats, bookmarks, false)
     expect(c.bookmarks).toHaveLength(0)
     expect(c.folders.map((f) => f.id)).toEqual(['root', 'shared', FOLDER_UNCATEGORIZED])
-    expect(c.folders.find((f) => f.id === FOLDER_UNCATEGORIZED)?.bookmarkCount).toBe(1)
-    expect(c.folders.find((f) => f.id === 'root')?.bookmarkCount).toBe(1)
+    // Counts come from the server; until they load, tiles show none.
+    expect(c.folders.every((f) => f.bookmarkCount === null)).toBe(true)
     expect(c.folders.find((f) => f.id === 'root')?.access).toBe('owner')
     expect(c.folders.find((f) => f.id === 'shared')?.access).toBe('read')
     expect(isSharedFolder(c.folders.find((f) => f.id === 'shared')!)).toBe(true)
+  })
+
+  it('takes tile counts from the server, zero for folders it did not list', () => {
+    const counts = { folders: { root: 7 }, uncategorized: 3 }
+    const c = listFolderContents(FOLDER_ALL, cats, bookmarks, false, counts)
+    expect(c.folders.find((f) => f.id === 'root')?.bookmarkCount).toBe(7)
+    expect(c.folders.find((f) => f.id === 'shared')?.bookmarkCount).toBe(0)
+    expect(c.folders.find((f) => f.id === FOLDER_UNCATEGORIZED)?.bookmarkCount).toBe(3)
   })
 
   it('includes hidden when showHidden', () => {

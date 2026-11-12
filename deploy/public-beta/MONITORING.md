@@ -12,7 +12,6 @@ The checks run in the operator's Uptime Kuma, on a homelab machine separate from
 | Linkdean · App version | `https://app.linkdean.app/api/health` | Keyword | `"status":"ok"` | 1 min |
 | Linkdean · Marketing | `https://linkdean.app/` | Keyword | `Linkdean` | 5 min |
 | Linkdean · Docs | `https://docs.linkdean.app/` | HTTP status | 200–299 | 5 min |
-| Linkdean · Outside heartbeat | the healthchecks.io ping URL | HTTP status | 200–299 | 5 min |
 
 - **App ready** is the one that matters. `/api/ready` checks Postgres and Meilisearch and answers 503 with `"status":"degraded"` when either is down, so a keyword check catches a half-working API that still returns a page. It is never cached.
 - **App version** confirms the API process answers at all, so a failed ready check with a passing version check points at the database or search rather than the API.
@@ -21,21 +20,19 @@ The checks run in the operator's Uptime Kuma, on a homelab machine separate from
 
 ## The blind spot: the home connection
 
-Uptime Kuma shares the home connection and power with Nova. When either drops, Kuma goes down with the app and cannot alert, and ntfy (also in the homelab) cannot deliver.
+Uptime Kuma shares the home connection and power with Nova. When either drops, Kuma goes down with the app and cannot alert, and ntfy (also in the homelab) cannot deliver. This gap is accepted for the beta: there is no outside heartbeat. The Cloudflare tunnel alert below still emails when the guest's tunnel loses its connector, which a home outage also causes.
 
-An outside heartbeat covers this. A free [healthchecks.io](https://healthchecks.io/) check expects a ping every 5 minutes, and **Linkdean · Outside heartbeat** in Kuma sends that ping by requesting the check's ping URL. When the pings stop, healthchecks.io alerts on its own.
-
-- Check settings: period 5 minutes, grace 10 minutes.
-- Its alerts must not go through the homelab: use email plus a phone channel that healthchecks.io delivers itself (its Telegram, Signal or Pushover integrations), not ntfy.
-- An alert from healthchecks.io with no alert from Kuma means the whole homelab is unreachable. An alert from Kuma means the homelab is up and Linkdean is not.
+If the gap ever matters, a free [healthchecks.io](https://healthchecks.io/) check (period 5 minutes, grace 10 minutes, alerts by email and Telegram or Signal, not ntfy) pinged by a Kuma HTTP monitor every 5 minutes would cover it.
 
 ## Cloudflare tunnel alerts
 
-Cloudflare can also notify when the tunnel loses its connector: **Notifications → Add → Tunnel Health Alert** for the `linkdean-public` tunnel, sent to your email. It overlaps with App ready, but it names the cause (the guest's `cloudflared` is gone) rather than just the symptom.
+Cloudflare emails the operator when the `linkdean-public` tunnel turns degraded or down (**Notifications → Tunnel Health Alert**, set up on 2026-11-12). It overlaps with App ready, but it names the cause (the guest's `cloudflared` is gone) rather than just the symptom.
 
-## After setup
+## Alert test
 
-Stop the api container on the guest for 15 minutes (`docker compose stop api`, then `docker compose start api`), and check that the App ready alert reaches your phone and then clears. Do this in a quiet hour, since the app is down for everyone while it runs.
+Stop the api container on the guest (`docker compose stop api`, then `docker compose start api`), and check that the App ready alert reaches your phone and then clears. Do this in a quiet hour, since the app is down for everyone while it runs.
+
+Last run on 2026-11-12: with the api stopped for about 5½ minutes, App ready and App version went down after about 2 minutes (Cloudflare answered 502) and each sent one ntfy alert; Marketing and Docs stayed green from the Cloudflare cache; both recovered and alerted within 20 seconds of the restart.
 
 ## Page views: GoatCounter
 

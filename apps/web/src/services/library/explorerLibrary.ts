@@ -1,5 +1,5 @@
 import { buildCategoryTree, type SortKey } from '@/lib'
-import type { Bookmark, Category, CategoryAccess } from '@/schemas'
+import type { Bookmark, Category, CategoryAccess, FolderCounts } from '@/schemas'
 
 /** Virtual folder ids (not real category UUIDs). */
 export const FOLDER_ALL = 'all' as const
@@ -10,7 +10,8 @@ export type ExplorerFolderId = typeof FOLDER_ALL | typeof FOLDER_UNCATEGORIZED |
 export type ExplorerFolder = {
   id: ExplorerFolderId
   name: string
-  bookmarkCount: number
+  /** Bookmarks directly in the folder, from the server; `null` until the counts load. */
+  bookmarkCount: number | null
   isVault: boolean
   isHidden: boolean
   icon?: string | null
@@ -62,19 +63,15 @@ export function isUncategorized(b: ExplorerBookmarkRef): boolean {
   return categoryIdsOf(b).size === 0
 }
 
-function countDirectBookmarks(folderId: string, bookmarks: readonly ExplorerBookmarkRef[]): number {
-  return bookmarks.filter((b) => bookmarkInFolder(b, folderId)).length
-}
-
 function filterVisibleCats(cats: readonly Category[], showHidden: boolean): Category[] {
   return cats.filter((c) => showHidden || !c.is_hidden)
 }
 
-function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): ExplorerFolder {
+function toFolder(cat: Category, counts: FolderCounts | undefined): ExplorerFolder {
   return {
     id: cat.id,
     name: cat.name,
-    bookmarkCount: countDirectBookmarks(cat.id, bookmarks),
+    bookmarkCount: counts ? (counts.folders[cat.id] ?? 0) : null,
     isVault: cat.is_vault,
     isHidden: cat.is_hidden,
     icon: cat.icon,
@@ -91,36 +88,37 @@ function toFolder(cat: Category, bookmarks: readonly ExplorerBookmarkRef[]): Exp
 /** Top-level folders at All, plus Unsorted. */
 function rootFolders(
   cats: readonly Category[],
-  bookmarks: readonly ExplorerBookmarkRef[],
+  counts: FolderCounts | undefined,
   showHidden: boolean
 ): ExplorerFolder[] {
   const visible = filterVisibleCats(cats, showHidden)
-  const roots = buildCategoryTree(visible).map((n) => toFolder(n.cat, bookmarks))
+  const roots = buildCategoryTree(visible).map((n) => toFolder(n.cat, counts))
   return [
     ...roots,
     {
       id: FOLDER_UNCATEGORIZED,
       name: 'Unsorted',
-      bookmarkCount: bookmarks.filter(isUncategorized).length,
+      bookmarkCount: counts ? counts.uncategorized : null,
       isVault: false,
       isHidden: false,
     },
   ]
 }
 
-/** Contents of the selected folder for the drill-down pane. */
+/** Contents of the selected folder for the drill-down pane. Tile counts come from `counts`. */
 export function listFolderContents(
   folderId: ExplorerFolderId | undefined,
   cats: readonly Category[],
   bookmarks: readonly Bookmark[],
-  showHidden = false
+  showHidden = false,
+  counts?: FolderCounts
 ): ExplorerContents {
   const id = folderId && folderId.length > 0 ? folderId : FOLDER_ALL
   const visible = filterVisibleCats(cats, showHidden)
 
   if (id === FOLDER_ALL) {
     return {
-      folders: rootFolders(visible, bookmarks, showHidden),
+      folders: rootFolders(visible, counts, showHidden),
       bookmarks: [],
     }
   }
@@ -133,7 +131,7 @@ export function listFolderContents(
   }
 
   const byParent = visible.filter((c) => c.parent_id === id)
-  const folders: ExplorerFolder[] = byParent.map((c) => toFolder(c, bookmarks))
+  const folders: ExplorerFolder[] = byParent.map((c) => toFolder(c, counts))
 
   return {
     folders,

@@ -12,12 +12,13 @@ type Props = {
 }
 
 export function ExplorerFolderTile({ folder, onOpen, menu }: Props): ReactElement {
-  // ponytail: Explorer only loads the open folder's bookmarks, so a tile's count is unknown.
-  // Upgrade: per-folder counts from the categories API.
+  const n = folder.bookmarkCount
+  const countLabel = n === null ? undefined : `${n} bookmark${n === 1 ? '' : 's'}`
   return (
     <FolderTile
       id={folder.id}
       name={folder.name}
+      countLabel={countLabel}
       onOpen={onOpen}
       isVault={folder.isVault}
       isHidden={folder.isHidden}

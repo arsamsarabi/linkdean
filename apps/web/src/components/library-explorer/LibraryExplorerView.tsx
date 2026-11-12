@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/empty-state'
 import { MASCOT } from '@/components/mascot'
 import { useLibraryExplorerContents } from '@/hooks/library'
 import type { SortKey } from '@/lib'
-import type { Bookmark, Category } from '@/schemas'
+import type { Bookmark, Category, FolderCounts } from '@/schemas'
 import type { ExplorerFolderId, FlagFilter, LibraryListItem } from '@/services'
 import { ExplorerBookmarkGrid } from './ExplorerBookmarkGrid'
 import { ExplorerBreadcrumb } from './ExplorerBreadcrumb'
@@ -16,6 +16,8 @@ type CategoryMenuHandlers = Omit<CategoryFolderMenuProps, 'name' | 'access' | 'i
 type Props = {
   categories: Category[]
   bookmarks: Bookmark[]
+  /** Bookmarks per folder for the tiles; tiles show no count until it loads. */
+  folderCounts?: FolderCounts
   searchHits: LibraryListItem[]
   searching: boolean
   searchQuery?: string
@@ -66,6 +68,7 @@ export function LibraryExplorerView({
   selectedIds,
   onToggleSelect,
   categoryMenuFor,
+  folderCounts,
 }: Props): ReactElement {
   const { atAll, byId, crumbs, sortedFolders, ownedFolders, sharedFolders, sortedBookmarks, sortedHits } =
     useLibraryExplorerContents({
@@ -76,6 +79,7 @@ export function LibraryExplorerView({
       sort,
       showHidden,
       filterFlags,
+      folderCounts,
     })
 
   if (loading) {

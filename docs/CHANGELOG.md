@@ -9,16 +9,20 @@
 - **File one by one**: a filing queue that walks through Unsorted bookmarks, suggesting folders and tags you already use on the same site, with keyboard shortcuts and swipes. The sidebar shows how many bookmarks are in Unsorted.
 - Create a category from the bookmark form: type a name that matches no category, pick **Create "name"**, and choose where it goes.
 - Import checks for bookmarks already in your library and lets you skip, replace, merge or import each one again; folders that already exist are reused.
+- Explorer folder tiles show how many bookmarks each folder holds again.
 - Admins can retry failed screenshots from **Admin → Screenshots**, once per cooldown, and set how long failed screenshots wait before the automatic retry, which now runs every 6 hours instead of only at start.
 
 ### Changed
 
+- The library list filters, sorts and pages in the database, so each page costs the same however large the library is.
 - Privacy Policy (version 2026-11-11): describes page-view statistics, and what the extension's saved-page icon reads.
 - **Import from URL** on the bookmark form now replaces the title and description with the page's, and adds its tags, instead of filling only empty fields.
 - Restructured `docs/` into purpose folders (`self-hosting/`, `product/`, `guides/`, `ops/`, `design/`); install split into quick start, environment, and operations.
 
 ### Fixed
 
+- Paging the library no longer skips bookmarks that share the same updated or created time.
+- The API shuts down cleanly on `docker stop`: it finishes open requests for up to 8 seconds and exits, instead of being killed after Docker's 10-second timeout.
 - Docs edits trigger a docs-site deploy again after the restructure; fixed links the move broke.
 
 

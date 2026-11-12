@@ -1,4 +1,4 @@
-//! Keyset-paginated bookmark list for the library / explorer.
+//! Keyset-paginated bookmark list for the library / explorer, filtered and paged in SQL.
 
 use super::bookmarks::bookmarks_to_views;
 use super::shares::{list_shared_categories, require_category_read};
@@ -7,7 +7,7 @@ use base64::Engine;
 use chrono::{DateTime, Utc};
 use linkdean_core::{Bookmark, BookmarkView, Error, Result, VaultKeyring};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 pub const DEFAULT_PAGE_LIMIT: i64 = 50;
@@ -67,9 +67,12 @@ struct CursorPayload {
     k: String,
     /// Pinned bit (1 = pinned) for pin-first ordering.
     p: i32,
-    /// Sort value: ISO timestamp or lowercased title.
+    /// Sort value: RFC 3339 timestamp, or the title key exactly as SQL computed it.
     s: String,
     i: Uuid,
+    /// Total matches from the first page, so later pages skip the count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    t: Option<i64>,
 }
 
 #[derive(Debug, Clone)]
@@ -80,11 +83,22 @@ pub struct BookmarkPage {
 }
 
 pub fn encode_cursor(sort: BookmarkSort, pinned: bool, sort_val: &str, id: Uuid) -> String {
+    encode_cursor_with_total(sort, pinned, sort_val, id, None)
+}
+
+fn encode_cursor_with_total(
+    sort: BookmarkSort,
+    pinned: bool,
+    sort_val: &str,
+    id: Uuid,
+    total: Option<i64>,
+) -> String {
     let payload = CursorPayload {
         k: sort.as_str().into(),
         p: if pinned { 1 } else { 0 },
         s: sort_val.into(),
         i: id,
+        t: total,
     };
     let json = serde_json::to_vec(&payload).unwrap_or_default();
     URL_SAFE_NO_PAD.encode(json)
@@ -110,18 +124,224 @@ fn clamp_limit(n: i64) -> i64 {
     }
 }
 
-fn sort_value_of(b: &BookmarkView, sort: BookmarkSort) -> String {
-    match sort {
-        BookmarkSort::TitleAsc | BookmarkSort::TitleDesc => {
-            let t = if b.title.is_empty() { &b.url } else { &b.title };
-            t.to_lowercase()
+/// Pinned for the viewer first, as 1 or 0.
+const PINNED_SQL: &str = "(CASE WHEN COALESCE(f.is_pinned, FALSE) THEN 1 ELSE 0 END)";
+/// Titles sort case-insensitively by byte order, falling back to the URL when empty.
+const TITLE_SQL: &str = "lower(COALESCE(NULLIF(b.title, ''), b.url)) COLLATE \"C\"";
+
+impl BookmarkSort {
+    fn key_sql(self) -> &'static str {
+        match self {
+            Self::TitleAsc | Self::TitleDesc => TITLE_SQL,
+            Self::CreatedDesc => "b.created_at",
+            Self::UpdatedAsc | Self::UpdatedDesc => "b.updated_at",
         }
-        BookmarkSort::CreatedDesc => b.created_at.to_rfc3339(),
-        BookmarkSort::UpdatedAsc | BookmarkSort::UpdatedDesc => b.updated_at.to_rfc3339(),
+    }
+
+    fn descending(self) -> bool {
+        !matches!(self, Self::TitleAsc | Self::UpdatedAsc)
+    }
+
+    fn is_title(self) -> bool {
+        matches!(self, Self::TitleAsc | Self::TitleDesc)
     }
 }
 
-/// Paginated library list. Filters and sort run in SQL; views decrypt via `keyring`.
+/// Which bookmarks a list covers before the filters.
+enum Scope {
+    /// The viewer's own bookmarks with no folder.
+    Uncategorized,
+    /// One folder the viewer can read, owned or shared.
+    Folder(Uuid),
+    /// The viewer's own bookmarks plus those in folders shared with them.
+    Library { shared: Vec<Uuid> },
+}
+
+/// `FROM … WHERE …` for a scope and filter. Every value is a bound parameter.
+fn push_from_where(
+    qb: &mut QueryBuilder<Postgres>,
+    user_id: Uuid,
+    scope: &Scope,
+    filter: &BookmarkPageFilter,
+    include_vault: bool,
+) {
+    qb.push(
+        " FROM bookmarks b LEFT JOIN bookmark_flags f ON f.bookmark_id = b.id AND f.user_id = ",
+    );
+    qb.push_bind(user_id);
+    qb.push(" WHERE ");
+    let push_own_visibility = |qb: &mut QueryBuilder<Postgres>| {
+        qb.push("(");
+        qb.push_bind(include_vault);
+        qb.push(" OR b.is_vault = FALSE) AND (");
+        qb.push_bind(filter.include_deleted);
+        qb.push(" OR b.deleted_at IS NULL)");
+    };
+    match scope {
+        Scope::Uncategorized => {
+            qb.push("b.owner_user_id = ");
+            qb.push_bind(user_id);
+            qb.push(
+                " AND b.category_id IS NULL AND NOT EXISTS (\
+                 SELECT 1 FROM bookmark_categories bc WHERE bc.bookmark_id = b.id) AND ",
+            );
+            push_own_visibility(qb);
+        }
+        Scope::Folder(cid) => {
+            qb.push("(b.category_id = ");
+            qb.push_bind(*cid);
+            qb.push(
+                " OR EXISTS (SELECT 1 FROM bookmark_categories bc \
+                 WHERE bc.bookmark_id = b.id AND bc.category_id = ",
+            );
+            qb.push_bind(*cid);
+            qb.push(")) AND ");
+            push_own_visibility(qb);
+            // Someone else's deleted bookmark stays in their Trash.
+            qb.push(" AND (b.deleted_at IS NULL OR b.owner_user_id = ");
+            qb.push_bind(user_id);
+            qb.push(")");
+        }
+        Scope::Library { shared } => {
+            qb.push("((b.owner_user_id = ");
+            qb.push_bind(user_id);
+            qb.push(" AND ");
+            push_own_visibility(qb);
+            qb.push(")");
+            if !shared.is_empty() && !filter.vault_only {
+                qb.push(" OR (b.owner_user_id <> ");
+                qb.push_bind(user_id);
+                qb.push(
+                    " AND b.is_vault = FALSE AND b.deleted_at IS NULL AND (b.category_id = ANY(",
+                );
+                qb.push_bind(shared.clone());
+                qb.push(
+                    ") OR EXISTS (SELECT 1 FROM bookmark_categories bc \
+                     WHERE bc.bookmark_id = b.id AND bc.category_id = ANY(",
+                );
+                qb.push_bind(shared.clone());
+                qb.push("))))");
+            }
+            qb.push(")");
+        }
+    }
+    if filter.vault_only {
+        qb.push(" AND b.is_vault = TRUE");
+    }
+    if let Some(since) = filter.since {
+        qb.push(" AND b.created_at >= ");
+        qb.push_bind(since);
+    }
+    for flag in &filter.flags {
+        match flag.as_str() {
+            "favorite" => qb.push(" AND COALESCE(f.is_favorite, FALSE)"),
+            "unread" => qb.push(" AND COALESCE(f.is_unread, FALSE)"),
+            "pinned" => qb.push(" AND COALESCE(f.is_pinned, FALSE)"),
+            _ => qb,
+        };
+    }
+    let mut tags: Vec<String> = filter.tags.clone();
+    tags.sort();
+    tags.dedup();
+    if !tags.is_empty() {
+        // Every requested tag must be on the bookmark.
+        let wanted = tags.len() as i64;
+        qb.push(
+            " AND (SELECT count(DISTINCT t.name) FROM bookmark_tags bt \
+             JOIN tags t ON t.id = bt.tag_id WHERE bt.bookmark_id = b.id AND t.name = ANY(",
+        );
+        qb.push_bind(tags);
+        qb.push(")) = ");
+        qb.push_bind(wanted);
+    }
+}
+
+/// Rows after the cursor, in pin-first then sort order, ties broken by id the same way.
+fn push_keyset(
+    qb: &mut QueryBuilder<Postgres>,
+    sort: BookmarkSort,
+    cursor: &CursorPayload,
+) -> Result<()> {
+    let cmp = if sort.descending() { "<" } else { ">" };
+    qb.push(" AND (");
+    qb.push(PINNED_SQL);
+    qb.push(" < ");
+    qb.push_bind(cursor.p);
+    qb.push(" OR (");
+    qb.push(PINNED_SQL);
+    qb.push(" = ");
+    qb.push_bind(cursor.p);
+    qb.push(" AND (");
+    qb.push(sort.key_sql());
+    qb.push(", b.id) ");
+    qb.push(cmp);
+    qb.push(" (");
+    if sort.is_title() {
+        qb.push_bind(cursor.s.clone());
+    } else {
+        let at = DateTime::parse_from_rfc3339(&cursor.s)
+            .map_err(|_| Error::BadRequest("invalid cursor".into()))?
+            .with_timezone(&Utc);
+        qb.push_bind(at);
+    }
+    qb.push(", ");
+    qb.push_bind(cursor.i);
+    qb.push(")))");
+    Ok(())
+}
+
+fn push_order(qb: &mut QueryBuilder<Postgres>, sort: BookmarkSort) {
+    let dir = if sort.descending() { "DESC" } else { "ASC" };
+    qb.push(" ORDER BY ");
+    qb.push(PINNED_SQL);
+    qb.push(" DESC, ");
+    qb.push(sort.key_sql());
+    qb.push(" ");
+    qb.push(dir);
+    qb.push(", b.id ");
+    qb.push(dir);
+}
+
+#[derive(sqlx::FromRow)]
+struct PageRow {
+    #[sqlx(flatten)]
+    bookmark: Bookmark,
+    page_pinned: i32,
+    page_title: String,
+}
+
+/// Checks folder access and resolves the scope and the vault switch for a filter.
+async fn resolve(
+    pool: &PgPool,
+    user_id: Uuid,
+    filter: &BookmarkPageFilter,
+    keyring: &VaultKeyring,
+) -> Result<(Scope, bool)> {
+    let include_vault = if filter.vault_only {
+        !keyring.is_empty()
+    } else {
+        filter.include_vault && !keyring.is_empty()
+    };
+    let scope = match filter.folder.as_deref() {
+        Some("uncategorized") => Scope::Uncategorized,
+        Some(fid) if fid != "all" => {
+            let cid =
+                Uuid::parse_str(fid).map_err(|_| Error::BadRequest("invalid folder".into()))?;
+            require_category_read(pool, user_id, cid).await?;
+            Scope::Folder(cid)
+        }
+        _ => {
+            let shared = list_shared_categories(pool, user_id, true).await?;
+            Scope::Library {
+                shared: shared.into_iter().map(|(c, _)| c.id).collect(),
+            }
+        }
+    };
+    Ok((scope, include_vault))
+}
+
+/// Paginated library list. Filters, pin-first sort and the keyset page all run in SQL, so
+/// a page costs the same however large the library is; views decrypt via `keyring`.
 pub async fn list_bookmarks_page(
     pool: &PgPool,
     user_id: Uuid,
@@ -129,101 +349,80 @@ pub async fn list_bookmarks_page(
     keyring: &VaultKeyring,
 ) -> Result<BookmarkPage> {
     let limit = clamp_limit(filter.limit);
-    let include_vault = if filter.vault_only {
-        !keyring.is_empty()
-    } else {
-        filter.include_vault && !keyring.is_empty()
-    };
-
-    if let Some(folder) = filter.folder.as_deref() {
-        if folder != "uncategorized" && folder != "all" {
-            let cid =
-                Uuid::parse_str(folder).map_err(|_| Error::BadRequest("invalid folder".into()))?;
-            require_category_read(pool, user_id, cid).await?;
-        }
-    }
-
-    let shared = list_shared_categories(pool, user_id, true).await?;
-    let shared_ids: Vec<Uuid> = shared.into_iter().map(|(c, _)| c.id).collect();
-
     let cursor = match filter.cursor.as_deref() {
         Some(c) if !c.is_empty() => Some(decode_cursor(c, filter.sort)?),
         _ => None,
     };
+    let (scope, include_vault) = resolve(pool, user_id, &filter, keyring).await?;
 
-    // Fetch a larger candidate set when shared folders exist and we must merge in app
-    // for folder=all — still better than unbounded. Folder-scoped queries stay in SQL.
-    let fetch_limit = limit + 1;
+    let mut qb = QueryBuilder::<Postgres>::new("SELECT b.*, ");
+    qb.push(PINNED_SQL);
+    qb.push(" AS page_pinned, ");
+    qb.push(TITLE_SQL);
+    qb.push(" AS page_title");
+    push_from_where(&mut qb, user_id, &scope, &filter, include_vault);
+    if let Some(c) = cursor.as_ref() {
+        push_keyset(&mut qb, filter.sort, c)?;
+    }
+    push_order(&mut qb, filter.sort);
+    qb.push(" LIMIT ");
+    qb.push_bind(limit + 1);
+    let mut rows: Vec<PageRow> = qb
+        .build_query_as()
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
 
-    let (rows, total) = match filter.folder.as_deref() {
-        Some("uncategorized") => {
-            page_owned_uncategorized(
-                pool,
-                user_id,
-                &filter,
-                include_vault,
-                cursor.as_ref(),
-                fetch_limit,
-            )
-            .await?
-        }
-        Some(fid) if fid != "all" => {
-            let cid =
-                Uuid::parse_str(fid).map_err(|_| Error::BadRequest("invalid folder".into()))?;
-            page_in_category(
-                pool,
-                user_id,
-                cid,
-                &filter,
-                include_vault,
-                cursor.as_ref(),
-                fetch_limit,
-            )
-            .await?
-        }
-        _ => {
-            page_library(
-                pool,
-                user_id,
-                &shared_ids,
-                &filter,
-                include_vault,
-                cursor.as_ref(),
-                fetch_limit,
-            )
-            .await?
+    let total = match cursor.as_ref().and_then(|c| c.t) {
+        Some(t) => t,
+        None => {
+            let mut count = QueryBuilder::<Postgres>::new("SELECT count(*)");
+            push_from_where(&mut count, user_id, &scope, &filter, include_vault);
+            count
+                .build_query_scalar::<i64>()
+                .fetch_one(pool)
+                .await
+                .map_err(|e| Error::msg(e.to_string()))?
         }
     };
 
     let has_more = rows.len() as i64 > limit;
-    let rows = if has_more {
-        rows.into_iter().take(limit as usize).collect()
-    } else {
-        rows
-    };
-
-    let none = VaultKeyring::default();
-    let views = bookmarks_to_views(pool, rows, user_id, |b| {
-        if b.is_vault && b.owner_user_id == user_id {
-            keyring
-        } else {
-            &none
-        }
-    })
-    .await?;
-
+    rows.truncate(limit as usize);
     let next_cursor = if has_more {
-        views.last().map(|b| {
-            encode_cursor(
+        rows.last().map(|r| {
+            let value = match filter.sort {
+                BookmarkSort::TitleAsc | BookmarkSort::TitleDesc => r.page_title.clone(),
+                BookmarkSort::CreatedDesc => r.bookmark.created_at.to_rfc3339(),
+                BookmarkSort::UpdatedAsc | BookmarkSort::UpdatedDesc => {
+                    r.bookmark.updated_at.to_rfc3339()
+                }
+            };
+            encode_cursor_with_total(
                 filter.sort,
-                b.is_pinned,
-                &sort_value_of(b, filter.sort),
-                b.id,
+                r.page_pinned == 1,
+                &value,
+                r.bookmark.id,
+                Some(total),
             )
         })
     } else {
         None
     };
+
+    let none = VaultKeyring::default();
+    let views = bookmarks_to_views(
+        pool,
+        rows.into_iter().map(|r| r.bookmark).collect(),
+        user_id,
+        |b| {
+            if b.is_vault && b.owner_user_id == user_id {
+                keyring
+            } else {
+                &none
+            }
+        },
+    )
+    .await?;
 
     Ok(BookmarkPage {
         items: views,
@@ -232,358 +431,94 @@ pub async fn list_bookmarks_page(
     })
 }
 
-async fn page_in_category(
-    pool: &PgPool,
-    user_id: Uuid,
-    cid: Uuid,
-    filter: &BookmarkPageFilter,
-    include_vault: bool,
-    cursor: Option<&CursorPayload>,
-    fetch_limit: i64,
-) -> Result<(Vec<Bookmark>, i64)> {
-    // Application-side filter after a bounded fetch is wrong for large folders; use SQL.
-    // Start with fetch-all-matching then page in Rust for correctness of flags/tags joins —
-    // ponytail: for v1 folder pages, load matching rows with SQL filters then keyset in Rust.
-    let rows = sqlx::query_as::<_, Bookmark>(
-        r#"
-        SELECT b.* FROM bookmarks b
-        WHERE ($2 OR b.is_vault = FALSE)
-          AND ($3 OR b.deleted_at IS NULL)
-          AND (b.deleted_at IS NULL OR b.owner_user_id = $4)
-          AND (
-            b.category_id = $1
-            OR EXISTS (
-              SELECT 1 FROM bookmark_categories bc
-              WHERE bc.bookmark_id = b.id AND bc.category_id = $1
-            )
-          )
-          AND ($5::bool = FALSE OR b.is_vault = TRUE)
-          AND ($6::timestamptz IS NULL OR b.created_at >= $6)
-        "#,
-    )
-    .bind(cid)
-    .bind(include_vault)
-    .bind(filter.include_deleted)
-    .bind(user_id)
-    .bind(filter.vault_only)
-    .bind(filter.since)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+/// Most ids `list_bookmark_ids_matching` returns, for select-all bulk actions.
+pub const MAX_MATCHING_IDS: i64 = 10_000;
 
-    filter_sort_page(pool, user_id, rows, filter, cursor, fetch_limit).await
-}
-
-async fn page_owned_uncategorized(
-    pool: &PgPool,
-    user_id: Uuid,
-    filter: &BookmarkPageFilter,
-    include_vault: bool,
-    cursor: Option<&CursorPayload>,
-    fetch_limit: i64,
-) -> Result<(Vec<Bookmark>, i64)> {
-    let rows = sqlx::query_as::<_, Bookmark>(
-        r#"
-        SELECT b.* FROM bookmarks b
-        WHERE b.owner_user_id = $1
-          AND ($2 OR b.is_vault = FALSE)
-          AND ($3 OR b.deleted_at IS NULL)
-          AND b.category_id IS NULL
-          AND NOT EXISTS (
-            SELECT 1 FROM bookmark_categories bc WHERE bc.bookmark_id = b.id
-          )
-          AND ($4::bool = FALSE OR b.is_vault = TRUE)
-          AND ($5::timestamptz IS NULL OR b.created_at >= $5)
-        "#,
-    )
-    .bind(user_id)
-    .bind(include_vault)
-    .bind(filter.include_deleted)
-    .bind(filter.vault_only)
-    .bind(filter.since)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-
-    filter_sort_page(pool, user_id, rows, filter, cursor, fetch_limit).await
-}
-
-async fn page_library(
-    pool: &PgPool,
-    user_id: Uuid,
-    shared_ids: &[Uuid],
-    filter: &BookmarkPageFilter,
-    include_vault: bool,
-    cursor: Option<&CursorPayload>,
-    fetch_limit: i64,
-) -> Result<(Vec<Bookmark>, i64)> {
-    let mut owned = sqlx::query_as::<_, Bookmark>(
-        r#"
-        SELECT * FROM bookmarks
-        WHERE owner_user_id = $1
-          AND ($2 OR is_vault = FALSE)
-          AND ($3 OR deleted_at IS NULL)
-          AND ($4::bool = FALSE OR is_vault = TRUE)
-          AND ($5::timestamptz IS NULL OR created_at >= $5)
-        "#,
-    )
-    .bind(user_id)
-    .bind(include_vault)
-    .bind(filter.include_deleted)
-    .bind(filter.vault_only)
-    .bind(filter.since)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-
-    if !shared_ids.is_empty() && !filter.vault_only {
-        let shared_rows = sqlx::query_as::<_, Bookmark>(
-            r#"
-            SELECT DISTINCT b.* FROM bookmarks b
-            WHERE b.owner_user_id <> $1
-              AND b.is_vault = FALSE
-              AND b.deleted_at IS NULL
-              AND ($3::timestamptz IS NULL OR b.created_at >= $3)
-              AND (
-                b.category_id = ANY($2)
-                OR EXISTS (
-                  SELECT 1 FROM bookmark_categories bc
-                  WHERE bc.bookmark_id = b.id AND bc.category_id = ANY($2)
-                )
-              )
-            "#,
-        )
-        .bind(user_id)
-        .bind(shared_ids)
-        .bind(filter.since)
-        .fetch_all(pool)
-        .await
-        .map_err(|e| Error::msg(e.to_string()))?;
-
-        let mut seen: std::collections::HashSet<Uuid> = owned.iter().map(|b| b.id).collect();
-        for b in shared_rows {
-            if seen.insert(b.id) {
-                owned.push(b);
-            }
-        }
-    }
-
-    filter_sort_page(pool, user_id, owned, filter, cursor, fetch_limit).await
-}
-
-/// Apply tag/flag filters, pin-first sort, keyset slice. Known issue: loads the filtered
-/// set into memory before paging — fine until libraries hit tens of thousands; then push
-/// the keyset into SQL (see ROADMAP deferred note if we park that).
-async fn filter_sort_page(
-    pool: &PgPool,
-    user_id: Uuid,
-    rows: Vec<Bookmark>,
-    filter: &BookmarkPageFilter,
-    cursor: Option<&CursorPayload>,
-    fetch_limit: i64,
-) -> Result<(Vec<Bookmark>, i64)> {
-    let ids: Vec<Uuid> = rows.iter().map(|b| b.id).collect();
-    let flags = load_flags_map(pool, user_id, &ids).await?;
-    let tags = if filter.tags.is_empty() {
-        None
-    } else {
-        Some(load_tags_map(pool, &ids).await?)
-    };
-
-    let mut matched: Vec<(Bookmark, bool)> = Vec::new();
-    for b in rows {
-        let f = flags.get(&b.id).copied().unwrap_or_default();
-        if !flags_match(&filter.flags, f) {
-            continue;
-        }
-        if let Some(ref tag_map) = tags {
-            let have = tag_map.get(&b.id).cloned().unwrap_or_default();
-            if !filter.tags.iter().all(|t| have.iter().any(|h| h == t)) {
-                continue;
-            }
-        }
-        matched.push((b, f.2));
-    }
-
-    let total = matched.len() as i64;
-    matched.sort_by(|(a, ap), (b, bp)| {
-        let apo = if *ap { 1 } else { 0 };
-        let bpo = if *bp { 1 } else { 0 };
-        bpo.cmp(&apo).then_with(|| cmp_bookmarks(a, b, filter.sort))
-    });
-
-    let start = if let Some(c) = cursor {
-        matched
-            .iter()
-            .position(|(b, pinned)| after_cursor(b, *pinned, c, filter.sort))
-            .unwrap_or(matched.len())
-    } else {
-        0
-    };
-
-    let page: Vec<Bookmark> = matched
-        .into_iter()
-        .skip(start)
-        .take(fetch_limit as usize)
-        .map(|(b, _)| b)
-        .collect();
-
-    Ok((page, total))
-}
-
-/// True when `b` is strictly after the cursor in pin-first + sort order.
-fn after_cursor(b: &Bookmark, pinned: bool, c: &CursorPayload, sort: BookmarkSort) -> bool {
-    let p = if pinned { 1 } else { 0 };
-    match p.cmp(&c.p) {
-        // Higher pin comes first; lower pin is after.
-        std::cmp::Ordering::Less => true,
-        std::cmp::Ordering::Greater => false,
-        std::cmp::Ordering::Equal => {
-            let sv = bookmark_sort_val(b, sort);
-            match sort {
-                BookmarkSort::TitleAsc | BookmarkSort::UpdatedAsc => {
-                    (sv.as_str(), b.id) > (c.s.as_str(), c.i)
-                }
-                BookmarkSort::TitleDesc | BookmarkSort::UpdatedDesc | BookmarkSort::CreatedDesc => {
-                    (sv.as_str(), b.id) < (c.s.as_str(), c.i)
-                }
-            }
-        }
-    }
-}
-
-fn bookmark_sort_val(b: &Bookmark, sort: BookmarkSort) -> String {
-    match sort {
-        BookmarkSort::TitleAsc | BookmarkSort::TitleDesc => {
-            let t = if b.title.is_empty() { &b.url } else { &b.title };
-            t.to_lowercase()
-        }
-        BookmarkSort::CreatedDesc => b.created_at.to_rfc3339(),
-        BookmarkSort::UpdatedAsc | BookmarkSort::UpdatedDesc => b.updated_at.to_rfc3339(),
-    }
-}
-
-fn cmp_bookmarks(a: &Bookmark, b: &Bookmark, sort: BookmarkSort) -> std::cmp::Ordering {
-    match sort {
-        BookmarkSort::TitleAsc => a
-            .title
-            .to_lowercase()
-            .cmp(&b.title.to_lowercase())
-            .then(a.id.cmp(&b.id)),
-        BookmarkSort::TitleDesc => b
-            .title
-            .to_lowercase()
-            .cmp(&a.title.to_lowercase())
-            .then(a.id.cmp(&b.id)),
-        BookmarkSort::UpdatedAsc => a.updated_at.cmp(&b.updated_at).then(a.id.cmp(&b.id)),
-        BookmarkSort::CreatedDesc => b.created_at.cmp(&a.created_at).then(a.id.cmp(&b.id)),
-        BookmarkSort::UpdatedDesc => b.updated_at.cmp(&a.updated_at).then(a.id.cmp(&b.id)),
-    }
-}
-
-fn flags_match(want: &[String], f: (bool, bool, bool)) -> bool {
-    let (fav, unread, pinned) = f;
-    want.iter().all(|w| match w.as_str() {
-        "favorite" => fav,
-        "unread" => unread,
-        "pinned" => pinned,
-        _ => true,
-    })
-}
-
-async fn load_flags_map(
-    pool: &PgPool,
-    user_id: Uuid,
-    ids: &[Uuid],
-) -> Result<std::collections::HashMap<Uuid, (bool, bool, bool)>> {
-    if ids.is_empty() {
-        return Ok(Default::default());
-    }
-    let rows: Vec<(Uuid, bool, bool, bool)> = sqlx::query_as(
-        r#"
-        SELECT bookmark_id, is_favorite, is_unread, is_pinned
-        FROM bookmark_flags
-        WHERE user_id = $1 AND bookmark_id = ANY($2)
-        "#,
-    )
-    .bind(user_id)
-    .bind(ids)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    Ok(rows
-        .into_iter()
-        .map(|(id, a, b, c)| (id, (a, b, c)))
-        .collect())
-}
-
-async fn load_tags_map(
-    pool: &PgPool,
-    ids: &[Uuid],
-) -> Result<std::collections::HashMap<Uuid, Vec<String>>> {
-    if ids.is_empty() {
-        return Ok(Default::default());
-    }
-    let rows: Vec<(Uuid, String)> = sqlx::query_as(
-        r#"
-        SELECT bt.bookmark_id, t.name
-        FROM bookmark_tags bt
-        JOIN tags t ON t.id = bt.tag_id
-        WHERE bt.bookmark_id = ANY($1)
-        "#,
-    )
-    .bind(ids)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-    let mut map: std::collections::HashMap<Uuid, Vec<String>> = Default::default();
-    for (id, name) in rows {
-        map.entry(id).or_default().push(name);
-    }
-    Ok(map)
-}
-
-/// IDs matching the same filters (for select-all bulk). Caps at 10_000.
+/// IDs matching the same filters, in list order (for select-all bulk). Caps at 10_000.
 pub async fn list_bookmark_ids_matching(
     pool: &PgPool,
     user_id: Uuid,
     filter: BookmarkPageFilter,
     keyring: &VaultKeyring,
 ) -> Result<Vec<Uuid>> {
-    let page = list_bookmarks_page(
-        pool,
-        user_id,
-        BookmarkPageFilter {
-            limit: MAX_PAGE_LIMIT,
-            cursor: None,
-            ..filter.clone()
-        },
-        keyring,
-    )
-    .await?;
-    // Walk pages until done or 10k.
-    let mut ids: Vec<Uuid> = page.items.iter().map(|b| b.id).collect();
-    let mut cursor = page.next_cursor;
-    while let Some(c) = cursor {
-        if ids.len() >= 10_000 {
-            break;
-        }
-        let next = list_bookmarks_page(
-            pool,
-            user_id,
-            BookmarkPageFilter {
-                limit: MAX_PAGE_LIMIT,
-                cursor: Some(c),
-                ..filter.clone()
-            },
-            keyring,
+    let (scope, include_vault) = resolve(pool, user_id, &filter, keyring).await?;
+    let mut qb = QueryBuilder::<Postgres>::new("SELECT b.id");
+    push_from_where(&mut qb, user_id, &scope, &filter, include_vault);
+    push_order(&mut qb, filter.sort);
+    qb.push(" LIMIT ");
+    qb.push_bind(MAX_MATCHING_IDS);
+    qb.build_query_scalar::<Uuid>()
+        .fetch_all(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))
+}
+
+/// Live bookmarks per folder the person can open, and in their Unsorted.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct FolderCounts {
+    /// Direct bookmarks per folder (not counting subfolders). Folders with none are absent.
+    pub folders: std::collections::HashMap<Uuid, i64>,
+    pub uncategorized: i64,
+}
+
+/// Counts for Explorer's folder tiles in two aggregate queries, without loading bookmarks.
+/// A folder counts the bookmarks the person would see in it: not deleted, and no one
+/// else's vault items. Unsorted leaves vault items out, as the list does.
+pub async fn folder_bookmark_counts(pool: &PgPool, user_id: Uuid) -> Result<FolderCounts> {
+    let shared: Vec<Uuid> = list_shared_categories(pool, user_id, true)
+        .await?
+        .into_iter()
+        .map(|(c, _)| c.id)
+        .collect();
+    let rows: Vec<(Uuid, i64)> = sqlx::query_as(
+        r#"
+        WITH visible AS (
+            SELECT id FROM categories WHERE owner_user_id = $1 AND deleted_at IS NULL
+            UNION
+            SELECT unnest($2::uuid[])
+        ),
+        placed AS (
+            SELECT b.id AS bookmark_id, b.category_id AS category_id
+            FROM bookmarks b
+            WHERE b.category_id IS NOT NULL
+              AND b.deleted_at IS NULL
+              AND (b.owner_user_id = $1 OR b.is_vault = FALSE)
+            UNION
+            SELECT bc.bookmark_id, bc.category_id
+            FROM bookmark_categories bc
+            JOIN bookmarks b ON b.id = bc.bookmark_id
+            WHERE b.deleted_at IS NULL
+              AND (b.owner_user_id = $1 OR b.is_vault = FALSE)
         )
-        .await?;
-        ids.extend(next.items.iter().map(|b| b.id));
-        cursor = next.next_cursor;
-    }
-    ids.truncate(10_000);
-    Ok(ids)
+        SELECT p.category_id, count(*)
+        FROM placed p
+        JOIN visible v ON v.id = p.category_id
+        GROUP BY p.category_id
+        "#,
+    )
+    .bind(user_id)
+    .bind(&shared)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let uncategorized: i64 = sqlx::query_scalar(
+        r#"
+        SELECT count(*) FROM bookmarks b
+        WHERE b.owner_user_id = $1
+          AND b.deleted_at IS NULL
+          AND b.is_vault = FALSE
+          AND b.category_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM bookmark_categories bc WHERE bc.bookmark_id = b.id)
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(FolderCounts {
+        folders: rows.into_iter().collect(),
+        uncategorized,
+    })
 }
 
 #[cfg(test)]
@@ -597,5 +532,13 @@ mod tests {
         let dec = decode_cursor(&enc, BookmarkSort::UpdatedDesc).unwrap();
         assert_eq!(dec.p, 1);
         assert_eq!(dec.i, id);
+        assert_eq!(dec.t, None);
+        let with_total = encode_cursor_with_total(BookmarkSort::TitleAsc, false, "a", id, Some(7));
+        assert_eq!(
+            decode_cursor(&with_total, BookmarkSort::TitleAsc)
+                .unwrap()
+                .t,
+            Some(7)
+        );
     }
 }

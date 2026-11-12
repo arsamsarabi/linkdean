@@ -1,5 +1,6 @@
 import { type ReactElement } from 'react'
 import { InfiniteScrollSentinel, LibraryExplorerView } from '@/components'
+import { useFolderCounts } from '@/hooks'
 import { canWriteCategory } from '@/lib'
 import { LibraryGridView } from './LibraryGridView'
 import styles from './LibraryPage.module.css'
@@ -7,6 +8,7 @@ import { useLibraryPageModel } from './useLibraryPageModel'
 
 export function LibraryResults(): ReactElement {
   const lib = useLibraryPageModel()
+  const folderCounts = useFolderCounts(lib.viewMode === 'explorer')
 
   if (lib.viewMode === 'explorer') {
     return (
@@ -14,6 +16,7 @@ export function LibraryResults(): ReactElement {
         <LibraryExplorerView
           categories={lib.cats.data || []}
           bookmarks={lib.bookmarks.data || []}
+          folderCounts={folderCounts.data}
           searchHits={lib.searchItems}
           searching={lib.searching}
           searchQuery={lib.debouncedQ}
