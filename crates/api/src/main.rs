@@ -75,6 +75,7 @@ async fn main() -> anyhow::Result<()> {
     let index = format!("{static_dir}/index.html");
     let cors = build_cors(&cfg.cors_origins)?;
     let hsts_max_age = cfg.hsts_max_age;
+    let csp = security::content_security_policy(cfg.goatcounter_url.as_deref());
     let app = Router::new()
         .merge(security::security_txt_router())
         .nest("/api", api)
@@ -83,7 +84,8 @@ async fn main() -> anyhow::Result<()> {
         .layer(cors)
         .layer(axum::middleware::from_fn(move |req, next| {
             let hsts = hsts_max_age;
-            async move { security::security_headers_middleware(hsts, req, next).await }
+            let csp = csp.clone();
+            async move { security::security_headers_middleware(hsts, csp, req, next).await }
         }))
         // Last `.layer` is outermost: normalize → set id → trace → propagate → security → cors.
         .layer(PropagateRequestIdLayer::x_request_id())

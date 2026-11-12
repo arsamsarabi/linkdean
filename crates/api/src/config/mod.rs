@@ -36,6 +36,9 @@ pub struct Config {
     pub turnstile_site_key: Option<String>,
     /// Cloudflare Turnstile secret (server only).
     pub turnstile_secret_key: Option<String>,
+    /// Origin of a GoatCounter instance (`https://stats.example.com`) that counts page views
+    /// in the web app. Unset keeps analytics off. Only route names are sent, never ids or queries.
+    pub goatcounter_url: Option<String>,
     /// When true and mail is on, require verified email even if the platform setting is off.
     pub require_verified_email: bool,
     /// When true, refuse registration / email-change to known disposable domains.
@@ -43,6 +46,27 @@ pub struct Config {
     /// Development-only routes such as `/api/dev/emails`. On with `ALLOW_DEFAULT_SECRETS`.
     pub dev_routes: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
+}
+
+/// `GOATCOUNTER_URL` must be a bare origin: https, or http on this machine, with no path,
+/// query or credentials. It is added to the CSP, so anything looser is refused at startup.
+pub fn parse_goatcounter_url(raw: &str) -> anyhow::Result<String> {
+    let bad =
+        || anyhow::anyhow!("GOATCOUNTER_URL must be an origin such as https://stats.example.com");
+    let url = url::Url::parse(raw).map_err(|_| bad())?;
+    let local = matches!(url.host_str(), Some("localhost" | "127.0.0.1"));
+    let scheme_ok = url.scheme() == "https" || (url.scheme() == "http" && local);
+    if !scheme_ok
+        || url.host_str().is_none()
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.path() != "/"
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return Err(bad());
+    }
+    Ok(url.origin().ascii_serialization())
 }
 
 /// Values published in this repository, so nobody should run on them in production.
@@ -151,6 +175,12 @@ impl Config {
             mail: linkdean_mail::MailConfig::from_vars(|k| std::env::var(k).ok())?,
             turnstile_site_key: None,
             turnstile_secret_key: None,
+            goatcounter_url: std::env::var("GOATCOUNTER_URL")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .map(|s| parse_goatcounter_url(&s))
+                .transpose()?,
             require_verified_email: env_bool("REQUIRE_VERIFIED_EMAIL", false),
             block_disposable_emails: env_bool("BLOCK_DISPOSABLE_EMAILS", false),
             dev_routes: env_bool("ALLOW_DEFAULT_SECRETS", false),
@@ -256,6 +286,33 @@ mod tests {
     use super::*;
 
     const URL: &str = "postgres://linkdean:a1b2c3@db:5432/linkdean";
+
+    #[test]
+    fn goatcounter_url_must_be_a_bare_origin() {
+        assert_eq!(
+            parse_goatcounter_url("https://stats.example.com").unwrap(),
+            "https://stats.example.com"
+        );
+        assert_eq!(
+            parse_goatcounter_url("https://stats.example.com/").unwrap(),
+            "https://stats.example.com"
+        );
+        assert_eq!(
+            parse_goatcounter_url("http://localhost:8081").unwrap(),
+            "http://localhost:8081"
+        );
+        for bad in [
+            "http://stats.example.com",
+            "https://stats.example.com/count",
+            "https://stats.example.com?x=1",
+            "https://u:p@stats.example.com",
+            "https://stats.example.com; script-src *",
+            "stats.example.com",
+            "javascript:alert(1)",
+        ] {
+            assert!(parse_goatcounter_url(bad).is_err(), "{bad}");
+        }
+    }
 
     #[test]
     fn published_secrets_are_refused() {

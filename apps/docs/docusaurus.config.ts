@@ -19,6 +19,8 @@ const config: Config = {
 
   onBrokenLinks: 'throw',
 
+  clientModules: ['./src/analytics.ts'],
+
   markdown: {
     format: 'detect',
   },

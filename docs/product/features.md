@@ -211,6 +211,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 ---
 
+- Optional page-view statistics with GoatCounter (`GOATCOUNTER_URL`, off when unset): one beacon per route with the route's name only, never ids, search terms or titles; no cookies or browser storage; Do Not Track and Global Privacy Control are honored; the CSP allows beacons to that origin only. linkdean.app counts its app, marketing site and docs on stats.linkdean.app
 ## Surfaces
 
 - Mascot (Dean) on moment screens only: empty library / folder / search, empty Deleted, fully empty Shared, 404, onboarding, and the wide sign-in panel. Soft light backdrop; decorative (`alt=""`). Not in header, sidebar, cards, dashboards, or settings.
