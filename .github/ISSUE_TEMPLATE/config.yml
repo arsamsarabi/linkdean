@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Idea or question
+    url: https://github.com/arsamsarabi/linkdean/discussions
+    about: Suggest a feature or ask how something works in GitHub Discussions.
+  - name: Security problem
+    url: https://github.com/arsamsarabi/linkdean/blob/main/.github/SECURITY.md
+    about: Report it privately, following the security policy.
+  - name: Email
+    url: mailto:contact@linkdean.app
+    about: No GitHub account, or something private.

@@ -4,6 +4,8 @@ What is still planned. Shipped capabilities live in [features.md](./features.md)
 
 Items are ranked by importance and by the value they add to the app, highest first, within each stage. Effort is a rough guess: **S** is days, **M** is one to two weeks, **L** is several weeks.
 
+The public [roadmap page](../../apps/docs/docs/roadmap.md) on the docs site is a plain-language copy of this list, without the internal steps. Update it in the same commit when an item is added, moved or shipped.
+
 Open defects are not listed here. They are `Known issue:` comments at the code they concern: `grep -rn "Known issue:" crates apps/web/src deploy`.
 
 The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `docs.linkdean.app` and the marketing site at `linkdean.app`, with off-site backups and a passed restore drill ([BACKUP.md](../../deploy/public-beta/BACKUP.md)). A cheap VPS and a full GCP deployment stay Far out; see [managed-service.md](../ops/managed-service.md).

@@ -6,18 +6,27 @@ sidebar_position: 0
 
 # Linkdean docs
 
-Self-host and operate [Linkdean](https://linkdean.app) — a personal bookmark library with folders, search, and optional vaults.
+[Linkdean](https://linkdean.app) is a bookmark library: folders and tags, fast search, saving from any browser or phone, shared folders, and encrypted vaults for the links you keep private. Use the hosted app free during the public beta, or run your own.
 
-## Start here
+## Use Linkdean
 
-- **[Quick start](/docs/self-hosting/quick-start)** — run a released image with Docker Compose
-- **[Environment variables](/docs/self-hosting/environment)** — every setting and its default
-- **[Operations](/docs/self-hosting/operations)** — reverse proxy, email, backups, development setup
-- **[Features](/docs/features)** — what the product can do today
-- **[Saving pages fast](/docs/guides/fast-capture)** — extension, bookmarklet, share, Shortcuts
-- **[Architecture](/docs/architecture)** — stack and domain model
+- **[Getting started](/docs/getting-started)**: from a new account to a working library
+- **[Saving pages fast](/docs/guides/fast-capture)**: browser extension, bookmarklet, share sheet, iOS Shortcuts
+- **[Features](/docs/features)**: everything the app does today
+- **[Public beta and feedback](/docs/beta)**: what the beta means, and how to report a bug or suggest an idea
+- **[Roadmap](/docs/roadmap)**: what is coming next, and later
+- **[Changelog](/docs/changelog)**: what changed in each release
 
-App: [app.linkdean.app](https://app.linkdean.app) · Source: [GitHub](https://github.com/arsamsarabi/linkdean)
+Open the app at [app.linkdean.app](https://app.linkdean.app), or [sign up free](https://app.linkdean.app/register).
+
+## Run your own
+
+- **[Quick start](/docs/self-hosting/quick-start)**: run a released image with Docker Compose
+- **[Environment variables](/docs/self-hosting/environment)**: every setting and its default
+- **[Operations](/docs/self-hosting/operations)**: reverse proxy, email, backups, development setup
+- **[Architecture](/docs/architecture)**: stack and domain model
+
+Source: [GitHub](https://github.com/arsamsarabi/linkdean).
 
 ## License
 

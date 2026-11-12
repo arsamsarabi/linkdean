@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in Linkdean does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please leave out anything private, such as the addresses of your bookmarks or your email. Security problems go through the [security policy](https://github.com/arsamsarabi/linkdean/blob/main/.github/SECURITY.md), not a public issue.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - app.linkdean.app (public beta)
+        - My own self-hosted instance
+        - Browser extension
+        - Docs or marketing site
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did
+      description: The steps that lead to the problem.
+      placeholder: |
+        1. Open the Library
+        2. Choose Explorer
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Error messages and screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Browser and device
+      placeholder: Firefox 150 on Windows 11, Safari on iPhone 16
+  - type: input
+    id: version
+    attributes:
+      label: Version (self-hosted only)
+      description: The image tag you run, for example 0.0.6.
