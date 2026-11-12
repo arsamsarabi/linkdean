@@ -3,6 +3,7 @@ import { ActionIcon, Box, Group, Stack, Text, Tooltip } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
 import { revokeOwnKey } from '@/lib/api'
 import { sessionItem, type Session } from '@/lib/session'
+import { SavedIconOffer } from './SavedIconOffer'
 import { SavedIconSwitch } from './SavedIconSwitch'
 import { SaveView } from './SaveView'
 import { SignInView } from './SignInView'
@@ -26,6 +27,7 @@ export function App(): ReactElement | null {
     <Box w={380} p="md">
       {session ? (
         <>
+          <SavedIconOffer />
           <SaveView session={session} />
           <Box mt="md">
             <SavedIconSwitch />
