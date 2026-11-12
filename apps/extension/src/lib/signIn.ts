@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser'
 import { storage } from 'wxt/utils/storage'
 import { z } from 'zod'
+import { originPattern } from './instance'
 import { challengeFor, randomState, randomVerifier } from './pkce'
 import { lastInstanceItem, sessionItem, type Session } from './session'
 
@@ -23,6 +24,39 @@ export type PendingSignIn = {
 export const pendingItem = storage.defineItem<PendingSignIn | null>('session:pendingSignIn', { fallback: null })
 /** Why the last sign-in failed, shown the next time the popup opens. */
 export const signInErrorItem = storage.defineItem<string | null>('local:signInError', { fallback: null })
+
+/**
+ * A sign-in the popup asked for. Chrome closes the popup while it asks for the site permission,
+ * so the popup records the request first and the background starts it once the grant arrives.
+ */
+export type SignInIntent = { instance: string; at: number }
+export const signInIntentItem = storage.defineItem<SignInIntent | null>('session:signInIntent', { fallback: null })
+/** An intent older than this is stale: the person walked away from the permission prompt. */
+export const SIGN_IN_INTENT_MAX_AGE_MS = 2 * 60_000
+
+/** Whether `intent` is recent and for one of the `origins` patterns just granted or asked about. */
+export function intentMatches(intent: SignInIntent | null, origins: string[], now: number): intent is SignInIntent {
+  return (
+    intent !== null && now - intent.at < SIGN_IN_INTENT_MAX_AGE_MS && origins.includes(originPattern(intent.instance))
+  )
+}
+
+let taking: Promise<unknown> = Promise.resolve()
+
+/**
+ * Hands out the recorded sign-in once and clears it. The permission grant and the popup (when
+ * it stayed open) both ask; taking one at a time means only one of them opens a window.
+ */
+export function takeSignInIntent(origins: string[]): Promise<string | null> {
+  const run = taking.then(async () => {
+    const intent = await signInIntentItem.getValue()
+    if (!intentMatches(intent, origins, Date.now())) return null
+    await signInIntentItem.setValue(null)
+    return intent.instance
+  })
+  taking = run.catch(() => undefined)
+  return run
+}
 
 /** The approve page on `instance` for this request. */
 export function connectUrl(instance: string, extensionOrigin: string, challenge: string, state: string): string {

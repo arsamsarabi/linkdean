@@ -1,9 +1,18 @@
 import { browser } from 'wxt/browser'
 import { defineBackground } from 'wxt/utils/define-background'
 import { createBookmark, savableUrl } from '@/lib/api'
+import { originPattern } from '@/lib/instance'
 import { forgetSaved, paintAllTabs, paintTab, rememberSaved, savedIconItem } from '@/lib/savedPages'
 import { sessionItem } from '@/lib/session'
-import { abandonSignIn, finishSignIn, injectRelay, RELAY_MESSAGE, startSignIn } from '@/lib/signIn'
+import {
+  abandonSignIn,
+  finishSignIn,
+  injectRelay,
+  RELAY_MESSAGE,
+  signInErrorItem,
+  startSignIn,
+  takeSignInIntent,
+} from '@/lib/signIn'
 
 export type SignInMessage = { type: 'sign-in'; instance: string }
 export type SignInReply = { ok: true } | { ok: false; error: string }
@@ -77,6 +86,16 @@ export default defineBackground(() => {
   // The popup can close while the browser asks for the permission, so the grant is caught here.
   browser.permissions.onAdded.addListener((p) => {
     if (p.permissions?.includes('tabs')) void savedIconItem.setValue(true)
+    // Same for the site permission asked for by Sign in: start the sign-in it was asked for.
+    if (p.origins?.length) {
+      void takeSignInIntent(p.origins).then((instance) =>
+        instance
+          ? startSignIn(instance).catch((e: unknown) =>
+              signInErrorItem.setValue(e instanceof Error ? e.message : String(e))
+            )
+          : undefined
+      )
+    }
   })
   browser.permissions.onRemoved.addListener((p) => {
     if (p.permissions?.includes('tabs')) void savedIconItem.setValue(false)
@@ -93,10 +112,14 @@ export default defineBackground(() => {
       return false
     }
     if (msg?.type !== 'sign-in') return false
-    startSignIn(msg.instance).then(
-      () => sendResponse({ ok: true }),
-      (e: unknown) => sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) })
-    )
+    // The popup stayed open after the permission prompt. If the grant already started this
+    // sign-in, there is nothing left to do.
+    takeSignInIntent([originPattern(msg.instance)])
+      .then((instance) => (instance ? startSignIn(instance) : undefined))
+      .then(
+        () => sendResponse({ ok: true }),
+        (e: unknown) => sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) })
+      )
     return true
   })
 })
