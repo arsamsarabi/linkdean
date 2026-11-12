@@ -12,6 +12,7 @@ mod rate_limit;
 mod request_id;
 mod routes;
 mod security;
+mod shutdown;
 mod state;
 mod turnstile;
 mod vault_keys;
@@ -97,7 +98,19 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("linkdean listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let app = app.into_make_service_with_connect_info::<SocketAddr>();
-    axum::serve(listener, app).await?;
+    use std::future::IntoFuture;
+    let stopping = std::sync::Arc::new(tokio::sync::Notify::new());
+    let server = axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown::signal(stopping.clone()))
+        .into_future();
+    match shutdown::drain_with_cap(server, stopping, shutdown::DRAIN_CAP).await {
+        Some(result) => result?,
+        None => tracing::warn!(
+            cap_secs = shutdown::DRAIN_CAP.as_secs(),
+            "requests still open at the shutdown cap; exiting anyway"
+        ),
+    }
+    tracing::info!("linkdean stopped");
     Ok(())
 }
 
