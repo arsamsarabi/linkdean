@@ -18,10 +18,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
     d. **Prep:** add the Chrome Web Store link to **Settings → Fast capture** and the docs now, and the AMO link once a is done.
 
-4. **Library paging in SQL** (M). The library list pages with a keyset cursor, but the filtered set is still loaded and paged in memory, so large libraries cost more on every scroll as the beta grows.
-    - Push the keyset and filters into the SQL query.
-    - Restore Explorer folder counts without fetching every bookmark.
-
 5. **Dashboard upgrades** (M). Make boards more useful at a glance.
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
     - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.
