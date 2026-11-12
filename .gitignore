@@ -21,3 +21,6 @@ apps/site/.taste-skill/
 deploy/public-beta/static/site/.taste-skill/
 
 .pnpm-store/
+
+# Remotion promo project (local render source; outputs live in videos/ + screenshots/)
+brand/graphics/launch/promo-source/
