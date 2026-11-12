@@ -21,11 +21,18 @@ http://linkdean.app, http://www.linkdean.app {
 	try_files {path} /index.html
 }
 
+# Docusaurus writes a pre-rendered index.html for every page. Serve that file, so search
+# engines, link previews and readers without JavaScript get the page, not the root shell.
+# Unknown paths get the docs 404 page with a 404 status.
 http://docs.linkdean.app {
 	root * /srv/docs
 	encode gzip
+	try_files {path} {path}/index.html
 	file_server
-	try_files {path} /index.html
+	handle_errors 404 {
+		rewrite * /404.html
+		file_server
+	}
 }
 
 http://app.linkdean.app {

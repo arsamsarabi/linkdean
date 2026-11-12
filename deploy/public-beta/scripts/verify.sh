@@ -68,7 +68,14 @@ check_static() {
   echo "$host: serves the checked-out build"
 }
 
-if [ "${CHECK_DOCS:-false}" = true ]; then check_static docs.linkdean.app docs; fi
+if [ "${CHECK_DOCS:-false}" = true ]; then
+  check_static docs.linkdean.app docs
+  # A docs page must come back as its own pre-rendered file, not the root shell.
+  want="$(sha256sum "$STACK/static/docs/docs/intro/index.html" | cut -d' ' -f1)"
+  got="$(caddy_get docs.linkdean.app /docs/intro/ | sha256sum | cut -d' ' -f1)" || fail "docs /docs/intro/ unreachable"
+  [ "$got" = "$want" ] || fail "docs.linkdean.app/docs/intro/ does not serve static/docs/docs/intro/index.html"
+  echo "docs.linkdean.app: serves pre-rendered pages"
+fi
 if [ "${CHECK_SITE:-false}" = true ]; then check_static linkdean.app site; fi
 
 echo "verify: ok"
