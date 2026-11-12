@@ -1,9 +1,13 @@
 import { useEffect, useRef, type ReactElement } from 'react'
 import { Anchor, Button, Code, CopyButton, Group, List, Paper, Stack, Text, Title } from '@mantine/core'
-import { IconBookmarkPlus } from '@tabler/icons-react'
+import { IconBookmarkPlus, IconBrandChrome } from '@tabler/icons-react'
 import { bookmarkletSource } from '@/lib'
 
-/** Settings → Fast capture: the bookmarklet that saves the page you are on. */
+const DOCS = 'https://docs.linkdean.app'
+/** The extension's Chrome Web Store listing; Edge installs from it too. */
+const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf'
+
+/** Settings → Fast capture: the browser extension, and the bookmarklet that saves the page you are on. */
 export function FastCapturePanel(): ReactElement {
   const source = bookmarkletSource(window.location.origin)
   const link = useRef<HTMLAnchorElement>(null)
@@ -15,6 +19,36 @@ export function FastCapturePanel(): ReactElement {
 
   return (
     <Stack gap="lg" maw={640}>
+      <Paper p="xl" withBorder>
+        <Stack gap="md">
+          <Stack gap={4}>
+            <Title order={4}>Browser extension</Title>
+            <Text size="sm" c="dimmed">
+              Save the page you are on from the toolbar, the right-click menu or Alt+Shift+S, and see at a glance which
+              pages you have already saved. Works in Chrome and Edge; the Firefox add-on is in review.
+            </Text>
+          </Stack>
+          <Group>
+            <Button
+              component="a"
+              href={CHROME_STORE_URL}
+              target="_blank"
+              rel="noreferrer"
+              leftSection={<IconBrandChrome size={16} />}
+            >
+              Add to Chrome
+            </Button>
+            <Anchor
+              href={`${DOCS}/docs/guides/fast-capture#browser-extension-chrome-edge-firefox`}
+              target="_blank"
+              rel="noreferrer"
+              size="sm"
+            >
+              How it works
+            </Anchor>
+          </Group>
+        </Stack>
+      </Paper>
       <Paper p="xl" withBorder>
         <Stack gap="md">
           <Stack gap={4}>
@@ -68,7 +102,11 @@ export function FastCapturePanel(): ReactElement {
           </Text>
           <Text size="sm">
             <b>iPhone and iPad:</b> iOS does not let web apps receive shares, so use a Shortcut instead.{' '}
-            <Anchor href="https://docs.linkdean.app/docs/fast-capture" target="_blank" rel="noreferrer">
+            <Anchor
+              href={`${DOCS}/docs/guides/fast-capture#iphone-and-ipad-a-shortcut`}
+              target="_blank"
+              rel="noreferrer"
+            >
               How to set it up
             </Anchor>
           </Text>

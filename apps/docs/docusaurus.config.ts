@@ -44,6 +44,7 @@ const config: Config = {
               'features.md': 'docs/product/features.md',
               'guides/fast-capture.md': 'docs/guides/fast-capture.md',
               'architecture.md': 'docs/product/architecture.md',
+              'changelog.md': 'docs/CHANGELOG.md',
               'intro.md': 'apps/docs/docs/intro.md',
             };
             const path =
@@ -77,6 +78,9 @@ const config: Config = {
           position: 'left',
           label: 'Docs',
         },
+        { to: '/docs/getting-started', label: 'Getting started', position: 'left' },
+        { to: '/docs/roadmap', label: 'Roadmap', position: 'left' },
+        { to: '/docs/beta', label: 'Feedback', position: 'left' },
         {
           href: 'https://app.linkdean.app',
           label: 'App',
@@ -95,9 +99,11 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            { label: 'Quick start', to: '/docs/self-hosting/quick-start' },
+            { label: 'Getting started', to: '/docs/getting-started' },
             { label: 'Features', to: '/docs/features' },
-            { label: 'Architecture', to: '/docs/architecture' },
+            { label: 'Roadmap', to: '/docs/roadmap' },
+            { label: 'Changelog', to: '/docs/changelog' },
+            { label: 'Self-hosting', to: '/docs/self-hosting/quick-start' },
           ],
         },
         {
@@ -118,6 +124,9 @@ const config: Config = {
               label: 'GitHub',
               href: 'https://github.com/arsamsarabi/linkdean',
             },
+            { label: 'Report a bug', href: 'https://github.com/arsamsarabi/linkdean/issues/new/choose' },
+            { label: 'Discussions', href: 'https://github.com/arsamsarabi/linkdean/discussions' },
+            { label: 'Email', href: 'mailto:contact@linkdean.app' },
           ],
         },
       ],

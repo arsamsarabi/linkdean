@@ -50,11 +50,18 @@ const pages = [
     sidebar_position: 1,
   },
   {
+    src: 'CHANGELOG.md',
+    dest: 'changelog.md',
+    id: 'changelog',
+    title: 'Changelog',
+    sidebar_position: 6,
+  },
+  {
     src: 'product/architecture.md',
     dest: 'architecture.md',
     id: 'architecture',
     title: 'Architecture',
-    sidebar_position: 6,
+    sidebar_position: 8,
   },
 ];
 
@@ -134,15 +141,15 @@ rmSync(join(outRoot, 'fast-capture.md'), { force: true });
 mkdirSync(join(outRoot, 'self-hosting'), { recursive: true });
 writeFileSync(
   join(outRoot, 'self-hosting', '_category_.json'),
-  `${JSON.stringify({ label: 'Self-hosting', position: 1, collapsed: false }, null, 2)}\n`,
+  `${JSON.stringify({ label: 'Self-hosting', position: 7, collapsed: false }, null, 2)}\n`,
 );
 mkdirSync(join(outRoot, 'guides'), { recursive: true });
 writeFileSync(
   join(outRoot, 'guides', '_category_.json'),
-  `${JSON.stringify({ label: 'Guides', position: 5, collapsed: false }, null, 2)}\n`,
+  `${JSON.stringify({ label: 'Guides', position: 3, collapsed: false }, null, 2)}\n`,
 );
 
-for (const name of ['features.md', 'architecture.md']) {
+for (const name of ['features.md', 'architecture.md', 'changelog.md']) {
   rmSync(join(outRoot, name), { force: true });
 }
 

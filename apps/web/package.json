@@ -2,7 +2,7 @@
   "name": "linkdean-web",
   "private": true,
   "packageManager": "pnpm@10.30.3",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "scripts": {
     "build": "pnpm routes:gen && tsc -b && vite build",

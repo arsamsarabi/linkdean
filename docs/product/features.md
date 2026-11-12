@@ -13,7 +13,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Only `http://` and `https://` addresses are saved, on create, edit and import; an address typed without a scheme gets `https://`
 - **Import from URL** on the bookmark form: the server fetches the page (plain HTTP, public addresses only) and replaces the form's title and description with the page's, adding its tags to the ones already there. A field edited while the page loads keeps the edit; the automatic fetch on the quick save page fills only empty fields. Not offered for bookmarks going into a vault. Counts as one enrich action and is limited to 60 per user every 15 minutes
 - **Quick save** at `/save?url=…&title=…&text=…`: opens the bookmark form filled from the link, fetches page details when needed, remembers the last folder, and offers **Save to Unsorted**. A URL already in the library opens that bookmark instead of a duplicate
-- **Fast capture** — browser extension, bookmarklet, share target, and iOS Shortcuts: how to set each up is in [Saving pages fast](../guides/fast-capture.md)
+- **Fast capture** — browser extension, bookmarklet, share target, and iOS Shortcuts: how to set each up is in [Saving pages fast](../guides/fast-capture.md). **Config options → Fast capture** links to the extension on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf)
 - Bookmark cards / glance tiles: title primary, full URL muted beneath
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)

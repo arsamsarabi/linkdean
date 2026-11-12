@@ -10,6 +10,7 @@
 - Create a category from the bookmark form: type a name that matches no category, pick **Create "name"**, and choose where it goes.
 - Import checks for bookmarks already in your library and lets you skip, replace, merge or import each one again; folders that already exist are reused.
 - Explorer folder tiles show how many bookmarks each folder holds again.
+- **Config options → Fast capture** links to the browser extension on the Chrome Web Store.
 - Admins can retry failed screenshots from **Admin → Screenshots**, once per cooldown, and set how long failed screenshots wait before the automatic retry, which now runs every 6 hours instead of only at start.
 
 ### Changed
@@ -21,6 +22,7 @@
 
 ### Fixed
 
+- The **How to set it up** link under **Config options → Fast capture** opened a missing docs page; it now opens the iPhone Shortcut guide.
 - Paging the library no longer skips bookmarks that share the same updated or created time.
 - The API shuts down cleanly on `docker stop`: it finishes open requests for up to 8 seconds and exits, instead of being killed after Docker's 10-second timeout.
 - Docs edits trigger a docs-site deploy again after the restructure; fixed links the move broke.

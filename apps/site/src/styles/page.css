@@ -130,3 +130,11 @@ html, body { overflow-x: clip; }
 /* Two-screen sections fill their screens: taller panels where the cards stack */
 @media (min-width: 640px) and (max-width: 1279px) { #features .panel { --p-h: max(420px, 43svh); } }
 @media (max-width: 639px) { #private .panel { --p-h: 460px; } }
+
+/* GitHub in the bar: the mark alone on wide screens, mark and word in the phone sheet */
+.nav__link--icon { gap: var(--s-2); }
+.nav__link--icon .nav__link-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 1023px) {
+  .nav.is-open .nav__link--icon { justify-content: flex-start; }
+  .nav.is-open .nav__link--icon .nav__link-text { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+}

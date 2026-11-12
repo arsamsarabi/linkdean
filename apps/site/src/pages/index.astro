@@ -6,6 +6,8 @@ const docs = 'https://docs.linkdean.app'
 const install = `${docs}/docs/self-hosting/quick-start`
 const github = 'https://github.com/arsamsarabi/linkdean'
 const signup = `${app}/register`
+const roadmap = `${docs}/docs/roadmap`
+const gettingStarted = `${docs}/docs/getting-started`
 
 const themes = [
   { value: 'system', label: 'Use system theme', icon: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>' },
@@ -165,6 +167,18 @@ const description =
           <div class="nav__item"><a class="nav__link" href="#vaults">Vaults</a></div>
           <div class="nav__item"><a class="nav__link" href="#self-host">Self-host</a></div>
           <div class="nav__item"><a class="nav__link" href="#faq">Questions</a></div>
+          <div class="nav__item"><a class="nav__link" href={docs}>Docs</a></div>
+          <div class="nav__item"><a class="nav__link" href={roadmap}>Roadmap</a></div>
+          <div class="nav__item">
+            <a class="nav__link nav__link--icon" href={github} aria-label="Linkdean on GitHub"
+              ><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"
+                ><path
+                  fill="currentColor"
+                  d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                ></path></svg
+              ><span class="nav__link-text">GitHub</span></a
+            >
+          </div>
         </nav>
         <div class="nav__actions">
           <a class="nav__link" href={`${app}/login`}>Sign in</a>
@@ -583,6 +597,8 @@ const description =
               <h4>Docs</h4>
               <ul>
                 <li><a href={docs}>Documentation</a></li>
+                <li><a href={gettingStarted}>Getting started</a></li>
+                <li><a href={roadmap}>Roadmap</a></li>
                 <li><a href={install}>Install guide</a></li>
                 <li><a href={github}>GitHub</a></li>
               </ul>

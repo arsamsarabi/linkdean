@@ -4,6 +4,8 @@ What is still planned. Shipped capabilities live in [features.md](./features.md)
 
 Items are ranked by importance and by the value they add to the app, highest first, within each stage. Effort is a rough guess: **S** is days, **M** is one to two weeks, **L** is several weeks.
 
+The public [roadmap page](../../apps/docs/docs/roadmap.md) on the docs site is a plain-language copy of this list, without the internal steps. Update it in the same commit when an item is added, moved or shipped.
+
 Open defects are not listed here. They are `Known issue:` comments at the code they concern: `grep -rn "Known issue:" crates apps/web/src deploy`.
 
 The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `docs.linkdean.app` and the marketing site at `linkdean.app`, with off-site backups and a passed restore drill ([BACKUP.md](../../deploy/public-beta/BACKUP.md)). A cheap VPS and a full GCP deployment stay Far out; see [managed-service.md](../ops/managed-service.md).
@@ -16,7 +18,7 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     a. **Arsam:** wait for AMO to approve 0.1.0 (email from Mozilla).
     b. **Prep** (needs a): bump `apps/extension/package.json` to 0.1.1, which ships the popup footer change from #94.
     c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
-    d. **Prep:** add the Chrome Web Store link to **Settings → Fast capture** and the docs now, and the AMO link once a is done.
+    d. **Prep** (needs a): add the AMO link beside the Chrome Web Store link in **Config options → Fast capture** and the docs. The Chrome link is in.
 
 5. **Dashboard upgrades** (M). Make boards more useful at a glance.
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.

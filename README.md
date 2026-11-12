@@ -25,8 +25,15 @@
   <a href="#development">Dev</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#docs">Docs</a> ·
+  <a href="#screenshots">Screenshots</a> ·
   <a href="#roadmap">Roadmap</a> ·
   <a href="#license">License</a>
+</p>
+
+<p align="center">
+  <a href="docs/media/linkdean-promo.mp4"><img src="docs/media/linkdean-promo-preview.webp" alt="Linkdean in 28 seconds: the library, search, filing Unsorted bookmarks, Explorer, shared folders, vaults, and light and dark themes" width="900" /></a>
+  <br />
+  <sub>▶ <a href="docs/media/linkdean-promo.mp4">Watch the video</a> · Try it free during the public beta at <a href="https://linkdean.app">linkdean.app</a> · <a href="https://docs.linkdean.app/docs/getting-started">Getting started</a></sub>
 </p>
 
 <details>
@@ -241,9 +248,68 @@ Published site: [docs.linkdean.app](https://docs.linkdean.app) (built from the f
 
 ---
 
+## Screenshots
+
+From a demo library of public sites. Each image follows your GitHub theme, light or dark.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/library-grid-dark.webp" />
+        <img src="apps/docs/static/img/screenshots/library-grid-light.webp" alt="Library: Grid view with page previews, folders, tags and pins" />
+      </picture>
+      <p><strong>Library</strong><br /><sub>Grid view with page previews, folders, tags and pins</sub></p>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/explorer-dark.webp" />
+        <img src="apps/docs/static/img/screenshots/explorer-light.webp" alt="Explorer: Folder tiles with live counts, and folders shared with you" />
+      </picture>
+      <p><strong>Explorer</strong><br /><sub>Folder tiles with live counts, and folders shared with you</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/filing-dark.webp" />
+        <img src="apps/docs/static/img/screenshots/filing-light.webp" alt="File one by one: Folders and tags suggested from the same site" />
+      </picture>
+      <p><strong>File one by one</strong><br /><sub>Folders and tags suggested from the same site</sub></p>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/search-dark.webp" />
+        <img src="apps/docs/static/img/screenshots/search-light.webp" alt="Search: Titles, addresses, notes and tags as you type" />
+      </picture>
+      <p><strong>Search</strong><br /><sub>Titles, addresses, notes and tags as you type</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/dashboard-dark.webp" />
+        <img src="apps/docs/static/img/screenshots/dashboard-light.webp" alt="Dashboard: Sections of the bookmarks you open most" />
+      </picture>
+      <p><strong>Dashboard</strong><br /><sub>Sections of the bookmarks you open most</sub></p>
+    </td>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/vault-dark.webp" />
+        <img src="apps/docs/static/img/screenshots/vault-light.webp" alt="Vaults: Encrypted folders with their own passphrase" />
+      </picture>
+      <p><strong>Vaults</strong><br /><sub>Encrypted folders with their own passphrase</sub></p>
+    </td>
+  </tr>
+</table>
+
+More in the [Getting started](https://docs.linkdean.app/docs/getting-started) guide.
+
+---
+
 ## Roadmap
 
-**Where we are:** product Now items 1–11 are shipped; `app` / `docs` / marketing are live on the homelab. **Before announce:** go-live hardening — SMTP + DNS auth, Turnstile, backups, uptime ([ROADMAP](docs/product/roadmap.md) #13 / [MANAGED_SERVICE](docs/ops/managed-service.md)). After that: membership pricing explore (#12), then post-release work (browser extension, …).
+**Where we are:** the public beta is live at [app.linkdean.app](https://app.linkdean.app), with docs at [docs.linkdean.app](https://docs.linkdean.app) and the browser extension on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf). What comes next, in plain language: the [public roadmap](https://docs.linkdean.app/docs/roadmap). Bugs and ideas: [issues](https://github.com/arsamsarabi/linkdean/issues/new/choose) and [discussions](https://github.com/arsamsarabi/linkdean/discussions).
 
 - Capabilities: [docs/product/features.md](docs/product/features.md)
 - Plan: [docs/product/roadmap.md](docs/product/roadmap.md)
