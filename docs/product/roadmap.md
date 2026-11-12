@@ -18,12 +18,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
     d. **Prep:** add the Chrome Web Store link to **Settings → Fast capture** and the docs now, and the AMO link once a is done.
 
-2. **External uptime monitoring** (S). Uptime Kuma checks the app, marketing site and docs every 1 to 5 minutes and alerts through ntfy ([MONITORING.md](../../deploy/public-beta/MONITORING.md)). Kuma shares the home connection, so an outside heartbeat must cover a home internet or power outage.
-    a. **Arsam:** create a free healthchecks.io check (period 5 min, grace 10 min) with email and one phone channel outside the homelab, and pass on its ping URL.
-    b. **Prep** (needs a): add **Linkdean · Outside heartbeat** to the Linkdean group in Uptime Kuma.
-    c. **Arsam:** add Cloudflare's Tunnel Health Alert for the `linkdean-public` tunnel.
-    d. **Arsam:** test one alert end to end by stopping the api for 15 minutes in a quiet hour.
-
 4. **Library paging in SQL** (M). The library list pages with a keyset cursor, but the filtered set is still loaded and paged in memory, so large libraries cost more on every scroll as the beta grows.
     - Push the keyset and filters into the SQL query.
     - Restore Explorer folder counts without fetching every bookmark.
