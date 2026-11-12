@@ -12,7 +12,7 @@ Plans move as the beta teaches us what matters. Want something sooner, or someth
 
 ## Now: running the public beta well
 
-- **Browser extension in both stores.** Live on the Chrome Web Store; the Firefox add-on is in review. Edge uses the Chrome build.
+- **Browser extension in both stores.** Live on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf); the Firefox add-on is in review. Edge installs from the Chrome listing.
 - **Dashboard upgrades.** Choose how each pinned item looks (a small, medium or large card, or just its icon), and sections that fill themselves with your latest bookmarks or the ones you open most.
 
 ## Next: once the beta settles

@@ -18,7 +18,7 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     a. **Arsam:** wait for AMO to approve 0.1.0 (email from Mozilla).
     b. **Prep** (needs a): bump `apps/extension/package.json` to 0.1.1, which ships the popup footer change from #94.
     c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
-    d. **Prep:** add the Chrome Web Store link to **Settings → Fast capture** and the docs now, and the AMO link once a is done.
+    d. **Prep** (needs a): add the AMO link beside the Chrome Web Store link in **Config options → Fast capture** and the docs. The Chrome link is in.
 
 5. **Dashboard upgrades** (M). Make boards more useful at a glance.
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
