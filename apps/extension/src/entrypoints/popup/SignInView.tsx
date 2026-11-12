@@ -3,7 +3,7 @@ import { Alert, Button, Stack, Text, TextInput, Title } from '@mantine/core'
 import { browser } from 'wxt/browser'
 import { DEFAULT_INSTANCE, normalizeInstance, originPattern } from '@/lib/instance'
 import { lastInstanceItem } from '@/lib/session'
-import { signInErrorItem } from '@/lib/signIn'
+import { signInErrorItem, signInIntentItem } from '@/lib/signIn'
 import type { SignInMessage, SignInReply } from '../background'
 
 export function SignInView(): ReactElement {
@@ -26,9 +26,14 @@ export function SignInView(): ReactElement {
       setError(e instanceof Error ? e.message : String(e))
       return
     }
+    // Chrome closes this popup while it asks for the permission, so nothing after the prompt is
+    // sure to run. Record the sign-in first; the background starts it when the grant arrives.
+    const recorded = signInIntentItem.setValue({ instance: origin, at: Date.now() })
     // Must be the first await: browsers only show this prompt straight after a click.
     const granted = await browser.permissions.request({ origins: [originPattern(origin)] })
+    await recorded
     if (!granted) {
+      await signInIntentItem.setValue(null)
       setError(`The extension needs permission to reach ${new URL(origin).host} to save there.`)
       return
     }
