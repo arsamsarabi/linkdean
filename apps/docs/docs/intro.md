@@ -8,6 +8,10 @@ sidebar_position: 0
 
 [Linkdean](https://linkdean.app) is a bookmark library: folders and tags, fast search, saving from any browser or phone, shared folders, and encrypted vaults for the links you keep private. Use the hosted app free during the public beta, or run your own.
 
+import Shot from '@site/src/components/Shot';
+
+<Shot name="library-grid" alt="The Linkdean Library in grid view" />
+
 ## Use Linkdean
 
 - **[Getting started](/docs/getting-started)**: from a new account to a working library
