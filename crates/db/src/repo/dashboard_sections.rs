@@ -2,8 +2,12 @@
 //! bookmark opens they read. They draw only on the dashboard owner's own non-vault
 //! bookmarks, which is why a dashboard that has one can never be shared.
 
+use std::collections::HashMap;
+
+use chrono::{DateTime, Utc};
 use linkdean_core::{
-    Bookmark, DashboardOpenWindow, DashboardSectionKind, DashboardSectionSettings, Error, Result,
+    Bookmark, DashboardOpenWindow, DashboardSectionKind, DashboardSectionSettings,
+    DashboardSectionView, DashboardStats, Error, Result,
 };
 use sqlx::{AssertSqlSafe, PgPool};
 use uuid::Uuid;
@@ -157,4 +161,85 @@ pub async fn record_bookmark_open(pool: &PgPool, user_id: Uuid, bookmark_id: Uui
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))
+}
+
+/// Fills each item's open count and last open from the viewer's own opens. A section that
+/// counts the last 30 days shows that count; every other section shows the all-time count.
+pub async fn attach_open_stats(
+    pool: &PgPool,
+    user_id: Uuid,
+    sections: &mut [DashboardSectionView],
+) -> Result<()> {
+    let ids: Vec<Uuid> = sections
+        .iter()
+        .flat_map(|s| s.items.iter().map(|i| i.bookmark.id))
+        .collect();
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let rows: Vec<(Uuid, i64, DateTime<Utc>, i64)> = sqlx::query_as(
+        r#"
+        SELECT s.bookmark_id, s.open_count::bigint, s.last_opened_at,
+               (SELECT COUNT(*) FROM bookmark_opens o
+                WHERE o.user_id = s.user_id AND o.bookmark_id = s.bookmark_id
+                  AND o.opened_at > now() - interval '30 days')
+        FROM bookmark_open_stats s
+        WHERE s.user_id = $1 AND s.bookmark_id = ANY($2)
+        "#,
+    )
+    .bind(user_id)
+    .bind(&ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let by_id: HashMap<Uuid, (i64, DateTime<Utc>, i64)> = rows
+        .into_iter()
+        .map(|(id, all, last, recent)| (id, (all, last, recent)))
+        .collect();
+    for section in sections.iter_mut() {
+        let recent_window = section.settings.kind == DashboardSectionKind::MostOpened
+            && section.settings.open_window == DashboardOpenWindow::Last30Days;
+        for item in section.items.iter_mut() {
+            if let Some((all, last, recent)) = by_id.get(&item.bookmark.id) {
+                let count = if recent_window { *recent } else { *all };
+                item.open_count = (count > 0).then_some(count);
+                item.last_opened_at = Some(*last);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Counts over the viewer's own live bookmarks for the dashboard header.
+pub async fn dashboard_stats(pool: &PgPool, user_id: Uuid) -> Result<DashboardStats> {
+    let (total, saved_this_week, unread, favorites, opened_today): (i64, i64, i64, i64, i64) =
+        sqlx::query_as(
+            r#"
+            SELECT
+              (SELECT COUNT(*) FROM bookmarks b
+               WHERE b.owner_user_id = $1 AND b.deleted_at IS NULL),
+              (SELECT COUNT(*) FROM bookmarks b
+               WHERE b.owner_user_id = $1 AND b.deleted_at IS NULL
+                 AND b.created_at > now() - interval '7 days'),
+              (SELECT COUNT(*) FROM bookmark_flags f JOIN bookmarks b ON b.id = f.bookmark_id
+               WHERE f.user_id = $1 AND f.is_unread AND b.deleted_at IS NULL
+                 AND b.owner_user_id = $1),
+              (SELECT COUNT(*) FROM bookmark_flags f JOIN bookmarks b ON b.id = f.bookmark_id
+               WHERE f.user_id = $1 AND f.is_favorite AND b.deleted_at IS NULL
+                 AND b.owner_user_id = $1),
+              (SELECT COUNT(*) FROM bookmark_opens o
+               WHERE o.user_id = $1 AND o.opened_at > now() - interval '24 hours')
+            "#,
+        )
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(DashboardStats {
+        total,
+        saved_this_week,
+        unread,
+        favorites,
+        opened_today,
+    })
 }

@@ -273,6 +273,8 @@ async fn load_dashboard_view(
                         id: bookmark.id,
                         position: i as i32,
                         bookmark,
+                        open_count: None,
+                        last_opened_at: None,
                     })
                     .collect(),
             });
@@ -311,6 +313,8 @@ async fn load_dashboard_view(
                 id: item.id,
                 position: item.position,
                 bookmark: view,
+                open_count: None,
+                last_opened_at: None,
             });
         }
 
@@ -322,6 +326,9 @@ async fn load_dashboard_view(
             items: item_views,
         });
     }
+
+    super::dashboard_sections::attach_open_stats(pool, user_id, &mut section_views).await?;
+    let stats = super::dashboard_sections::dashboard_stats(pool, user_id).await?;
 
     let owner_display_name = if access.is_owner() {
         None
@@ -342,6 +349,7 @@ async fn load_dashboard_view(
         deleted_at: dash.deleted_at,
         created_at: dash.created_at,
         updated_at: dash.updated_at,
+        stats,
     })
 }
 
