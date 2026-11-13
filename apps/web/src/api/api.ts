@@ -769,6 +769,9 @@ export const api = {
   checkBookmarkLink: (id: string): Promise<Bookmark> =>
     req(`/bookmarks/${id}/check-link`, { method: 'POST' }, bookmarkSchema),
 
+  /** Records an open for the dashboard's Most opened and Recently visited sections. */
+  recordBookmarkOpen: (id: string): Promise<void> => req(`/bookmarks/${id}/open`, { method: 'POST' }),
+
   saveBookmarkCopy: (id: string): Promise<Bookmark> => req(`/bookmarks/${id}/save`, { method: 'POST' }, bookmarkSchema),
 
   listDashboards: (): Promise<DashboardSummary[]> => req('/dashboards', {}, dashboardSummariesSchema),

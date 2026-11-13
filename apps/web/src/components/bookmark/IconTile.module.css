@@ -1,0 +1,30 @@
+.tile {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 12px;
+  background: var(--mantine-color-body);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.tile:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--mantine-color-violet-filled) 45%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--mantine-color-violet-filled) 12%, transparent);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--mantine-color-violet-filled);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    transition: none;
+  }
+}

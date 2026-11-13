@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { Badge, Group, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import { IconExternalLink, IconLock, IconWorld } from '@tabler/icons-react'
 import { ShareBadge } from '@/components/share-badge'
+import { useRecordBookmarkOpen } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
 import { googleFavicon } from '@/services'
 import { ApiImage } from './ApiImage'
@@ -28,6 +29,7 @@ type Props = {
 export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
   const title = b.title.trim() || 'Untitled'
   const [iconFailed, setIconFailed] = useState(false)
+  const recordOpen = useRecordBookmarkOpen()
   const iconSrc = !iconFailed ? b.favicon_url || (b.is_vault ? undefined : googleFavicon(b.url)) : undefined
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
@@ -40,6 +42,9 @@ export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
       rel="noreferrer"
       className={styles.tile}
       aria-label={`Open ${title}`}
+      onClick={() => {
+        if (!b.is_vault) recordOpen(b.id)
+      }}
     >
       <Group gap="sm" wrap="nowrap" align="center" className={styles.inner}>
         <div className={styles.iconWrap}>

@@ -1,10 +1,40 @@
 import { newClientId } from '@/lib/id'
-import type { Bookmark, Dashboard, DashboardSummary } from '@/schemas'
+import {
+  DASHBOARD_SECTION_DEFAULT_ITEMS,
+  type Bookmark,
+  type Dashboard,
+  type DashboardSectionKind,
+  type DashboardSectionSettings,
+  type DashboardSummary,
+} from '@/schemas'
 
-export type DashboardDraftSection = {
+export type DashboardDraftSection = DashboardSectionSettings & {
   key: string
   title: string
   bookmark_ids: string[]
+}
+
+/** Default title for a new section of each kind. */
+export const SECTION_KIND_TITLES: Record<DashboardSectionKind, string> = {
+  pinned: 'New section',
+  latest: 'Latest',
+  most_opened: 'Most opened',
+  recently_visited: 'Recently visited',
+}
+
+export function defaultSectionSettings(kind: DashboardSectionKind = 'pinned'): DashboardSectionSettings {
+  return {
+    kind,
+    display: kind === 'pinned' ? 'medium' : 'small',
+    item_limit: DASHBOARD_SECTION_DEFAULT_ITEMS,
+    source: { category_id: null, tag: null, site: null, favorites: false, unread: false },
+    open_window: 'all_time',
+  }
+}
+
+/** Whether a section fills itself from the owner's library (anything but pinned). */
+export function sectionFillsItself(section: Pick<DashboardSectionSettings, 'kind'>): boolean {
+  return section.kind !== 'pinned'
 }
 
 export type DashboardDraft = {
@@ -15,12 +45,17 @@ export type DashboardDraft = {
 export function emptyDashboardDraft(): DashboardDraft {
   return {
     title: 'Home',
-    sections: [{ key: newClientId(), title: 'Favorites', bookmark_ids: [] }],
+    sections: [{ ...defaultSectionSettings(), key: newClientId(), title: 'Favorites', bookmark_ids: [] }],
   }
 }
 
-export function newDraftSection(title = 'New section'): DashboardDraftSection {
-  return { key: newClientId(), title, bookmark_ids: [] }
+export function newDraftSection(title?: string, kind: DashboardSectionKind = 'pinned'): DashboardDraftSection {
+  return {
+    ...defaultSectionSettings(kind),
+    key: newClientId(),
+    title: title ?? SECTION_KIND_TITLES[kind],
+    bookmark_ids: [],
+  }
 }
 
 export function moveSection<T>(sections: readonly T[], index: number, delta: number): T[] {
@@ -42,13 +77,25 @@ export function dashboardDraftError(draft: DashboardDraft): string | null {
 
 export function toPutDashboardLayout(draft: DashboardDraft): {
   title: string
-  sections: { title: string; bookmark_ids: string[] }[]
+  sections: (DashboardSectionSettings & { title: string; bookmark_ids: string[] })[]
 } {
   return {
     title: draft.title.trim() || 'Home',
     sections: draft.sections.map((s) => ({
       title: s.title.trim(),
-      bookmark_ids: s.bookmark_ids,
+      // A section that fills itself has no pins of its own.
+      bookmark_ids: sectionFillsItself(s) ? [] : s.bookmark_ids,
+      kind: s.kind,
+      display: s.display,
+      item_limit: s.item_limit,
+      source: {
+        category_id: s.source.category_id || null,
+        tag: s.source.tag?.trim() || null,
+        site: s.source.site?.trim() || null,
+        favorites: s.source.favorites,
+        unread: s.source.unread,
+      },
+      open_window: s.open_window,
     })),
   }
 }
@@ -60,6 +107,7 @@ export function toPutDashboardLayout(draft: DashboardDraft): {
 export function mergeDashboardBookmarks(library: Bookmark[], dashboard: Dashboard | undefined): Bookmark[] {
   const byId = new Map(library.map((b) => [b.id, b]))
   for (const section of dashboard?.sections ?? []) {
+    if (sectionFillsItself(section)) continue
     for (const { bookmark } of section.items) {
       if (!byId.has(bookmark.id)) byId.set(bookmark.id, bookmark)
     }
@@ -74,4 +122,31 @@ export function dashboardToShowInstead(
 ): string | undefined {
   if (!activeId || list.some((d) => d.id === activeId)) return undefined
   return list.find((d) => d.is_default)?.id ?? list[0]?.id
+}
+
+/**
+ * One line saying what fills a section, such as "Newest · in Work · tagged rust · from
+ * github.com · favorites". Null for a pinned section.
+ */
+export function describeSectionSource(
+  section: DashboardSectionSettings,
+  folderName: (id: string) => string | undefined
+): string | null {
+  if (!sectionFillsItself(section)) return null
+  if (section.kind === 'recently_visited') return 'The bookmarks you opened last'
+  const parts = [
+    section.kind === 'latest'
+      ? 'Newest'
+      : section.open_window === 'last_30_days'
+        ? 'Most opened in the last 30 days'
+        : 'Most opened of all time',
+  ]
+  const { category_id, tag, site, favorites, unread } = section.source
+  if (category_id) parts.push(`in ${folderName(category_id) ?? 'a deleted folder'}`)
+  if (tag) parts.push(`tagged ${tag}`)
+  if (site) parts.push(`from ${site}`)
+  if (favorites) parts.push('favorites')
+  if (unread) parts.push('unread')
+  if (parts.length === 1) parts.push('whole library')
+  return parts.join(' · ')
 }

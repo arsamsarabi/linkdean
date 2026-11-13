@@ -127,6 +127,20 @@ export function useDeleteBookmarkPreview(): UseMutationResult<Bookmark, Error, s
   })
 }
 
+/**
+ * Records that a bookmark was opened. Fire and forget: a failure (such as a pin seen only
+ * through a shared dashboard) never gets in the way of opening the link.
+ */
+export function useRecordBookmarkOpen(): (id: string) => void {
+  const qc = useQueryClient()
+  return (id: string) => {
+    api
+      .recordBookmarkOpen(id)
+      .then(() => qc.invalidateQueries({ queryKey: ['dashboard'] }))
+      .catch(() => undefined)
+  }
+}
+
 export function useSaveBookmarkCopy(): UseMutationResult<Bookmark, Error, string> {
   const qc = useQueryClient()
   return useMutation({

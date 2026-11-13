@@ -13,12 +13,39 @@ export const dashboardItemSchema = z.object({
   bookmark: bookmarkSchema,
 })
 
-export const dashboardSectionSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  position: z.number(),
-  items: z.array(dashboardItemSchema),
+export const dashboardSectionKindSchema = z.enum(['pinned', 'latest', 'most_opened', 'recently_visited'])
+export const dashboardSectionDisplaySchema = z.enum(['small', 'medium', 'large', 'icons'])
+export const dashboardOpenWindowSchema = z.enum(['last_30_days', 'all_time'])
+
+export const DASHBOARD_SECTION_MIN_ITEMS = 4
+export const DASHBOARD_SECTION_MAX_ITEMS = 24
+export const DASHBOARD_SECTION_DEFAULT_ITEMS = 8
+
+export const dashboardSectionSourceSchema = z.object({
+  category_id: z.string().nullish(),
+  tag: z.string().nullish(),
+  site: z.string().nullish(),
+  favorites: z.boolean().default(false),
+  unread: z.boolean().default(false),
 })
+
+/** A section's type, display mode and source; older servers send none, meaning pinned and medium. */
+export const dashboardSectionSettingsSchema = z.object({
+  kind: dashboardSectionKindSchema.default('pinned'),
+  display: dashboardSectionDisplaySchema.default('medium'),
+  item_limit: z.number().default(DASHBOARD_SECTION_DEFAULT_ITEMS),
+  source: dashboardSectionSourceSchema.default({ favorites: false, unread: false }),
+  open_window: dashboardOpenWindowSchema.default('all_time'),
+})
+
+export const dashboardSectionSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    position: z.number(),
+    items: z.array(dashboardItemSchema),
+  })
+  .extend(dashboardSectionSettingsSchema.shape)
 
 export const dashboardSchema = z.object({
   id: z.string(),
@@ -78,10 +105,12 @@ export const dashboardSummariesSchema = z.array(dashboardSummarySchema)
 export const putDashboardLayoutSchema = z.object({
   title: z.string().optional(),
   sections: z.array(
-    z.object({
-      title: z.string(),
-      bookmark_ids: z.array(z.string()),
-    })
+    z
+      .object({
+        title: z.string(),
+        bookmark_ids: z.array(z.string()),
+      })
+      .extend(dashboardSectionSettingsSchema.partial().shape)
   ),
 })
 
@@ -96,6 +125,11 @@ export const patchDashboardSchema = z.object({
 
 export type DashboardItem = z.infer<typeof dashboardItemSchema>
 export type DashboardSection = z.infer<typeof dashboardSectionSchema>
+export type DashboardSectionKind = z.infer<typeof dashboardSectionKindSchema>
+export type DashboardSectionDisplay = z.infer<typeof dashboardSectionDisplaySchema>
+export type DashboardOpenWindow = z.infer<typeof dashboardOpenWindowSchema>
+export type DashboardSectionSource = z.infer<typeof dashboardSectionSourceSchema>
+export type DashboardSectionSettings = z.infer<typeof dashboardSectionSettingsSchema>
 export type Dashboard = z.infer<typeof dashboardSchema>
 export type DashboardSummary = z.infer<typeof dashboardSummarySchema>
 export type DashboardShare = z.infer<typeof dashboardShareSchema>
