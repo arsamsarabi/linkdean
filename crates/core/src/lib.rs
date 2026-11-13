@@ -1,3 +1,4 @@
+pub mod agent_skill;
 pub mod avatar;
 pub mod crypto;
 pub mod error;

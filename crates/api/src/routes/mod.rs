@@ -1,5 +1,6 @@
 mod activity;
 mod admin;
+mod agent_skills;
 mod api_keys;
 mod assets;
 pub(crate) mod auth;
@@ -51,6 +52,7 @@ fn router() -> Router<AppState> {
         .merge(trash::router())
         .merge(search::router())
         .merge(import_export::router())
+        .merge(agent_skills::router())
         .merge(vault::router())
         .merge(public::router())
         .merge(reports::router())

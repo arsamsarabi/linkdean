@@ -50,6 +50,13 @@ const pages = [
     sidebar_position: 1,
   },
   {
+    src: 'guides/agent-skills.md',
+    dest: 'guides/agent-skills.md',
+    id: 'agent-skills',
+    title: 'Agent Skills',
+    sidebar_position: 2,
+  },
+  {
     src: 'CHANGELOG.md',
     dest: 'changelog.md',
     id: 'changelog',
@@ -91,6 +98,7 @@ function rewriteLinks(body) {
       .replace(/\]\(\.\.\/product\/ideas\.md(#[^)]*)?\)/g, `](${githubBlob}/docs/product/ideas.md$1)`)
       .replace(/\]\(\.\.\/guides\/fast-capture\.md(#[^)]*)?\)/g, '](/docs/guides/fast-capture$1)')
       .replace(/\]\(\.\/fast-capture\.md(#[^)]*)?\)/g, '](/docs/guides/fast-capture$1)')
+      .replace(/\]\(\.\.\/guides\/agent-skills\.md(#[^)]*)?\)/g, '](/docs/guides/agent-skills$1)')
       // Ops / design (repo-only).
       .replace(
         /\]\(\.\.\/ops\/managed-service\.md(#[^)]*)?\)/g,

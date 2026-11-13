@@ -20,6 +20,8 @@ vi.mock('@/hooks', async (orig) => ({
   }),
 }))
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
+// The Agent Skill card has its own tests.
+vi.mock('./AgentSkillCard', () => ({ AgentSkillCard: () => null }))
 
 beforeAll(() => {
   vi.stubGlobal(

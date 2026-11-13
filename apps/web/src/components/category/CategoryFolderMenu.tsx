@@ -1,6 +1,15 @@
 import type { MouseEvent, ReactElement, ReactNode } from 'react'
 import { ActionIcon, Menu } from '@mantine/core'
-import { IconCopy, IconDots, IconLock, IconMessageCircle, IconPencil, IconShare, IconTrash } from '@tabler/icons-react'
+import {
+  IconCopy,
+  IconDots,
+  IconLock,
+  IconMessageCircle,
+  IconPencil,
+  IconRobot,
+  IconShare,
+  IconTrash,
+} from '@tabler/icons-react'
 import type { CategoryAccess } from '@/schemas'
 
 export type CategoryFolderMenuProps = {
@@ -13,6 +22,8 @@ export type CategoryFolderMenuProps = {
   onFork?: () => void
   onDelete?: () => void
   onMoveToVault?: () => void
+  /** Download the folder as an Agent Skill. Never offered for vault folders. */
+  onAgentSkill?: () => void
   forkPending?: boolean
   /** Wrapper class for positioning (e.g. absolute corner). */
   className?: string
@@ -24,6 +35,7 @@ function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boolean {
   return (
     (canWrite && !!props.onEdit) ||
     (!props.isVault && !!props.onFork) ||
+    (!props.isVault && !!props.onAgentSkill) ||
     (isOwner && !props.isVault && !!props.onShare) ||
     !!props.onSocial ||
     (isOwner && (!!props.onDelete || !!props.onMoveToVault))
@@ -33,8 +45,20 @@ function categoryFolderMenuVisible(props: CategoryFolderMenuProps): boolean {
 export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement | null {
   if (!categoryFolderMenuVisible(props)) return null
 
-  const { name, access, isVault, onEdit, onShare, onSocial, onFork, onDelete, onMoveToVault, forkPending, className } =
-    props
+  const {
+    name,
+    access,
+    isVault,
+    onEdit,
+    onShare,
+    onSocial,
+    onFork,
+    onDelete,
+    onMoveToVault,
+    onAgentSkill,
+    forkPending,
+    className,
+  } = props
   const isOwner = access === 'owner'
   const canWrite = isOwner || access === 'write'
 
@@ -51,7 +75,7 @@ export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement
 
   return (
     <div className={className} onClick={stop}>
-      <Menu shadow="md" width={180} position="bottom-end" withinPortal>
+      <Menu shadow="md" width={200} position="bottom-end" withinPortal>
         <Menu.Target>{target}</Menu.Target>
         <Menu.Dropdown>
           {canWrite && onEdit ? (
@@ -67,6 +91,11 @@ export function CategoryFolderMenu(props: CategoryFolderMenuProps): ReactElement
           {isOwner && !isVault && onShare ? (
             <Menu.Item leftSection={<IconShare size={14} stroke={1.5} />} onClick={onShare}>
               Share
+            </Menu.Item>
+          ) : null}
+          {!isVault && onAgentSkill ? (
+            <Menu.Item leftSection={<IconRobot size={14} stroke={1.5} />} onClick={onAgentSkill}>
+              Agent Skill (.zip)
             </Menu.Item>
           ) : null}
           {isOwner && onMoveToVault ? (

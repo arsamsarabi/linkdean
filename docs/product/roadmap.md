@@ -45,12 +45,10 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Depends on: phase 2 of item 12 for summaries and semantic search over page contents; tag suggestions do not.
     - Later: AI-assisted dashboards. Suggest sections and their sources (folders, tags, websites) from what the person saves and opens, built on the sections that fill themselves.
 
-18. **Bookmarks as memory for AI agents** (M). People who use coding and research agents (Claude Code, Codex, Cursor and others) keep re-explaining the same references. Their curated folders already hold that context.
-    - Generate an [Agent Skill](https://agentskills.io) from a folder, a tag or a saved search: a `SKILL.md` with a description of when to use it, and the links grouped with their titles, descriptions and notes.
-    - Download it as a zip to drop into an agent's skills folder, or fetch it with an API key, so a script or agent can refresh it as the folder changes.
-    - Later, with item 12, include the archived reader-mode text so the agent can read a page without fetching it.
-    - Vault folders are never offered. Shared folders follow the same read access as the share.
-    - Open questions: a read-only MCP server (search and read bookmarks) as well as, or instead of, generated files; a per-skill size limit.
+22. **Agent Skills, next steps** (S–M). Folders and tags already download as Agent Skills, and an API key can fetch them (see features).
+    - A read-only MCP server (search and read bookmarks), as well as or instead of generated files.
+    - With item 12, include the archived reader-mode text so the agent can read a page without fetching it.
+    - Skills from a saved library search, once saved searches exist.
 
 6. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
     - A daily digest for the noisy kinds.

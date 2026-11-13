@@ -5,6 +5,7 @@ import { IconDownload, IconFileExport, IconInfoCircle, IconUpload } from '@table
 import { QueryErrorAlert } from '@/components/query-error-alert'
 import { useExportBookmarks, useImportBookmarks, useImportPreview, useMe } from '@/hooks'
 import type { DuplicateDecisions, ImportPreview, ImportResult } from '@/schemas'
+import { AgentSkillCard } from './AgentSkillCard'
 import { ImportDuplicatesDrawer } from './ImportDuplicatesDrawer'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -154,6 +155,8 @@ export function ImportExportPanel(): ReactElement {
             </Group>
           </Stack>
         </Paper>
+
+        <AgentSkillCard />
       </SimpleGrid>
       {review ? (
         <ImportDuplicatesDrawer

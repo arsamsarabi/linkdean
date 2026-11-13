@@ -194,6 +194,9 @@ function bookmarksQuery(p: BookmarksListParams): URLSearchParams {
   return q
 }
 
+/** What an Agent Skill is made from. */
+export type AgentSkillSource = { folder: string } | { tag: string }
+
 export const api = {
   bootstrap: (): Promise<BootstrapStatus> => req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
 
@@ -713,6 +716,12 @@ export const api = {
     ),
 
   exportUrl: (format: string): string => `/api/export?format=${format}`,
+
+  /** A folder (with its subfolders) or a tag as an Agent Skill: a zip, or the SKILL.md alone. */
+  agentSkillUrl: (source: AgentSkillSource, format: 'zip' | 'md' = 'zip'): string => {
+    const q = new URLSearchParams('folder' in source ? { folder: source.folder, format } : { tag: source.tag, format })
+    return `/api/agent-skill?${q.toString()}`
+  },
 
   vaults: (): Promise<{ vaults: Vault[] }> => req('/vaults', {}, vaultsEnvelopeSchema),
 
