@@ -136,10 +136,12 @@ async fn default_dashboard_roundtrip_and_authz() {
             title: Some("My desk".into()),
             sections: vec![
                 PutDashboardSection {
+                    settings: Default::default(),
                     title: "Later".into(),
                     bookmark_ids: vec![bm2.id],
                 },
                 PutDashboardSection {
+                    settings: Default::default(),
                     title: "Now".into(),
                     bookmark_ids: vec![bm1.id, bm2.id],
                 },
@@ -173,6 +175,7 @@ async fn default_dashboard_roundtrip_and_authz() {
         PutDashboardLayout {
             title: None,
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Stolen".into(),
                 bookmark_ids: vec![bm1.id],
             }],
@@ -352,6 +355,7 @@ async fn dashboard_share_read_write_and_revoke() {
         PutDashboardLayout {
             title: Some("Team board".into()),
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Pins".into(),
                 bookmark_ids: vec![bm.id],
             }],
@@ -398,6 +402,7 @@ async fn dashboard_share_read_write_and_revoke() {
             PutDashboardLayout {
                 title: None,
                 sections: vec![PutDashboardSection {
+                    settings: Default::default(),
                     title: "Nope".into(),
                     bookmark_ids: vec![],
                 }],
@@ -431,6 +436,7 @@ async fn dashboard_share_read_write_and_revoke() {
         PutDashboardLayout {
             title: Some("Team board RW".into()),
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Pins".into(),
                 bookmark_ids: vec![bm.id],
             }],
@@ -535,6 +541,7 @@ async fn saving_a_layout_keeps_pins_the_editor_cannot_see() {
         PutDashboardLayout {
             title: None,
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Main".into(),
                 bookmark_ids: vec![plain, trashed, secret],
             }],
@@ -555,6 +562,7 @@ async fn saving_a_layout_keeps_pins_the_editor_cannot_see() {
         PutDashboardLayout {
             title: None,
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Renamed".into(),
                 bookmark_ids: vec![plain],
             }],

@@ -1,8 +1,8 @@
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
     Bookmark, CategoryAccess, CreateDashboard, Dashboard, DashboardItem, DashboardItemView,
-    DashboardSection, DashboardSectionView, DashboardSummary, DashboardView, Error, PatchDashboard,
-    PutDashboardLayout, Result,
+    DashboardSection, DashboardSectionSettings, DashboardSectionView, DashboardSummary,
+    DashboardView, Error, PatchDashboard, PutDashboardLayout, Result,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -249,6 +249,35 @@ async fn load_dashboard_view(
 
     let mut section_views = Vec::with_capacity(sections.len());
     for sec in sections {
+        let settings = sec.settings();
+        if settings.kind.fills_itself() {
+            // Only the owner ever sees these: they draw on the owner's whole library, and a
+            // dashboard that has one cannot be shared.
+            if dash.owner_user_id != user_id {
+                continue;
+            }
+            let rows =
+                super::dashboard_sections::fill_dashboard_section(pool, user_id, &settings).await?;
+            let none = VaultKeyring::default();
+            let views =
+                super::bookmarks::bookmarks_to_views(pool, rows, user_id, |_| &none).await?;
+            section_views.push(DashboardSectionView {
+                id: sec.id,
+                title: sec.title,
+                position: sec.position,
+                settings,
+                items: views
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, bookmark)| DashboardItemView {
+                        id: bookmark.id,
+                        position: i as i32,
+                        bookmark,
+                    })
+                    .collect(),
+            });
+            continue;
+        }
         let items = sqlx::query_as::<_, DashboardItem>(
             r#"
             SELECT * FROM dashboard_items
@@ -289,6 +318,7 @@ async fn load_dashboard_view(
             id: sec.id,
             title: sec.title,
             position: sec.position,
+            settings,
             items: item_views,
         });
     }
@@ -418,12 +448,51 @@ pub async fn put_dashboard(
         }
     }
 
-    // (title, pins in order) per section of the request, after validation.
-    let mut planned: Vec<(&str, Vec<Uuid>)> = Vec::with_capacity(req.sections.len());
+    // (title, settings, pins in order) per section of the request, after validation.
+    let mut planned: Vec<(&str, DashboardSectionSettings, Vec<Uuid>)> =
+        Vec::with_capacity(req.sections.len());
+    let mut shared: Option<bool> = None;
     for section in &req.sections {
         let section_title = section.title.trim();
         if section_title.is_empty() {
             return Err(Error::BadRequest("section title required".into()));
+        }
+        let settings = section.settings.clone().normalized()?;
+        if settings.kind.fills_itself() {
+            if dash.owner_user_id != user_id {
+                return Err(Error::BadRequest(
+                    super::dashboard_sections::SELF_FILLING_SHARED_MESSAGE.into(),
+                ));
+            }
+            let is_shared = match shared {
+                Some(v) => v,
+                None => {
+                    let v =
+                        super::dashboard_sections::dashboard_has_any_share(pool, dash.id).await?;
+                    shared = Some(v);
+                    v
+                }
+            };
+            if is_shared {
+                return Err(Error::BadRequest(
+                    super::dashboard_sections::SELF_FILLING_SHARED_MESSAGE.into(),
+                ));
+            }
+            if let Some(cid) = settings.source.category_id {
+                let own: bool = sqlx::query_scalar(
+                    "SELECT EXISTS (SELECT 1 FROM categories WHERE id = $1 AND owner_user_id = $2 AND vault_id IS NULL)",
+                )
+                .bind(cid)
+                .bind(user_id)
+                .fetch_one(pool)
+                .await
+                .map_err(|e| Error::msg(e.to_string()))?;
+                if !own {
+                    return Err(Error::BadRequest("folder not found".into()));
+                }
+            }
+            planned.push((section_title, settings, Vec::new()));
+            continue;
         }
         let mut seen = std::collections::HashSet::new();
         let mut pins = Vec::new();
@@ -450,7 +519,7 @@ pub async fn put_dashboard(
             }
             pins.push(*bookmark_id);
         }
-        planned.push((section_title, pins));
+        planned.push((section_title, settings, pins));
     }
 
     let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
@@ -474,19 +543,32 @@ pub async fn put_dashboard(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
 
-    let mut new_sections: Vec<(Uuid, std::collections::HashSet<Uuid>, i32)> = Vec::new();
+    // (id, pins, next position, pinned?) per new section.
+    let mut new_sections: Vec<(Uuid, std::collections::HashSet<Uuid>, i32, bool)> = Vec::new();
 
-    for (si, (section_title, pins)) in planned.into_iter().enumerate() {
+    for (si, (section_title, settings, pins)) in planned.into_iter().enumerate() {
         let sec = sqlx::query_as::<_, DashboardSection>(
             r#"
-            INSERT INTO dashboard_sections (dashboard_id, title, position)
-            VALUES ($1, $2, $3)
+            INSERT INTO dashboard_sections (
+                dashboard_id, title, position, kind, display, item_limit, source_category_id,
+                source_tag, source_site, source_favorites, source_unread, open_window
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING *
             "#,
         )
         .bind(dash.id)
         .bind(section_title)
         .bind(si as i32)
+        .bind(settings.kind.as_str())
+        .bind(settings.display.as_str())
+        .bind(settings.item_limit)
+        .bind(settings.source.category_id)
+        .bind(settings.source.tag.as_deref())
+        .bind(settings.source.site.as_deref())
+        .bind(settings.source.favorites)
+        .bind(settings.source.unread)
+        .bind(settings.open_window.as_str())
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
@@ -506,13 +588,15 @@ pub async fn put_dashboard(
             .map_err(|e| Error::msg(e.to_string()))?;
         }
         let next_pos = pins.len() as i32;
-        new_sections.push((sec.id, pins.into_iter().collect(), next_pos));
+        let is_pinned = !settings.kind.fills_itself();
+        new_sections.push((sec.id, pins.into_iter().collect(), next_pos, is_pinned));
     }
 
-    // Hidden pins go back to the section at the same index, else the last one. With no
-    // sections left, their old section is recreated so they are not lost.
+    // Hidden pins go back to the pinned section at the same index or the nearest one before
+    // it, else the first pinned one. With no pinned section left, their old section is
+    // recreated so they are not lost.
     for (index, old_title, bookmark_id) in hidden {
-        if new_sections.is_empty() {
+        if !new_sections.iter().any(|s| s.3) {
             let sec_id: Uuid = sqlx::query_scalar(
                 r#"
                 INSERT INTO dashboard_sections (dashboard_id, title, position)
@@ -525,10 +609,16 @@ pub async fn put_dashboard(
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| Error::msg(e.to_string()))?;
-            new_sections.push((sec_id, std::collections::HashSet::new(), 0));
+            new_sections.push((sec_id, std::collections::HashSet::new(), 0, true));
         }
-        let target = index.min(new_sections.len() - 1);
-        let (sec_id, seen, next_pos) = &mut new_sections[target];
+        let pinned_at = |i: usize| new_sections.get(i).is_some_and(|s| s.3);
+        let start = index.min(new_sections.len() - 1);
+        let target = (0..=start)
+            .rev()
+            .find(|&i| pinned_at(i))
+            .or_else(|| (0..new_sections.len()).find(|&i| pinned_at(i)))
+            .unwrap_or(0);
+        let (sec_id, seen, next_pos, _) = &mut new_sections[target];
         if !seen.insert(bookmark_id) {
             continue;
         }

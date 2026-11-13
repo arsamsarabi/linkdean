@@ -193,6 +193,17 @@ pub async fn apply_parsed_import_counted(
             .into_iter()
             .map(|sec| PutDashboardSection {
                 title: sec.title,
+                // Known issue: a folder source cannot be matched to the imported folders yet
+                // (they are resolved by position, not id), so it is dropped and an imported
+                // "Latest in Work" section draws on the whole library. Suggested fix: carry the
+                // exported category id through `resolve_folders` and map it here.
+                settings: linkdean_core::DashboardSectionSettings {
+                    source: linkdean_core::DashboardSectionSource {
+                        category_id: None,
+                        ..sec.settings.source
+                    },
+                    ..sec.settings
+                },
                 bookmark_ids: sec
                     .bookmark_ids
                     .iter()
@@ -392,6 +403,17 @@ async fn export_dashboards(
         .fetch_all(pool)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
+        let settings: std::collections::HashMap<Uuid, linkdean_core::DashboardSectionSettings> =
+            sqlx::query_as::<_, linkdean_core::DashboardSection>(
+                "SELECT * FROM dashboard_sections WHERE dashboard_id = $1",
+            )
+            .bind(id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?
+            .into_iter()
+            .map(|sec| (sec.id, sec.settings()))
+            .collect();
         let mut sections: Vec<(Uuid, DashboardSectionExport)> = Vec::new();
         for (section_id, section_title, bookmark_id) in rows {
             if sections.last().is_none_or(|(sid, _)| *sid != section_id) {
@@ -400,6 +422,7 @@ async fn export_dashboards(
                     DashboardSectionExport {
                         title: section_title,
                         bookmark_ids: Vec::new(),
+                        settings: settings.get(&section_id).cloned().unwrap_or_default(),
                     },
                 ));
             }

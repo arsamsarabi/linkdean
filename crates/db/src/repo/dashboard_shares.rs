@@ -301,6 +301,11 @@ pub async fn create_dashboard_share(
     use linkdean_core::{CreateDashboardShareOutcome, PendingShareSubjectType};
 
     let dash = require_dashboard_owner(pool, owner_user_id, dashboard_id).await?;
+    if super::dashboard_sections::dashboard_has_self_filling_section(pool, dashboard_id).await? {
+        return Err(Error::BadRequest(
+            "remove the sections that fill themselves before sharing this dashboard".into(),
+        ));
+    }
 
     let email = req.email.trim().to_ascii_lowercase();
     if email.is_empty() || !email.contains('@') {

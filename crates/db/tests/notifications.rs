@@ -317,6 +317,7 @@ async fn shared_dashboard_edit_notifies_owner() {
             sections: vec![PutDashboardSection {
                 title: "Pins".into(),
                 bookmark_ids: vec![],
+                settings: Default::default(),
             }],
         },
         &VaultKeyring::default(),

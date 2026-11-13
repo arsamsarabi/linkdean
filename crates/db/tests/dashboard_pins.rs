@@ -324,6 +324,7 @@ async fn pinned_bookmark(pool: &PgPool, owner: &User, board: Uuid) -> Uuid {
         PutDashboardLayout {
             title: None,
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Pins".into(),
                 bookmark_ids: vec![bookmark.id],
             }],
@@ -406,6 +407,7 @@ async fn layout(
         PutDashboardLayout {
             title: None,
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Pins".into(),
                 bookmark_ids: ids,
             }],
