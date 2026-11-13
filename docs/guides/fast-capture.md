@@ -12,7 +12,7 @@ Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/
 
 Then, on any page:
 
-- **The toolbar button** (or **Alt+Shift+S**) shows the page's title, the text you selected as the description, your folders and tags. **Save** files it; **Save to Unsorted** saves it with no folder. A page you already saved shows **Open in Linkdean** instead. Turn on **Color the icon on saved pages** in the popup to see this at a glance: the icon is in color on pages you have saved and grey elsewhere. The check happens in your browser; the pages you visit are not sent to Linkdean.
+- **The toolbar button** (or **Alt+Shift+S**) shows the page's title, the text you selected as the description, your folders and tags. **Save** files it; **Save to Unsorted** saves it with no folder. A page you already saved shows **Open in Linkdean** instead. The first time you open the popup after signing in, it offers to show this at a glance; choose **Allow**, or turn on **Color the icon on saved pages** later: the icon is in color on pages you have saved and grey elsewhere. The check happens in your browser; the pages you visit are not sent to Linkdean.
 - **Right-click → Save page to Linkdean**, or **Save link to Linkdean** on a link, saves to Unsorted at once. A ✓ on the toolbar button confirms it.
 
 The extension holds its own API key, listed as "Browser extension" under **Settings → API keys**. **Sign out** in the extension revokes it.

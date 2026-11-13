@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { Switch } from '@mantine/core'
 import { browser } from 'wxt/browser'
-import { requestTabsPermission, savedIconItem } from '@/lib/savedPages'
+import { requestTabsPermission, savedIconItem, savedIconOfferedItem } from '@/lib/savedPages'
 
 /** Opt-in: colour the toolbar icon on pages already saved, grey elsewhere. */
 export function SavedIconSwitch(): ReactElement {
@@ -20,6 +20,7 @@ export function SavedIconSwitch(): ReactElement {
   }, [])
 
   function change(next: boolean): void {
+    void savedIconOfferedItem.setValue(true)
     if (next) {
       // Ask straight from the click: browsers allow the prompt only from a user gesture.
       void requestTabsPermission().then((ok) => (ok ? savedIconItem.setValue(true) : undefined))

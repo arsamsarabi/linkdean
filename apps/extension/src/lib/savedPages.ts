@@ -14,6 +14,8 @@ import { sessionItem, type Session } from './session'
  * server.
  */
 export const savedIconItem = storage.defineItem<boolean>('local:savedIcon', { fallback: false })
+/** Whether the popup has asked once, after sign-in, to turn the icon on. Never asked twice. */
+export const savedIconOfferedItem = storage.defineItem<boolean>('local:savedIconOffered', { fallback: false })
 
 type HashCache = { instance: string; hashes: string[]; fetchedAt: number }
 const hashCacheItem = storage.defineItem<HashCache | null>('local:savedHashes', { fallback: null })
@@ -75,6 +77,11 @@ export async function savedIconActive(): Promise<Session | null> {
   const [on, session] = await Promise.all([savedIconItem.getValue(), sessionItem.getValue()])
   if (!on || !session) return null
   return (await browser.permissions.contains(TABS)) ? session : null
+}
+
+/** Whether the `tabs` permission is held. */
+export function tabsPermissionHeld(): Promise<boolean> {
+  return browser.permissions.contains(TABS)
 }
 
 export function requestTabsPermission(): Promise<boolean> {

@@ -31,7 +31,7 @@ UPDATE_SITE="${UPDATE_SITE:-}"
 if [ -z "$UPDATE_APP$UPDATE_DOCS$UPDATE_SITE" ]; then
   UPDATE_APP=false UPDATE_DOCS=false UPDATE_SITE=false
   if changed '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)'; then UPDATE_APP=true; fi
-  if changed '^(apps/docs/|deploy/public-beta/static/docs/|docs/(self-hosting/[^/]+|product/(features|architecture)|guides/fast-capture)\.md$)'; then UPDATE_DOCS=true; fi
+  if changed '^(apps/docs/|deploy/public-beta/static/docs/|deploy/public-beta/Caddyfile$|docs/(self-hosting/[^/]+|product/(features|architecture)|guides/fast-capture)\.md$)'; then UPDATE_DOCS=true; fi
   if changed '^(apps/site/|deploy/public-beta/static/site/)'; then UPDATE_SITE=true; fi
 fi
 
