@@ -72,7 +72,7 @@ export function DashboardPage(): ReactElement {
           onUpdateTitle={d.updateSectionTitle}
           onUpdateBookmarks={d.updateSectionBookmarks}
           onUpdateSection={d.updateSection}
-          onMoveSection={d.moveSectionTo}
+          onApplyLayout={d.applyLayout}
           onMovePin={d.movePin}
           onRemoveSection={d.removeSection}
           onAddSection={d.addSection}

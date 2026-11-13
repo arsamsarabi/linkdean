@@ -115,7 +115,7 @@ export function useDashboardPage() {
     cancelEdit: edit.cancelEdit,
     addSection: edit.addSection,
     updateSection: edit.updateSection,
-    moveSectionTo: edit.moveSectionTo,
+    applyLayout: edit.applyLayout,
     movePin: edit.movePin,
     selectDashboard: (id: string | null) => board.selectDashboard(id, edit.editing),
     onSave: edit.onSave,

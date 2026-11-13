@@ -44,7 +44,7 @@ Before anything is written, Linkdean checks the file against your library. Bookm
 - **Favorite**, **Unread** and **Pin** mark bookmarks; pinned ones stay at the top.
 - The Library shows a grid, a compact list or an explorer of folders. Filters cover folder, tag, flags and how recently a bookmark was added.
 - **Select** (or tick a card) moves, tags or deletes many bookmarks at once. Deleted bookmarks wait in **Deleted items** until you restore or purge them.
-- The **Dashboard** is your home page: sections of the bookmarks you open most, arranged with **Edit layout**. Pin bookmarks by hand, or add sections that fill themselves with your latest bookmarks, the ones you open most or the ones you opened last, and show each section as icons, small tiles or cards, at full, half or a third of the width. In **Edit layout**, drag sections and pinned bookmarks to rearrange them. Filter the whole dashboard from the box under the header, and press `1` to `9` to open a bookmark.
+- The **Dashboard** is your home page: sections of the bookmarks you open most, arranged with **Edit layout**. Pin bookmarks by hand, or add sections that fill themselves with your latest bookmarks, the ones you open most or the ones you opened last, and show each section as icons, small tiles or cards. Sections form a bento grid: in **Edit layout**, drag them anywhere, resize them from the corner, and drag pinned bookmarks to reorder them. Filter the whole dashboard from the box under the header, and press `1` to `9` to open a bookmark.
 
 <Shot name="explorer" alt="Explorer view: folder tiles with bookmark counts, and a folder shared with you" />
 

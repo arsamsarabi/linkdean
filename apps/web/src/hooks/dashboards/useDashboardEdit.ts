@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { notifications } from '@mantine/notifications'
-import type { Dashboard, DashboardSectionKind, PutDashboardLayout } from '@/schemas'
+import type { Dashboard, DashboardSectionKind, DashboardSectionLayout, PutDashboardLayout } from '@/schemas'
 import {
   dashboardDraftError,
   draftFromDashboard,
@@ -54,9 +54,11 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
     return section.key
   }
 
-  /** Drag and drop: moves a section from one place on the board to another. */
-  function moveSectionTo(from: number, to: number): void {
-    setEditDraft((prev) => (prev ? { ...prev, sections: moveItem(prev.sections, from, to) } : prev))
+  /** Drag, resize or a keyboard move on the board: every section's new place and size. */
+  function applyLayout(placed: Map<string, DashboardSectionLayout>): void {
+    setEditDraft((prev) =>
+      prev ? { ...prev, sections: prev.sections.map((s) => ({ ...s, layout: placed.get(s.key) ?? s.layout })) } : prev
+    )
   }
 
   /** Drag and drop: moves a pinned bookmark within its section. */
@@ -145,7 +147,7 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
     startEdit,
     cancelEdit,
     addSection,
-    moveSectionTo,
+    applyLayout,
     movePin,
     updateSection,
     onSave,

@@ -19,7 +19,18 @@ export const dashboardItemSchema = z.object({
 export const dashboardSectionKindSchema = z.enum(['pinned', 'latest', 'most_opened', 'recently_visited'])
 export const dashboardSectionDisplaySchema = z.enum(['small', 'medium', 'large', 'icons'])
 export const dashboardOpenWindowSchema = z.enum(['last_30_days', 'all_time'])
-export const dashboardSectionWidthSchema = z.enum(['full', 'half', 'third'])
+/** The dashboard is a 12-column grid; sections are placed and sized in grid units. */
+export const DASHBOARD_GRID_COLS = 12
+export const DASHBOARD_SECTION_MIN_W = 3
+export const DASHBOARD_SECTION_MIN_H = 3
+export const DASHBOARD_SECTION_MAX_H = 30
+
+export const dashboardSectionLayoutSchema = z.object({
+  x: z.number().int(),
+  y: z.number().int(),
+  w: z.number().int(),
+  h: z.number().int(),
+})
 
 export const DASHBOARD_SECTION_MIN_ITEMS = 4
 export const DASHBOARD_SECTION_MAX_ITEMS = 24
@@ -40,7 +51,7 @@ export const dashboardSectionSettingsSchema = z.object({
   item_limit: z.number().default(DASHBOARD_SECTION_DEFAULT_ITEMS),
   source: dashboardSectionSourceSchema.default({ favorites: false, unread: false }),
   open_window: dashboardOpenWindowSchema.default('all_time'),
-  width: dashboardSectionWidthSchema.default('full'),
+  layout: dashboardSectionLayoutSchema.default({ x: 0, y: 0, w: DASHBOARD_GRID_COLS, h: 8 }),
 })
 
 export const dashboardSectionSchema = z
@@ -133,7 +144,7 @@ export type DashboardSection = z.infer<typeof dashboardSectionSchema>
 export type DashboardSectionKind = z.infer<typeof dashboardSectionKindSchema>
 export type DashboardSectionDisplay = z.infer<typeof dashboardSectionDisplaySchema>
 export type DashboardOpenWindow = z.infer<typeof dashboardOpenWindowSchema>
-export type DashboardSectionWidth = z.infer<typeof dashboardSectionWidthSchema>
+export type DashboardSectionLayout = z.infer<typeof dashboardSectionLayoutSchema>
 export type DashboardSectionSource = z.infer<typeof dashboardSectionSourceSchema>
 export type DashboardSectionSettings = z.infer<typeof dashboardSectionSettingsSchema>
 export type Dashboard = z.infer<typeof dashboardSchema>

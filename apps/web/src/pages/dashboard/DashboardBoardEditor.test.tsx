@@ -14,8 +14,20 @@ const bookmarks = [bm('a', 'Alpha'), bm('b', 'Beta')]
 const draft: DashboardDraft = {
   title: 'Home',
   sections: [
-    { ...defaultSectionSettings('pinned'), key: 'p', title: 'Daily', bookmark_ids: ['a', 'b'] },
-    { ...defaultSectionSettings('latest'), key: 'l', title: 'New', bookmark_ids: [], width: 'half' },
+    {
+      ...defaultSectionSettings('pinned'),
+      key: 'p',
+      title: 'Daily',
+      bookmark_ids: ['a', 'b'],
+      layout: { x: 0, y: 0, w: 12, h: 11 },
+    },
+    {
+      ...defaultSectionSettings('latest'),
+      key: 'l',
+      title: 'New',
+      bookmark_ids: [],
+      layout: { x: 0, y: 11, w: 6, h: 8 },
+    },
   ],
 }
 
@@ -24,7 +36,7 @@ function renderEditor(canAddSelfFilling = true) {
     onUpdateTitle: vi.fn(),
     onUpdateBookmarks: vi.fn(),
     onUpdateSection: vi.fn(),
-    onMoveSection: vi.fn(),
+    onApplyLayout: vi.fn(),
     onMovePin: vi.fn(),
     onRemoveSection: vi.fn(),
     onAddSection: vi.fn(() => 'p'),
@@ -61,26 +73,35 @@ describe('DashboardBoardEditor', () => {
   afterAll(() => vi.unstubAllGlobals())
   afterEach(cleanup)
 
-  it('gives every section and pinned bookmark a named drag handle', () => {
+  it('gives every section and pinned bookmark a named handle', () => {
     renderEditor()
-    expect(screen.getByRole('button', { name: 'Move section “Daily”' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Move section “New”' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Move or resize section “Daily”' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Move or resize section “New”' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Move bookmark “Alpha”' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Move bookmark “Beta”' })).toBeTruthy()
   })
 
-  it('lays sections out at their width', () => {
+  it('shows each section size in columns by rows', () => {
     renderEditor()
-    const cell = (name: string) => screen.getByRole('region', { name }).parentElement!
-    expect(cell('Section “Daily”').dataset.width).toBe('full')
-    expect(cell('Section “New”').dataset.width).toBe('half')
+    expect(within(screen.getByRole('region', { name: 'Section “New”' })).getByText('6 × 8')).toBeTruthy()
   })
 
-  it('changes a section width from the board', async () => {
+  it('moves and resizes a section from the keyboard, and says so', async () => {
     const h = renderEditor()
-    const daily = screen.getByRole('region', { name: 'Section “Daily”' })
-    await userEvent.click(within(daily).getByText('Third'))
-    expect(h.onUpdateSection).toHaveBeenCalledWith(0, { width: 'third' })
+    const handle = screen.getByRole('button', { name: 'Move or resize section “New”' })
+    handle.focus()
+    await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}')
+    expect(h.onApplyLayout).toHaveBeenLastCalledWith(
+      new Map([
+        ['p', { x: 0, y: 0, w: 12, h: 11 }],
+        ['l', { x: 0, y: 11, w: 7, h: 8 }],
+      ])
+    )
+    expect(screen.getByText('“New” is 7 columns wide and 8 rows tall.').getAttribute('aria-live')).toBe('polite')
+    await userEvent.keyboard('{ArrowUp}')
+    const placed = h.onApplyLayout.mock.lastCall![0] as Map<string, { y: number }>
+    expect(placed.get('l')!.y).toBe(0)
+    expect(placed.get('p')!.y).toBe(8)
   })
 
   it('unpins a bookmark and removes a section', async () => {

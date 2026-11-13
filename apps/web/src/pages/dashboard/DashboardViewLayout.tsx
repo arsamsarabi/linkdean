@@ -4,8 +4,8 @@ import { IconLayoutDashboard, IconPinned } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { EmptyState } from '@/components'
 import type { Dashboard } from '@/schemas'
-import { filterSections } from '@/services'
-import grid from './DashboardGrid.module.css'
+import { bentoLayout, filterSections } from '@/services'
+import { BentoGrid } from './BentoGrid'
 import { DashboardSectionPanel } from './DashboardSectionPanel'
 import { QuickPinButton } from './QuickPinButton'
 import { useCollapsedSections } from './useCollapsedSections'
@@ -70,16 +70,24 @@ export function DashboardViewLayout({
 
   const filtering = filter.trim().length > 0
   const shown = filterSections(view.sections, filter)
+  const shownById = new Map(shown.map((s) => [s.id, s]))
+  const allById = new Map(view.sections.map((s) => [s.id, s]))
   const active = activeId ?? shown.find((s) => s.items.length > 0)?.id ?? shown[0]?.id
 
   return (
     <Stack gap="xl" ref={root}>
-      <div className={grid.grid}>
-        {shown.map((section, i) => (
-          <div key={section.id} className={grid.cell} data-width={section.width}>
+      <BentoGrid
+        layout={bentoLayout(
+          shown.map((s) => ({ key: s.id, layout: s.layout })),
+          (id) => !filtering && collapsed.isCollapsed(id)
+        )}
+        renderItem={(id) => {
+          const section = shownById.get(id)!
+          const all = allById.get(id)
+          return (
             <DashboardSectionPanel
               section={section}
-              totalItems={view.sections[i]?.items.length ?? section.items.length}
+              totalItems={all?.items.length ?? section.items.length}
               filtering={filtering}
               // A filter shows every match, collapsed or not.
               collapsed={!filtering && collapsed.isCollapsed(section.id)}
@@ -92,7 +100,7 @@ export function DashboardViewLayout({
                   <QuickPinButton
                     sectionTitle={section.title}
                     options={bookmarkOptions}
-                    pinnedIds={(view.sections[i]?.items ?? []).map((it) => it.bookmark.id)}
+                    pinnedIds={(all?.items ?? []).map((it) => it.bookmark.id)}
                     saving={quickPinPending}
                     onPin={(bookmarkId) => onQuickPin(section.id, bookmarkId)}
                   />
@@ -102,9 +110,9 @@ export function DashboardViewLayout({
               onActivate={() => setActiveId(section.id)}
               onStartEdit={onStartEdit}
             />
-          </div>
-        ))}
-      </div>
+          )
+        }}
+      />
       <Group justify="space-between" gap="sm" c="dimmed">
         <Text size="sm" c="dimmed">
           Browse the full collection in the{' '}
