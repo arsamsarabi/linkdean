@@ -36,7 +36,7 @@ Checked in November 2026 against each project's own site and README. These tools
 - **Vaults.** Put private folders behind their own passphrase. Contents are encrypted at rest (Argon2id and AES-GCM), never sent to the search index, and stay locked on other devices until you unlock them there. None of the others offer this.
 - **Filing Unsorted one by one.** Save now, file later: a card at a time, with folders and tags you already used on the same site offered as one-click picks. Keyboard on desktop, swipe on a phone.
 - **A bookmark can live in several folders.** No copying a link into two places and keeping both up to date.
-- **Dashboards.** Pin the links you open every day into sectioned start pages, and share them read-only or editable.
+- **Dashboards.** Pin the links you open every day into sectioned start pages, or let sections fill themselves with your latest, most opened or recently visited bookmarks. Share them read-only or editable.
 - **Sharing that respects people.** Invite another account or an email address to a folder or dashboard, and they choose to accept. Likes, comments and ratings live on shared items only; follow, mute and block work as you would expect, and everything starts private.
 - **Library health without a paid tier.** Broken-link checks, a duplicate finder and a duplicate review on import are part of every account.
 

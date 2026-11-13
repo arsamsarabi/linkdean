@@ -13,7 +13,6 @@ Plans move as the beta teaches us what matters. Want something sooner, or someth
 ## Now: running the public beta well
 
 - **Browser extension in both stores.** Live on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf); the Firefox add-on is in review. Edge installs from the Chrome listing.
-- **Dashboard upgrades.** Choose how each pinned item looks (a small, medium or large card, or just its icon), and sections that fill themselves with your latest bookmarks or the ones you open most.
 
 ## Next: once the beta settles
 
@@ -30,6 +29,7 @@ Archiving and AI assistance come first. They are the biggest gaps on the [compar
   - A short summary of each bookmark.
   - Search by meaning ("that article about…"), not only by the words in it.
   - Hints for related and near-duplicate bookmarks.
+  - Later, dashboard sections suggested from what you save and open.
   - Suggestions wait for your click. Vault contents are never sent to a model.
 - **Your bookmarks as memory for AI agents.** Turn a folder or tag into an [Agent Skill](https://agentskills.io) your coding or research agent can use: download it, or keep it fresh with an API key. Vaults are never included.
 - **Email digests and one-click unsubscribe.** A daily digest for the chattier notifications (edits, likes, comments), and an unsubscribe link for each kind in every email.
