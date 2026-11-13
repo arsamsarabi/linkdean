@@ -162,6 +162,26 @@ describe('BookmarkDrawer quick save', () => {
     expect(pageDetails.mutateAsync).toHaveBeenCalledWith('https://example.com/a')
   })
 
+  it('closes without asking when only the automatic fill changed the form', async () => {
+    pageDetails.mutateAsync.mockResolvedValue({ title: 'Fetched', description: 'About', tags: ['docs'] })
+    const onClose = vi.fn()
+    renderQuick({ ...emptyDraft(), url: 'https://example.com/a' }, vi.fn(), onClose)
+    await screen.findByDisplayValue('Fetched')
+    await userEvent.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Discard changes?')).toBeNull()
+  })
+
+  it('still asks once the person edits the filled form', async () => {
+    pageDetails.mutateAsync.mockResolvedValue({ title: 'Fetched', description: null, tags: [] })
+    const onClose = vi.fn()
+    renderQuick({ ...emptyDraft(), url: 'https://example.com/a' }, vi.fn(), onClose)
+    await userEvent.type(await screen.findByDisplayValue('Fetched'), ' page')
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByText('Discard changes?')).toBeTruthy()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('does not fetch when a title came with the link', () => {
     renderQuick({ ...emptyDraft(), url: 'https://example.com/a', title: 'Given' })
     expect(pageDetails.mutateAsync).not.toHaveBeenCalled()
