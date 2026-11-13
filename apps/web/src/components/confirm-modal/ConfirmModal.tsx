@@ -9,6 +9,7 @@ type Props = {
   title: string
   body: string
   confirmLabel?: string
+  cancelLabel?: string
   confirmColor?: string
   loading?: boolean
 }
@@ -20,6 +21,7 @@ export function ConfirmModal({
   title,
   body,
   confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   confirmColor = 'red',
   loading,
 }: Props): ReactElement {
@@ -30,7 +32,7 @@ export function ConfirmModal({
         <Text size="sm">{body}</Text>
         <Group justify="flex-end" gap="sm">
           <Button variant="default" onClick={onClose} disabled={loading}>
-            Cancel
+            {cancelLabel}
           </Button>
           <Button color={confirmColor} onClick={onConfirm} loading={loading}>
             {confirmLabel}

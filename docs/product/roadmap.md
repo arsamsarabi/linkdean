@@ -24,12 +24,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
     - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.
 
-17. **Keep unsaved form changes when a drawer closes by accident** (S). Form drawers (bookmark, category, edit category, bulk edit, profile, report) close on Escape or a click outside and drop what was typed, with no warning.
-    - Track whether the form changed since it opened; when it has, closing by Escape, a click outside or the close button asks "Discard changes?" with **Keep editing** and **Discard**.
-    - An unchanged form closes at once, as today. Saving closes without asking.
-    - One shared hook or wrapper for every form drawer, so a new drawer gets it by default. It sits beside `useDrawerClosesOnEscape`, which already holds Escape back while a dialog is open on top.
-    - Open question: also keep a draft of the bookmark form for a reload or a closed tab, or only guard the close.
-
 ---
 
 ## Next: high value after the beta settles

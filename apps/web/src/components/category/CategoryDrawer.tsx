@@ -3,9 +3,10 @@ import { Box, Button, Checkbox, Drawer, LoadingOverlay, Select, Stack, TextInput
 import { notifications } from '@mantine/notifications'
 import { IconFolderPlus } from '@tabler/icons-react'
 import { useCreateCategory, useSyncDuringRender, useVaults } from '@/hooks'
-import { useDrawerSize } from '@/hooks/render'
+import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import { categorySelectData, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category } from '@/schemas'
+import { useDiscardGuard } from '../confirm-modal'
 import { CategoryIconPicker } from './CategoryIconPicker'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -19,6 +20,7 @@ type Props = {
 }
 
 export function CategoryDrawer({ opened, onClose, categories, defaultParentId = null }: Props): ReactElement {
+  const closeOnEscape = useDrawerClosesOnEscape()
   const drawerSize = useDrawerSize()
   const [name, setName] = useState('')
   const [parentId, setParentId] = useState<string | null>(null)
@@ -48,6 +50,9 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
     setIcon(null)
   })
 
+  const dirty = name.trim() !== '' || parentId !== defaultParentId || hidden || vaultId !== null || icon !== null
+  const { requestClose, discardModal } = useDiscardGuard(dirty, onClose)
+
   async function onCreate(): Promise<void> {
     try {
       await create.mutateAsync({
@@ -65,52 +70,63 @@ export function CategoryDrawer({ opened, onClose, categories, defaultParentId = 
   }
 
   return (
-    <Drawer opened={opened} onClose={onClose} title="New category" position="right" size={drawerSize} padding="lg">
-      <Box pos="relative">
-        <LoadingOverlay visible={create.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.currentTarget.value)}
-            data-autofocus
-          />
-          <Select
-            label="Parent"
-            data={parentOptions}
-            value={parentId ?? ''}
-            onChange={(v) => {
-              setParentId(v || null)
-              setVaultId(null)
-            }}
-            searchable
-            clearable
-          />
-          <CategoryIconPicker
-            value={icon}
-            onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
-          />
-          <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
-          <Select
-            label="Vault"
-            placeholder={parentCat ? 'Follows the parent category' : 'Not in a vault'}
-            clearable
-            disabled={!canChooseVault}
-            data={(vaults.data?.vaults ?? []).filter((v) => v.unlocked).map((v) => ({ value: v.id, label: v.name }))}
-            value={vaultId}
-            onChange={setVaultId}
-          />
-          <Button
-            leftSection={<IconFolderPlus {...iconSm} />}
-            onClick={() => void onCreate()}
-            disabled={!name.trim()}
-            loading={create.isPending}
-          >
-            Add category
-          </Button>
-        </Stack>
-      </Box>
-    </Drawer>
+    <>
+      <Drawer
+        opened={opened}
+        onClose={requestClose}
+        closeOnEscape={closeOnEscape}
+        title="New category"
+        position="right"
+        size={drawerSize}
+        padding="lg"
+      >
+        <Box pos="relative">
+          <LoadingOverlay visible={create.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
+          <Stack gap="md">
+            <TextInput
+              label="Name"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.currentTarget.value)}
+              data-autofocus
+            />
+            <Select
+              label="Parent"
+              data={parentOptions}
+              value={parentId ?? ''}
+              onChange={(v) => {
+                setParentId(v || null)
+                setVaultId(null)
+              }}
+              searchable
+              clearable
+            />
+            <CategoryIconPicker
+              value={icon}
+              onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
+            />
+            <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
+            <Select
+              label="Vault"
+              placeholder={parentCat ? 'Follows the parent category' : 'Not in a vault'}
+              clearable
+              disabled={!canChooseVault}
+              data={(vaults.data?.vaults ?? []).filter((v) => v.unlocked).map((v) => ({ value: v.id, label: v.name }))}
+              value={vaultId}
+              onChange={setVaultId}
+            />
+            <Button
+              leftSection={<IconFolderPlus {...iconSm} />}
+              onClick={() => void onCreate()}
+              disabled={!name.trim()}
+              loading={create.isPending}
+            >
+              Add category
+            </Button>
+          </Stack>
+        </Box>
+      </Drawer>
+      {discardModal}
+    </>
   )
 }

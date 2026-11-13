@@ -4,6 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { useCreateReport, useReportConfig } from '@/hooks'
 import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import type { AbuseReason, AbuseTargetType } from '@/schemas'
+import { useDiscardGuard } from '../confirm-modal'
 import { REPORT_DETAILS_MAX, REPORT_REASONS } from './reasons'
 
 type Props = {
@@ -26,6 +27,12 @@ export function ReportDrawer({ opened, onClose, targetType, targetId, subject }:
   const [details, setDetails] = useState('')
   const [error, setError] = useState<string | null>(null)
   const contact = config.data?.abuse_contact_email
+  const { requestClose, discardModal } = useDiscardGuard(reason !== null || details.trim() !== '', () => {
+    setReason(null)
+    setDetails('')
+    setError(null)
+    onClose()
+  })
 
   async function submit(): Promise<void> {
     if (!reason) return
@@ -47,61 +54,64 @@ export function ReportDrawer({ opened, onClose, targetType, targetId, subject }:
   }
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      closeOnEscape={closeOnEscape}
-      position="right"
-      size={drawerSize}
-      padding="lg"
-      title={`Report ${subject}`}
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          void submit()
-        }}
+    <>
+      <Drawer
+        opened={opened}
+        onClose={requestClose}
+        closeOnEscape={closeOnEscape}
+        position="right"
+        size={drawerSize}
+        padding="lg"
+        title={`Report ${subject}`}
       >
-        <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            An admin of this instance reviews every report. The person you report is not told who reported them.
-          </Text>
-          <Radio.Group
-            label="Why are you reporting this?"
-            required
-            value={reason}
-            onChange={(v) => setReason(v as AbuseReason)}
-          >
-            <Stack gap="xs" mt="xs">
-              {REPORT_REASONS.map((r) => (
-                <Radio key={r.value} value={r.value} label={r.label} />
-              ))}
-            </Stack>
-          </Radio.Group>
-          <Textarea
-            label="Details (optional)"
-            maxLength={REPORT_DETAILS_MAX}
-            autosize
-            minRows={3}
-            maxRows={8}
-            value={details}
-            onChange={(e) => setDetails(e.currentTarget.value)}
-          />
-          {error ? (
-            <Alert color="red" role="alert">
-              {error}
-            </Alert>
-          ) : null}
-          <Button type="submit" disabled={!reason} loading={create.isPending}>
-            Send report
-          </Button>
-          {contact ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submit()
+          }}
+        >
+          <Stack gap="md">
             <Text size="sm" c="dimmed">
-              To reach the operator directly, email <Anchor href={`mailto:${contact}`}>{contact}</Anchor>.
+              An admin of this instance reviews every report. The person you report is not told who reported them.
             </Text>
-          ) : null}
-        </Stack>
-      </form>
-    </Drawer>
+            <Radio.Group
+              label="Why are you reporting this?"
+              required
+              value={reason}
+              onChange={(v) => setReason(v as AbuseReason)}
+            >
+              <Stack gap="xs" mt="xs">
+                {REPORT_REASONS.map((r) => (
+                  <Radio key={r.value} value={r.value} label={r.label} />
+                ))}
+              </Stack>
+            </Radio.Group>
+            <Textarea
+              label="Details (optional)"
+              maxLength={REPORT_DETAILS_MAX}
+              autosize
+              minRows={3}
+              maxRows={8}
+              value={details}
+              onChange={(e) => setDetails(e.currentTarget.value)}
+            />
+            {error ? (
+              <Alert color="red" role="alert">
+                {error}
+              </Alert>
+            ) : null}
+            <Button type="submit" disabled={!reason} loading={create.isPending}>
+              Send report
+            </Button>
+            {contact ? (
+              <Text size="sm" c="dimmed">
+                To reach the operator directly, email <Anchor href={`mailto:${contact}`}>{contact}</Anchor>.
+              </Text>
+            ) : null}
+          </Stack>
+        </form>
+      </Drawer>
+      {discardModal}
+    </>
   )
 }
