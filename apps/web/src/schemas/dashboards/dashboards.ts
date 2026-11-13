@@ -19,6 +19,7 @@ export const dashboardItemSchema = z.object({
 export const dashboardSectionKindSchema = z.enum(['pinned', 'latest', 'most_opened', 'recently_visited'])
 export const dashboardSectionDisplaySchema = z.enum(['small', 'medium', 'large', 'icons'])
 export const dashboardOpenWindowSchema = z.enum(['last_30_days', 'all_time'])
+export const dashboardSectionWidthSchema = z.enum(['full', 'half', 'third'])
 
 export const DASHBOARD_SECTION_MIN_ITEMS = 4
 export const DASHBOARD_SECTION_MAX_ITEMS = 24
@@ -39,6 +40,7 @@ export const dashboardSectionSettingsSchema = z.object({
   item_limit: z.number().default(DASHBOARD_SECTION_DEFAULT_ITEMS),
   source: dashboardSectionSourceSchema.default({ favorites: false, unread: false }),
   open_window: dashboardOpenWindowSchema.default('all_time'),
+  width: dashboardSectionWidthSchema.default('full'),
 })
 
 export const dashboardSectionSchema = z
@@ -131,6 +133,7 @@ export type DashboardSection = z.infer<typeof dashboardSectionSchema>
 export type DashboardSectionKind = z.infer<typeof dashboardSectionKindSchema>
 export type DashboardSectionDisplay = z.infer<typeof dashboardSectionDisplaySchema>
 export type DashboardOpenWindow = z.infer<typeof dashboardOpenWindowSchema>
+export type DashboardSectionWidth = z.infer<typeof dashboardSectionWidthSchema>
 export type DashboardSectionSource = z.infer<typeof dashboardSectionSourceSchema>
 export type DashboardSectionSettings = z.infer<typeof dashboardSectionSettingsSchema>
 export type Dashboard = z.infer<typeof dashboardSchema>

@@ -78,6 +78,8 @@
 }
 
 .title {
+  min-width: 0;
+  max-width: 100%;
   font-weight: 700;
   font-size: var(--mantine-font-size-lg);
   line-height: 1.2;

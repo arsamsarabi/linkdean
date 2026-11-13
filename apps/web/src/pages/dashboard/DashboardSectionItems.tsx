@@ -5,9 +5,11 @@ import type { Bookmark, DashboardSectionDisplay, DashboardSectionKind } from '@/
 import { itemMeta } from '@/services'
 import styles from './DashboardSectionItems.module.css'
 
+// Columns follow the section's own width (container queries), so half and third sections fit.
+const SMALL_COLS = { base: 1, '440px': 2, '760px': 3, '1040px': 4 }
 const CARD_COLS = {
-  medium: { base: 1, xs: 2, sm: 3, lg: 4, xl: 6 },
-  large: { base: 1, sm: 2, lg: 3, xl: 4 },
+  medium: { base: 1, '360px': 2, '560px': 3, '760px': 4, '1100px': 6 },
+  large: { base: 1, '520px': 2, '820px': 3, '1100px': 4 },
 } as const
 
 export type SectionItem = {
@@ -57,72 +59,76 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
   }
   if (display === 'small') {
     return (
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 3, xl: 4 }} spacing="sm">
-        {items.map((item, i) => (
-          <Group key={item.bookmark.id} data-dash-tile className={styles.tile} gap="xs" wrap="nowrap" align="center">
-            {metas[i]!.rank ? null : <Keycap index={i} />}
-            {metas[i]!.rank ? (
-              <Text
-                className={styles.rankKey}
-                fw={700}
-                size="sm"
-                c="dimmed"
-                w={22}
-                ta="center"
-                style={{ flexShrink: 0 }}
-                aria-hidden
-              >
-                {metas[i]!.rank}
-              </Text>
-            ) : null}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <GlanceTile
-                bookmark={item.bookmark}
-                viewerUserId={viewerUserId}
-                meta={metas[i]!.text}
-                fresh={metas[i]!.fresh}
-              />
-            </div>
-          </Group>
-        ))}
-      </SimpleGrid>
+      <div className={styles.container}>
+        <SimpleGrid type="container" cols={SMALL_COLS} spacing="sm">
+          {items.map((item, i) => (
+            <Group key={item.bookmark.id} data-dash-tile className={styles.tile} gap="xs" wrap="nowrap" align="center">
+              {metas[i]!.rank ? null : <Keycap index={i} />}
+              {metas[i]!.rank ? (
+                <Text
+                  className={styles.rankKey}
+                  fw={700}
+                  size="sm"
+                  c="dimmed"
+                  w={22}
+                  ta="center"
+                  style={{ flexShrink: 0 }}
+                  aria-hidden
+                >
+                  {metas[i]!.rank}
+                </Text>
+              ) : null}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <GlanceTile
+                  bookmark={item.bookmark}
+                  viewerUserId={viewerUserId}
+                  meta={metas[i]!.text}
+                  fresh={metas[i]!.fresh}
+                />
+              </div>
+            </Group>
+          ))}
+        </SimpleGrid>
+      </div>
     )
   }
   return (
-    <SimpleGrid cols={CARD_COLS[display]} spacing="md">
-      {items.map((item, i) => {
-        const meta = metas[i]!
-        return (
-          <Stack key={item.bookmark.id} data-dash-tile className={styles.tile} gap={6}>
-            {metas[i]!.rank ? null : <Keycap index={i} />}
-            <BookmarkCard
-              bookmark={{ ...item.bookmark, can_write: false }}
-              viewerUserId={viewerUserId}
-              onEdit={() => undefined}
-              onDelete={() => undefined}
-            />
-            {meta.text || meta.rank || meta.fresh ? (
-              <Group gap={6} px={4}>
-                {meta.rank ? (
-                  <Badge size="sm" variant="filled" color="var(--dash-accent)" circle>
-                    {meta.rank}
-                  </Badge>
-                ) : null}
-                {meta.fresh ? (
-                  <Badge size="xs" variant="light" color="ice">
-                    New
-                  </Badge>
-                ) : null}
-                {meta.text ? (
-                  <Text size="xs" c="dimmed">
-                    {meta.text}
-                  </Text>
-                ) : null}
-              </Group>
-            ) : null}
-          </Stack>
-        )
-      })}
-    </SimpleGrid>
+    <div className={styles.container}>
+      <SimpleGrid type="container" cols={CARD_COLS[display]} spacing="md">
+        {items.map((item, i) => {
+          const meta = metas[i]!
+          return (
+            <Stack key={item.bookmark.id} data-dash-tile className={styles.tile} gap={6}>
+              {metas[i]!.rank ? null : <Keycap index={i} />}
+              <BookmarkCard
+                bookmark={{ ...item.bookmark, can_write: false }}
+                viewerUserId={viewerUserId}
+                onEdit={() => undefined}
+                onDelete={() => undefined}
+              />
+              {meta.text || meta.rank || meta.fresh ? (
+                <Group gap={6} px={4}>
+                  {meta.rank ? (
+                    <Badge size="sm" variant="filled" color="var(--dash-accent)" circle>
+                      {meta.rank}
+                    </Badge>
+                  ) : null}
+                  {meta.fresh ? (
+                    <Badge size="xs" variant="light" color="ice">
+                      New
+                    </Badge>
+                  ) : null}
+                  {meta.text ? (
+                    <Text size="xs" c="dimmed">
+                      {meta.text}
+                    </Text>
+                  ) : null}
+                </Group>
+              ) : null}
+            </Stack>
+          )
+        })}
+      </SimpleGrid>
+    </div>
   )
 }

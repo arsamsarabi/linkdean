@@ -1,0 +1,67 @@
+.card {
+  height: 100%;
+}
+
+.body {
+  padding: 4px 20px 18px;
+}
+
+.handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+/* The section or bookmark being dragged lifts off the board. */
+.dragging {
+  position: relative;
+  z-index: 2;
+  opacity: 0.92;
+}
+
+.dragging > * {
+  box-shadow:
+    0 0 0 2px var(--dash-accent, var(--mantine-color-violet-6)),
+    0 18px 40px -16px rgb(20 10 40 / 35%);
+}
+
+.titleInput input {
+  font-weight: 700;
+  font-size: var(--mantine-font-size-md);
+}
+
+.pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 6px 4px 4px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 10px;
+  background: var(--mantine-color-body);
+}
+
+.pinTitle {
+  overflow: hidden;
+  max-width: 220px;
+  font-size: var(--mantine-font-size-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.addTile {
+  display: grid;
+  min-height: 120px;
+  place-items: center;
+  border: 1.5px dashed var(--mantine-color-default-border);
+  border-radius: 16px;
+}
