@@ -11,7 +11,19 @@ type Props = {
   pendingDelete: boolean
 }
 
-export function BookmarkCardBadges({ bookmark: b, share, showOutgoing, pendingDelete }: Props): ReactElement {
+/** Status badges: shared, pending delete, broken link, favorite, unread, pinned, vault. Tags have their own toggle. */
+export function BookmarkCardBadges({ bookmark: b, share, showOutgoing, pendingDelete }: Props): ReactElement | null {
+  const any =
+    !!share ||
+    showOutgoing ||
+    pendingDelete ||
+    b.link_check_status === 'broken' ||
+    b.link_check_status === 'unreachable' ||
+    b.is_favorite ||
+    b.is_unread ||
+    b.is_pinned ||
+    b.is_vault
+  if (!any) return null
   return (
     <Group gap={4} mt="auto" pt={4}>
       {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} size="sm" /> : null}
@@ -56,11 +68,6 @@ export function BookmarkCardBadges({ bookmark: b, share, showOutgoing, pendingDe
           </Badge>
         </Tooltip>
       ) : null}
-      {(b.tags || []).map((t) => (
-        <Badge key={t} variant="outline" size="sm">
-          {t}
-        </Badge>
-      ))}
     </Group>
   )
 }
