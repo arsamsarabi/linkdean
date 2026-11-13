@@ -14,6 +14,12 @@ describe('useDrawerSize', () => {
     expect(result.current).toBe('100%')
   })
 
+  it('defaults to the shared drawer width on a wide viewport', () => {
+    vi.mocked(useMediaQuery).mockReturnValue(false)
+    const { result } = renderHook(() => useDrawerSize())
+    expect(result.current).toBe(520)
+  })
+
   it('keeps the desktop size on a wide viewport', () => {
     vi.mocked(useMediaQuery).mockReturnValue(false)
     const { result } = renderHook(() => useDrawerSize('lg'))
