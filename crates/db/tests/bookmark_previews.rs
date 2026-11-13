@@ -125,9 +125,12 @@ async fn failed_screenshots_are_retried_only_once_the_cooldown_has_passed() {
     assert!(!rows.contains(&(owner.id, never_tried)));
     assert!(!rows.contains(&(owner.id, removed)));
 
+    // Other tests add failed bookmarks to the same database in parallel, so the global
+    // count can move between the two queries. Compare against this owner's rows only.
+    let mine = rows.iter().filter(|(user, _)| *user == owner.id).count();
+    assert_eq!(mine, 1);
     let n = db::count_failed_previews(&pool, 24).await.expect("count");
-    assert!(n >= 1);
-    assert_eq!(n as usize, rows.len());
+    assert!(n as usize >= mine);
 }
 
 #[tokio::test]
