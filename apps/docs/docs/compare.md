@@ -42,8 +42,8 @@ Checked in November 2026 against each project's own site and README. These tools
 
 ## Where another tool fits better
 
-- **You want a copy of every page you save.** Linkdean stores page previews, not the page itself. If link rot worries you, [Linkwarden](https://linkwarden.app) and [Karakeep](https://karakeep.app) archive full pages, and [Raindrop.io](https://raindrop.io) does on Pro.
-- **You want AI to tag and summarize for you.** Karakeep is built around it, Linkwarden offers it with local models, and Raindrop.io has it on Pro. Linkdean has no AI features today.
+- **You want a copy of every page you save.** Linkdean stores page previews, not the page itself. If link rot worries you, [Linkwarden](https://linkwarden.app) and [Karakeep](https://karakeep.app) archive full pages, and [Raindrop.io](https://raindrop.io) does on Pro. Page copies, downloads and search inside pages are [next on the roadmap](/docs/roadmap#next-once-the-beta-settles).
+- **You want AI to tag and summarize for you.** Karakeep is built around it, Linkwarden offers it with local models, and Raindrop.io has it on Pro. Linkdean has no AI features today; opt-in AI assistance, with your own key or a local model, is [next on the roadmap](/docs/roadmap#next-once-the-beta-settles).
 - **You want highlights, annotations or RSS.** Linkwarden, Karakeep and Raindrop.io (Pro) have them; Linkdean does not.
 - **You want native phone apps.** Raindrop.io, Linkwarden and Karakeep ship them. Linkdean is an installable web app with share-sheet saving.
 - **You want an OSI open-source license.** Linkwarden and Karakeep are AGPL-3.0 and linkding is MIT. Linkdean's source is public under the PolyForm Noncommercial license: free for personal and non-commercial use, and forks are welcome, but commercial use needs a separate license.
@@ -56,4 +56,4 @@ Import from a browser export (Netscape HTML), a **Pocket** CSV, a **Raindrop.io*
 
 Leaving is just as easy: export everything as Linkdean JSON or browser HTML from **Config options**.
 
-Planned work that closes some of the gaps above is on the [roadmap](/docs/roadmap).
+Page archiving and AI assistance are next on the [roadmap](/docs/roadmap); other planned work that closes gaps above is there too.

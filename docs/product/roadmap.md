@@ -28,6 +28,26 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
 
 ## Next: high value after the beta settles
 
+Archiving and AI assistance come first: they are the biggest gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](../../apps/docs/docs/compare.md).
+
+12. **Archive & downloads** (L, in phases). Link rot is the main reason people keep bookmarks on their own server, and Linkwarden, Karakeep and Raindrop.io (Pro) all keep a copy of each page. Linkdean stores previews only.
+    - Phase 1, snapshots: when a bookmark is saved, the worker's existing headless Chrome also captures a single-file HTML copy and a PDF. Opt-in per account; stored on a separate archive volume and counted against the storage quota.
+    - Phase 2, page text: reader-mode text taken from the snapshot and indexed in Meilisearch, so search covers page contents, not only titles and notes.
+    - Downloads: per bookmark, download the copy as HTML, PDF or reader-mode Markdown. The full export gains an option to include archives (zip).
+    - Dead links: when the broken-link check finds a page gone, the bookmark offers its archived copy. Re-archive on demand.
+    - Vaults: archived copies of vault bookmarks are encrypted with the vault key and never indexed.
+    - Media (images, audio, video) last, behind a size cap per item and per account.
+    - Deploy: archive volume and mount convention, a worker concurrency limit, the archive volume in the restic backup, self-host settings to turn it off or cap it.
+    - Open questions: on by default for new accounts or opt-in; retention for deleted bookmarks; quota on the hosted beta.
+
+16. **AI assistance** (M–L). Karakeep is built around AI tagging, Linkwarden offers it with local models, and Raindrop.io has it on Pro. Linkdean has none. Add it without giving up the privacy stance.
+    - Off by default. Each account opts in; the operator chooses the provider: bring-your-own-key (any OpenAI-compatible API, or Anthropic) or a local model (Ollama) on a self-hosted instance.
+    - Workflows, in order: tag and folder suggestions when saving and in **File one by one** (extends the same-site suggestions); a short summary per bookmark (from the archived page text when there is one); semantic search ("that article about...") through Meilisearch hybrid search with embeddings; related-bookmark and near-duplicate hints.
+    - Suggestions, not silent changes: nothing is applied without a click, unless the person turns on auto-tagging.
+    - Vault contents never leave the server for a model. The settings page shows what is sent.
+    - Hosted service: a limited free allowance, more with your own key (ties into item 10).
+    - Depends on: phase 2 of item 12 for summaries and semantic search over page contents; tag suggestions do not.
+
 6. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
     - A daily digest for the noisy kinds.
     - A one-click unsubscribe link per kind in every notification email, with the `List-Unsubscribe` and `List-Unsubscribe-Post` headers.
@@ -64,12 +84,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
 
 ## Later
 
-12. **Archive & downloads** (L). Protects against link rot, which is the main reason people keep bookmarks in a self-hosted app. Heavy infrastructure.
-    - Opt-in local cache of bookmarked pages.
-    - Download / export: PDF, Markdown (reader mode), images, audio, video.
-    - Separate storage volume and a background job queue.
-    - Deploy: archive worker and volume mount convention.
-
 13. **Organizations and teams** (L). Organizations own shared content in team spaces, with owner, admin, member and guest roles, team roles, restricted folders, email invites, lifecycle rules and a basic audit log. Personal libraries stay private and unchanged. Requirements: [organizations and teams design](../design/organizations-and-teams.md). After v1:
     - Invite links (role, expiry, use limit; off by default).
     - Verified domains (DNS TXT proof), then auto-join for matching verified addresses.
@@ -88,7 +102,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
 
 Revisit once the stages above are done.
 
-- **AI features** (?). To explore: which features (for example auto-tagging, summaries, semantic search), a free tier with limited usage, and bring-your-own-key (BYOK), possibly for a discount on paid plans. Idea from `docs/product/ideas.md`.
 - **Client-held vault key** (L). True end-to-end encryption, where the server never sees the key. Makes vault search much harder.
 - **Cheap VPS** (S–M). Move the same Compose stack off the homelab when outages, upload bandwidth, CPU, or abuse on the home connection start to matter, or when charging begins. Same [quick-start.md](../self-hosting/quick-start.md); no multi-instance code changes. Triggers and notes: [managed-service.md](../ops/managed-service.md#when-to-move-off-the-home-server).
 - **GCP deployment** (L). Multi-instance managed hosting when one server is no longer enough: Cloud Run, Cloud SQL, object storage, shared rate limits, worker split, Terraform, Stripe and plan gates. Full plan: [managed-service.md](../ops/managed-service.md#moving-to-gcp).
