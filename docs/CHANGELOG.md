@@ -20,6 +20,7 @@
 
 ### Changed
 
+- Bookmark cards: folders now sit right under the title, shown as breadcrumbs, and tags hide behind a **N tags** toggle so cards stay short. List rows open tags in a popover.
 - The library list filters, sorts and pages in the database, so each page costs the same however large the library is.
 - Privacy Policy (version 2026-11-11): describes page-view statistics, and what the extension's saved-page icon reads.
 - **Import from URL** on the bookmark form now replaces the title and description with the page's, and adds its tags, instead of filling only empty fields.

@@ -12,6 +12,7 @@ import styles from './BookmarkCard.module.css'
 import { BookmarkCardBadges } from './BookmarkCardBadges'
 import { BookmarkCardMenu } from './BookmarkCardMenu'
 import { BookmarkCardPreview, BookmarkFavicon } from './BookmarkCardPreview'
+import { BookmarkCardTags } from './BookmarkCardTags'
 import type { BookmarkCardItem } from './bookmarkCardTypes'
 
 export type { BookmarkCardItem } from './bookmarkCardTypes'
@@ -179,7 +180,7 @@ export function BookmarkCard({
               className={styles.categoryLink}
             >
               <Pill size="sm" className={styles.categoryPill}>
-                {c.path}
+                <CategoryCrumbs path={c.path} />
               </Pill>
             </Link>
           </Tooltip>
@@ -223,6 +224,7 @@ export function BookmarkCard({
       </Stack>
       <Group gap={6} className={styles.rowMeta}>
         {folders}
+        <BookmarkCardTags tags={b.tags || []} variant="row" />
         {badges}
       </Group>
       <div className={styles.rowMenu}>{menu}</div>
@@ -253,6 +255,10 @@ export function BookmarkCard({
               {menu}
             </Group>
 
+            {/* Folders always show under the title; tags wait behind a toggle so the card stays short. */}
+            {folders}
+            <BookmarkCardTags tags={b.tags || []} />
+
             <Text size="xs" c="dimmed" lineClamp={1} title={b.url}>
               {b.url}
             </Text>
@@ -264,8 +270,6 @@ export function BookmarkCard({
                 </Text>
               </Spoiler>
             ) : null}
-
-            {folders}
 
             {badges}
           </Stack>
@@ -291,5 +295,24 @@ export function BookmarkCard({
         />
       ) : null}
     </>
+  )
+}
+
+/** A folder path ("Work / Projects / Linkdean") as breadcrumbs, the folder itself in full weight. */
+function CategoryCrumbs({ path }: { path: string }): ReactElement {
+  const parts = path.split(' / ')
+  return (
+    <span className={styles.crumbs}>
+      {parts.map((part, i) => (
+        <span key={i} className={i === parts.length - 1 ? styles.crumbLeaf : styles.crumbParent}>
+          {i > 0 ? (
+            <span className={styles.crumbSep} aria-hidden>
+              ›
+            </span>
+          ) : null}
+          {part}
+        </span>
+      ))}
+    </span>
   )
 }

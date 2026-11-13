@@ -90,6 +90,13 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - The collapsed choice stays saved per browser, as it is now.
     - Check at tablet and desktop widths, in both themes, and with keyboard focus moving through the rail.
 
+21. **Quick peek** (M). Checking what a bookmark is means opening a new tab and coming back. A peek shows the page inside Linkdean, from any bookmark card, row or dashboard tile.
+    - Opens in a panel with window controls: maximize to fill the app, minimize to a small bar that stays open while you browse, detach into its own browser window, open in a new tab, and close. Esc closes it; the panel keeps its size and place per browser.
+    - Many sites refuse to be shown inside another page (`X-Frame-Options` or CSP `frame-ancestors`), and the frame then stays blank. Detect it where possible and fall back to the bookmark's preview image, title and description, with an "Open in new tab" button. Once **Archive & downloads** (12) lands, the fallback shows the archived copy or its reader-mode text.
+    - Security: the app's CSP allows frames only from Cloudflare Turnstile today (`frame-src` in `crates/api/src/security.rs`). Peek needs `frame-src https:` and a sandboxed iframe (no same-origin access, no top navigation), so a peeked page cannot reach the user's session. Vault bookmarks stay out of peek, or need an explicit confirm.
+    - Opening a page in peek counts as an open, the same as clicking the link.
+    - Open questions: a keyboard shortcut (Space on the focused bookmark?), whether peek is a user setting or always on, and whether the desktop app (Far out) uses a real webview without the frame limits.
+
 ---
 
 ## Later
