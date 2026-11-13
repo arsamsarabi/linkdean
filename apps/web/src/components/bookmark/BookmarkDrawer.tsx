@@ -130,6 +130,11 @@ export function BookmarkDrawer({
         if (withWebScheme(d.url) !== url) return d
         return replace ? replaceFromPage(before, d, details) : fillFromPage(d, details)
       })
+      // The automatic quick-save fill is not the person's edit: fill the baseline the same way,
+      // so closing without typing anything does not ask about discarding it.
+      if (!replace) {
+        setBaseline((b) => (withWebScheme(b.url) === url ? fillFromPage(b, details) : b))
+      }
       if (!details.title && !details.description && details.tags.length === 0) {
         setFetchNote({ error: false, text: 'The page did not share a title, description or tags.' })
       }
