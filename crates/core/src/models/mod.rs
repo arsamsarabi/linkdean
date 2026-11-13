@@ -1305,7 +1305,10 @@ pub struct DashboardSection {
     pub source_favorites: bool,
     pub source_unread: bool,
     pub open_window: String,
-    pub width: String,
+    pub grid_x: i32,
+    pub grid_y: i32,
+    pub grid_w: i32,
+    pub grid_h: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -1325,7 +1328,12 @@ impl DashboardSection {
                 unread: self.source_unread,
             },
             open_window: DashboardOpenWindow::parse(&self.open_window).unwrap_or_default(),
-            width: DashboardSectionWidth::parse(&self.width).unwrap_or_default(),
+            layout: DashboardSectionLayout {
+                x: self.grid_x,
+                y: self.grid_y,
+                w: self.grid_w,
+                h: self.grid_h,
+            },
         }
     }
 }
@@ -1403,32 +1411,49 @@ impl DashboardSectionDisplay {
     }
 }
 
-/// How much of the board's width a section takes. Phones always show full width.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DashboardSectionWidth {
-    #[default]
-    Full,
-    Half,
-    Third,
+pub const DASHBOARD_GRID_COLS: i32 = 12;
+pub const DASHBOARD_SECTION_MIN_W: i32 = 3;
+pub const DASHBOARD_SECTION_MIN_H: i32 = 3;
+pub const DASHBOARD_SECTION_MAX_H: i32 = 30;
+const DASHBOARD_GRID_MAX_Y: i32 = 10_000;
+
+/// A section's place and size on the dashboard's 12-column grid, in grid units. The web app
+/// packs sections upward, so `y` orders them more than it places them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DashboardSectionLayout {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
 }
 
-impl DashboardSectionWidth {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Full => "full",
-            Self::Half => "half",
-            Self::Third => "third",
+impl Default for DashboardSectionLayout {
+    /// Full width at the top; the grid pushes the others down.
+    fn default() -> Self {
+        Self {
+            x: 0,
+            y: 0,
+            w: DASHBOARD_GRID_COLS,
+            h: 8,
         }
     }
+}
 
-    pub fn parse(s: &str) -> Option<Self> {
-        Some(match s {
-            "full" => Self::Full,
-            "half" => Self::Half,
-            "third" => Self::Third,
-            _ => return None,
-        })
+impl DashboardSectionLayout {
+    pub fn check(self) -> crate::Result<Self> {
+        let fits = (DASHBOARD_SECTION_MIN_W..=DASHBOARD_GRID_COLS).contains(&self.w)
+            && (DASHBOARD_SECTION_MIN_H..=DASHBOARD_SECTION_MAX_H).contains(&self.h)
+            && self.x >= 0
+            && self.x + self.w <= DASHBOARD_GRID_COLS
+            && (0..=DASHBOARD_GRID_MAX_Y).contains(&self.y);
+        if fits {
+            Ok(self)
+        } else {
+            Err(crate::Error::BadRequest(format!(
+                "a section is {DASHBOARD_SECTION_MIN_W} to {DASHBOARD_GRID_COLS} columns wide, \
+                 {DASHBOARD_SECTION_MIN_H} to {DASHBOARD_SECTION_MAX_H} rows tall, and inside the grid"
+            )))
+        }
     }
 }
 
@@ -1499,7 +1524,7 @@ pub struct DashboardSectionSettings {
     #[serde(default)]
     pub open_window: DashboardOpenWindow,
     #[serde(default)]
-    pub width: DashboardSectionWidth,
+    pub layout: DashboardSectionLayout,
 }
 
 impl Default for DashboardSectionSettings {
@@ -1510,7 +1535,7 @@ impl Default for DashboardSectionSettings {
             item_limit: DASHBOARD_SECTION_DEFAULT_ITEMS,
             source: DashboardSectionSource::default(),
             open_window: DashboardOpenWindow::default(),
-            width: DashboardSectionWidth::default(),
+            layout: DashboardSectionLayout::default(),
         }
     }
 }
@@ -1533,6 +1558,7 @@ impl DashboardSectionSettings {
             // Pinned and Recently visited have no source.
             self.source = DashboardSectionSource::default();
         }
+        self.layout = self.layout.check()?;
         Ok(self)
     }
 }

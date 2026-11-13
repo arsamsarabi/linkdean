@@ -5,8 +5,8 @@
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CreateBookmark, CreateCategory, CreateDashboard, CreateDashboardShare, DashboardOpenWindow,
-    DashboardSectionDisplay, DashboardSectionKind, DashboardSectionSettings,
-    DashboardSectionSource, DashboardSectionWidth, DashboardView, Error, PutDashboardLayout,
+    DashboardSectionDisplay, DashboardSectionKind, DashboardSectionLayout,
+    DashboardSectionSettings, DashboardSectionSource, DashboardView, Error, PutDashboardLayout,
     PutDashboardSection, ShareAccess, User,
 };
 use linkdean_db::{self as db};
@@ -681,15 +681,15 @@ async fn items_carry_the_viewers_opens() {
 }
 
 #[tokio::test]
-async fn section_widths_are_kept_and_survive_export_and_import() {
+async fn section_grid_places_are_kept_and_survive_export_and_import() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
-    let owner = user(&pool, "width").await;
-    let a = bookmark(&pool, &owner, at("https://width.example/a")).await;
+    let owner = user(&pool, "grid").await;
+    let a = bookmark(&pool, &owner, at("https://grid.example/a")).await;
     let id = board(&pool, &owner).await;
-    let sized = |width| DashboardSectionSettings {
-        width,
+    let placed = |x, y, w, h| DashboardSectionSettings {
+        layout: DashboardSectionLayout { x, y, w, h },
         ..Default::default()
     };
     let view = put(
@@ -698,23 +698,38 @@ async fn section_widths_are_kept_and_survive_export_and_import() {
         id,
         vec![
             PutDashboardSection {
-                title: "Half".into(),
+                title: "Wide".into(),
                 bookmark_ids: vec![a],
-                settings: sized(DashboardSectionWidth::Half),
+                settings: placed(0, 0, 8, 5),
             },
-            section("Third", sized(DashboardSectionWidth::Third)),
-            section("Full", DashboardSectionSettings::default()),
+            section("Tall", placed(8, 0, 4, 12)),
+            section("Under", placed(0, 5, 8, 7)),
         ],
     )
     .await
     .expect("layout");
-    let widths: Vec<_> = view.sections.iter().map(|s| s.settings.width).collect();
+    let layouts: Vec<_> = view.sections.iter().map(|s| s.settings.layout).collect();
     assert_eq!(
-        widths,
+        layouts,
         [
-            DashboardSectionWidth::Half,
-            DashboardSectionWidth::Third,
-            DashboardSectionWidth::Full
+            DashboardSectionLayout {
+                x: 0,
+                y: 0,
+                w: 8,
+                h: 5
+            },
+            DashboardSectionLayout {
+                x: 8,
+                y: 0,
+                w: 4,
+                h: 12
+            },
+            DashboardSectionLayout {
+                x: 0,
+                y: 5,
+                w: 8,
+                h: 7
+            },
         ]
     );
 
@@ -725,18 +740,54 @@ async fn section_widths_are_kept_and_survive_export_and_import() {
         cats, bms, dashboards,
     ))
     .expect("json");
-    let other = user(&pool, "width-import").await;
+    let other = user(&pool, "grid-import").await;
     let parsed = linkdean_core::import_export::parse_linkdean_json(&raw).expect("parse");
     db::apply_parsed_import(&pool, other.id, parsed)
         .await
         .expect("import");
-    let imported: Vec<String> = sqlx::query_scalar(
-        "SELECT s.width FROM dashboard_sections s JOIN dashboards d ON d.id = s.dashboard_id
-         WHERE d.owner_user_id = $1 AND s.title IN ('Half', 'Third') ORDER BY s.title",
+    let imported: Vec<(i32, i32, i32, i32)> = sqlx::query_as(
+        "SELECT s.grid_x, s.grid_y, s.grid_w, s.grid_h FROM dashboard_sections s
+         JOIN dashboards d ON d.id = s.dashboard_id
+         WHERE d.owner_user_id = $1 AND s.title = 'Tall'",
     )
     .bind(other.id)
     .fetch_all(&pool)
     .await
-    .expect("widths");
-    assert_eq!(imported, ["half", "third"]);
+    .expect("grid");
+    assert_eq!(imported, [(8, 0, 4, 12)]);
+}
+
+#[tokio::test]
+async fn section_grid_places_outside_the_grid_are_refused() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "grid-bad").await;
+    let id = board(&pool, &owner).await;
+    for (x, y, w, h) in [
+        (10, 0, 4, 8),
+        (0, 0, 2, 8),
+        (0, 0, 12, 2),
+        (0, 0, 12, 31),
+        (-1, 0, 4, 8),
+    ] {
+        let err = put(
+            &pool,
+            &owner,
+            id,
+            vec![section(
+                "Bad",
+                DashboardSectionSettings {
+                    layout: DashboardSectionLayout { x, y, w, h },
+                    ..Default::default()
+                },
+            )],
+        )
+        .await
+        .expect_err("refused");
+        assert!(
+            matches!(err, Error::BadRequest(_)),
+            "{x},{y},{w},{h}: {err:?}"
+        );
+    }
 }
