@@ -592,3 +592,96 @@ async fn a_folder_source_must_be_the_owners_and_a_deleted_one_empties_the_sectio
         .expect("view");
     assert!(view.sections[0].items.is_empty());
 }
+
+#[tokio::test]
+async fn items_carry_the_viewers_opens_and_the_view_carries_their_counts() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "counts").await;
+    let a = bookmark(
+        &pool,
+        &owner,
+        CreateBookmark {
+            is_unread: true,
+            is_favorite: true,
+            ..at("https://counts.example/a")
+        },
+    )
+    .await;
+    let b = bookmark(&pool, &owner, at("https://counts.example/b")).await;
+    bookmark(&pool, &owner, at("https://counts.example/never")).await;
+    for _ in 0..3 {
+        db::record_bookmark_open(&pool, owner.id, a)
+            .await
+            .expect("open a");
+    }
+    db::record_bookmark_open(&pool, owner.id, b)
+        .await
+        .expect("open b");
+    // Two of a's opens fall outside the 30-day window.
+    sqlx::query(
+        "UPDATE bookmark_opens SET opened_at = now() - interval '40 days'
+         WHERE ctid IN (SELECT ctid FROM bookmark_opens WHERE user_id = $1 AND bookmark_id = $2 LIMIT 2)",
+    )
+    .bind(owner.id)
+    .bind(a)
+    .execute(&pool)
+    .await
+    .expect("age");
+
+    let opened = |window| DashboardSectionSettings {
+        kind: DashboardSectionKind::MostOpened,
+        open_window: window,
+        ..Default::default()
+    };
+    let id = board(&pool, &owner).await;
+    let view = put(
+        &pool,
+        &owner,
+        id,
+        vec![
+            section("All time", opened(DashboardOpenWindow::AllTime)),
+            section("30 days", opened(DashboardOpenWindow::Last30Days)),
+            section("Latest", latest(DashboardSectionSource::default())),
+        ],
+    )
+    .await
+    .expect("layout");
+
+    let counts = |i: usize| -> Vec<(String, Option<i64>)> {
+        view.sections[i]
+            .items
+            .iter()
+            .map(|it| (it.bookmark.url.clone(), it.open_count))
+            .collect()
+    };
+    assert_eq!(
+        counts(0),
+        [
+            ("https://counts.example/a".to_string(), Some(3)),
+            ("https://counts.example/b".to_string(), Some(1)),
+        ]
+    );
+    // A tie in the window goes to the one opened last.
+    assert_eq!(
+        counts(1),
+        [
+            ("https://counts.example/b".to_string(), Some(1)),
+            ("https://counts.example/a".to_string(), Some(1)),
+        ]
+    );
+    let never = view.sections[2]
+        .items
+        .iter()
+        .find(|it| it.bookmark.url.ends_with("/never"))
+        .expect("never");
+    assert_eq!(never.open_count, None);
+    assert!(never.last_opened_at.is_none());
+
+    assert_eq!(view.stats.total, 3);
+    assert_eq!(view.stats.saved_this_week, 3);
+    assert_eq!(view.stats.unread, 1);
+    assert_eq!(view.stats.favorites, 1);
+    assert_eq!(view.stats.opened_today, 2);
+}

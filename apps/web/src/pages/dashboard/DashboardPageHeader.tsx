@@ -1,5 +1,5 @@
-import { type ReactElement } from 'react'
-import { ActionIcon, Badge, Button, Group, Menu, Select, Stack, Text, TextInput, Title } from '@mantine/core'
+import { useState, type ReactElement } from 'react'
+import { ActionIcon, Badge, Button, CloseButton, Group, Menu, Select, Stack, Text, TextInput } from '@mantine/core'
 import {
   IconDeviceFloppy,
   IconDotsVertical,
@@ -7,13 +7,16 @@ import {
   IconPencil,
   IconPin,
   IconPlus,
+  IconSearch,
   IconShare,
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
 import { ShareBadge } from '@/components'
 import type { Dashboard } from '@/schemas'
-import type { DashboardDraft } from '@/services'
+import { greeting, type DashboardDraft } from '@/services'
+import styles from './DashboardHero.module.css'
+import { DashboardStatsRow } from './DashboardStatsRow'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -30,6 +33,10 @@ type Props = {
   createPending: boolean
   pinPending: boolean
   savePending: boolean
+  /** First name or display name for the greeting; omitted when unknown. */
+  viewerName: string | null
+  filter: string
+  onFilterChange: (filter: string) => void
   onDraftTitleChange: (title: string) => void
   onSelectDashboard: (id: string | null) => void
   onCreate: () => void
@@ -55,6 +62,9 @@ export function DashboardPageHeader({
   createPending,
   pinPending,
   savePending,
+  viewerName,
+  filter,
+  onFilterChange,
   onDraftTitleChange,
   onSelectDashboard,
   onCreate,
@@ -66,8 +76,19 @@ export function DashboardPageHeader({
   onSave,
   onStartEdit,
 }: Props): ReactElement {
+  const [today] = useState(() => new Date())
+  const date = today.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
   return (
-    <Stack gap="xs">
+    <Stack className={styles.hero} gap="lg">
+      {!draft ? (
+        <Stack gap={4}>
+          <Text className={styles.eyebrow}>{date}</Text>
+          <Text className={styles.greeting}>
+            {greeting(today)}
+            {viewerName ? `, ${viewerName}` : ''}
+          </Text>
+        </Stack>
+      ) : null}
       <Group justify="space-between" align="center" wrap="wrap" gap="md">
         {draft ? (
           <TextInput
@@ -79,7 +100,9 @@ export function DashboardPageHeader({
           />
         ) : (
           <Group gap="sm" align="center" wrap="wrap" style={{ flex: '1 1 220px', minWidth: 220 }}>
-            <Title order={2}>{view.title}</Title>
+            <Text component="h1" className={styles.title}>
+              {view.title}
+            </Text>
             {inviteeAccess ? <ShareBadge access={inviteeAccess} ownerLabel={view.owner_display_name} /> : null}
             {isOwner && view.shared_out ? <ShareBadge outgoing sharedWith={view.shared_with} /> : null}
             {view.deleted_at ? (
@@ -89,7 +112,7 @@ export function DashboardPageHeader({
             ) : null}
           </Group>
         )}
-        <Group gap="sm" wrap="nowrap" align="center">
+        <Group gap="sm" wrap="wrap" align="center">
           {!draft ? (
             <Select
               aria-label="Switch dashboard"
@@ -165,11 +188,33 @@ export function DashboardPageHeader({
           ) : null}
         </Group>
       </Group>
-      <Text size="sm" c="dimmed">
-        {draft
-          ? 'Editing layout — pick bookmarks, then Save. Manage bookmarks in the library.'
-          : 'Glance at pinned links. Switch boards or set a default pin.'}
-      </Text>
+      {draft ? (
+        <Text size="sm" c="dimmed">
+          Editing layout: add sections, pick bookmarks, then Save. Manage bookmarks in the library.
+        </Text>
+      ) : (
+        <>
+          <DashboardStatsRow stats={view.stats} />
+          <TextInput
+            aria-label="Filter this dashboard"
+            placeholder="Filter this dashboard by title, site or tag"
+            leftSection={<IconSearch {...iconSm} />}
+            value={filter}
+            onChange={(e) => onFilterChange(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && filter) {
+                e.stopPropagation()
+                onFilterChange('')
+              }
+            }}
+            rightSection={
+              filter ? <CloseButton size="sm" aria-label="Clear filter" onClick={() => onFilterChange('')} /> : null
+            }
+            radius="md"
+            size="md"
+          />
+        </>
+      )}
     </Stack>
   )
 }

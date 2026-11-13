@@ -4,7 +4,7 @@ import { IconExternalLink, IconLock, IconWorld } from '@tabler/icons-react'
 import { ShareBadge } from '@/components/share-badge'
 import { useRecordBookmarkOpen } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
-import { googleFavicon } from '@/services'
+import { googleFavicon, hostname } from '@/services'
 import { ApiImage } from './ApiImage'
 import styles from './GlanceTile.module.css'
 
@@ -24,9 +24,13 @@ export type GlanceTileItem = {
 type Props = {
   bookmark: GlanceTileItem
   viewerUserId?: string
+  /** Shown after the site instead of the full address, such as "12 opens" or "2h ago". */
+  meta?: string | null
+  /** Marks a bookmark saved in the last day. */
+  fresh?: boolean
 }
 
-export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
+export function GlanceTile({ bookmark: b, viewerUserId, meta, fresh = false }: Props): ReactElement {
   const title = b.title.trim() || 'Untitled'
   const [iconFailed, setIconFailed] = useState(false)
   const recordOpen = useRecordBookmarkOpen()
@@ -61,6 +65,11 @@ export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
             </Text>
             {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} /> : null}
             {showOutgoing ? <ShareBadge outgoing sharedWith={b.shared_with} /> : null}
+            {fresh ? (
+              <Tooltip label="Saved in the last day">
+                <span className={styles.fresh} role="img" aria-label="New" />
+              </Tooltip>
+            ) : null}
             {b.is_vault ? (
               <Tooltip label="Stored in vault">
                 <Badge size="xs" variant="light" leftSection={<IconLock size={8} stroke={1.5} />}>
@@ -70,7 +79,7 @@ export function GlanceTile({ bookmark: b, viewerUserId }: Props): ReactElement {
             ) : null}
           </Group>
           <Text size="xs" c="dimmed" lineClamp={1} title={b.url}>
-            {b.url}
+            {meta ? `${hostname(b.url)} · ${meta}` : b.url}
           </Text>
         </div>
         <IconExternalLink size={14} stroke={1.5} className={styles.external} aria-hidden />

@@ -1,50 +1,105 @@
-import { type ReactElement } from 'react'
-import { Group, SimpleGrid } from '@mantine/core'
+import { useState, type ReactElement } from 'react'
+import { Badge, Group, SimpleGrid, Stack, Text } from '@mantine/core'
 import { BookmarkCard, GlanceTile, IconTile } from '@/components'
-import type { Bookmark, DashboardSectionDisplay } from '@/schemas'
+import type { Bookmark, DashboardSectionDisplay, DashboardSectionKind } from '@/schemas'
+import { itemMeta } from '@/services'
 
 const CARD_COLS = {
-  medium: { base: 1, xs: 2, sm: 4, lg: 6, xl: 8 },
+  medium: { base: 1, xs: 2, sm: 3, lg: 4, xl: 6 },
   large: { base: 1, sm: 2, lg: 3, xl: 4 },
 } as const
 
+export type SectionItem = {
+  bookmark: Bookmark
+  open_count?: number | null
+  last_opened_at?: string | null
+}
+
 type Props = {
+  kind: DashboardSectionKind
   display: DashboardSectionDisplay
-  bookmarks: Bookmark[]
+  items: SectionItem[]
   viewerUserId: string | undefined
 }
 
-/** A section's bookmarks in its display mode: icons, small tiles, or medium or large cards. */
-export function DashboardSectionItems({ display, bookmarks, viewerUserId }: Props): ReactElement {
+/**
+ * A section's bookmarks in its display mode: icons, small tiles, or medium or large cards.
+ * Each one carries what its section adds: rank and opens, when it was opened, or when saved.
+ * Every link sits inside a `data-dash-tile` box so the keyboard can move between them.
+ */
+export function DashboardSectionItems({ kind, display, items, viewerUserId }: Props): ReactElement {
+  // Fixed at mount: "2h ago" need not tick while the page is open.
+  const [now] = useState(() => Date.now())
+  const metas = items.map((item, i) => itemMeta({ kind }, item, i, now))
+
   if (display === 'icons') {
     return (
-      <Group gap="sm">
-        {bookmarks.map((b) => (
-          <IconTile key={b.id} bookmark={b} />
+      <Group gap="md">
+        {items.map((item, i) => (
+          <div key={item.bookmark.id} data-dash-tile>
+            <IconTile bookmark={item.bookmark} meta={metas[i]!.text} rank={metas[i]!.rank} fresh={metas[i]!.fresh} />
+          </div>
         ))}
       </Group>
     )
   }
   if (display === 'small') {
     return (
-      <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, lg: 4, xl: 5 }} spacing="sm">
-        {bookmarks.map((b) => (
-          <GlanceTile key={b.id} bookmark={b} viewerUserId={viewerUserId} />
+      <SimpleGrid cols={{ base: 1, xs: 2, md: 3, xl: 4 }} spacing="sm">
+        {items.map((item, i) => (
+          <Group key={item.bookmark.id} data-dash-tile gap="xs" wrap="nowrap" align="center">
+            {metas[i]!.rank ? (
+              <Text fw={700} size="sm" c="dimmed" w={22} ta="right" style={{ flexShrink: 0 }} aria-hidden>
+                {metas[i]!.rank}
+              </Text>
+            ) : null}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <GlanceTile
+                bookmark={item.bookmark}
+                viewerUserId={viewerUserId}
+                meta={metas[i]!.text}
+                fresh={metas[i]!.fresh}
+              />
+            </div>
+          </Group>
         ))}
       </SimpleGrid>
     )
   }
   return (
-    <SimpleGrid cols={CARD_COLS[display]} spacing="sm">
-      {bookmarks.map((b) => (
-        <BookmarkCard
-          key={b.id}
-          bookmark={{ ...b, can_write: false }}
-          viewerUserId={viewerUserId}
-          onEdit={() => undefined}
-          onDelete={() => undefined}
-        />
-      ))}
+    <SimpleGrid cols={CARD_COLS[display]} spacing="md">
+      {items.map((item, i) => {
+        const meta = metas[i]!
+        return (
+          <Stack key={item.bookmark.id} data-dash-tile gap={6}>
+            <BookmarkCard
+              bookmark={{ ...item.bookmark, can_write: false }}
+              viewerUserId={viewerUserId}
+              onEdit={() => undefined}
+              onDelete={() => undefined}
+            />
+            {meta.text || meta.rank || meta.fresh ? (
+              <Group gap={6} px={4}>
+                {meta.rank ? (
+                  <Badge size="sm" variant="filled" color="var(--dash-accent)" circle>
+                    {meta.rank}
+                  </Badge>
+                ) : null}
+                {meta.fresh ? (
+                  <Badge size="xs" variant="light" color="ice">
+                    New
+                  </Badge>
+                ) : null}
+                {meta.text ? (
+                  <Text size="xs" c="dimmed">
+                    {meta.text}
+                  </Text>
+                ) : null}
+              </Group>
+            ) : null}
+          </Stack>
+        )
+      })}
     </SimpleGrid>
   )
 }

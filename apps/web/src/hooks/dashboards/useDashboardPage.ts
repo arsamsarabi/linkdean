@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { notifications } from '@mantine/notifications'
 import { useMe } from '@/hooks/auth'
 import { useTagNames } from '@/hooks/bookmarks'
 import { useCategories } from '@/hooks/categories'
 import { categoryPath } from '@/lib'
-import { dashboardToShowInstead, mergeDashboardBookmarks, sectionFillsItself } from '@/services'
+import { dashboardToShowInstead, layoutWithPin, mergeDashboardBookmarks, sectionFillsItself } from '@/services'
 import { useDashboard, usePutDashboard } from './useDashboard'
 import { useDashboardBoard } from './useDashboardBoard'
 import { useDashboardEdit } from './useDashboardEdit'
@@ -36,6 +37,8 @@ export function useDashboardPage() {
   }, [loadFailed, activeId])
 
   const viewerUserId = me.data?.user.id
+  const viewerName = me.data?.user.display_name?.trim().split(/\s+/)[0] || null
+  const [filter, setFilter] = useState('')
   const view = dashboard.data
   const access = board.accessFlags(view)
 
@@ -65,8 +68,25 @@ export function useDashboardPage() {
   const canAddSelfFilling = access.isOwner && !hasShares
   const selfFillingSections = (view?.sections ?? []).filter(sectionFillsItself).map((s) => s.title)
 
+  /** Pins a bookmark to a section straight from the dashboard. True once saved. */
+  async function quickPin(sectionId: string, bookmarkId: string): Promise<boolean> {
+    if (!view || !board.activeId) return false
+    try {
+      await save.mutateAsync({ id: board.activeId, body: layoutWithPin(view, sectionId, bookmarkId) })
+      notifications.show({ message: 'Pinned' })
+      return true
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+      return false
+    }
+  }
+
   return {
     list: board.list,
+    viewerName,
+    filter,
+    setFilter,
+    quickPin,
     dashboard,
     activeId: board.activeId,
     viewerUserId,

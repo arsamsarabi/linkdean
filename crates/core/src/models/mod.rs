@@ -1530,6 +1530,23 @@ pub struct DashboardItemView {
     pub id: Uuid,
     pub position: i32,
     pub bookmark: BookmarkView,
+    /// How often the viewer opened it: in the last 30 days for a section counting that
+    /// window, otherwise of all time. Absent when never opened.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open_count: Option<i64>,
+    /// When the viewer last opened it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_opened_at: Option<DateTime<Utc>>,
+}
+
+/// The viewer's own library at a glance, for the dashboard header.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DashboardStats {
+    pub total: i64,
+    pub saved_this_week: i64,
+    pub unread: i64,
+    pub favorites: i64,
+    pub opened_today: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1562,6 +1579,9 @@ pub struct DashboardView {
     pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// The viewer's own library counts, whoever owns the dashboard.
+    #[serde(default)]
+    pub stats: DashboardStats,
 }
 
 /// Lightweight row for switchers / settings (no sections).

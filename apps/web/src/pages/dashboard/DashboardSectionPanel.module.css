@@ -1,0 +1,104 @@
+.panel {
+  /* The section sets --dash-accent-light and --dash-accent-dark; the scheme picks one. */
+  --dash-accent: var(--dash-accent-light, var(--mantine-color-violet-6));
+
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 16px;
+  background: var(--mantine-color-body);
+  box-shadow:
+    0 1px 2px rgb(20 10 40 / 4%),
+    0 8px 24px -12px rgb(20 10 40 / 12%);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+[data-mantine-color-scheme='dark'] .panel {
+  --dash-accent: var(--dash-accent-dark, var(--mantine-color-violet-4));
+  background: color-mix(in srgb, var(--mantine-color-dark-6) 72%, var(--mantine-color-dark-7));
+  box-shadow: 0 10px 30px -18px rgb(0 0 0 / 70%);
+}
+
+/* A strip of the section's colour across the top, and a faint wash of it behind the header. */
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--dash-accent), color-mix(in srgb, var(--dash-accent) 25%, transparent));
+}
+
+.panel:focus-within,
+.panel[data-active] {
+  border-color: color-mix(in srgb, var(--dash-accent) 45%, var(--mantine-color-default-border));
+}
+
+.header {
+  padding: 18px 20px 14px;
+  background: radial-gradient(
+    120% 140% at 0% 0%,
+    color-mix(in srgb, var(--dash-accent) 9%, transparent),
+    transparent 60%
+  );
+}
+
+.chip {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--dash-accent);
+  background: color-mix(in srgb, var(--dash-accent) 14%, transparent);
+}
+
+.title {
+  font-weight: 700;
+  font-size: var(--mantine-font-size-lg);
+  line-height: 1.2;
+}
+
+.body {
+  padding: 4px 20px 20px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px 28px;
+  border: 1px dashed color-mix(in srgb, var(--dash-accent) 35%, var(--mantine-color-default-border));
+  border-radius: 12px;
+  text-align: center;
+  background: color-mix(in srgb, var(--dash-accent) 4%, transparent);
+}
+
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--dash-accent);
+  background: color-mix(in srgb, var(--dash-accent) 12%, transparent);
+}
+
+@media (max-width: 36em) {
+  .header {
+    padding: 14px 14px 10px;
+  }
+
+  .body {
+    padding: 4px 14px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+}

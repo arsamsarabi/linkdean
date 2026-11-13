@@ -9,17 +9,23 @@ import styles from './IconTile.module.css'
 
 type Props = {
   bookmark: GlanceTileItem
+  /** Added to the tooltip, such as "12 opens". */
+  meta?: string | null
+  /** Small number in the corner, for a ranked section. */
+  rank?: number | null
+  /** Marks a bookmark saved in the last day. */
+  fresh?: boolean
 }
 
 /** A dashboard bookmark shown as its site icon alone, titled by a tooltip. */
-export function IconTile({ bookmark: b }: Props): ReactElement {
+export function IconTile({ bookmark: b, meta, rank, fresh = false }: Props): ReactElement {
   const title = b.title.trim() || 'Untitled'
   const [iconFailed, setIconFailed] = useState(false)
   const recordOpen = useRecordBookmarkOpen()
   const iconSrc = !iconFailed ? b.favicon_url || (b.is_vault ? undefined : googleFavicon(b.url)) : undefined
 
   return (
-    <Tooltip label={title} openDelay={150}>
+    <Tooltip label={meta ? `${title} · ${meta}` : title} openDelay={150}>
       <UnstyledButton
         component="a"
         href={b.url}
@@ -36,6 +42,8 @@ export function IconTile({ bookmark: b }: Props): ReactElement {
         ) : (
           <IconWorld size={24} stroke={1.5} color="var(--mantine-color-dimmed)" />
         )}
+        {rank ? <span className={styles.rank}>{rank}</span> : null}
+        {fresh ? <span className={styles.fresh} aria-label="New" /> : null}
       </UnstyledButton>
     </Tooltip>
   )
