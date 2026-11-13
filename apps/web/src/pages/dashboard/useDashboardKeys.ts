@@ -12,7 +12,9 @@ function linkIn(tile: Element | undefined): HTMLAnchorElement | null {
 /**
  * Keyboard use of the dashboard inside `root`:
  * - 1 to 9 open that bookmark of the highlighted section (the first section until one is hovered or focused);
- * - with a bookmark focused, Left and Right move along its section, Up and Down to the section before or after.
+ * - with a bookmark focused, Left and Right move along its section, Up and Down to the section before or after;
+ * - G, or Down with nothing focused, jumps to the first bookmark of the highlighted section, so the
+ *   sections are reachable without tabbing through the sidebar and header.
  */
 export function useDashboardKeys(root: RefObject<HTMLElement | null>, enabled: boolean): void {
   useEffect(() => {
@@ -30,6 +32,19 @@ export function useDashboardKeys(root: RefObject<HTMLElement | null>, enabled: b
         if (link) {
           e.preventDefault()
           link.click()
+        }
+        return
+      }
+
+      const nothingFocused = e.target === document.body || e.target === document.documentElement
+      if (e.key === 'g' || e.key === 'G' || (e.key === 'ArrowDown' && nothingFocused)) {
+        const active = sections.find((s) => s.hasAttribute('data-active'))
+        const link = [active, ...sections]
+          .map((s) => linkIn(s?.querySelector('[data-dash-tile]') ?? undefined))
+          .find(Boolean)
+        if (link) {
+          e.preventDefault()
+          link.focus()
         }
         return
       }
