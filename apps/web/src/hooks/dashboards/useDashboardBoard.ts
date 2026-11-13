@@ -63,6 +63,8 @@ export function useDashboardBoard() {
     }
     try {
       const created = await create.mutateAsync({ title: 'New dashboard' })
+      // Wait for the list to hold the new board, or the fallback above sends us back to the pin.
+      await list.refetch()
       setActiveId(created.id)
       notifications.show({ message: 'Dashboard created' })
     } catch (e) {

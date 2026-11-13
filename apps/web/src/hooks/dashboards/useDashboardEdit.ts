@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { notifications } from '@mantine/notifications'
-import type { Dashboard, PutDashboardLayout } from '@/schemas'
+import type { Dashboard, DashboardSectionKind, PutDashboardLayout } from '@/schemas'
 import {
   dashboardDraftError,
   emptyDashboardDraft,
   moveSection,
   newDraftSection,
+  sectionFillsItself,
   toPutDashboardLayout,
   type DashboardDraft,
+  type DashboardDraftSection,
 } from '@/services'
 
 function draftFromDashboard(d: Dashboard): DashboardDraft {
@@ -16,7 +18,12 @@ function draftFromDashboard(d: Dashboard): DashboardDraft {
     sections: d.sections.map((s) => ({
       key: s.id,
       title: s.title,
-      bookmark_ids: s.items.map((i) => i.bookmark.id),
+      bookmark_ids: sectionFillsItself(s) ? [] : s.items.map((i) => i.bookmark.id),
+      kind: s.kind,
+      display: s.display,
+      item_limit: s.item_limit,
+      source: { ...s.source },
+      open_window: s.open_window,
     })),
   }
 }
@@ -53,10 +60,25 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
     setEditDraft(null)
   }
 
-  function addSection(): void {
+  function addSection(kind: DashboardSectionKind = 'pinned'): void {
     setEditDraft((prev) => {
       if (!prev) return prev
-      return { ...prev, sections: [...prev.sections, newDraftSection()] }
+      return { ...prev, sections: [...prev.sections, newDraftSection(undefined, kind)] }
+    })
+  }
+
+  /** Changes a section's display mode, number of bookmarks, source or counting window. */
+  function updateSection(
+    idx: number,
+    patch: Partial<Omit<DashboardDraftSection, 'key' | 'kind' | 'bookmark_ids'>>
+  ): void {
+    setEditDraft((prev) => {
+      if (!prev) return prev
+      const next = [...prev.sections]
+      const section = next[idx]
+      if (!section) return prev
+      next[idx] = { ...section, ...patch }
+      return { ...prev, sections: next }
     })
   }
 
@@ -126,6 +148,7 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
     startEdit,
     cancelEdit,
     addSection,
+    updateSection,
     onSave,
     updateSectionTitle,
     updateSectionBookmarks,

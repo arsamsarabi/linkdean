@@ -1221,7 +1221,10 @@ pub struct DashboardExport {
 pub struct DashboardSectionExport {
     pub title: String,
     /// `BookmarkExport::id` values, in order.
+    #[serde(default)]
     pub bookmark_ids: Vec<Uuid>,
+    #[serde(flatten)]
+    pub settings: DashboardSectionSettings,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1293,8 +1296,224 @@ pub struct DashboardSection {
     pub dashboard_id: Uuid,
     pub title: String,
     pub position: i32,
+    pub kind: String,
+    pub display: String,
+    pub item_limit: i32,
+    pub source_category_id: Option<Uuid>,
+    pub source_tag: Option<String>,
+    pub source_site: Option<String>,
+    pub source_favorites: bool,
+    pub source_unread: bool,
+    pub open_window: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl DashboardSection {
+    /// The stored settings; unknown values (never written by this version) fall back to defaults.
+    pub fn settings(&self) -> DashboardSectionSettings {
+        DashboardSectionSettings {
+            kind: DashboardSectionKind::parse(&self.kind).unwrap_or_default(),
+            display: DashboardSectionDisplay::parse(&self.display).unwrap_or_default(),
+            item_limit: self.item_limit,
+            source: DashboardSectionSource {
+                category_id: self.source_category_id,
+                tag: self.source_tag.clone(),
+                site: self.source_site.clone(),
+                favorites: self.source_favorites,
+                unread: self.source_unread,
+            },
+            open_window: DashboardOpenWindow::parse(&self.open_window).unwrap_or_default(),
+        }
+    }
+}
+
+/// What fills a dashboard section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DashboardSectionKind {
+    /// Bookmarks pinned by hand.
+    #[default]
+    Pinned,
+    /// The newest bookmarks matching the section's source.
+    Latest,
+    /// The most opened bookmarks matching the section's source.
+    MostOpened,
+    /// The bookmarks the owner opened last. Never on a shared dashboard.
+    RecentlyVisited,
+}
+
+impl DashboardSectionKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Pinned => "pinned",
+            Self::Latest => "latest",
+            Self::MostOpened => "most_opened",
+            Self::RecentlyVisited => "recently_visited",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "pinned" => Self::Pinned,
+            "latest" => Self::Latest,
+            "most_opened" => Self::MostOpened,
+            "recently_visited" => Self::RecentlyVisited,
+            _ => return None,
+        })
+    }
+
+    /// Sections that fill themselves from the owner's library, so never on a shared dashboard.
+    pub fn fills_itself(self) -> bool {
+        self != Self::Pinned
+    }
+}
+
+/// How a section shows its bookmarks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DashboardSectionDisplay {
+    Small,
+    #[default]
+    Medium,
+    Large,
+    Icons,
+}
+
+impl DashboardSectionDisplay {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Small => "small",
+            Self::Medium => "medium",
+            Self::Large => "large",
+            Self::Icons => "icons",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "small" => Self::Small,
+            "medium" => Self::Medium,
+            "large" => Self::Large,
+            "icons" => Self::Icons,
+            _ => return None,
+        })
+    }
+}
+
+/// The period "Most opened" counts opens over.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DashboardOpenWindow {
+    #[serde(rename = "last_30_days")]
+    Last30Days,
+    #[default]
+    AllTime,
+}
+
+impl DashboardOpenWindow {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Last30Days => "last_30_days",
+            Self::AllTime => "all_time",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "last_30_days" => Self::Last30Days,
+            "all_time" => Self::AllTime,
+            _ => return None,
+        })
+    }
+}
+
+/// Filters for a section that fills itself. A bookmark must match every one that is set.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DashboardSectionSource {
+    /// A folder of the owner's, with its subfolders.
+    #[serde(default)]
+    pub category_id: Option<Uuid>,
+    #[serde(default)]
+    pub tag: Option<String>,
+    /// A website, such as `github.com`; its subdomains match too.
+    #[serde(default)]
+    pub site: Option<String>,
+    #[serde(default)]
+    pub favorites: bool,
+    #[serde(default)]
+    pub unread: bool,
+}
+
+pub const DASHBOARD_SECTION_MIN_ITEMS: i32 = 4;
+pub const DASHBOARD_SECTION_MAX_ITEMS: i32 = 24;
+pub const DASHBOARD_SECTION_DEFAULT_ITEMS: i32 = 8;
+
+fn default_section_item_limit() -> i32 {
+    DASHBOARD_SECTION_DEFAULT_ITEMS
+}
+
+/// A section's type, display mode and source. Every field has a default, so older layouts
+/// and exports (title and pins only) still read as pinned, medium sections.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DashboardSectionSettings {
+    #[serde(default)]
+    pub kind: DashboardSectionKind,
+    #[serde(default)]
+    pub display: DashboardSectionDisplay,
+    #[serde(default = "default_section_item_limit")]
+    pub item_limit: i32,
+    #[serde(default)]
+    pub source: DashboardSectionSource,
+    #[serde(default)]
+    pub open_window: DashboardOpenWindow,
+}
+
+impl Default for DashboardSectionSettings {
+    fn default() -> Self {
+        Self {
+            kind: DashboardSectionKind::default(),
+            display: DashboardSectionDisplay::default(),
+            item_limit: DASHBOARD_SECTION_DEFAULT_ITEMS,
+            source: DashboardSectionSource::default(),
+            open_window: DashboardOpenWindow::default(),
+        }
+    }
+}
+
+impl DashboardSectionSettings {
+    /// Trims the source, drops empty values, and checks the bookmark count.
+    pub fn normalized(mut self) -> crate::Result<Self> {
+        if !(DASHBOARD_SECTION_MIN_ITEMS..=DASHBOARD_SECTION_MAX_ITEMS).contains(&self.item_limit) {
+            return Err(crate::Error::BadRequest(format!(
+                "a section shows {DASHBOARD_SECTION_MIN_ITEMS} to {DASHBOARD_SECTION_MAX_ITEMS} bookmarks"
+            )));
+        }
+        let clean = |v: Option<String>| v.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+        self.source.tag = clean(self.source.tag);
+        self.source.site = clean(self.source.site).map(|s| normalize_site(&s));
+        if self.source.site.as_deref() == Some("") {
+            self.source.site = None;
+        }
+        if !self.kind.fills_itself() || self.kind == DashboardSectionKind::RecentlyVisited {
+            // Pinned and Recently visited have no source.
+            self.source = DashboardSectionSource::default();
+        }
+        Ok(self)
+    }
+}
+
+/// `https://www.GitHub.com/x` and `github.com` both become `github.com`.
+pub fn normalize_site(input: &str) -> String {
+    let s = input.trim().to_ascii_lowercase();
+    let s = s.split_once("://").map(|(_, rest)| rest).unwrap_or(&s);
+    let host = s.split(['/', '?', '#']).next().unwrap_or("");
+    let host = host.rsplit_once('@').map(|(_, h)| h).unwrap_or(host);
+    let host = host.split(':').next().unwrap_or("");
+    host.strip_prefix("www.")
+        .unwrap_or(host)
+        .trim_matches('.')
+        .to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -1318,6 +1537,8 @@ pub struct DashboardSectionView {
     pub id: Uuid,
     pub title: String,
     pub position: i32,
+    #[serde(flatten)]
+    pub settings: DashboardSectionSettings,
     pub items: Vec<DashboardItemView>,
 }
 
@@ -1412,7 +1633,11 @@ pub struct PutDashboardLayout {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PutDashboardSection {
     pub title: String,
+    /// Pins, for a pinned section. Ignored for sections that fill themselves.
+    #[serde(default)]
     pub bookmark_ids: Vec<Uuid>,
+    #[serde(flatten)]
+    pub settings: DashboardSectionSettings,
 }
 
 /// Shared-activity notification kinds (Milestone 5).

@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import { Drawer } from '@mantine/core'
+import { Alert, Drawer, List, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { ShareInvitePanel } from '@/components/share-invite'
 import {
@@ -19,9 +19,17 @@ type Props = {
   dashboardTitle: string
   opened: boolean
   onClose: () => void
+  /** Titles of the dashboard's sections that fill themselves; sharing waits until they are gone. */
+  selfFillingSections?: string[]
 }
 
-export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onClose }: Props): ReactElement {
+export function ShareDashboardDrawer({
+  dashboardId,
+  dashboardTitle,
+  opened,
+  onClose,
+  selfFillingSections = [],
+}: Props): ReactElement {
   const drawerSize = useDrawerSize()
   const [email, setEmail] = useState('')
   const [access, setAccess] = useState<ShareAccess>('read')
@@ -64,49 +72,63 @@ export function ShareDashboardDrawer({ dashboardId, dashboardTitle, opened, onCl
       size={drawerSize}
       padding="lg"
     >
-      <ShareInvitePanel
-        description="Invite by email. They get access once they accept."
-        email={email}
-        access={access}
-        onEmailChange={setEmail}
-        onAccessChange={setAccess}
-        onInvite={() => void onInvite()}
-        claimLink={claimLink}
-        inviteEmail={inviteEmail}
-        invitePending={create.isPending}
-        sharesError={shares.isError ? shares.error : null}
-        onRetryShares={() => void shares.refetch()}
-        sharesLoading={shares.isLoading}
-        activeShares={shares.data?.shares ?? []}
-        pendingInvites={shares.data?.pending ?? []}
-        removeBusy={remove.isPending || removePending.isPending}
-        onUpdateAccess={(userId, next) => {
-          if (!dashboardId) return
-          void update
-            .mutateAsync({ dashboardId, userId, access: next })
-            .catch((e) => notifications.show({ color: 'red', message: String(e) }))
-        }}
-        onRevoke={(userId) => {
-          if (!dashboardId) return
-          void remove
-            .mutateAsync({ dashboardId, userId })
-            .then(() => notifications.show({ message: 'Access revoked' }))
-            .catch((e) => notifications.show({ color: 'red', message: String(e) }))
-        }}
-        onUpdatePendingAccess={(pendingId, next) => {
-          if (!dashboardId) return
-          void updatePending
-            .mutateAsync({ dashboardId, pendingId, access: next })
-            .catch((e) => notifications.show({ color: 'red', message: String(e) }))
-        }}
-        onCancelPending={(pendingId) => {
-          if (!dashboardId) return
-          void removePending
-            .mutateAsync({ dashboardId, pendingId })
-            .then(() => notifications.show({ message: 'Pending invite cancelled' }))
-            .catch((e) => notifications.show({ color: 'red', message: String(e) }))
-        }}
-      />
+      {selfFillingSections.length > 0 ? (
+        <Alert color="orange" title="Remove sections that fill themselves first">
+          <Text size="sm">
+            These sections show bookmarks from your own library, so a dashboard that has them can&apos;t be shared. Edit
+            the dashboard and remove them, or change them to pinned sections, to share it:
+          </Text>
+          <List size="sm" mt="xs">
+            {selfFillingSections.map((title, i) => (
+              <List.Item key={`${i}:${title}`}>{title}</List.Item>
+            ))}
+          </List>
+        </Alert>
+      ) : (
+        <ShareInvitePanel
+          description="Invite by email. They get access once they accept."
+          email={email}
+          access={access}
+          onEmailChange={setEmail}
+          onAccessChange={setAccess}
+          onInvite={() => void onInvite()}
+          claimLink={claimLink}
+          inviteEmail={inviteEmail}
+          invitePending={create.isPending}
+          sharesError={shares.isError ? shares.error : null}
+          onRetryShares={() => void shares.refetch()}
+          sharesLoading={shares.isLoading}
+          activeShares={shares.data?.shares ?? []}
+          pendingInvites={shares.data?.pending ?? []}
+          removeBusy={remove.isPending || removePending.isPending}
+          onUpdateAccess={(userId, next) => {
+            if (!dashboardId) return
+            void update
+              .mutateAsync({ dashboardId, userId, access: next })
+              .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+          }}
+          onRevoke={(userId) => {
+            if (!dashboardId) return
+            void remove
+              .mutateAsync({ dashboardId, userId })
+              .then(() => notifications.show({ message: 'Access revoked' }))
+              .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+          }}
+          onUpdatePendingAccess={(pendingId, next) => {
+            if (!dashboardId) return
+            void updatePending
+              .mutateAsync({ dashboardId, pendingId, access: next })
+              .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+          }}
+          onCancelPending={(pendingId) => {
+            if (!dashboardId) return
+            void removePending
+              .mutateAsync({ dashboardId, pendingId })
+              .then(() => notifications.show({ message: 'Pending invite cancelled' }))
+              .catch((e) => notifications.show({ color: 'red', message: String(e) }))
+          }}
+        />
+      )}
     </Drawer>
   )
 }

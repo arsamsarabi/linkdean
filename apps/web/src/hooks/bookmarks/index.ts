@@ -8,6 +8,7 @@ export {
   useUploadBookmarkPreview,
   useDeleteBookmarkPreview,
   useSaveBookmarkCopy,
+  useRecordBookmarkOpen,
   usePageDetails,
   useBookmarkByUrl,
 } from './useBookmarks'

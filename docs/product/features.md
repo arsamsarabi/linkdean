@@ -70,6 +70,11 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 - Home at `/`; library at `/library`
 - Sectioned glance grid of pinned bookmarks
+- Per-section display mode: icons only, small tiles, or medium or large bookmark cards
+- Section types: **Pinned** (bookmarks you pick), **Latest**, **Most opened** (last 30 days or all time) and **Recently visited**, 4 to 24 bookmarks each (default 8)
+- Latest and Most opened sources, combined: a folder with its subfolders, a tag, a website (subdomains match), favorites only, unread only. Vault bookmarks never show
+- Opening a bookmark from a card, tile or icon records the open for you alone (`POST /bookmarks/{id}/open`); vault bookmarks are never recorded, and per-open history is kept 30 days
+- Sections that fill themselves draw on the owner's library, so they only exist on dashboards that aren't shared: they can't be added to a shared dashboard (or one with a pending invite), and the share drawer lists them and refuses to share until they're removed
 - Multi-dashboard: create, rename, pin default, delete (fallback / recreate Home)
 - Page switcher; Settings default-dashboard select
 - `default_landing` `/` vs `/library` (Settings + post-login; logo honors it)

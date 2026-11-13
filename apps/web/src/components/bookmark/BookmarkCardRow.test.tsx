@@ -16,6 +16,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('@/hooks', () => ({
   useSaveBookmarkCopy: () => ({ mutateAsync: vi.fn() }),
+  useRecordBookmarkOpen: () => vi.fn(),
   useOwnerActions: () => ({ following: false, muted: false, blocking: false }),
   useApiImage: () => ({ src: undefined, failed: false }),
 }))

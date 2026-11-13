@@ -62,9 +62,13 @@ export function DashboardPage(): ReactElement {
           draft={draft}
           bookmarkOptions={d.bookmarkOptions}
           bookmarkById={d.bookmarkById}
+          folderOptions={d.folderOptions}
+          tagOptions={d.tagOptions}
+          canAddSelfFilling={d.canAddSelfFilling}
           viewerUserId={d.viewerUserId}
           onUpdateTitle={d.updateSectionTitle}
           onUpdateBookmarks={d.updateSectionBookmarks}
+          onUpdateSection={d.updateSection}
           onMoveSection={d.moveSectionBy}
           onRemoveSection={d.removeSection}
           onAddSection={d.addSection}
@@ -75,6 +79,7 @@ export function DashboardPage(): ReactElement {
           empty={d.empty}
           canEditLayout={!!d.canEditLayout}
           viewerUserId={d.viewerUserId}
+          folderName={d.folderName}
           onStartEdit={d.startEdit}
         />
       )}
@@ -95,6 +100,7 @@ export function DashboardPage(): ReactElement {
         dashboardTitle={view.title}
         opened={d.shareOpen}
         onClose={() => d.setShareOpen(false)}
+        selfFillingSections={d.selfFillingSections}
       />
       {d.socialEnabled ? (
         <SocialDrawer

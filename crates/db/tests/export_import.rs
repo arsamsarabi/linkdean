@@ -94,6 +94,7 @@ async fn json_export_restores_folders_flags_times_and_dashboards() {
         PutDashboardLayout {
             title: None,
             sections: vec![PutDashboardSection {
+                settings: Default::default(),
                 title: "Top".into(),
                 bookmark_ids: vec![bookmark],
             }],

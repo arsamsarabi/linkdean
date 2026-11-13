@@ -1,9 +1,13 @@
 import { useEffect, useMemo } from 'react'
 import { useMe } from '@/hooks/auth'
-import { dashboardToShowInstead, mergeDashboardBookmarks } from '@/services'
+import { useTagNames } from '@/hooks/bookmarks'
+import { useCategories } from '@/hooks/categories'
+import { categoryPath } from '@/lib'
+import { dashboardToShowInstead, mergeDashboardBookmarks, sectionFillsItself } from '@/services'
 import { useDashboard, usePutDashboard } from './useDashboard'
 import { useDashboardBoard } from './useDashboardBoard'
 import { useDashboardEdit } from './useDashboardEdit'
+import { useDashboardShares } from './useDashboardShares'
 
 /** Compose dashboard board + edit-draft hooks for DashboardPage. */
 // Known issue: An edit draft is not tied to its dashboard, so after losing access to one it can be
@@ -42,6 +46,25 @@ export function useDashboardPage() {
   const bookmarkOptions = useMemo(() => bookmarks.map((b) => ({ value: b.id, label: b.title || b.url })), [bookmarks])
   const bookmarkById = useMemo(() => new Map(bookmarks.map((b) => [b.id, b])), [bookmarks])
 
+  // Sources for sections that fill themselves: the owner's own folders outside vaults, and tags.
+  const categories = useCategories(true, false)
+  const tags = useTagNames()
+  const folders = useMemo(() => {
+    const own = (categories.data ?? []).filter((c) => !c.vault_id && c.access === 'owner')
+    const byId = new Map(own.map((c) => [c.id, c]))
+    return own
+      .map((c) => ({ value: c.id, label: categoryPath(c, byId) }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [categories.data])
+  const folderLabel = useMemo(() => new Map(folders.map((f) => [f.value, f.label])), [folders])
+  const folderName = (id: string): string | undefined => folderLabel.get(id)
+
+  // A shared dashboard, or one with an invite waiting, takes pinned sections only.
+  const shares = useDashboardShares(access.isOwner && edit.editing ? (board.activeId ?? null) : null)
+  const hasShares = !!view?.shared_out || (shares.data?.pending.length ?? 0) > 0
+  const canAddSelfFilling = access.isOwner && !hasShares
+  const selfFillingSections = (view?.sections ?? []).filter(sectionFillsItself).map((s) => s.title)
+
   return {
     list: board.list,
     dashboard,
@@ -56,6 +79,11 @@ export function useDashboardPage() {
     setSocialOpen: board.setSocialOpen,
     bookmarkOptions,
     bookmarkById,
+    folderOptions: folders,
+    folderName,
+    tagOptions: tags.data ?? [],
+    canAddSelfFilling,
+    selfFillingSections,
     switcherData: board.switcherData,
     save,
     create: board.create,
@@ -66,6 +94,7 @@ export function useDashboardPage() {
     startEdit: edit.startEdit,
     cancelEdit: edit.cancelEdit,
     addSection: edit.addSection,
+    updateSection: edit.updateSection,
     selectDashboard: (id: string | null) => board.selectDashboard(id, edit.editing),
     onSave: edit.onSave,
     onCreate: () => board.onCreate(edit.editing),

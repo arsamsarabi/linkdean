@@ -33,6 +33,7 @@ pub fn router() -> Router<AppState> {
         .route("/bookmarks/folder-counts", get(folder_counts))
         .route("/bookmarks/url-hashes", get(url_hashes))
         .route("/bookmarks/{id}/check-link", post(check_link))
+        .route("/bookmarks/{id}/open", post(record_open))
         .route(
             "/bookmarks/{id}/filing-suggestions",
             get(filing_suggestions),
@@ -457,6 +458,17 @@ async fn page_details(
         "description": details.description,
         "tags": details.tags,
     })))
+}
+
+/// Records that the signed-in person opened the bookmark, for the dashboard's Most opened
+/// and Recently visited sections. Vault bookmarks are not recorded.
+async fn record_open(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<axum::http::StatusCode> {
+    db::record_bookmark_open(&state.pool, user.id, id).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
 async fn check_link(

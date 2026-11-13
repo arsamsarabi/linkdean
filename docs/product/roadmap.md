@@ -20,10 +20,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     c. **After merge**: tag `v0.0.9`. Its `extension` job is the first real run of the store submission; check its log.
     d. **Prep** (needs a): add the AMO link beside the Chrome Web Store link in **Config options → Fast capture** and the docs. The Chrome link is in.
 
-5. **Dashboard upgrades** (M). Make boards more useful at a glance.
-    - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
-    - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.
-
 ---
 
 ## Next: high value after the beta settles
@@ -47,6 +43,7 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Vault contents never leave the server for a model. The settings page shows what is sent.
     - Hosted service: a limited free allowance, more with your own key (ties into item 10).
     - Depends on: phase 2 of item 12 for summaries and semantic search over page contents; tag suggestions do not.
+    - Later: AI-assisted dashboards. Suggest sections and their sources (folders, tags, websites) from what the person saves and opens, built on the sections that fill themselves.
 
 18. **Bookmarks as memory for AI agents** (M). People who use coding and research agents (Claude Code, Codex, Cursor and others) keep re-explaining the same references. Their curated folders already hold that context.
     - Generate an [Agent Skill](https://agentskills.io) from a folder, a tag or a saved search: a `SKILL.md` with a description of when to use it, and the links grouped with their titles, descriptions and notes.

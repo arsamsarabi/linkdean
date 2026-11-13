@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { SocialDrawer } from '@/components/social'
-import { useOwnerActions, useSaveBookmarkCopy } from '@/hooks'
+import { useOwnerActions, useRecordBookmarkOpen, useSaveBookmarkCopy } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
 import { FOLDER_UNCATEGORIZED, hostname, previewSrcCandidates } from '@/services'
 import { BlockOwnerModal } from './BlockOwnerModal'
@@ -58,6 +58,7 @@ export function BookmarkCard({
   const canSaveCopy = !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId && !b.is_vault
   const canFollowOwner = !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId
   const saveCopy = useSaveBookmarkCopy()
+  const recordOpen = useRecordBookmarkOpen()
   const owner = useOwnerActions(b.owner_user_id, b.owner_display_name, canFollowOwner)
   const navigate = useNavigate()
   const [socialOpen, setSocialOpen] = useState(false)
@@ -120,6 +121,7 @@ export function BookmarkCard({
       className={styles.titleLink}
       onClick={() => {
         if (b.is_unread && onFlags) onFlags(b.id, { is_unread: false })
+        if (!b.is_vault) recordOpen(b.id)
       }}
     >
       <Group gap={6} wrap="nowrap" align="flex-start">

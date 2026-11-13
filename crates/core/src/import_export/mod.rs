@@ -760,6 +760,7 @@ mod tests {
                 title: "Home".into(),
                 is_default: true,
                 sections: vec![crate::DashboardSectionExport {
+                    settings: Default::default(),
                     title: "Top".into(),
                     bookmark_ids: vec![id],
                 }],

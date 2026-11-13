@@ -1,8 +1,13 @@
 import { MantineProvider } from '@mantine/core'
 import { cleanup, render } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BookmarkCardPreview } from './BookmarkCardPreview'
 import { GlanceTile } from './GlanceTile'
+
+vi.mock('@/hooks', async (orig) => ({
+  ...(await orig<typeof import('@/hooks')>()),
+  useRecordBookmarkOpen: () => vi.fn(),
+}))
 
 function images(ui: React.ReactElement): string[] {
   const { container } = render(<MantineProvider env="test">{ui}</MantineProvider>)
