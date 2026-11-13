@@ -3,30 +3,14 @@ import { notifications } from '@mantine/notifications'
 import type { Dashboard, DashboardSectionKind, PutDashboardLayout } from '@/schemas'
 import {
   dashboardDraftError,
+  draftFromDashboard,
   emptyDashboardDraft,
   moveSection,
   newDraftSection,
-  sectionFillsItself,
   toPutDashboardLayout,
   type DashboardDraft,
   type DashboardDraftSection,
 } from '@/services'
-
-function draftFromDashboard(d: Dashboard): DashboardDraft {
-  return {
-    title: d.title,
-    sections: d.sections.map((s) => ({
-      key: s.id,
-      title: s.title,
-      bookmark_ids: sectionFillsItself(s) ? [] : s.items.map((i) => i.bookmark.id),
-      kind: s.kind,
-      display: s.display,
-      item_limit: s.item_limit,
-      source: { ...s.source },
-      open_window: s.open_window,
-    })),
-  }
-}
 
 function buildEditDraft(data: Dashboard | undefined): DashboardDraft {
   if (!data) return emptyDashboardDraft()

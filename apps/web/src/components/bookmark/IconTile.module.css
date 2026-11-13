@@ -1,4 +1,5 @@
 .tile {
+  position: relative;
   display: grid;
   place-items: center;
   width: 56px;
@@ -27,4 +28,31 @@
   .tile {
     transition: none;
   }
+}
+
+.rank {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: var(--mantine-color-white);
+  background: var(--dash-accent, var(--mantine-color-violet-6));
+}
+
+.fresh {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mantine-color-ice-5);
+  box-shadow: 0 0 0 2px var(--mantine-color-body);
 }

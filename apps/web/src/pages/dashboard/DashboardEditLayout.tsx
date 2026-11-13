@@ -305,7 +305,12 @@ export function DashboardEditLayout({
                     No bookmarks yet — pick a few above.
                   </Text>
                 ) : (
-                  <DashboardSectionItems display={section.display} bookmarks={pinned} viewerUserId={viewerUserId} />
+                  <DashboardSectionItems
+                    kind="pinned"
+                    display={section.display}
+                    items={pinned.map((bookmark) => ({ bookmark }))}
+                    viewerUserId={viewerUserId}
+                  />
                 )}
               </>
             )}

@@ -69,3 +69,11 @@
   color: var(--mantine-color-dimmed);
   opacity: 0.7;
 }
+
+.fresh {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mantine-color-ice-5);
+}

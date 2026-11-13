@@ -1,11 +1,14 @@
-import { type ReactElement } from 'react'
-import { Stack, Text, Title } from '@mantine/core'
+import { useRef, useState, type ReactElement } from 'react'
+import { Group, Kbd, Stack, Text } from '@mantine/core'
 import { IconLayoutDashboard, IconPinned } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { EmptyState } from '@/components'
-import type { Dashboard, DashboardSection } from '@/schemas'
-import { describeSectionSource } from '@/services'
-import { DashboardSectionItems } from './DashboardSectionItems'
+import type { Dashboard } from '@/schemas'
+import { filterSections } from '@/services'
+import { DashboardSectionPanel } from './DashboardSectionPanel'
+import { QuickPinButton } from './QuickPinButton'
+import { useCollapsedSections } from './useCollapsedSections'
+import { useDashboardKeys } from './useDashboardKeys'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -15,13 +18,12 @@ type Props = {
   canEditLayout: boolean
   viewerUserId: string | undefined
   folderName: (id: string) => string | undefined
+  /** Text from the header's filter box. */
+  filter: string
+  bookmarkOptions: { value: string; label: string }[]
+  quickPinPending: boolean
+  onQuickPin: (sectionId: string, bookmarkId: string) => Promise<boolean>
   onStartEdit: () => void
-}
-
-function emptyText(section: DashboardSection): string {
-  if (section.kind === 'pinned') return 'Nothing in this section yet.'
-  if (section.kind === 'latest') return 'No bookmarks match yet.'
-  return 'Open a few bookmarks and they show up here.'
 }
 
 export function DashboardViewLayout({
@@ -30,8 +32,17 @@ export function DashboardViewLayout({
   canEditLayout,
   viewerUserId,
   folderName,
+  filter,
+  bookmarkOptions,
+  quickPinPending,
+  onQuickPin,
   onStartEdit,
 }: Props): ReactElement {
+  const root = useRef<HTMLDivElement>(null)
+  const collapsed = useCollapsedSections()
+  const [activeId, setActiveId] = useState<string | null>(null)
+  useDashboardKeys(root, !empty)
+
   if (empty) {
     return (
       <EmptyState
@@ -56,38 +67,54 @@ export function DashboardViewLayout({
     )
   }
 
+  const filtering = filter.trim().length > 0
+  const shown = filterSections(view.sections, filter)
+  const active = activeId ?? shown.find((s) => s.items.length > 0)?.id ?? shown[0]?.id
+
   return (
-    <Stack gap="lg">
-      {view.sections.map((section) => (
-        <Stack key={section.id} gap="sm">
-          <Stack gap={2}>
-            <Title order={4}>{section.title}</Title>
-            {describeSectionSource(section, folderName) ? (
-              <Text size="xs" c="dimmed">
-                {describeSectionSource(section, folderName)}
-              </Text>
-            ) : null}
-          </Stack>
-          {section.items.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              {emptyText(section)}
-            </Text>
-          ) : (
-            <DashboardSectionItems
-              display={section.display}
-              bookmarks={section.items.map((i) => i.bookmark)}
-              viewerUserId={viewerUserId}
-            />
-          )}
-        </Stack>
+    <Stack gap="xl" ref={root}>
+      {shown.map((section, i) => (
+        <DashboardSectionPanel
+          key={section.id}
+          section={section}
+          totalItems={view.sections[i]?.items.length ?? section.items.length}
+          filtering={filtering}
+          // A filter shows every match, collapsed or not.
+          collapsed={!filtering && collapsed.isCollapsed(section.id)}
+          active={section.id === active}
+          canEditLayout={canEditLayout}
+          viewerUserId={viewerUserId}
+          folderName={folderName}
+          quickPin={
+            canEditLayout && section.kind === 'pinned' ? (
+              <QuickPinButton
+                sectionTitle={section.title}
+                options={bookmarkOptions}
+                pinnedIds={(view.sections[i]?.items ?? []).map((it) => it.bookmark.id)}
+                saving={quickPinPending}
+                onPin={(bookmarkId) => onQuickPin(section.id, bookmarkId)}
+              />
+            ) : null
+          }
+          onToggleCollapse={() => collapsed.toggle(section.id)}
+          onActivate={() => setActiveId(section.id)}
+          onStartEdit={onStartEdit}
+        />
       ))}
-      <Text size="sm" c="dimmed">
-        Browse the full collection in the{' '}
-        <Text span component={Link} to="/library" c="violet" inherit>
-          library
+      <Group justify="space-between" gap="sm" c="dimmed">
+        <Text size="sm" c="dimmed">
+          Browse the full collection in the{' '}
+          <Text span component={Link} to="/library" c="violet" inherit>
+            library
+          </Text>
+          .
         </Text>
-        .
-      </Text>
+        <Text size="xs" c="dimmed" visibleFrom="sm">
+          <Kbd size="xs">1</Kbd>–<Kbd size="xs">9</Kbd> open a bookmark in the highlighted section ·{' '}
+          <Kbd size="xs">←</Kbd> <Kbd size="xs">→</Kbd> <Kbd size="xs">↑</Kbd> <Kbd size="xs">↓</Kbd> move between
+          bookmarks
+        </Text>
+      </Group>
     </Stack>
   )
 }

@@ -45,6 +45,9 @@ export function DashboardPage(): ReactElement {
         createPending={d.create.isPending}
         pinPending={d.patch.isPending}
         savePending={d.save.isPending}
+        viewerName={d.viewerName}
+        filter={d.filter}
+        onFilterChange={d.setFilter}
         onDraftTitleChange={d.setDraftTitle}
         onSelectDashboard={d.selectDashboard}
         onCreate={() => void d.onCreate()}
@@ -80,6 +83,10 @@ export function DashboardPage(): ReactElement {
           canEditLayout={!!d.canEditLayout}
           viewerUserId={d.viewerUserId}
           folderName={d.folderName}
+          filter={d.filter}
+          bookmarkOptions={d.bookmarkOptions}
+          quickPinPending={d.save.isPending}
+          onQuickPin={d.quickPin}
           onStartEdit={d.startEdit}
         />
       )}
