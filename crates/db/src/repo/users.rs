@@ -455,6 +455,9 @@ pub async fn update_user_settings(
             }
         }
     }
+    if let Some(v) = patch.show_keyboard_hints {
+        s.show_keyboard_hints = v;
+    }
     sqlx::query_as::<_, UserSettings>(
         r#"
         UPDATE user_settings SET
@@ -468,6 +471,7 @@ pub async fn update_user_settings(
             show_deleted_in_library = $9,
             show_vault_in_library = $10,
             vault_delete_mode = $11,
+            show_keyboard_hints = $12,
             updated_at = now()
         WHERE user_id = $1
         RETURNING *
@@ -484,6 +488,7 @@ pub async fn update_user_settings(
     .bind(s.show_deleted_in_library)
     .bind(s.show_vault_in_library)
     .bind(&s.vault_delete_mode)
+    .bind(s.show_keyboard_hints)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))

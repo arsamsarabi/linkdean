@@ -68,3 +68,10 @@ a[href]:not([class*='mantine-']):hover {
 .mantine-Drawer-content .mantine-ScrollArea-content {
   min-width: 0 !important;
 }
+
+/* Settings → Keyboard → Show keyboard hints off: hide key numbers, hint lines and shortcut keycaps.
+   The shortcuts keep working. */
+:root[data-key-hints='off'] [data-key-hint],
+:root[data-key-hints='off'] .mantine-Kbd-root {
+  display: none !important;
+}

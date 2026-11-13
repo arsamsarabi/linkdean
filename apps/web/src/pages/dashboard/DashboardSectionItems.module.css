@@ -48,9 +48,10 @@
   }
 }
 
-/* In a ranked section the rank is the key, so it takes the keycap look instead of a second number. */
+/* In a ranked section the rank is the key, so it takes the keycap look instead of a second number
+   (a plain number when keyboard hints are off in Settings). */
 @media (hover: hover) and (pointer: fine) {
-  [data-active] .rankKey {
+  :global(:root:not([data-key-hints='off'])) [data-active] .rankKey {
     height: 20px;
     border: 1px solid color-mix(in srgb, var(--dash-accent) 60%, transparent);
     border-bottom-width: 2px;

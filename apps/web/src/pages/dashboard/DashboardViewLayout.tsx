@@ -121,7 +121,7 @@ export function DashboardViewLayout({
           </Text>
           .
         </Text>
-        <Text size="xs" c="dimmed" visibleFrom="sm">
+        <Text size="xs" c="dimmed" visibleFrom="sm" data-key-hint>
           Press <Kbd size="xs">G</Kbd> to jump into the sections, then <Kbd size="xs">←</Kbd> <Kbd size="xs">→</Kbd>{' '}
           move within a section and <Kbd size="xs">↑</Kbd> <Kbd size="xs">↓</Kbd> between sections. Point at a section
           and press the number on a bookmark to open it.

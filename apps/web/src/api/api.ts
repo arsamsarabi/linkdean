@@ -487,6 +487,7 @@ export const api = {
       library_view: UserSettings['library_view']
       trash_retention_days: number
       show_deleted_in_library: boolean
+      show_keyboard_hints: boolean
     }>
   ): Promise<{ settings: UserSettings }> =>
     req('/users/me/settings', { method: 'PATCH', body: JSON.stringify(body) }, settingsEnvelopeSchema),

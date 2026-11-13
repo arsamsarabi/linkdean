@@ -200,7 +200,7 @@ export function CommandPalette({ opened, onClose }: Props): ReactElement {
           ))
         )}
       </div>
-      <Group className={styles.footer} gap="md" justify="space-between">
+      <Group className={styles.footer} gap="md" justify="space-between" data-key-hint>
         <Group gap="xs">
           <Kbd size="xs">↑↓</Kbd>
           <Text size="xs" c="dimmed">

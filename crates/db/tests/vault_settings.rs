@@ -60,6 +60,7 @@ async fn set_mode(pool: &PgPool, owner: &User, mode: &str) -> linkdean_core::Res
             show_deleted_in_library: None,
             show_vault_in_library: None,
             vault_delete_mode: Some(mode.into()),
+            show_keyboard_hints: None,
         },
     )
     .await

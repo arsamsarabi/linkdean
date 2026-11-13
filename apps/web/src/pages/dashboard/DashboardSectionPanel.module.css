@@ -86,6 +86,11 @@
     opacity: 0;
   }
 
+  /* Hints turned off in Settings: the caption stays. */
+  :global(:root[data-key-hints='off']) .panel[data-active] .caption {
+    opacity: 1;
+  }
+
   .panel[data-active] .keysHint {
     opacity: 1;
   }

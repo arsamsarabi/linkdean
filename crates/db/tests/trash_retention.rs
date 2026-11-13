@@ -29,6 +29,7 @@ fn retention(days: i32) -> UpdateSettings {
         show_deleted_in_library: None,
         show_vault_in_library: None,
         vault_delete_mode: None,
+        show_keyboard_hints: None,
     }
 }
 
@@ -175,4 +176,35 @@ async fn the_library_view_accepts_list_and_refuses_unknown_layouts() {
         .await
         .expect_err("unknown layout");
     assert!(matches!(err, Error::BadRequest(_)));
+}
+
+#[tokio::test]
+async fn keyboard_hints_are_on_by_default_and_can_be_turned_off() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let email = format!("hints-{}@limits.test", Uuid::new_v4());
+    let user = db::create_user(&pool, &email, Some("password-long"), None, None, None)
+        .await
+        .expect("user");
+    assert!(
+        db::get_user_settings(&pool, user.id)
+            .await
+            .expect("settings")
+            .show_keyboard_hints
+    );
+    let off = UpdateSettings {
+        show_keyboard_hints: Some(false),
+        trash_retention_days: None,
+        ..retention(30)
+    };
+    let saved = db::update_user_settings(&pool, user.id, &off)
+        .await
+        .expect("off");
+    assert!(!saved.show_keyboard_hints);
+    // A patch without the field leaves it alone.
+    let saved = db::update_user_settings(&pool, user.id, &retention(14))
+        .await
+        .expect("other field");
+    assert!(!saved.show_keyboard_hints);
 }
