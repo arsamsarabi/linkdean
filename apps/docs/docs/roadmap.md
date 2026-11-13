@@ -14,6 +14,7 @@ Plans move as the beta teaches us what matters. Want something sooner, or someth
 
 - **Browser extension in both stores.** Live on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf); the Firefox add-on is in review. Edge installs from the Chrome listing.
 - **Dashboard upgrades.** Choose how each pinned item looks (a small, medium or large card, or just its icon), and sections that fill themselves with your latest bookmarks or the ones you open most.
+- **No more lost form edits.** Closing a bookmark or folder form by accident with unsaved changes asks before throwing them away.
 
 ## Next: once the beta settles
 
@@ -31,12 +32,14 @@ Archiving and AI assistance come first. They are the biggest gaps on the [compar
   - Search by meaning ("that article about…"), not only by the words in it.
   - Hints for related and near-duplicate bookmarks.
   - Suggestions wait for your click. Vault contents are never sent to a model.
+- **Your bookmarks as memory for AI agents.** Turn a folder or tag into an [Agent Skill](https://agentskills.io) your coding or research agent can use: download it, or keep it fresh with an API key. Vaults are never included.
 - **Email digests and one-click unsubscribe.** A daily digest for the chattier notifications (edits, likes, comments), and an unsubscribe link for each kind in every email.
 - **Account and legal polish.** Tighter checks around deleting single sign-on accounts, a prompt to accept updated Terms, and a legal review of the Terms and Privacy Policy before anything costs money.
 - **More ways to sign in.** Passkeys, and ready-made sign-in with Google, Microsoft, GitHub and Authentik. Any standard OpenID Connect provider already works on a self-hosted instance.
 - **An API to build on.** API keys already work. Next: a published OpenAPI reference on this site, one error format across every endpoint, caching headers, and optional tracing.
 - **Plans and pricing for the managed service.** Deciding what stays free, what a paid plan would add, and the limits of each. Self-hosting stays free for non-commercial use.
 - **Privacy-respecting usage statistics.** Aggregate counts only (active users, bookmarks saved, features used), nothing per person and no page content or addresses. Off by default when you self-host.
+- **A slimmer sidebar.** On tablets and wider, a collapsed sidebar becomes a narrow strip of icons instead of disappearing.
 
 ## Later
 
