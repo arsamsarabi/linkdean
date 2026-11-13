@@ -62,4 +62,22 @@ describe('useDashboardKeys', () => {
     fireEvent.keyDown(getByText('b1'), { key: 'ArrowUp' })
     expect(document.activeElement).toBe(getByText('a1'))
   })
+
+  it('jumps into the highlighted section with G, or Down when nothing is focused', () => {
+    render(<Board />)
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    fireEvent.keyDown(document.body, { key: 'ArrowDown' })
+    expect(document.activeElement?.textContent).toBe('b1')
+    ;(document.activeElement as HTMLElement).blur()
+    fireEvent.keyDown(document.body, { key: 'g' })
+    expect(document.activeElement?.textContent).toBe('b1')
+  })
+
+  it('leaves G alone while typing', () => {
+    const { getByLabelText } = render(<Board />)
+    const input = getByLabelText('filter')
+    input.focus()
+    fireEvent.keyDown(input, { key: 'g' })
+    expect(document.activeElement).toBe(input)
+  })
 })

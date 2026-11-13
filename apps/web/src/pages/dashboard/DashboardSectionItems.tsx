@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import { Badge, Group, SimpleGrid, Stack, Text } from '@mantine/core'
+import { Group, SimpleGrid, Text } from '@mantine/core'
 import { BookmarkCard, GlanceTile, IconTile } from '@/components'
 import type { Bookmark, DashboardSectionDisplay, DashboardSectionKind } from '@/schemas'
 import { itemMeta } from '@/services'
@@ -60,10 +60,10 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
   if (display === 'small') {
     return (
       <div className={styles.container}>
-        <SimpleGrid type="container" cols={SMALL_COLS} spacing="sm">
+        {/* Room between rows for the key numbers that sit on each tile's corner. */}
+        <SimpleGrid type="container" cols={SMALL_COLS} spacing="md" verticalSpacing="md">
           {items.map((item, i) => (
-            <Group key={item.bookmark.id} data-dash-tile className={styles.tile} gap="xs" wrap="nowrap" align="center">
-              {metas[i]!.rank ? null : <Keycap index={i} />}
+            <Group key={item.bookmark.id} gap="xs" wrap="nowrap" align="center">
               {metas[i]!.rank ? (
                 <Text
                   className={styles.rankKey}
@@ -78,7 +78,9 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
                   {metas[i]!.rank}
                 </Text>
               ) : null}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {/* The ring and the key go round the bookmark only, not its rank. */}
+              <div data-dash-tile className={styles.tile} style={{ flex: 1, minWidth: 0 }}>
+                {metas[i]!.rank ? null : <Keycap index={i} />}
                 <GlanceTile
                   bookmark={item.bookmark}
                   viewerUserId={viewerUserId}
@@ -98,8 +100,8 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
         {items.map((item, i) => {
           const meta = metas[i]!
           return (
-            <Stack key={item.bookmark.id} data-dash-tile className={styles.tile} gap={6}>
-              {metas[i]!.rank ? null : <Keycap index={i} />}
+            <div key={item.bookmark.id} data-dash-tile className={styles.tile}>
+              {meta.rank ? null : <Keycap index={i} />}
               <BookmarkCard
                 bookmark={{ ...item.bookmark, can_write: false }}
                 viewerUserId={viewerUserId}
@@ -107,25 +109,13 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
                 onDelete={() => undefined}
               />
               {meta.text || meta.rank || meta.fresh ? (
-                <Group gap={6} px={4}>
-                  {meta.rank ? (
-                    <Badge size="sm" variant="filled" color="var(--dash-accent)" circle>
-                      {meta.rank}
-                    </Badge>
-                  ) : null}
-                  {meta.fresh ? (
-                    <Badge size="xs" variant="light" color="ice">
-                      New
-                    </Badge>
-                  ) : null}
-                  {meta.text ? (
-                    <Text size="xs" c="dimmed">
-                      {meta.text}
-                    </Text>
-                  ) : null}
-                </Group>
+                <div className={styles.cardMeta}>
+                  {meta.rank ? <span className={styles.cardRank}>{meta.rank}</span> : null}
+                  {meta.fresh ? <span className={styles.cardFresh}>New</span> : null}
+                  {meta.text ? <span>{meta.text}</span> : null}
+                </div>
               ) : null}
-            </Stack>
+            </div>
           )
         })}
       </SimpleGrid>

@@ -139,3 +139,9 @@
   min-height: 0;
   overflow: auto !important;
 }
+
+/* The body scrolls, so it clips what pokes out of it: leave room for the key numbers that
+   sit above each bookmark's top corner. */
+[data-bento] .panel .body {
+  padding-top: 12px;
+}

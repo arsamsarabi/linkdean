@@ -8,10 +8,53 @@
   border-radius: 10px;
 }
 
-/* A clear ring on the bookmark the arrow keys are on. */
+/* One clear ring on the bookmark the arrow keys are on: the tile draws it in the section's
+   color, so the link's own focus ring is turned off rather than doubled. */
 .tile:has(a:focus-visible) {
   outline: 2px solid var(--dash-accent, var(--mantine-color-violet-6));
   outline-offset: 3px;
+}
+
+.tile a:focus-visible {
+  outline: none;
+}
+
+/* Card meta (rank, opens, new) sits on the card's preview instead of under it, so it adds no height. */
+.cardMeta {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 16px);
+  padding: 3px 8px 3px 4px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgb(15 10 25 / 72%);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.cardRank {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--dash-accent);
+}
+
+.cardFresh {
+  color: var(--mantine-color-ice-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* The digit that opens this bookmark. Only on the highlighted section, and only with a mouse and keyboard. */
