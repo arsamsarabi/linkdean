@@ -134,3 +134,35 @@ export function greeting(date: Date = new Date()): string {
   if (h < 18) return 'Good afternoon'
   return 'Good evening'
 }
+
+/** This dashboard at a glance: counts over the distinct bookmarks it shows. */
+export type DashboardStats = {
+  bookmarks: number
+  addedThisWeek: number
+  unread: number
+  favorites: number
+  openedToday: number
+}
+
+export function dashboardStats(sections: Pick<DashboardSection, 'items'>[], now: number = Date.now()): DashboardStats {
+  const byId = new Map<string, DashboardItem>()
+  for (const s of sections) {
+    for (const item of s.items) {
+      const seen = byId.get(item.bookmark.id)
+      // The same bookmark can sit in several sections; keep the copy that knows its last open.
+      if (!seen || (!seen.last_opened_at && item.last_opened_at)) byId.set(item.bookmark.id, item)
+    }
+  }
+  const items = [...byId.values()]
+  const within = (iso: string | null | undefined, ms: number): boolean => {
+    const t = iso ? Date.parse(iso) : NaN
+    return !Number.isNaN(t) && now - t < ms
+  }
+  return {
+    bookmarks: items.length,
+    addedThisWeek: items.filter((i) => within(i.bookmark.created_at, 7 * DAY)).length,
+    unread: items.filter((i) => i.bookmark.is_unread).length,
+    favorites: items.filter((i) => i.bookmark.is_favorite).length,
+    openedToday: items.filter((i) => within(i.last_opened_at, DAY)).length,
+  }
+}

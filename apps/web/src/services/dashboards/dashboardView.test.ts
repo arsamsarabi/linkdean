@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Bookmark, Dashboard, DashboardSection } from '@/schemas'
 import { defaultSectionSettings } from './dashboardDraft'
 import {
+  dashboardStats,
   filterSections,
   greeting,
   isNew,
@@ -128,5 +129,24 @@ describe('greeting', () => {
     expect(greeting(new Date(2026, 10, 13, 14))).toBe('Good afternoon')
     expect(greeting(new Date(2026, 10, 13, 21))).toBe('Good evening')
     expect(greeting(new Date(2026, 10, 13, 2))).toBe('Good evening')
+  })
+})
+
+describe('dashboardStats', () => {
+  it('counts the distinct bookmarks this dashboard shows', () => {
+    const a = bm('a', { is_unread: true, is_favorite: true, created_at: ago(2 * 24 * H) })
+    const b = bm('b', { created_at: ago(10 * 24 * H) })
+    const sections = [
+      section('pinned', [a, b]),
+      { items: [{ id: 'a', position: 0, bookmark: a, last_opened_at: ago(2 * H) }] },
+    ] as DashboardSection[]
+    expect(dashboardStats(sections, NOW)).toEqual({
+      bookmarks: 2,
+      addedThisWeek: 1,
+      unread: 1,
+      favorites: 1,
+      openedToday: 1,
+    })
+    expect(dashboardStats([], NOW).bookmarks).toBe(0)
   })
 })

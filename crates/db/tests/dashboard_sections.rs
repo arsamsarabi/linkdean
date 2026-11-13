@@ -594,7 +594,7 @@ async fn a_folder_source_must_be_the_owners_and_a_deleted_one_empties_the_sectio
 }
 
 #[tokio::test]
-async fn items_carry_the_viewers_opens_and_the_view_carries_their_counts() {
+async fn items_carry_the_viewers_opens() {
     let Some(pool) = pool_or_skip().await else {
         return;
     };
@@ -678,10 +678,4 @@ async fn items_carry_the_viewers_opens_and_the_view_carries_their_counts() {
         .expect("never");
     assert_eq!(never.open_count, None);
     assert!(never.last_opened_at.is_none());
-
-    assert_eq!(view.stats.total, 3);
-    assert_eq!(view.stats.saved_this_week, 3);
-    assert_eq!(view.stats.unread, 1);
-    assert_eq!(view.stats.favorites, 1);
-    assert_eq!(view.stats.opened_today, 2);
 }

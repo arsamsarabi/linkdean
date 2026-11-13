@@ -16,15 +16,6 @@ export const dashboardItemSchema = z.object({
   last_opened_at: z.string().nullish(),
 })
 
-/** The viewer's own library at a glance, for the dashboard header. */
-export const dashboardStatsSchema = z.object({
-  total: z.number().default(0),
-  saved_this_week: z.number().default(0),
-  unread: z.number().default(0),
-  favorites: z.number().default(0),
-  opened_today: z.number().default(0),
-})
-
 export const dashboardSectionKindSchema = z.enum(['pinned', 'latest', 'most_opened', 'recently_visited'])
 export const dashboardSectionDisplaySchema = z.enum(['small', 'medium', 'large', 'icons'])
 export const dashboardOpenWindowSchema = z.enum(['last_30_days', 'all_time'])
@@ -72,7 +63,6 @@ export const dashboardSchema = z.object({
   deleted_at: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
-  stats: dashboardStatsSchema.default({ total: 0, saved_this_week: 0, unread: 0, favorites: 0, opened_today: 0 }),
 })
 
 export const dashboardSummarySchema = z.object({
@@ -138,7 +128,6 @@ export const patchDashboardSchema = z.object({
 
 export type DashboardItem = z.infer<typeof dashboardItemSchema>
 export type DashboardSection = z.infer<typeof dashboardSectionSchema>
-export type DashboardStats = z.infer<typeof dashboardStatsSchema>
 export type DashboardSectionKind = z.infer<typeof dashboardSectionKindSchema>
 export type DashboardSectionDisplay = z.infer<typeof dashboardSectionDisplaySchema>
 export type DashboardOpenWindow = z.infer<typeof dashboardOpenWindowSchema>

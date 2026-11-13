@@ -77,7 +77,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Each section is a panel in its type's color and icon (Pinned violet, Latest blue, Most opened amber, Recently visited green), with a bookmark count, a line saying what fills it, and a menu with **See all in library** (the same folder, tag, website and flags in the library), **Edit layout** and **Collapse**
 - Bookmarks show what their section adds: rank and open count in Most opened, when you opened them in Recently visited, when they were saved (and a dot for the last day) in Latest
 - Collapse any section; the choice is kept in this browser. Empty sections say what will fill them, with a button to get started
-- Header with the date, a greeting, and your library at a glance: bookmarks, saved this week, unread, favorites and opens in the last 24 hours, each opening the matching library view
+- Header with the date, a greeting, and this dashboard at a glance: how many distinct bookmarks it shows, and how many of them were added this week, are unread, are favorites and were opened in the last 24 hours
 - **Filter this dashboard** narrows every section by title, address, site or tag as you type; Escape clears it
 - Pin a bookmark from the **+** on a pinned section without opening the layout editor
 - Keyboard: `1` to `9` open that bookmark in the highlighted section (hover or focus picks the section); arrow keys move between bookmarks and sections
