@@ -136,23 +136,35 @@ export function DashboardSectionPanel({
             {look.icon(20)}
           </div>
           <Stack gap={2} style={{ minWidth: 0 }}>
-            {/* Wraps in a narrow (half or third) section, so the title never shrinks to nothing. */}
-            <Group gap={8} wrap="wrap" style={{ rowGap: 4 }}>
-              <Text id={`${bodyId}-title`} className={styles.title} component="h2" lineClamp={1}>
+            {/* One line: a long title truncates before the count moves to a new line. */}
+            <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+              <Text
+                id={`${bodyId}-title`}
+                className={styles.title}
+                component="h2"
+                lineClamp={1}
+                style={{ minWidth: 0 }}
+              >
                 {section.title}
               </Text>
-              <Badge size="sm" variant="light" color={look.color} radius="sm">
+              <Badge size="sm" variant="light" color={look.color} radius="sm" style={{ flexShrink: 0 }}>
                 {filtering && section.items.length !== totalItems
                   ? `${section.items.length} of ${totalItems}`
                   : totalItems}
               </Badge>
-              {section.items.length > 0 ? (
-                <span className={styles.keysChip}>Keys 1–{Math.min(9, section.items.length)} open these</span>
-              ) : null}
             </Group>
-            <Text size="xs" c="dimmed" lineClamp={1}>
-              {caption ?? `${look.label} · bookmarks you picked`}
-            </Text>
+            {/* The caption and the key hint share one line: the hint fades in over the caption on the
+                highlighted section, so nothing below it moves. */}
+            <div className={styles.subline}>
+              <Text size="xs" c="dimmed" lineClamp={1} className={styles.caption}>
+                {caption ?? `${look.label} · bookmarks you picked`}
+              </Text>
+              {section.items.length > 0 ? (
+                <span className={styles.keysHint} aria-hidden>
+                  <kbd>1</kbd>–<kbd>{Math.min(9, section.items.length)}</kbd> open a bookmark
+                </span>
+              ) : null}
+            </div>
           </Stack>
         </Group>
         <Group gap={4} wrap="nowrap">

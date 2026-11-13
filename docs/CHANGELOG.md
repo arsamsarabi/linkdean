@@ -20,6 +20,7 @@
 
 ### Changed
 
+- Dashboard cards are redesigned: preview, site, title, and a footer with rank and opens, when you opened it or when it was saved. No tags, folders or "More" text, so cards in a row line up. Pointing at a section no longer pushes its header down: the key hint now replaces the caption line in place.
 - Bookmark cards: folders now sit right under the title, shown as breadcrumbs, and tags hide behind a **N tags** toggle so cards stay short. List rows open tags in a popover.
 - The library list filters, sorts and pages in the database, so each page costs the same however large the library is.
 - Privacy Policy (version 2026-11-11): describes page-view statistics, and what the extension's saved-page icon reads.
@@ -28,7 +29,7 @@
 
 ### Fixed
 
-- Dashboard: key numbers are no longer clipped at the top of a section, small tiles have more room between them, the focused bookmark has one ring instead of two, and card details (rank, opens, saved) sit on the card's preview instead of adding a row under it. Press **G** to jump straight into the sections.
+- Dashboard: key numbers are no longer clipped at the top of a section, small tiles have more room between them, the focused bookmark has one ring instead of two. Press **G** to jump straight into the sections.
 - Side drawers no longer spill past their right edge when a field holds a long item, such as a bookmark with a long title in the section settings, and are a little wider (520 px instead of 440 px) on tablets and desktops.
 - Browser extension: the first **Sign in** click now opens the Linkdean window. Chrome closed the popup while it asked for the site permission, so it took a second click.
 - The **How to set it up** link under **Config options → Fast capture** opened a missing docs page; it now opens the iPhone Shortcut guide.

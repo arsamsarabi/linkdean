@@ -1,8 +1,9 @@
 import { useState, type ReactElement } from 'react'
 import { Group, SimpleGrid, Text } from '@mantine/core'
-import { BookmarkCard, GlanceTile, IconTile } from '@/components'
+import { GlanceTile, IconTile } from '@/components'
 import type { Bookmark, DashboardSectionDisplay, DashboardSectionKind } from '@/schemas'
 import { itemMeta } from '@/services'
+import { DashboardCard } from './DashboardCard'
 import styles from './DashboardSectionItems.module.css'
 
 // Columns follow the section's own width (container queries), so half and third sections fit.
@@ -101,20 +102,14 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
           const meta = metas[i]!
           return (
             <div key={item.bookmark.id} data-dash-tile className={styles.tile}>
-              {meta.rank ? null : <Keycap index={i} />}
-              <BookmarkCard
-                bookmark={{ ...item.bookmark, can_write: false }}
+              <Keycap index={i} />
+              <DashboardCard
+                bookmark={item.bookmark}
+                kind={kind}
+                meta={meta}
                 viewerUserId={viewerUserId}
-                onEdit={() => undefined}
-                onDelete={() => undefined}
+                size={display}
               />
-              {meta.text || meta.rank || meta.fresh ? (
-                <div className={styles.cardMeta}>
-                  {meta.rank ? <span className={styles.cardRank}>{meta.rank}</span> : null}
-                  {meta.fresh ? <span className={styles.cardFresh}>New</span> : null}
-                  {meta.text ? <span>{meta.text}</span> : null}
-                </div>
-              ) : null}
             </div>
           )
         })}
