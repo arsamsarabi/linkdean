@@ -59,3 +59,12 @@ a[href]:not([class*='mantine-']):hover {
 [data-mantine-color-scheme='light'] .mantine-Switch-input:not(:checked):not(:disabled) + .mantine-Switch-track {
   --switch-bg: var(--mantine-color-gray-5);
 }
+
+/*
+ * Drawer bodies scroll only vertically. Mantine's autosize scroll area sets its content to
+ * min-width: min-content, so a long unbreakable item (a bookmark pill in a multi-select)
+ * widened every field past the drawer's edge. Let the content shrink to the drawer instead.
+ */
+.mantine-Drawer-content .mantine-ScrollArea-content {
+  min-width: 0 !important;
+}
