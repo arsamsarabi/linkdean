@@ -116,7 +116,10 @@ html, body { overflow-x: clip; }
 @media (max-width: 639px) { .faq-dean img { width: 120px; } }
 
 /* Theme picker in the footer */
-.theme-picker { display: inline-flex; gap: 2px; padding: 3px; margin: 0; border: 1px solid var(--line); border-radius: 999px; }
+/* Footer brand column: logo and line at the top, theme picker on the column's bottom edge. */
+.footer__brand { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
+.footer__brand > .theme-picker { margin-top: auto; }
+.theme-picker { display: inline-flex; gap: 2px; padding: 3px; margin: auto 0 0 0; border: 1px solid var(--line); border-radius: 999px; }
 .theme-picker legend { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
 .theme-picker input { position: absolute; opacity: 0; pointer-events: none; }
 .theme-picker label { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; color: var(--muted); cursor: pointer; }
