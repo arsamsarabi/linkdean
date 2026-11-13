@@ -17,6 +17,20 @@ Plans move as the beta teaches us what matters. Want something sooner, or someth
 
 ## Next: once the beta settles
 
+Archiving and AI assistance come first. They are the biggest gaps on the [comparison page](/docs/compare).
+
+- **Archive and downloads.** Keep a copy of every page you bookmark, so a link that dies is not lost.
+  - A single-file HTML copy and a PDF of each page, taken when you save it. Opt-in, and counted against your storage.
+  - Search inside the pages themselves, not only titles, notes and tags.
+  - Download any copy as HTML, PDF or reader-mode Markdown, or include all of them in your export.
+  - When a link breaks, open its saved copy instead.
+  - Copies of vault bookmarks are encrypted with the vault and kept out of search.
+- **AI assistance, on your terms.** Off by default, and you choose who runs it: your own API key, or a local model on your own server. The hosted service will include a small free allowance.
+  - Tag and folder suggestions as you save and file.
+  - A short summary of each bookmark.
+  - Search by meaning ("that article about…"), not only by the words in it.
+  - Hints for related and near-duplicate bookmarks.
+  - Suggestions wait for your click. Vault contents are never sent to a model.
 - **Email digests and one-click unsubscribe.** A daily digest for the chattier notifications (edits, likes, comments), and an unsubscribe link for each kind in every email.
 - **Account and legal polish.** Tighter checks around deleting single sign-on accounts, a prompt to accept updated Terms, and a legal review of the Terms and Privacy Policy before anything costs money.
 - **More ways to sign in.** Passkeys, and ready-made sign-in with Google, Microsoft, GitHub and Authentik. Any standard OpenID Connect provider already works on a self-hosted instance.
@@ -26,7 +40,6 @@ Plans move as the beta teaches us what matters. Want something sooner, or someth
 
 ## Later
 
-- **Archive and downloads.** Keep a copy of the pages you bookmark, so a link that dies is not lost, and download them as PDF, reader-mode Markdown or media.
 - **Organizations and teams.** Shared team spaces with roles, restricted folders, invites and an audit log, while personal libraries stay private. Then invite links, verified domains, SAML and SCIM single sign-on, and team vaults.
 - **Other languages.** The interface translated, starting with making every string translatable.
 
@@ -34,7 +47,6 @@ Plans move as the beta teaches us what matters. Want something sooner, or someth
 
 Ideas we want to get to, without a date.
 
-- **AI features**, such as auto-tagging, summaries and semantic search, with a limited free tier and bring-your-own-key.
 - **End-to-end encrypted vaults**, where the server never sees the key.
 - **Native mobile apps** for iOS and Android, beyond the installable web app.
 - **A desktop app** for macOS, Windows and Linux.
