@@ -80,7 +80,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Header with the date, a greeting, and this dashboard at a glance: how many distinct bookmarks it shows, and how many of them were added this week, are unread, are favorites and were opened in the last 24 hours
 - **Filter this dashboard** narrows every section by title, address, site or tag as you type; Escape clears it
 - Pin a bookmark from the **+** on a pinned section without opening the layout editor
-- Keyboard: `1` to `9` open that bookmark in the highlighted section (hover or focus picks the section); arrow keys move between bookmarks and sections
+- Keyboard: the section under the pointer (or holding focus) gets a colored ring, a "Keys 1–N open these" chip and a key number on each of its first nine bookmarks (the rank doubles as the key in Most opened); press the number to open it. With a bookmark focused, arrow keys move within its section and between sections, with a ring on the focused bookmark. Key hints show only with a mouse and keyboard
 - Sections that fill themselves draw on the owner's library, so they only exist on dashboards that aren't shared: they can't be added to a shared dashboard (or one with a pending invite), and the share drawer lists them and refuses to share until they're removed
 - Multi-dashboard: create, rename, pin default, delete (fallback / recreate Home)
 - Page switcher; Settings default-dashboard select
