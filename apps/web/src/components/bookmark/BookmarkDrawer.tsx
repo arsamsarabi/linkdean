@@ -40,6 +40,7 @@ import {
   replaceFromPage,
   type BookmarkDraft,
 } from '@/services'
+import { useDiscardGuard } from '../confirm-modal'
 import { BookmarkCategoriesField } from './BookmarkCategoriesField'
 import { BookmarkPreviewField } from './BookmarkPreviewField'
 
@@ -79,6 +80,8 @@ export function BookmarkDrawer({
   const closeOnEscape = useDrawerClosesOnEscape()
   const drawerSize = useDrawerSize()
   const [draft, setDraft] = useState<BookmarkDraft>(emptyDraft())
+  // The draft as it opened: anything different is an unsaved change.
+  const [baseline, setBaseline] = useState<BookmarkDraft>(draft)
   const [pendingPreview, setPendingPreview] = useState<Blob | null>(null)
   const [tab, setTab] = useState<string | null>('details')
   const editing = !!draft.id
@@ -103,7 +106,9 @@ export function BookmarkDrawer({
 
   useSyncDuringRender([opened, initial], () => {
     if (!opened) return
-    setDraft(initial ? { ...initial, tags: [...initial.tags] } : emptyDraft())
+    const start = initial ? { ...initial, tags: [...initial.tags] } : emptyDraft()
+    setDraft(start)
+    setBaseline(start)
     setPendingPreview(null)
     setTab('details')
     setFetchNote(null)
@@ -209,6 +214,9 @@ export function BookmarkDrawer({
       notifications.show({ color: 'red', message: String(e) })
     }
   }
+
+  const dirty = pendingPreview !== null || JSON.stringify(draft) !== JSON.stringify(baseline)
+  const { requestClose, discardModal } = useDiscardGuard(dirty, onClose)
 
   const previewAllowed = !draft.is_vault && (draft.can_write !== false || !editing)
 
@@ -365,29 +373,32 @@ export function BookmarkDrawer({
   )
 
   return (
-    <Drawer
-      closeOnEscape={closeOnEscape}
-      opened={opened}
-      onClose={onClose}
-      title={editing ? 'Edit bookmark' : 'Add bookmark'}
-      position="right"
-      size={drawerSize}
-      padding="lg"
-    >
-      {showDiscussion && draft.id ? (
-        <Tabs value={tab} onChange={setTab}>
-          <Tabs.List mb="md">
-            <Tabs.Tab value="details">Details</Tabs.Tab>
-            <Tabs.Tab value="discussion">Discussion</Tabs.Tab>
-          </Tabs.List>
-          <Tabs.Panel value="details">{form}</Tabs.Panel>
-          <Tabs.Panel value="discussion">
-            <SocialThread subjectType="bookmark" subjectId={draft.id} enabled={opened && tab === 'discussion'} />
-          </Tabs.Panel>
-        </Tabs>
-      ) : (
-        form
-      )}
-    </Drawer>
+    <>
+      <Drawer
+        closeOnEscape={closeOnEscape}
+        opened={opened}
+        onClose={requestClose}
+        title={editing ? 'Edit bookmark' : 'Add bookmark'}
+        position="right"
+        size={drawerSize}
+        padding="lg"
+      >
+        {showDiscussion && draft.id ? (
+          <Tabs value={tab} onChange={setTab}>
+            <Tabs.List mb="md">
+              <Tabs.Tab value="details">Details</Tabs.Tab>
+              <Tabs.Tab value="discussion">Discussion</Tabs.Tab>
+            </Tabs.List>
+            <Tabs.Panel value="details">{form}</Tabs.Panel>
+            <Tabs.Panel value="discussion">
+              <SocialThread subjectType="bookmark" subjectId={draft.id} enabled={opened && tab === 'discussion'} />
+            </Tabs.Panel>
+          </Tabs>
+        ) : (
+          form
+        )}
+      </Drawer>
+      {discardModal}
+    </>
   )
 }

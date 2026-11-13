@@ -13,6 +13,7 @@ vi.mock('@/hooks', () => ({
 vi.mock('@/hooks/render', () => ({
   useDrawerClosesOnEscape: () => true,
   useDrawerSize: (desktop: string | number = 'md') => desktop,
+  useChildDialog: () => undefined,
 }))
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 

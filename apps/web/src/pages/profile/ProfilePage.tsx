@@ -101,6 +101,10 @@ export function ProfilePage(): ReactElement {
 
   function closeEditor(): void {
     resetFields()
+    setCurrentPw('')
+    setNewPw('')
+    setNewPw2('')
+    setRevokeKeys(false)
     setEditOpen(false)
   }
 
@@ -165,6 +169,13 @@ export function ProfilePage(): ReactElement {
             visibility={visibility}
             onVisibility={setVisibility}
             onClose={closeEditor}
+            dirty={
+              displayName !== (user.display_name || '') ||
+              bio !== (user.bio || '') ||
+              timezone !== (user.timezone || null) ||
+              visibility !== user.profile_visibility ||
+              !!(currentPw || newPw || newPw2)
+            }
           >
             <ProfileAboutCard
               label={label}

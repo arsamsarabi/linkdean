@@ -3,9 +3,10 @@ import { Box, Button, Checkbox, Drawer, LoadingOverlay, Select, Stack, Text, Tex
 import { notifications } from '@mantine/notifications'
 import { IconDeviceFloppy } from '@tabler/icons-react'
 import { useCategories, useSyncDuringRender, useUpdateCategory } from '@/hooks'
-import { useDrawerSize } from '@/hooks/render'
+import { useDrawerClosesOnEscape, useDrawerSize } from '@/hooks/render'
 import { categorySelectData, categorySubtreeIds, isCategoryIconKey, type CategoryIconKey } from '@/lib'
 import type { Category, CategoryVisibility } from '@/schemas'
+import { useDiscardGuard } from '../confirm-modal'
 import { CategoryIconPicker } from './CategoryIconPicker'
 import { CategoryVisibilitySelect } from './CategoryVisibilitySelect'
 
@@ -18,6 +19,7 @@ type Props = {
 }
 
 export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactElement {
+  const closeOnEscape = useDrawerClosesOnEscape()
   const drawerSize = useDrawerSize()
   const cats = useCategories()
   const update = useUpdateCategory()
@@ -46,18 +48,19 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
     setIcon(isCategoryIconKey(category.icon) ? category.icon : null)
   })
 
+  const next = name.trim()
+  const prevIcon = category && isCategoryIconKey(category.icon) ? category.icon : null
+  const nameChanged = !!category && next !== category.name
+  const iconChanged = !!category && icon !== prevIcon
+  const parentChanged = !!category && parentId !== (category.parent_id ?? null)
+  const hiddenChanged = !!category && isOwner && hidden !== category.is_hidden
+  const visibilityChanged = !!category && isOwner && visibility !== category.visibility
+  const dirty = nameChanged || iconChanged || parentChanged || hiddenChanged || visibilityChanged
+  const { requestClose, discardModal } = useDiscardGuard(dirty, onClose)
+
   async function onSave(): Promise<void> {
     if (!category) return
-    const next = name.trim()
     if (!next) return
-
-    const prevIcon = isCategoryIconKey(category.icon) ? category.icon : null
-    const prevParent = category.parent_id ?? null
-    const nameChanged = next !== category.name
-    const iconChanged = icon !== prevIcon
-    const parentChanged = parentId !== prevParent
-    const hiddenChanged = isOwner && hidden !== category.is_hidden
-    const visibilityChanged = isOwner && visibility !== category.visibility
 
     if (!nameChanged && !iconChanged && !parentChanged && !hiddenChanged && !visibilityChanged) {
       onClose()
@@ -83,51 +86,62 @@ export function EditCategoryDrawer({ opened, onClose, category }: Props): ReactE
   }
 
   return (
-    <Drawer opened={opened} onClose={onClose} title="Edit category" position="right" size={drawerSize} padding="lg">
-      <Box pos="relative">
-        <LoadingOverlay visible={update.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.currentTarget.value)}
-            data-autofocus
-          />
-          <Select
-            label="Parent"
-            data={parentOptions}
-            value={parentId ?? ''}
-            onChange={(v) => setParentId(v || null)}
-            searchable
-            clearable
-            disabled={!isOwner && category?.access !== 'write'}
-          />
-          <CategoryIconPicker
-            value={icon}
-            onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
-          />
-          {isOwner ? (
-            <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
-          ) : null}
-          {isOwner ? (
-            <CategoryVisibilitySelect value={visibility} isVault={!!category?.is_vault} onChange={setVisibility} />
-          ) : null}
-          {category?.is_vault ? (
-            <Text size="sm" c="dimmed">
-              Vault folder — encryption flag cannot be changed here.
-            </Text>
-          ) : null}
-          <Button
-            leftSection={<IconDeviceFloppy {...iconSm} />}
-            onClick={() => void onSave()}
-            disabled={!name.trim()}
-            loading={update.isPending}
-          >
-            Save changes
-          </Button>
-        </Stack>
-      </Box>
-    </Drawer>
+    <>
+      <Drawer
+        opened={opened}
+        onClose={requestClose}
+        closeOnEscape={closeOnEscape}
+        title="Edit category"
+        position="right"
+        size={drawerSize}
+        padding="lg"
+      >
+        <Box pos="relative">
+          <LoadingOverlay visible={update.isPending} zIndex={100} overlayProps={{ blur: 1 }} />
+          <Stack gap="md">
+            <TextInput
+              label="Name"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.currentTarget.value)}
+              data-autofocus
+            />
+            <Select
+              label="Parent"
+              data={parentOptions}
+              value={parentId ?? ''}
+              onChange={(v) => setParentId(v || null)}
+              searchable
+              clearable
+              disabled={!isOwner && category?.access !== 'write'}
+            />
+            <CategoryIconPicker
+              value={icon}
+              onChange={(next) => setIcon(next && isCategoryIconKey(next) ? next : null)}
+            />
+            {isOwner ? (
+              <Checkbox label="Hidden" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
+            ) : null}
+            {isOwner ? (
+              <CategoryVisibilitySelect value={visibility} isVault={!!category?.is_vault} onChange={setVisibility} />
+            ) : null}
+            {category?.is_vault ? (
+              <Text size="sm" c="dimmed">
+                Vault folder — encryption flag cannot be changed here.
+              </Text>
+            ) : null}
+            <Button
+              leftSection={<IconDeviceFloppy {...iconSm} />}
+              onClick={() => void onSave()}
+              disabled={!name.trim()}
+              loading={update.isPending}
+            >
+              Save changes
+            </Button>
+          </Stack>
+        </Box>
+      </Drawer>
+      {discardModal}
+    </>
   )
 }

@@ -179,3 +179,34 @@ describe('BookmarkDrawer quick save', () => {
     expect(onClose).toHaveBeenCalled()
   })
 })
+
+describe('BookmarkDrawer unsaved changes', () => {
+  afterEach(cleanup)
+
+  function renderEdit(onClose: () => void): void {
+    const initial = { ...emptyDraft(), id: 'b1', url: 'https://react.dev', title: 'React', owner_user_id: 'me' }
+    render(
+      <MantineProvider env="test">
+        <BookmarkDrawer opened onClose={onClose} categories={[]} initial={initial} />
+      </MantineProvider>
+    )
+  }
+
+  it('closes an untouched bookmark without asking', async () => {
+    const onClose = vi.fn()
+    renderEdit(onClose)
+    await userEvent.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('asks before Escape throws away an edited title', async () => {
+    const onClose = vi.fn()
+    renderEdit(onClose)
+    await userEvent.type(screen.getByLabelText(/^Title/), ' docs')
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByText('Discard changes?')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(onClose).not.toHaveBeenCalled()
+    expect((screen.getByLabelText(/^Title/) as HTMLInputElement).value).toBe('React docs')
+  })
+})
