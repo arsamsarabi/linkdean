@@ -6,8 +6,8 @@ use linkdean_core::VaultKeyring;
 use linkdean_core::{
     CreateBookmark, CreateCategory, CreateDashboard, CreateDashboardShare, DashboardOpenWindow,
     DashboardSectionDisplay, DashboardSectionKind, DashboardSectionSettings,
-    DashboardSectionSource, DashboardView, Error, PutDashboardLayout, PutDashboardSection,
-    ShareAccess, User,
+    DashboardSectionSource, DashboardSectionWidth, DashboardView, Error, PutDashboardLayout,
+    PutDashboardSection, ShareAccess, User,
 };
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -678,4 +678,65 @@ async fn items_carry_the_viewers_opens() {
         .expect("never");
     assert_eq!(never.open_count, None);
     assert!(never.last_opened_at.is_none());
+}
+
+#[tokio::test]
+async fn section_widths_are_kept_and_survive_export_and_import() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "width").await;
+    let a = bookmark(&pool, &owner, at("https://width.example/a")).await;
+    let id = board(&pool, &owner).await;
+    let sized = |width| DashboardSectionSettings {
+        width,
+        ..Default::default()
+    };
+    let view = put(
+        &pool,
+        &owner,
+        id,
+        vec![
+            PutDashboardSection {
+                title: "Half".into(),
+                bookmark_ids: vec![a],
+                settings: sized(DashboardSectionWidth::Half),
+            },
+            section("Third", sized(DashboardSectionWidth::Third)),
+            section("Full", DashboardSectionSettings::default()),
+        ],
+    )
+    .await
+    .expect("layout");
+    let widths: Vec<_> = view.sections.iter().map(|s| s.settings.width).collect();
+    assert_eq!(
+        widths,
+        [
+            DashboardSectionWidth::Half,
+            DashboardSectionWidth::Third,
+            DashboardSectionWidth::Full
+        ]
+    );
+
+    let (cats, bms, dashboards) = db::export_data(&pool, owner.id, &VaultKeyring::default())
+        .await
+        .expect("export");
+    let raw = serde_json::to_string(&linkdean_core::import_export::build_linkdean_export(
+        cats, bms, dashboards,
+    ))
+    .expect("json");
+    let other = user(&pool, "width-import").await;
+    let parsed = linkdean_core::import_export::parse_linkdean_json(&raw).expect("parse");
+    db::apply_parsed_import(&pool, other.id, parsed)
+        .await
+        .expect("import");
+    let imported: Vec<String> = sqlx::query_scalar(
+        "SELECT s.width FROM dashboard_sections s JOIN dashboards d ON d.id = s.dashboard_id
+         WHERE d.owner_user_id = $1 AND s.title IN ('Half', 'Third') ORDER BY s.title",
+    )
+    .bind(other.id)
+    .fetch_all(&pool)
+    .await
+    .expect("widths");
+    assert_eq!(imported, ["half", "third"]);
 }
