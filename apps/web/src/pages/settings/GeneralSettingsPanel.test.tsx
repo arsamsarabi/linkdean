@@ -46,6 +46,7 @@ const settings: UserSettings = {
   show_deleted_in_library: false,
   show_vault_in_library: true,
   vault_delete_mode: 'trash',
+  show_keyboard_hints: true,
   updated_at: '2026-01-01T00:00:00Z',
 }
 
@@ -80,5 +81,18 @@ describe('GeneralSettingsPanel', () => {
     await userEvent.tab()
     expect(onPatch).not.toHaveBeenCalled()
     expect((input as HTMLInputElement).value).toBe('30')
+  })
+
+  it('turns keyboard hints off', async () => {
+    const onPatch = vi.fn()
+    render(
+      <MantineProvider>
+        <GeneralSettingsPanel settings={settings} saving={false} onPatch={onPatch} />
+      </MantineProvider>
+    )
+    const toggle = screen.getByRole('switch', { name: /show keyboard hints/i })
+    expect((toggle as HTMLInputElement).checked).toBe(true)
+    await userEvent.click(toggle)
+    expect(onPatch).toHaveBeenCalledWith({ show_keyboard_hints: false })
   })
 })

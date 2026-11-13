@@ -35,6 +35,7 @@ export const userSettingsSchema = z.object({
   show_deleted_in_library: z.boolean().default(false),
   show_vault_in_library: z.boolean().default(true),
   vault_delete_mode: z.enum(['trash', 'permanent']).default('trash'),
+  show_keyboard_hints: z.boolean().default(true),
   updated_at: z.string(),
 })
 

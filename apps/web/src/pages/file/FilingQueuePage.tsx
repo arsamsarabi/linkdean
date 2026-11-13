@@ -367,7 +367,7 @@ export function FilingQueuePage(): ReactElement {
           </Stack>
         </Group>
         {card && wide ? (
-          <Text size="xs" c="dimmed" className={classes.keys}>
+          <Text size="xs" c="dimmed" className={classes.keys} data-key-hint>
             <Kbd size="xs">1</Kbd>–<Kbd size="xs">5</Kbd> folder · <Kbd size="xs">Enter</Kbd> file ·{' '}
             <Kbd size="xs">S</Kbd> skip · <Kbd size="xs">D</Kbd> delete
           </Text>

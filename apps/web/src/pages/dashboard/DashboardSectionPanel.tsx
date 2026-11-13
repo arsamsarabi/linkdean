@@ -160,7 +160,7 @@ export function DashboardSectionPanel({
                 {caption ?? `${look.label} · bookmarks you picked`}
               </Text>
               {section.items.length > 0 ? (
-                <span className={styles.keysHint} aria-hidden>
+                <span className={styles.keysHint} aria-hidden data-key-hint>
                   <kbd>1</kbd>–<kbd>{Math.min(9, section.items.length)}</kbd> open a bookmark
                 </span>
               ) : null}

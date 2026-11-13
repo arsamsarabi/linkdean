@@ -96,6 +96,7 @@ pub struct UserSettings {
     pub show_deleted_in_library: bool,
     pub show_vault_in_library: bool,
     pub vault_delete_mode: String,
+    pub show_keyboard_hints: bool,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -157,6 +158,9 @@ pub struct UpdateSettings {
     pub show_deleted_in_library: Option<bool>,
     pub show_vault_in_library: Option<bool>,
     pub vault_delete_mode: Option<String>,
+    /// Hide key numbers, key hint lines and shortcut keycaps. Missing means unchanged.
+    #[serde(default)]
+    pub show_keyboard_hints: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

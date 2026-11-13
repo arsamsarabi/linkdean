@@ -6,7 +6,13 @@ import { useLockAllVaults } from '@/hooks/vault'
 import type { MeResponse, UserSettings } from '@/schemas'
 import { useUi } from '@/stores'
 
-/** Hydrate show-hidden, theme, vault unlock flag, and idle auto-lock from /auth/me. */
+/** `data-key-hints="off"` on <html> hides every keyboard hint (see styles.css); the keys still work. */
+export function applyKeyboardHints(show: boolean): void {
+  if (show) delete document.documentElement.dataset.keyHints
+  else document.documentElement.dataset.keyHints = 'off'
+}
+
+/** Hydrate show-hidden, theme, keyboard hints, vault unlock flag, and idle auto-lock from /auth/me. */
 export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> {
   const setShowHidden = useUi((s) => s.setShowHidden)
   const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
@@ -46,6 +52,11 @@ export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> 
     setShowHidden,
     setColorScheme,
   ])
+
+  const showKeyHints = me.data?.settings.show_keyboard_hints ?? true
+  useEffect(() => {
+    applyKeyboardHints(showKeyHints)
+  }, [showKeyHints])
 
   useVaultAutoLock(me.data?.settings, vaultUnlocked, lockRef)
 

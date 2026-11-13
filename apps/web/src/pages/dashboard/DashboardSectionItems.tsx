@@ -35,7 +35,7 @@ type Props = {
 function Keycap({ index }: { index: number }): ReactElement | null {
   if (index > 8) return null
   return (
-    <kbd className={styles.keycap} aria-hidden>
+    <kbd className={styles.keycap} aria-hidden data-key-hint>
       {index + 1}
     </kbd>
   )

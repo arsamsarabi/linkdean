@@ -116,6 +116,15 @@ export function GeneralSettingsPanel({ settings, saving, onPatch }: Props): Reac
           />
         </SettingsCard>
 
+        <SettingsCard title="Keyboard" description="Shortcuts work the same either way.">
+          <Switch
+            label="Show keyboard hints"
+            description="Key numbers on dashboard bookmarks, key hint lines, and shortcut keys such as ⌘K and /. Turn off for a cleaner look."
+            checked={settings.show_keyboard_hints}
+            onChange={(e) => onPatch({ show_keyboard_hints: e.currentTarget.checked })}
+          />
+        </SettingsCard>
+
         <SettingsCard title="Library" description="How bookmarks are browsed and searched.">
           <Select
             label="Library view"
