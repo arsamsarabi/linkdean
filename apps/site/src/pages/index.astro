@@ -8,6 +8,21 @@ const github = 'https://github.com/arsamsarabi/linkdean'
 const signup = `${app}/register`
 const roadmap = `${docs}/docs/roadmap`
 const gettingStarted = `${docs}/docs/getting-started`
+const comingNext = `${roadmap}#next-once-the-beta-settles`
+
+// Coming next: the two roadmap items that close the biggest gaps on the docs' comparison page.
+const archivePoints = [
+  ['A copy of every page', 'A single-file HTML copy and a PDF, taken when you save. Opt-in.'],
+  ['Search inside pages', 'Find a bookmark by what the page says, not only its title and notes.'],
+  ['Downloads', 'Save any copy as HTML, PDF or reader-mode Markdown, or include them in your export.'],
+  ['Dead links, still readable', 'When a link breaks, open its saved copy instead.'],
+]
+const aiPoints = [
+  ['Your key or your server', 'Off by default. Bring your own API key, or run a local model on your own server.'],
+  ['Tags and folders suggested', 'Suggestions as you save and file, applied only when you click.'],
+  ['Summaries and search by meaning', 'A short summary per bookmark, and search for "that article about…".'],
+  ['Vaults stay private', 'Nothing in a vault is ever sent to a model.'],
+]
 
 const themes = [
   { value: 'system', label: 'Use system theme', icon: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>' },
@@ -507,6 +522,52 @@ const description =
         </div>
       </section>
 
+      <section class="section" id="next" aria-labelledby="next-h">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="next-h">Coming next to Linkdean. <span class="muted">Page archiving and AI assistance lead the roadmap.</span></h2>
+          </div>
+          <div class="grid">
+            <article class="card span-6">
+              <h3>Archive and downloads <span class="badge">Planned</span></h3>
+              <p>Keep a copy of the pages you bookmark, so a link that dies is not lost.</p>
+              <ul class="card__points">
+                {
+                  archivePoints.map(([head, body]) => (
+                    <li>
+                      <span class="next__tick" set:html={tick} />
+                      <span>
+                        <b>{head}.</b> {body}
+                      </span>
+                    </li>
+                  ))
+                }
+              </ul>
+            </article>
+            <article class="card span-6">
+              <h3>AI assistance, on your terms <span class="badge">Planned</span></h3>
+              <p>Help with tagging, filing and finding, without handing your library over.</p>
+              <ul class="card__points">
+                {
+                  aiPoints.map(([head, body]) => (
+                    <li>
+                      <span class="next__tick" set:html={tick} />
+                      <span>
+                        <b>{head}.</b> {body}
+                      </span>
+                    </li>
+                  ))
+                }
+              </ul>
+            </article>
+          </div>
+          <p class="next__more muted">
+            Plans can change as the beta teaches us what matters. <a class="link" href={comingNext}>Read the roadmap</a>{' '}or{' '}
+            <a class="link" href="https://github.com/arsamsarabi/linkdean/discussions">tell us what you need</a>.
+          </p>
+        </div>
+      </section>
+
       <section class="section" id="faq" aria-labelledby="faq-h">
         <div class="wrap">
           <div class="grid grid--top">
@@ -524,6 +585,10 @@ const description =
                 <div class="faq__item">
                   <h3>Who can open my Linkdean vaults?</h3>
                   <p>Only you, with the vault's passphrase or recovery key. Lose both and the contents are gone, for us too.</p>
+                </div>
+                <div class="faq__item">
+                  <h3>Does Linkdean save copies of pages, or use AI?</h3>
+                  <p>Not yet. Page archiving and opt-in AI assistance are next on the <a class="link" href={comingNext}>roadmap</a>. Today Linkdean keeps a preview of each page.</p>
                 </div>
                 <div class="faq__item">
                   <h3>Does Linkdean work on my phone?</h3>
@@ -591,6 +656,7 @@ const description =
                 <li><a href="#features">Features</a></li>
                 <li><a href="#vaults">Vaults</a></li>
                 <li><a href="#self-host">Self-host</a></li>
+                <li><a href="#next">Coming next</a></li>
               </ul>
             </div>
             <div class="span-2 footer__col">

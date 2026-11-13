@@ -138,3 +138,8 @@ html, body { overflow-x: clip; }
   .nav.is-open .nav__link--icon { justify-content: flex-start; }
   .nav.is-open .nav__link--icon .nav__link-text { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
 }
+
+/* Coming next: the card ticks inherit the accent; the closing line sits under the cards. */
+#next .next__tick { flex: none; display: flex; width: 18px; height: 24px; align-items: flex-start; }
+#next .card__points svg { color: var(--accent, currentColor); }
+.next__more { margin-top: var(--s-6, 32px); }
