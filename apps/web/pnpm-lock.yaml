@@ -47,6 +47,9 @@ importers:
       react-easy-crop:
         specifier: ^6.2.4
         version: 6.2.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      react-grid-layout:
+        specifier: 2.3.0
+        version: 2.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       workbox-window:
         specifier: 7.4.1
         version: 7.4.1
@@ -1783,6 +1786,9 @@ packages:
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
+  fast-equals@4.0.3:
+    resolution: {integrity: sha512-G3BSX9cfKttjr+2o1O22tYMLq0DPluZnYtq1rXumE1SpL/F/SLIfHx08WYQoWSIpeMYf8sRbJ8++71+v6Pnxfg==}
+
   fast-json-stable-stringify@2.1.0:
     resolution: {integrity: sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==}
 
@@ -2329,11 +2335,23 @@ packages:
     peerDependencies:
       react: ^19.3.1
 
+  react-draggable@4.7.2:
+    resolution: {integrity: sha512-pmqDx72EqhMGoJe/x42ZO2wJ9TIz7qJ5OPnFu6lVWWznEuJumlSjR+J0V4tNyDFhUo6dVvv56FeiTqN+arTgnw==}
+    peerDependencies:
+      react: '>= 16.3.0'
+      react-dom: '>= 16.3.0'
+
   react-easy-crop@6.2.4:
     resolution: {integrity: sha512-OWdnFYctzUNlekjob+bQfloG9wyhIBkkmeISnM5XVE4Byqn0jmVxDF7oz85ovUF+EIPQyj0yAHbBEFtnxwGv4g==}
     peerDependencies:
       react: '>=16.4.0'
       react-dom: '>=16.4.0'
+
+  react-grid-layout@2.3.0:
+    resolution: {integrity: sha512-4ofzuR/MlYchp+ixDUVBxH6ybaw+JH51M+rpf675ik/++4Dn0Kax/Vf2Gv/7Z++mV1ZC7mY9UV2sRRycjGjKXQ==}
+    peerDependencies:
+      react: '>= 16.3.0'
+      react-dom: '>= 16.3.0'
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -2366,6 +2384,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react-resizable@3.2.0:
+    resolution: {integrity: sha512-3NKQ0SLZV7rs3LQHeXlOzDSRQfFrkX6TVet77/Qk03zqiZyee37b7N8/gwDJAA8UUjRz7PdWCCy49hcso45SMQ==}
+    peerDependencies:
+      react: '>= 16.3'
+      react-dom: '>= 16.3'
 
   react-style-singleton@2.2.3:
     resolution: {integrity: sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ==}
@@ -2424,6 +2448,9 @@ packages:
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
+
+  resize-observer-polyfill@1.5.1:
+    resolution: {integrity: sha512-LwZrotdHOo12nQuZlHEmtuXdqGoOD0OhaxopaNFxWzInpEgaLWoVuAMbTzixuosCx2nEG58ngzW3vxdWoxIgdg==}
 
   resolve@1.22.14:
     resolution: {integrity: sha512-1ZjYvR9sbkiwC5+9QHetqW5HmA2pHRMaoupD01t2HlYnV/vydC2zPwLixhsMieSWVZt0JJRg5LVIk0Ow1D/TrA==}
@@ -4638,6 +4665,8 @@ snapshots:
 
   fast-deep-equal@3.1.3: {}
 
+  fast-equals@4.0.3: {}
+
   fast-json-stable-stringify@2.1.0: {}
 
   fast-uri@3.1.9: {}
@@ -5152,11 +5181,29 @@ snapshots:
       react: 19.3.1
       scheduler: 0.28.0
 
+  react-draggable@4.7.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+    dependencies:
+      clsx: 2.1.1
+      prop-types: 15.8.1
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
   react-easy-crop@6.2.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       normalize-wheel: 1.0.1
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
+
+  react-grid-layout@2.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+    dependencies:
+      clsx: 2.1.1
+      fast-equals: 4.0.3
+      prop-types: 15.8.1
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+      react-draggable: 4.7.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      react-resizable: 3.2.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      resize-observer-polyfill: 1.5.1
 
   react-is@16.13.1: {}
 
@@ -5185,6 +5232,13 @@ snapshots:
       use-sidecar: 1.1.3(@types/react@19.3.0)(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
+
+  react-resizable@3.2.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+    dependencies:
+      prop-types: 15.8.1
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+      react-draggable: 4.7.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   react-style-singleton@2.2.3(@types/react@19.3.0)(react@19.3.1):
     dependencies:
@@ -5254,6 +5308,8 @@ snapshots:
       jsesc: 3.1.0
 
   require-from-string@2.0.2: {}
+
+  resize-observer-polyfill@1.5.1: {}
 
   resolve@1.22.14:
     dependencies:

@@ -200,7 +200,7 @@ export function DashboardSectionPanel({
           </Tooltip>
         </Group>
       </Group>
-      <Collapse expanded={!collapsed} id={bodyId}>
+      <Collapse className={styles.collapse} expanded={!collapsed} id={bodyId}>
         <div className={styles.body}>
           {section.items.length === 0 ? (
             <EmptyBody

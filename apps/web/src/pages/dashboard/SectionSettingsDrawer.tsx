@@ -15,15 +15,18 @@ import {
 } from '@mantine/core'
 import { useDrawerSize } from '@/hooks'
 import {
+  DASHBOARD_GRID_COLS,
+  DASHBOARD_SECTION_MAX_H,
   DASHBOARD_SECTION_MAX_ITEMS,
+  DASHBOARD_SECTION_MIN_H,
   DASHBOARD_SECTION_MIN_ITEMS,
+  DASHBOARD_SECTION_MIN_W,
   type DashboardOpenWindow,
   type DashboardSectionDisplay,
-  type DashboardSectionWidth,
 } from '@/schemas'
 import { sectionFillsItself, type DashboardDraftSection } from '@/services'
 import { SECTION_KIND_LOOK } from './sectionKinds'
-import { DISPLAY_OPTIONS, WIDTH_OPTIONS } from './sectionOptions'
+import { DISPLAY_OPTIONS } from './sectionOptions'
 
 type Option = { value: string; label: string }
 
@@ -192,17 +195,35 @@ export function SectionSettingsDrawer({
             />
           </Stack>
           <Stack gap={4}>
-            <Text size="sm" fw={500}>
-              Width
-            </Text>
-            <SegmentedControl
-              fullWidth
-              data={WIDTH_OPTIONS}
-              value={section.width}
-              onChange={(v) => onUpdateSection({ width: v as DashboardSectionWidth })}
-            />
+            <Group gap="sm" align="flex-end" grow>
+              <NumberInput
+                label="Width"
+                description={`${DASHBOARD_SECTION_MIN_W} to ${DASHBOARD_GRID_COLS} columns`}
+                min={DASHBOARD_SECTION_MIN_W}
+                max={DASHBOARD_GRID_COLS}
+                clampBehavior="strict"
+                allowDecimal={false}
+                value={section.layout.w}
+                onChange={(v) =>
+                  typeof v === 'number' &&
+                  onUpdateSection({
+                    layout: { ...section.layout, w: v, x: Math.min(section.layout.x, DASHBOARD_GRID_COLS - v) },
+                  })
+                }
+              />
+              <NumberInput
+                label="Height"
+                description={`${DASHBOARD_SECTION_MIN_H} to ${DASHBOARD_SECTION_MAX_H} rows`}
+                min={DASHBOARD_SECTION_MIN_H}
+                max={DASHBOARD_SECTION_MAX_H}
+                clampBehavior="strict"
+                allowDecimal={false}
+                value={section.layout.h}
+                onChange={(v) => typeof v === 'number' && onUpdateSection({ layout: { ...section.layout, h: v } })}
+              />
+            </Group>
             <Text size="xs" c="dimmed">
-              Phones always show sections at full width. On tablets a third takes half.
+              Or drag the section&apos;s corner on the board. Phones stack sections at their natural height.
             </Text>
           </Stack>
           {sectionFillsItself(section) ? (

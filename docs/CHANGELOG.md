@@ -4,7 +4,7 @@
 
 ### Added
 
-- **Dashboard layout v2**: put sections side by side at half or a third of the width, and edit the layout on the board itself. Drag sections and pinned bookmarks by their handles (or move them with the keyboard), set each section's width on its card, and change its settings in a side drawer.
+- **Bento dashboard**: sections sit on a grid, each with its own width and height, and pack upward to fill the gaps. In **Edit layout**, drag sections by their handle, resize them from the corner or edges (or with Shift and the arrow keys), drag pinned bookmarks to reorder them, and change a section's settings in a side drawer. Existing layouts carry over. Phones stack sections in one column.
 - Redesigned dashboard: each section is a panel in its own color with an icon, a count, a **See all in library** link and a collapse toggle; bookmarks show their rank and opens, when you opened them, or when they were saved. The header shows the date, a greeting and counts for the bookmarks on that dashboard, with a filter for the whole dashboard. Pin to a section from its **+**, and open bookmarks with `1` to `9`.
 - **Dashboard upgrades**: each section picks how its bookmarks look (icons, small tiles, or medium or large cards), and new sections fill themselves with your latest bookmarks, the ones you open most (last 30 days or all time) or the ones you opened last, filtered by folder, tag, website, favorites or unread. They stay on dashboards you haven't shared.
 - Form drawers ask before discarding unsaved changes: closing an edited bookmark, category, bulk edit, report or profile form by Escape, a click outside or Cancel offers **Keep editing** or **Discard**.

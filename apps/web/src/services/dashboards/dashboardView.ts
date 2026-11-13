@@ -111,7 +111,7 @@ export function draftFromDashboard(d: Dashboard): DashboardDraft {
       item_limit: s.item_limit,
       source: { ...s.source },
       open_window: s.open_window,
-      width: s.width,
+      layout: s.layout,
     })),
   }
 }

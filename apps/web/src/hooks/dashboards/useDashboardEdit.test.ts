@@ -15,7 +15,7 @@ const section = (id: string, ids: string[]) => ({
   item_limit: 8,
   source: { category_id: null, tag: null, site: null, favorites: false, unread: false },
   open_window: 'all_time',
-  width: 'full',
+  layout: { x: 0, y: 0, w: 12, h: 8 },
   items: ids.map(item),
 })
 const dashboard = {
@@ -25,14 +25,16 @@ const dashboard = {
 } as unknown as Dashboard
 
 describe('useDashboardEdit drag moves', () => {
-  it('moves a section to where it was dropped and reorders pins within a section', () => {
+  it('applies a new board layout and reorders pins within a section', () => {
     const save = { mutateAsync: vi.fn() }
     const { result } = renderHook(() => useDashboardEdit({ activeId: 'd1', dashboard, save }))
     act(() => result.current.startEdit())
-    act(() => result.current.moveSectionTo(0, 2))
-    expect(result.current.editDraft!.sections.map((s) => s.title)).toEqual(['two', 'three', 'one'])
-    act(() => result.current.movePin(2, 2, 0))
-    expect(result.current.editDraft!.sections[2]!.bookmark_ids).toEqual(['c', 'a', 'b'])
+    const key = result.current.editDraft!.sections[1]!.key
+    act(() => result.current.applyLayout(new Map([[key, { x: 6, y: 0, w: 6, h: 4 }]])))
+    expect(result.current.editDraft!.sections[1]!.layout).toEqual({ x: 6, y: 0, w: 6, h: 4 })
+    expect(result.current.editDraft!.sections[0]!.layout).toEqual({ x: 0, y: 0, w: 12, h: 8 })
+    act(() => result.current.movePin(0, 2, 0))
+    expect(result.current.editDraft!.sections[0]!.bookmark_ids).toEqual(['c', 'a', 'b'])
   })
 
   it('returns the key of an added section so its settings can open', () => {

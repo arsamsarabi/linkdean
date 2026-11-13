@@ -126,3 +126,16 @@
     transition: none;
   }
 }
+
+/* On the bento grid a panel fills its tile, and the bookmarks scroll inside it. */
+[data-bento] .panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The body sits in Mantine's Collapse, which sets its own inline overflow. */
+[data-bento] .panel > .collapse {
+  flex: 1;
+  min-height: 0;
+  overflow: auto !important;
+}

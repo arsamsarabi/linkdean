@@ -1,5 +1,6 @@
 import { newClientId } from '@/lib/id'
 import {
+  DASHBOARD_GRID_COLS,
   DASHBOARD_SECTION_DEFAULT_ITEMS,
   type Bookmark,
   type Dashboard,
@@ -7,6 +8,7 @@ import {
   type DashboardSectionSettings,
   type DashboardSummary,
 } from '@/schemas'
+import { bentoLayout, BOTTOM_ROW, defaultSectionHeight, layoutByKey, readingOrder } from './bentoLayout'
 
 export type DashboardDraftSection = DashboardSectionSettings & {
   key: string
@@ -29,7 +31,13 @@ export function defaultSectionSettings(kind: DashboardSectionKind = 'pinned'): D
     item_limit: DASHBOARD_SECTION_DEFAULT_ITEMS,
     source: { category_id: null, tag: null, site: null, favorites: false, unread: false },
     open_window: 'all_time',
-    width: 'full',
+    // At the bottom; the grid packs it up under the others.
+    layout: {
+      x: 0,
+      y: BOTTOM_ROW,
+      w: DASHBOARD_GRID_COLS,
+      h: defaultSectionHeight(kind === 'pinned' ? 'medium' : 'small'),
+    },
   }
 }
 
@@ -77,9 +85,14 @@ export function toPutDashboardLayout(draft: DashboardDraft): {
   title: string
   sections: (DashboardSectionSettings & { title: string; bookmark_ids: string[] })[]
 } {
+  // Saved packed, in reading order, so the order on the server matches the board.
+  const packed = bentoLayout(draft.sections)
+  const placed = layoutByKey(packed)
+  const rank = new Map(readingOrder(packed).map((key, i) => [key, i]))
+  const sections = [...draft.sections].sort((a, b) => rank.get(a.key)! - rank.get(b.key)!)
   return {
     title: draft.title.trim() || 'Home',
-    sections: draft.sections.map((s) => ({
+    sections: sections.map((s) => ({
       title: s.title.trim(),
       // A section that fills itself has no pins of its own.
       bookmark_ids: sectionFillsItself(s) ? [] : s.bookmark_ids,
@@ -94,7 +107,7 @@ export function toPutDashboardLayout(draft: DashboardDraft): {
         unread: s.source.unread,
       },
       open_window: s.open_window,
-      width: s.width,
+      layout: placed.get(s.key)!,
     })),
   }
 }

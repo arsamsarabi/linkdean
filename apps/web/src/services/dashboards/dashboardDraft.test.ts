@@ -43,7 +43,7 @@ describe('toPutDashboardLayout', () => {
           item_limit: 8,
           source: { category_id: null, tag: null, site: null, favorites: false, unread: false },
           open_window: 'all_time',
-          width: 'full',
+          layout: { x: 0, y: 0, w: 12, h: 11 },
         },
       ],
     })

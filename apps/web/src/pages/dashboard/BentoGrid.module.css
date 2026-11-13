@@ -1,0 +1,71 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xl);
+}
+
+/* A section fills its tile; its body scrolls when the bookmarks don't fit. */
+.tile {
+  display: flex;
+  min-width: 0;
+}
+
+.tile > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.grid :global(.react-grid-placeholder) {
+  border: 2px dashed var(--mantine-color-violet-5);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--mantine-color-violet-5) 12%, transparent);
+  opacity: 1;
+}
+
+.grid :global(.react-grid-item.react-draggable-dragging),
+.grid :global(.react-grid-item.resizing) {
+  z-index: 3;
+}
+
+/* Resize grips: a corner and two edge bars, visible while editing. Selectors match the
+   library's own (item > handle.handle-axis) so ours win, and its rotated arrow is dropped. */
+.grid :global(.react-grid-item > .react-resizable-handle) {
+  z-index: 2;
+  padding: 0;
+  background: none;
+  transform: none;
+}
+
+.grid :global(.react-grid-item > .react-resizable-handle)::after {
+  display: none;
+}
+
+.grid :global(.react-grid-item > .react-resizable-handle.react-resizable-handle-se) {
+  right: 4px;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  border-right: 3px solid var(--mantine-color-violet-5);
+  border-bottom: 3px solid var(--mantine-color-violet-5);
+  border-bottom-right-radius: 8px;
+}
+
+.grid :global(.react-grid-item > .react-resizable-handle.react-resizable-handle-e) {
+  top: 50%;
+  right: 2px;
+  width: 6px;
+  height: 40px;
+  margin-top: -20px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--mantine-color-violet-5) 55%, transparent);
+}
+
+.grid :global(.react-grid-item > .react-resizable-handle.react-resizable-handle-s) {
+  bottom: 2px;
+  left: 50%;
+  width: 40px;
+  height: 6px;
+  margin-left: -20px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--mantine-color-violet-5) 55%, transparent);
+}
