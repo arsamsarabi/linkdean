@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
+import { useDrawerSize } from '@/hooks'
 import {
   DASHBOARD_GRID_COLS,
   DASHBOARD_SECTION_MAX_H,
@@ -165,12 +166,13 @@ export function SectionSettingsDrawer({
   onUpdateBookmarks,
   onUpdateSection,
 }: DrawerProps): ReactElement {
+  const drawerSize = useDrawerSize()
   return (
     <Drawer
       opened={section !== null}
       onClose={onClose}
       position="right"
-      size="md"
+      size={drawerSize}
       title={section ? `${SECTION_KIND_LOOK[section.kind].label} section` : 'Section'}
     >
       {section ? (
