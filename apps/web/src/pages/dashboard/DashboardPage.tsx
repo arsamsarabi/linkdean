@@ -2,7 +2,7 @@ import { type ReactElement } from 'react'
 import { Stack, Text } from '@mantine/core'
 import { ConfirmModal, QueryErrorAlert, ShareDashboardDrawer, SocialDrawer } from '@/components'
 import { useDashboardPage } from '@/hooks'
-import { DashboardEditLayout } from './DashboardEditLayout'
+import { DashboardBoardEditor } from './DashboardBoardEditor'
 import { DashboardPageHeader } from './DashboardPageHeader'
 import { DashboardViewLayout } from './DashboardViewLayout'
 
@@ -61,18 +61,19 @@ export function DashboardPage(): ReactElement {
       />
 
       {draft ? (
-        <DashboardEditLayout
+        <DashboardBoardEditor
           draft={draft}
           bookmarkOptions={d.bookmarkOptions}
           bookmarkById={d.bookmarkById}
           folderOptions={d.folderOptions}
           tagOptions={d.tagOptions}
+          folderName={d.folderName}
           canAddSelfFilling={d.canAddSelfFilling}
-          viewerUserId={d.viewerUserId}
           onUpdateTitle={d.updateSectionTitle}
           onUpdateBookmarks={d.updateSectionBookmarks}
           onUpdateSection={d.updateSection}
-          onMoveSection={d.moveSectionBy}
+          onMoveSection={d.moveSectionTo}
+          onMovePin={d.movePin}
           onRemoveSection={d.removeSection}
           onAddSection={d.addSection}
         />

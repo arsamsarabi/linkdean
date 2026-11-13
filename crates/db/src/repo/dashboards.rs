@@ -557,9 +557,9 @@ pub async fn put_dashboard(
             r#"
             INSERT INTO dashboard_sections (
                 dashboard_id, title, position, kind, display, item_limit, source_category_id,
-                source_tag, source_site, source_favorites, source_unread, open_window
+                source_tag, source_site, source_favorites, source_unread, open_window, width
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING *
             "#,
         )
@@ -575,6 +575,7 @@ pub async fn put_dashboard(
         .bind(settings.source.favorites)
         .bind(settings.source.unread)
         .bind(settings.open_window.as_str())
+        .bind(settings.width.as_str())
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| Error::msg(e.to_string()))?;

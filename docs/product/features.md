@@ -70,6 +70,8 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 - Home at `/`; library at `/library`
 - Sectioned glance grid of pinned bookmarks
+- Section width: full, half or a third of the board (a third takes half on tablets; phones always show one column). Item grids size to their section. The width is kept in export and import
+- **Edit layout** turns the board into the editor: drag a section by its handle to move it, drag pinned bookmarks within their section, pick each section's width on its card, and open its settings (title, display, width, bookmarks or source) in a side drawer. Keyboard: focus a handle, press Space, move one place per arrow key, Space to drop, Escape to cancel; screen readers hear the section or bookmark name and its new position
 - Per-section display mode: icons only, small tiles, or medium or large bookmark cards
 - Section types: **Pinned** (bookmarks you pick), **Latest**, **Most opened** (last 30 days or all time) and **Recently visited**, 4 to 24 bookmarks each (default 8)
 - Latest and Most opened sources, combined: a folder with its subfolders, a tag, a website (subdomains match), favorites only, unread only. Vault bookmarks never show
@@ -80,6 +82,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Header with the date, a greeting, and this dashboard at a glance: how many distinct bookmarks it shows, and how many of them were added this week, are unread, are favorites and were opened in the last 24 hours
 - **Filter this dashboard** narrows every section by title, address, site or tag as you type; Escape clears it
 - Pin a bookmark from the **+** on a pinned section without opening the layout editor
+- Invitees with write access to a shared dashboard can move and resize sections and pins in the editor, and add pinned sections only
 - Keyboard: the section under the pointer (or holding focus) gets a colored ring, a "Keys 1–N open these" chip and a key number on each of its first nine bookmarks (the rank doubles as the key in Most opened); press the number to open it. With a bookmark focused, arrow keys move within its section and between sections, with a ring on the focused bookmark. Key hints show only with a mouse and keyboard
 - Sections that fill themselves draw on the owner's library, so they only exist on dashboards that aren't shared: they can't be added to a shared dashboard (or one with a pending invite), and the share drawer lists them and refuses to share until they're removed
 - Multi-dashboard: create, rename, pin default, delete (fallback / recreate Home)

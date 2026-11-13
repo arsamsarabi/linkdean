@@ -29,6 +29,7 @@ export function defaultSectionSettings(kind: DashboardSectionKind = 'pinned'): D
     item_limit: DASHBOARD_SECTION_DEFAULT_ITEMS,
     source: { category_id: null, tag: null, site: null, favorites: false, unread: false },
     open_window: 'all_time',
+    width: 'full',
   }
 }
 
@@ -58,15 +59,12 @@ export function newDraftSection(title?: string, kind: DashboardSectionKind = 'pi
   }
 }
 
-export function moveSection<T>(sections: readonly T[], index: number, delta: number): T[] {
-  const next = [...sections]
-  const target = index + delta
-  if (index < 0 || index >= next.length || target < 0 || target >= next.length) {
-    return next
-  }
-  const tmp = next[index]!
-  next[index] = next[target]!
-  next[target] = tmp
+/** The list with the item at `from` moved to `to`. Out-of-range indexes leave it unchanged. */
+export function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
+  const next = [...items]
+  if (from < 0 || from >= next.length || to < 0 || to >= next.length || from === to) return next
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item!)
   return next
 }
 
@@ -96,6 +94,7 @@ export function toPutDashboardLayout(draft: DashboardDraft): {
         unread: s.source.unread,
       },
       open_window: s.open_window,
+      width: s.width,
     })),
   }
 }

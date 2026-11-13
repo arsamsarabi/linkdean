@@ -5,7 +5,7 @@ import {
   dashboardDraftError,
   draftFromDashboard,
   emptyDashboardDraft,
-  moveSection,
+  moveItem,
   newDraftSection,
   toPutDashboardLayout,
   type DashboardDraft,
@@ -44,10 +44,30 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
     setEditDraft(null)
   }
 
-  function addSection(kind: DashboardSectionKind = 'pinned'): void {
+  /** Adds a section at the end and returns its key, so its settings can open straight away. */
+  function addSection(kind: DashboardSectionKind = 'pinned'): string {
+    const section = newDraftSection(undefined, kind)
     setEditDraft((prev) => {
       if (!prev) return prev
-      return { ...prev, sections: [...prev.sections, newDraftSection(undefined, kind)] }
+      return { ...prev, sections: [...prev.sections, section] }
+    })
+    return section.key
+  }
+
+  /** Drag and drop: moves a section from one place on the board to another. */
+  function moveSectionTo(from: number, to: number): void {
+    setEditDraft((prev) => (prev ? { ...prev, sections: moveItem(prev.sections, from, to) } : prev))
+  }
+
+  /** Drag and drop: moves a pinned bookmark within its section. */
+  function movePin(idx: number, from: number, to: number): void {
+    setEditDraft((prev) => {
+      if (!prev) return prev
+      const next = [...prev.sections]
+      const section = next[idx]
+      if (!section) return prev
+      next[idx] = { ...section, bookmark_ids: moveItem(section.bookmark_ids, from, to) }
+      return { ...prev, sections: next }
     })
   }
 
@@ -104,13 +124,6 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
     })
   }
 
-  function moveSectionBy(idx: number, delta: -1 | 1): void {
-    setEditDraft((prev) => {
-      if (!prev) return prev
-      return { ...prev, sections: moveSection(prev.sections, idx, delta) }
-    })
-  }
-
   function removeSection(idx: number): void {
     setEditDraft((prev) => {
       if (!prev) return prev
@@ -132,11 +145,12 @@ export function useDashboardEdit({ activeId, dashboard, save }: Input) {
     startEdit,
     cancelEdit,
     addSection,
+    moveSectionTo,
+    movePin,
     updateSection,
     onSave,
     updateSectionTitle,
     updateSectionBookmarks,
-    moveSectionBy,
     removeSection,
     setDraftTitle,
     clearDraft,

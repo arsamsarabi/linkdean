@@ -1,4 +1,4 @@
-import { type ReactElement } from 'react'
+import { type CSSProperties, type ReactElement } from 'react'
 import { IconClockHour4, IconFlame, IconHistory, IconPinned } from '@tabler/icons-react'
 import type { DashboardSectionKind } from '@/schemas'
 
@@ -18,4 +18,13 @@ export const SECTION_KIND_LOOK: Record<DashboardSectionKind, SectionKindLook> = 
     color: 'green',
     icon: (size) => <IconHistory size={size} stroke={1.6} />,
   },
+}
+
+/** The CSS variables that give a section panel its kind's color in both themes. */
+export function kindAccent(kind: DashboardSectionKind): CSSProperties {
+  const color = SECTION_KIND_LOOK[kind].color
+  return {
+    '--dash-accent-light': `var(--mantine-color-${color}-6)`,
+    '--dash-accent-dark': `var(--mantine-color-${color}-4)`,
+  } as CSSProperties
 }

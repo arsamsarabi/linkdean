@@ -20,11 +20,6 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     c. **After merge**: tag `v0.0.9`. Its `extension` job is the first real run of the store submission; check its log.
     d. **Prep** (needs a): add the AMO link beside the Chrome Web Store link in **Config options → Fast capture** and the docs. The Chrome link is in.
 
-20. **Dashboard layout v2** (M). Sections are panels now, but each still takes the full width, so short sections leave wide empty rows, and the layout editor is a long form away from the board itself.
-    - Section width per section: full, half or a third, flowing in a 12-column grid and stacking to one column on phones. Needs a `width` column on `dashboard_sections` and the setting in export and import.
-    - Edit in place: **Edit layout** turns the board into the editor, with drag handles to reorder sections and the bookmarks in a pinned section (first drag-and-drop library in the app, such as `@dnd-kit`), keyboard reordering for the same moves, and each section's settings in a side drawer instead of the long form.
-    - Shared dashboards follow the same write access as today: invitees with write access can move pins and sections, never add sections that fill themselves.
-
 ---
 
 ## Next: high value after the beta settles

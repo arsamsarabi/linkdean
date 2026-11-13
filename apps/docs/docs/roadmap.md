@@ -12,7 +12,6 @@ Plans move as the beta teaches us what matters. Want something sooner, or someth
 
 ## Now: running the public beta well
 
-- **Dashboard layout v2.** Put sections side by side at half or a third of the width, and rearrange sections and pinned bookmarks by dragging them on the board itself.
 - **Browser extension in both stores.** Live on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf); the Firefox add-on is in review. Edge installs from the Chrome listing.
 
 ## Next: once the beta settles

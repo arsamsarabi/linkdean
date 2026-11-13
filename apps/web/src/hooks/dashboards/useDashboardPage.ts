@@ -115,6 +115,8 @@ export function useDashboardPage() {
     cancelEdit: edit.cancelEdit,
     addSection: edit.addSection,
     updateSection: edit.updateSection,
+    moveSectionTo: edit.moveSectionTo,
+    movePin: edit.movePin,
     selectDashboard: (id: string | null) => board.selectDashboard(id, edit.editing),
     onSave: edit.onSave,
     onCreate: () => board.onCreate(edit.editing),
@@ -122,7 +124,6 @@ export function useDashboardPage() {
     onDelete: () => board.onDelete(edit.clearDraft),
     updateSectionTitle: edit.updateSectionTitle,
     updateSectionBookmarks: edit.updateSectionBookmarks,
-    moveSectionBy: edit.moveSectionBy,
     removeSection: edit.removeSection,
     setDraftTitle: edit.setDraftTitle,
   }

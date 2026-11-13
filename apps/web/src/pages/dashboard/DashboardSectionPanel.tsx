@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactElement, type ReactNode } from 'react'
+import { type ReactElement, type ReactNode } from 'react'
 import { ActionIcon, Badge, Button, Collapse, Group, Menu, Stack, Text, Tooltip } from '@mantine/core'
 import {
   IconChevronDown,
@@ -13,7 +13,7 @@ import type { DashboardSection } from '@/schemas'
 import { describeSectionSource, sectionLibrarySearch } from '@/services'
 import { DashboardSectionItems } from './DashboardSectionItems'
 import styles from './DashboardSectionPanel.module.css'
-import { SECTION_KIND_LOOK } from './sectionKinds'
+import { kindAccent, SECTION_KIND_LOOK } from './sectionKinds'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -118,10 +118,7 @@ export function DashboardSectionPanel({
   const caption = describeSectionSource(section, folderName)
   const librarySearch = sectionLibrarySearch(section)
   const bodyId = `dash-section-${section.id}`
-  const accent = {
-    '--dash-accent-light': `var(--mantine-color-${look.color}-6)`,
-    '--dash-accent-dark': `var(--mantine-color-${look.color}-4)`,
-  } as CSSProperties
+  const accent = kindAccent(section.kind)
 
   return (
     <section
@@ -139,7 +136,8 @@ export function DashboardSectionPanel({
             {look.icon(20)}
           </div>
           <Stack gap={2} style={{ minWidth: 0 }}>
-            <Group gap={8} wrap="nowrap">
+            {/* Wraps in a narrow (half or third) section, so the title never shrinks to nothing. */}
+            <Group gap={8} wrap="wrap" style={{ rowGap: 4 }}>
               <Text id={`${bodyId}-title`} className={styles.title} component="h2" lineClamp={1}>
                 {section.title}
               </Text>

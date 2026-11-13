@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router'
 import { EmptyState } from '@/components'
 import type { Dashboard } from '@/schemas'
 import { filterSections } from '@/services'
+import grid from './DashboardGrid.module.css'
 import { DashboardSectionPanel } from './DashboardSectionPanel'
 import { QuickPinButton } from './QuickPinButton'
 import { useCollapsedSections } from './useCollapsedSections'
@@ -73,34 +74,37 @@ export function DashboardViewLayout({
 
   return (
     <Stack gap="xl" ref={root}>
-      {shown.map((section, i) => (
-        <DashboardSectionPanel
-          key={section.id}
-          section={section}
-          totalItems={view.sections[i]?.items.length ?? section.items.length}
-          filtering={filtering}
-          // A filter shows every match, collapsed or not.
-          collapsed={!filtering && collapsed.isCollapsed(section.id)}
-          active={section.id === active}
-          canEditLayout={canEditLayout}
-          viewerUserId={viewerUserId}
-          folderName={folderName}
-          quickPin={
-            canEditLayout && section.kind === 'pinned' ? (
-              <QuickPinButton
-                sectionTitle={section.title}
-                options={bookmarkOptions}
-                pinnedIds={(view.sections[i]?.items ?? []).map((it) => it.bookmark.id)}
-                saving={quickPinPending}
-                onPin={(bookmarkId) => onQuickPin(section.id, bookmarkId)}
-              />
-            ) : null
-          }
-          onToggleCollapse={() => collapsed.toggle(section.id)}
-          onActivate={() => setActiveId(section.id)}
-          onStartEdit={onStartEdit}
-        />
-      ))}
+      <div className={grid.grid}>
+        {shown.map((section, i) => (
+          <div key={section.id} className={grid.cell} data-width={section.width}>
+            <DashboardSectionPanel
+              section={section}
+              totalItems={view.sections[i]?.items.length ?? section.items.length}
+              filtering={filtering}
+              // A filter shows every match, collapsed or not.
+              collapsed={!filtering && collapsed.isCollapsed(section.id)}
+              active={section.id === active}
+              canEditLayout={canEditLayout}
+              viewerUserId={viewerUserId}
+              folderName={folderName}
+              quickPin={
+                canEditLayout && section.kind === 'pinned' ? (
+                  <QuickPinButton
+                    sectionTitle={section.title}
+                    options={bookmarkOptions}
+                    pinnedIds={(view.sections[i]?.items ?? []).map((it) => it.bookmark.id)}
+                    saving={quickPinPending}
+                    onPin={(bookmarkId) => onQuickPin(section.id, bookmarkId)}
+                  />
+                ) : null
+              }
+              onToggleCollapse={() => collapsed.toggle(section.id)}
+              onActivate={() => setActiveId(section.id)}
+              onStartEdit={onStartEdit}
+            />
+          </div>
+        ))}
+      </div>
       <Group justify="space-between" gap="sm" c="dimmed">
         <Text size="sm" c="dimmed">
           Browse the full collection in the{' '}

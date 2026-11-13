@@ -1305,6 +1305,7 @@ pub struct DashboardSection {
     pub source_favorites: bool,
     pub source_unread: bool,
     pub open_window: String,
+    pub width: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -1324,6 +1325,7 @@ impl DashboardSection {
                 unread: self.source_unread,
             },
             open_window: DashboardOpenWindow::parse(&self.open_window).unwrap_or_default(),
+            width: DashboardSectionWidth::parse(&self.width).unwrap_or_default(),
         }
     }
 }
@@ -1401,6 +1403,35 @@ impl DashboardSectionDisplay {
     }
 }
 
+/// How much of the board's width a section takes. Phones always show full width.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DashboardSectionWidth {
+    #[default]
+    Full,
+    Half,
+    Third,
+}
+
+impl DashboardSectionWidth {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::Half => "half",
+            Self::Third => "third",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "full" => Self::Full,
+            "half" => Self::Half,
+            "third" => Self::Third,
+            _ => return None,
+        })
+    }
+}
+
 /// The period "Most opened" counts opens over.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -1467,6 +1498,8 @@ pub struct DashboardSectionSettings {
     pub source: DashboardSectionSource,
     #[serde(default)]
     pub open_window: DashboardOpenWindow,
+    #[serde(default)]
+    pub width: DashboardSectionWidth,
 }
 
 impl Default for DashboardSectionSettings {
@@ -1477,6 +1510,7 @@ impl Default for DashboardSectionSettings {
             item_limit: DASHBOARD_SECTION_DEFAULT_ITEMS,
             source: DashboardSectionSource::default(),
             open_window: DashboardOpenWindow::default(),
+            width: DashboardSectionWidth::default(),
         }
     }
 }

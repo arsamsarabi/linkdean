@@ -1,3 +1,8 @@
+/* Item grids size their columns to the section, not the window. */
+.container {
+  container-type: inline-size;
+}
+
 .tile {
   position: relative;
   border-radius: 10px;

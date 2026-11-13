@@ -6,22 +6,23 @@ import {
   defaultSectionSettings,
   describeSectionSource,
   mergeDashboardBookmarks,
-  moveSection,
+  moveItem,
   toPutDashboardLayout,
   type DashboardDraft,
 } from './dashboardDraft'
 
-describe('moveSection', () => {
-  it('swaps adjacent sections up and down', () => {
-    const sections = ['a', 'b', 'c']
-    expect(moveSection(sections, 1, -1)).toEqual(['b', 'a', 'c'])
-    expect(moveSection(sections, 1, 1)).toEqual(['a', 'c', 'b'])
+describe('moveItem', () => {
+  it('moves an item to the drop position, shifting the rest', () => {
+    const items = ['a', 'b', 'c', 'd']
+    expect(moveItem(items, 0, 2)).toEqual(['b', 'c', 'a', 'd'])
+    expect(moveItem(items, 3, 1)).toEqual(['a', 'd', 'b', 'c'])
+    expect(items).toEqual(['a', 'b', 'c', 'd'])
   })
 
-  it('no-ops at edges', () => {
-    const sections = ['a', 'b']
-    expect(moveSection(sections, 0, -1)).toEqual(['a', 'b'])
-    expect(moveSection(sections, 1, 1)).toEqual(['a', 'b'])
+  it('leaves the list unchanged for the same or an out-of-range index', () => {
+    expect(moveItem(['a', 'b'], 1, 1)).toEqual(['a', 'b'])
+    expect(moveItem(['a', 'b'], -1, 0)).toEqual(['a', 'b'])
+    expect(moveItem(['a', 'b'], 0, 2)).toEqual(['a', 'b'])
   })
 })
 
@@ -42,6 +43,7 @@ describe('toPutDashboardLayout', () => {
           item_limit: 8,
           source: { category_id: null, tag: null, site: null, favorites: false, unread: false },
           open_window: 'all_time',
+          width: 'full',
         },
       ],
     })
