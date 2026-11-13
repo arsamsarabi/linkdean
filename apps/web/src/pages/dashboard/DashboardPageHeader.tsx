@@ -14,7 +14,7 @@ import {
 } from '@tabler/icons-react'
 import { ShareBadge } from '@/components'
 import type { Dashboard } from '@/schemas'
-import { greeting, type DashboardDraft } from '@/services'
+import { dashboardStats, greeting, type DashboardDraft } from '@/services'
 import styles from './DashboardHero.module.css'
 import { DashboardStatsRow } from './DashboardStatsRow'
 
@@ -194,7 +194,7 @@ export function DashboardPageHeader({
         </Text>
       ) : (
         <>
-          <DashboardStatsRow stats={view.stats} />
+          <DashboardStatsRow stats={dashboardStats(view.sections, today.getTime())} />
           <TextInput
             aria-label="Filter this dashboard"
             placeholder="Filter this dashboard by title, site or tag"

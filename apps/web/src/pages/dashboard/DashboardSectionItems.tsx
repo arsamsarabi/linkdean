@@ -3,6 +3,7 @@ import { Badge, Group, SimpleGrid, Stack, Text } from '@mantine/core'
 import { BookmarkCard, GlanceTile, IconTile } from '@/components'
 import type { Bookmark, DashboardSectionDisplay, DashboardSectionKind } from '@/schemas'
 import { itemMeta } from '@/services'
+import styles from './DashboardSectionItems.module.css'
 
 const CARD_COLS = {
   medium: { base: 1, xs: 2, sm: 3, lg: 4, xl: 6 },
@@ -25,8 +26,18 @@ type Props = {
 /**
  * A section's bookmarks in its display mode: icons, small tiles, or medium or large cards.
  * Each one carries what its section adds: rank and opens, when it was opened, or when saved.
- * Every link sits inside a `data-dash-tile` box so the keyboard can move between them.
+ * Every link sits inside a `data-dash-tile` box so the keyboard can move between them, and the
+ * first nine carry the digit that opens them (shown on the highlighted section only).
  */
+function Keycap({ index }: { index: number }): ReactElement | null {
+  if (index > 8) return null
+  return (
+    <kbd className={styles.keycap} aria-hidden>
+      {index + 1}
+    </kbd>
+  )
+}
+
 export function DashboardSectionItems({ kind, display, items, viewerUserId }: Props): ReactElement {
   // Fixed at mount: "2h ago" need not tick while the page is open.
   const [now] = useState(() => Date.now())
@@ -36,7 +47,8 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
     return (
       <Group gap="md">
         {items.map((item, i) => (
-          <div key={item.bookmark.id} data-dash-tile>
+          <div key={item.bookmark.id} data-dash-tile className={styles.tile}>
+            {metas[i]!.rank ? null : <Keycap index={i} />}
             <IconTile bookmark={item.bookmark} meta={metas[i]!.text} rank={metas[i]!.rank} fresh={metas[i]!.fresh} />
           </div>
         ))}
@@ -47,9 +59,19 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
     return (
       <SimpleGrid cols={{ base: 1, xs: 2, md: 3, xl: 4 }} spacing="sm">
         {items.map((item, i) => (
-          <Group key={item.bookmark.id} data-dash-tile gap="xs" wrap="nowrap" align="center">
+          <Group key={item.bookmark.id} data-dash-tile className={styles.tile} gap="xs" wrap="nowrap" align="center">
+            {metas[i]!.rank ? null : <Keycap index={i} />}
             {metas[i]!.rank ? (
-              <Text fw={700} size="sm" c="dimmed" w={22} ta="right" style={{ flexShrink: 0 }} aria-hidden>
+              <Text
+                className={styles.rankKey}
+                fw={700}
+                size="sm"
+                c="dimmed"
+                w={22}
+                ta="center"
+                style={{ flexShrink: 0 }}
+                aria-hidden
+              >
                 {metas[i]!.rank}
               </Text>
             ) : null}
@@ -71,7 +93,8 @@ export function DashboardSectionItems({ kind, display, items, viewerUserId }: Pr
       {items.map((item, i) => {
         const meta = metas[i]!
         return (
-          <Stack key={item.bookmark.id} data-dash-tile gap={6}>
+          <Stack key={item.bookmark.id} data-dash-tile className={styles.tile} gap={6}>
+            {metas[i]!.rank ? null : <Keycap index={i} />}
             <BookmarkCard
               bookmark={{ ...item.bookmark, can_write: false }}
               viewerUserId={viewerUserId}

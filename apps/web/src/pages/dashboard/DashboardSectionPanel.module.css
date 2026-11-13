@@ -32,7 +32,29 @@
 
 .panel:focus-within,
 .panel[data-active] {
-  border-color: color-mix(in srgb, var(--dash-accent) 45%, var(--mantine-color-default-border));
+  border-color: color-mix(in srgb, var(--dash-accent) 70%, var(--mantine-color-default-border));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--dash-accent) 18%, transparent),
+    0 8px 24px -12px rgb(20 10 40 / 12%);
+}
+
+.keysChip {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dash-accent);
+  background: color-mix(in srgb, var(--dash-accent) 12%, transparent);
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .panel[data-active] .keysChip {
+    display: inline-flex;
+  }
 }
 
 .header {

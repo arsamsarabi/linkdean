@@ -64,19 +64,6 @@
   text-decoration: none;
   background: color-mix(in srgb, var(--mantine-color-body) 70%, transparent);
   backdrop-filter: blur(6px);
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease;
-}
-
-a.stat:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--stat-accent) 50%, var(--mantine-color-default-border));
-}
-
-a.stat:focus-visible {
-  outline: 2px solid var(--mantine-color-violet-filled);
-  outline-offset: 2px;
 }
 
 .statIcon {
@@ -101,11 +88,5 @@ a.stat:focus-visible {
   .hero {
     padding: 20px 16px 16px;
     border-radius: 16px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stat {
-    transition: none;
   }
 }

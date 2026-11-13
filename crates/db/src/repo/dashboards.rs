@@ -328,7 +328,6 @@ async fn load_dashboard_view(
     }
 
     super::dashboard_sections::attach_open_stats(pool, user_id, &mut section_views).await?;
-    let stats = super::dashboard_sections::dashboard_stats(pool, user_id).await?;
 
     let owner_display_name = if access.is_owner() {
         None
@@ -349,7 +348,6 @@ async fn load_dashboard_view(
         deleted_at: dash.deleted_at,
         created_at: dash.created_at,
         updated_at: dash.updated_at,
-        stats,
     })
 }
 

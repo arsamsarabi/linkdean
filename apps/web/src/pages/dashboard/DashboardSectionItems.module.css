@@ -1,0 +1,53 @@
+.tile {
+  position: relative;
+  border-radius: 10px;
+}
+
+/* A clear ring on the bookmark the arrow keys are on. */
+.tile:has(a:focus-visible) {
+  outline: 2px solid var(--dash-accent, var(--mantine-color-violet-6));
+  outline-offset: 3px;
+}
+
+/* The digit that opens this bookmark. Only on the highlighted section, and only with a mouse and keyboard. */
+.keycap {
+  position: absolute;
+  z-index: 1;
+  top: -8px;
+  right: -8px;
+  display: none;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--dash-accent) 60%, transparent);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  color: var(--dash-accent);
+  background: var(--mantine-color-body);
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-active] .keycap {
+    display: block;
+  }
+}
+
+/* In a ranked section the rank is the key, so it takes the keycap look instead of a second number. */
+@media (hover: hover) and (pointer: fine) {
+  [data-active] .rankKey {
+    height: 20px;
+    border: 1px solid color-mix(in srgb, var(--dash-accent) 60%, transparent);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    font-family: var(--mantine-font-family-monospace);
+    font-size: 11px;
+    line-height: 17px;
+    color: var(--dash-accent);
+  }
+}

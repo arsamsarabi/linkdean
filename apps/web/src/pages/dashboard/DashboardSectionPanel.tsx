@@ -148,6 +148,9 @@ export function DashboardSectionPanel({
                   ? `${section.items.length} of ${totalItems}`
                   : totalItems}
               </Badge>
+              {section.items.length > 0 ? (
+                <span className={styles.keysChip}>Keys 1–{Math.min(9, section.items.length)} open these</span>
+              ) : null}
             </Group>
             <Text size="xs" c="dimmed" lineClamp={1}>
               {caption ?? `${look.label} · bookmarks you picked`}

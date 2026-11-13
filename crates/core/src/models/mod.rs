@@ -1539,16 +1539,6 @@ pub struct DashboardItemView {
     pub last_opened_at: Option<DateTime<Utc>>,
 }
 
-/// The viewer's own library at a glance, for the dashboard header.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub struct DashboardStats {
-    pub total: i64,
-    pub saved_this_week: i64,
-    pub unread: i64,
-    pub favorites: i64,
-    pub opened_today: i64,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardSectionView {
     pub id: Uuid,
@@ -1579,9 +1569,6 @@ pub struct DashboardView {
     pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    /// The viewer's own library counts, whoever owns the dashboard.
-    #[serde(default)]
-    pub stats: DashboardStats,
 }
 
 /// Lightweight row for switchers / settings (no sections).

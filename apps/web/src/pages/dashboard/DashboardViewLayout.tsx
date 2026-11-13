@@ -110,9 +110,9 @@ export function DashboardViewLayout({
           .
         </Text>
         <Text size="xs" c="dimmed" visibleFrom="sm">
-          <Kbd size="xs">1</Kbd>–<Kbd size="xs">9</Kbd> open a bookmark in the highlighted section ·{' '}
-          <Kbd size="xs">←</Kbd> <Kbd size="xs">→</Kbd> <Kbd size="xs">↑</Kbd> <Kbd size="xs">↓</Kbd> move between
-          bookmarks
+          Point at a section, then press the number shown on a bookmark to open it. <Kbd size="xs">Tab</Kbd> to a
+          bookmark, then <Kbd size="xs">←</Kbd> <Kbd size="xs">→</Kbd> move within its section and{' '}
+          <Kbd size="xs">↑</Kbd> <Kbd size="xs">↓</Kbd> jump between sections.
         </Text>
       </Group>
     </Stack>
