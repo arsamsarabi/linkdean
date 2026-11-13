@@ -24,6 +24,12 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
     - Choose how each item displays: a full bookmark card in small, medium or large, or icons only.
     - Dynamic sections that fill themselves: the latest bookmarks, and the bookmarks you interact with most.
 
+17. **Keep unsaved form changes when a drawer closes by accident** (S). Form drawers (bookmark, category, edit category, bulk edit, profile, report) close on Escape or a click outside and drop what was typed, with no warning.
+    - Track whether the form changed since it opened; when it has, closing by Escape, a click outside or the close button asks "Discard changes?" with **Keep editing** and **Discard**.
+    - An unchanged form closes at once, as today. Saving closes without asking.
+    - One shared hook or wrapper for every form drawer, so a new drawer gets it by default. It sits beside `useDrawerClosesOnEscape`, which already holds Escape back while a dialog is open on top.
+    - Open question: also keep a draft of the bookmark form for a reload or a closed tab, or only guard the close.
+
 ---
 
 ## Next: high value after the beta settles
@@ -47,6 +53,13 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Vault contents never leave the server for a model. The settings page shows what is sent.
     - Hosted service: a limited free allowance, more with your own key (ties into item 10).
     - Depends on: phase 2 of item 12 for summaries and semantic search over page contents; tag suggestions do not.
+
+18. **Bookmarks as memory for AI agents** (M). People who use coding and research agents (Claude Code, Codex, Cursor and others) keep re-explaining the same references. Their curated folders already hold that context.
+    - Generate an [Agent Skill](https://agentskills.io) from a folder, a tag or a saved search: a `SKILL.md` with a description of when to use it, and the links grouped with their titles, descriptions and notes.
+    - Download it as a zip to drop into an agent's skills folder, or fetch it with an API key, so a script or agent can refresh it as the folder changes.
+    - Later, with item 12, include the archived reader-mode text so the agent can read a page without fetching it.
+    - Vault folders are never offered. Shared folders follow the same read access as the share.
+    - Open questions: a read-only MCP server (search and read bookmarks) as well as, or instead of, generated files; a per-skill size limit.
 
 6. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
     - A daily digest for the noisy kinds.
@@ -79,6 +92,12 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the tracing in **API platform**.
     - The managed service uses the same hooks with its own backend.
     - Document exactly what is collected.
+
+19. **Icon-only sidebar when collapsed** (S–M). On tablets and wider, collapsing the sidebar (⌘B) hides it completely today, so getting to Library, Dashboards or Vaults takes a reopen.
+    - From the `sm` breakpoint up, collapsed means a narrow rail of icons with tooltips: the main pages, then pinned or recent folders. Phones keep the burger menu and bottom tabs.
+    - The folder tree, counts and labels show only when expanded. The rail keeps the active page highlighted.
+    - The collapsed choice stays saved per browser, as it is now.
+    - Check at tablet and desktop widths, in both themes, and with keyboard focus moving through the rail.
 
 ---
 
