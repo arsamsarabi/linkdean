@@ -16,8 +16,8 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
 
 1. **Browser extension in both stores** (S). The extension is the fastest way to save a page, but 0.1.0 is only live on the Chrome Web Store, and the store submission in the Release workflow has never run for real.
     a. **Arsam:** wait for AMO to approve 0.1.0 (email from Mozilla).
-    b. **Prep** (needs a): bump `apps/extension/package.json` to 0.1.1, which ships the popup footer change from #94.
-    c. **Arsam** (needs b): tag the next release. Its `extension` job is the first real run of the store submission; check its log.
+    b. **Done** (Release 0.0.9): `apps/extension/package.json` is 0.1.1, which ships the popup footer change from #94, the first-click sign-in fix, the saved-page icon and its one-time offer.
+    c. **After merge**: tag `v0.0.9`. Its `extension` job is the first real run of the store submission; check its log.
     d. **Prep** (needs a): add the AMO link beside the Chrome Web Store link in **Config options → Fast capture** and the docs. The Chrome link is in.
 
 5. **Dashboard upgrades** (M). Make boards more useful at a glance.
