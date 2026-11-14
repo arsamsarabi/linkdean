@@ -63,14 +63,14 @@ export function AppShellHeader({
     <Group h="100%" px="md" justify="space-between" wrap="nowrap" gap="md">
       <Group gap="md" wrap="nowrap" className={classes.brand}>
         <Burger opened={navOpen} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Open navigation" />
-        <Tooltip label={navCollapsed ? 'Show sidebar (⌘B)' : 'Hide sidebar (⌘B)'} position="bottom">
+        <Tooltip label={navCollapsed ? 'Expand sidebar (⌘B)' : 'Collapse to icons (⌘B)'} position="bottom">
           <ActionIcon
             variant="subtle"
             color="gray"
             size="lg"
             onClick={toggleNavCollapsed}
             visibleFrom="sm"
-            aria-label={navCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+            aria-label={navCollapsed ? 'Expand sidebar' : 'Collapse to icons'}
             aria-expanded={!navCollapsed}
           >
             {navCollapsed ? (

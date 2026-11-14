@@ -23,7 +23,7 @@ type ShellUiState = {
   paletteOpen: boolean
   notifOpen: boolean
   navOpen: boolean
-  /** Wide screens only: the sidebar is hidden. Remembered across reloads. */
+  /** Wide screens only: the sidebar is an icon rail. Remembered across reloads. */
   navCollapsed: boolean
   openPalette: () => void
   closePalette: () => void
