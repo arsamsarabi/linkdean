@@ -21,6 +21,7 @@ import {
   useUpdateProfile,
   useUploadAvatar,
 } from '@/hooks'
+import { ssoButtons } from '@/lib'
 import type { ProfileVisibility } from '@/schemas'
 import { validatePasswordPair } from '@/services'
 import { ChangeEmailModal } from './ChangeEmailModal'
@@ -29,6 +30,7 @@ import { ProfileAboutCard } from './ProfileAboutCard'
 import { ProfileBlocksCard } from './ProfileBlocksCard'
 import { ProfileDeclinedInvitesCard } from './ProfileDeclinedInvitesCard'
 import { ProfileEditDrawer } from './ProfileEditDrawer'
+import { ProfilePasskeysCard } from './ProfilePasskeysCard'
 import { ProfilePasswordCard } from './ProfilePasswordCard'
 import { ProfileSsoCard } from './ProfileSsoCard'
 
@@ -67,14 +69,15 @@ export function ProfilePage(): ReactElement {
   const search = useSearch({ from: '/_app/profile' })
   const [ssoError, setSsoError] = useState<string | null>(search.oidc_error ?? null)
   const ssoReturnHandled = useRef(false)
+  const [reauthed] = useState(search.reauth === 'done')
   useEffect(() => {
-    if (ssoReturnHandled.current || (!search.sso && !search.oidc_error)) return
+    if (ssoReturnHandled.current || (!search.sso && !search.oidc_error && !search.reauth)) return
     ssoReturnHandled.current = true
     if (search.sso === 'connected') notifications.show({ message: 'Single sign-on connected' })
     void nav({ to: '/profile', search: {}, replace: true })
-  }, [search.sso, search.oidc_error, nav])
+  }, [search.sso, search.oidc_error, search.reauth, nav])
 
-  const [editOpen, setEditOpen] = useState(() => !!search.sso || !!search.oidc_error)
+  const [editOpen, setEditOpen] = useState(() => !!search.sso || !!search.oidc_error || reauthed)
   const [list, setList] = useState<FollowListKind | null>(null)
   const [visibility, setVisibility] = useState<ProfileVisibility>('hidden')
   const [displayName, setDisplayName] = useState('')
@@ -262,6 +265,7 @@ export function ProfilePage(): ReactElement {
 
             {oidcEnabled ? (
               <ProfileSsoCard
+                providers={ssoButtons(oidcEnabled, bootstrap?.sso_providers)}
                 connected={!!user.sso_connected}
                 provider={user.sso_provider}
                 hasPassword={!!user.has_password}
@@ -270,6 +274,8 @@ export function ProfilePage(): ReactElement {
                 onDisconnect={() => setDisconnectOpen(true)}
               />
             ) : null}
+
+            <ProfilePasskeysCard hasPassword={!!user.has_password} reauthed={reauthed} />
           </ProfileEditDrawer>
         </>
       )}

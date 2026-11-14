@@ -6,11 +6,14 @@ export type ProfileSearch = {
   sso?: 'connected'
   /** Why connecting single sign-on failed, set by the API's callback redirect. */
   oidc_error?: string
+  /** Back from signing in again with single sign-on, to add a passkey. */
+  reauth?: 'done'
 }
 
 export const Route = createFileRoute('/_app/profile')({
   validateSearch: (search: Record<string, unknown>): ProfileSearch => ({
     sso: search.sso === 'connected' ? 'connected' : undefined,
+    reauth: search.reauth === 'done' ? 'done' : undefined,
     oidc_error:
       typeof search.oidc_error === 'string' && search.oidc_error.trim() ? search.oidc_error.trim() : undefined,
   }),

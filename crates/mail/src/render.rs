@@ -37,6 +37,7 @@ const TEMPLATES: &[Template] = &[
     template!("email_change_verify"),
     template!("email_change_notice"),
     template!("sso_connected"),
+    template!("passkey_added"),
     template!("share_invite"),
     template!("share_invite_pending"),
     template!("notification"),

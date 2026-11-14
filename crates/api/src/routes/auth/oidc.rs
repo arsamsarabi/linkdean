@@ -13,6 +13,8 @@
 //! account that has no password.
 
 use super::email_verification::mask_email;
+use super::github;
+use super::providers::{self, Provider, ProviderId};
 use super::{bearer_or_cookie, session_cookie};
 use crate::auth::AuthUser;
 use crate::error::{ApiError, ApiResult};
@@ -51,37 +53,33 @@ const LINK_COOKIE_PATH: &str = "/api/auth";
 const LINK_MAX_AGE_SECS: u32 = (db::PENDING_OIDC_LINK_MINUTES * 60) as u32;
 /// Where a connect-mode flow returns: the profile page holds the account's sign-in settings.
 const CONNECT_RETURN: &str = "/profile";
-/// Where a reauth-mode flow returns: the settings page holds account deletion.
-const REAUTH_RETURN: &str = "/settings";
+/// Where a reauth-mode flow returns: the page that asked for it.
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum ReauthReturn {
+    /// Settings holds account deletion.
+    Settings,
+    /// Profile holds passkeys.
+    Profile,
+}
+
+impl ReauthReturn {
+    fn path(self) -> &'static str {
+        match self {
+            Self::Settings => "/settings",
+            Self::Profile => "/profile",
+        }
+    }
+}
 /// How old the provider's `auth_time` may be for a reauth to count, to allow for clock skew and
 /// a slow sign-in page.
 const REAUTH_MAX_AUTH_AGE_SECS: i64 = 300;
 
-struct OidcSettings {
-    issuer: String,
-    client_id: String,
-    client_secret: String,
-    redirect: String,
-}
-
-fn settings(state: &AppState) -> Result<OidcSettings, Error> {
-    let cfg = &state.cfg;
-    match (
-        cfg.oidc_issuer.clone(),
-        cfg.oidc_client_id.clone(),
-        cfg.oidc_client_secret.clone(),
-    ) {
-        (Some(issuer), Some(client_id), Some(client_secret)) => Ok(OidcSettings {
-            issuer,
-            client_id,
-            client_secret,
-            redirect: format!(
-                "{}/api/auth/oidc/callback",
-                cfg.app_url.trim_end_matches('/')
-            ),
-        }),
-        _ => Err(Error::BadRequest("OIDC not configured".into())),
-    }
+/// The callback every provider returns to; the flow cookie says which provider it was.
+fn redirect_url(state: &AppState) -> String {
+    format!(
+        "{}/api/auth/oidc/callback",
+        state.cfg.app_url.trim_end_matches('/')
+    )
 }
 
 fn http_client() -> Result<openidconnect::reqwest::Client, Error> {
@@ -94,23 +92,54 @@ fn http_client() -> Result<openidconnect::reqwest::Client, Error> {
 }
 
 async fn discover(
-    s: &OidcSettings,
+    p: &Provider,
     http: &openidconnect::reqwest::Client,
 ) -> Result<CoreProviderMetadata, Error> {
-    let issuer = IssuerUrl::new(s.issuer.clone())
-        .map_err(|e| Error::BadRequest(format!("OIDC_ISSUER is not a URL: {e}")))?;
+    let issuer = IssuerUrl::new(p.issuer.clone())
+        .map_err(|e| Error::BadRequest(format!("OIDC issuer is not a URL: {e}")))?;
     CoreProviderMetadata::discover_async(issuer, http)
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, issuer = %s.issuer, "OIDC discovery failed");
+            tracing::error!(error = %e, issuer = %p.issuer, "OIDC discovery failed");
             Error::msg("OIDC discovery failed")
         })
+}
+
+/// An OpenID Connect client for `p`, from its discovery document.
+async fn oidc_client(
+    state: &AppState,
+    p: &Provider,
+    http: &openidconnect::reqwest::Client,
+) -> Result<
+    CoreClient<
+        openidconnect::EndpointSet,
+        openidconnect::EndpointNotSet,
+        openidconnect::EndpointNotSet,
+        openidconnect::EndpointNotSet,
+        openidconnect::EndpointMaybeSet,
+        openidconnect::EndpointMaybeSet,
+    >,
+    Error,
+> {
+    let meta = discover(p, http).await?;
+    let redirect = RedirectUrl::new(redirect_url(state)).map_err(|e| Error::msg(e.to_string()))?;
+    Ok(CoreClient::from_provider_metadata(
+        meta,
+        ClientId::new(p.client_id.clone()),
+        Some(ClientSecret::new(p.client_secret.clone())),
+    )
+    .set_redirect_uri(redirect))
 }
 
 #[derive(Deserialize)]
 pub(super) struct StartQuery {
     mode: Option<String>,
     terms_version: Option<String>,
+    /// `oidc`, `google`, `microsoft` or `github`; the first configured one when unset.
+    provider: Option<String>,
+    /// Reauth mode: `profile` returns to the profile page, anything else to settings.
+    #[serde(rename = "return")]
+    return_to: Option<String>,
 }
 
 /// `?mode=connect` attaches the provider identity to the signed-in account instead of signing
@@ -122,9 +151,13 @@ pub(super) async fn start(
     Query(q): Query<StartQuery>,
     auth: Result<AuthUser, ApiError>,
 ) -> ApiResult<Response> {
+    let back = match q.return_to.as_deref() {
+        Some("profile") => ReauthReturn::Profile,
+        _ => ReauthReturn::Settings,
+    };
     let mode = match q.mode.as_deref() {
         None | Some("") | Some("signin") => FlowMode::SignIn,
-        Some("connect") => match auth {
+        Some("connect") => match &auth {
             Ok(AuthUser(user)) => FlowMode::Connect(user.id),
             Err(_) => {
                 return Ok(error_redirect(
@@ -133,11 +166,11 @@ pub(super) async fn start(
                 ))
             }
         },
-        Some("reauth") => match auth {
-            Ok(AuthUser(user)) if user.oidc_subject.is_some() => FlowMode::Reauth(user.id),
+        Some("reauth") => match &auth {
+            Ok(AuthUser(user)) if user.oidc_subject.is_some() => FlowMode::Reauth(user.id, back),
             Ok(_) => {
                 return Ok(error_redirect(
-                    REAUTH_RETURN,
+                    back.path(),
                     "this account has no single sign-on to confirm with",
                 ))
             }
@@ -150,29 +183,50 @@ pub(super) async fn start(
             require_current_terms(q.terms_version.as_deref())?;
             Some(TERMS_VERSION.to_string())
         }
-        FlowMode::Connect(_) | FlowMode::Reauth(_) => None,
+        FlowMode::Connect(_) | FlowMode::Reauth(..) => None,
     };
-    let s = match (settings(&state), mode) {
-        (Ok(s), _) => s,
-        // A page link, not an API call: send the person back with a reason, not a JSON error.
-        (Err(_), FlowMode::Reauth(_)) => {
-            return Ok(error_redirect(
-                REAUTH_RETURN,
-                "single sign-on is not set up on this server; ask your admin",
-            ))
+    let provider = match mode {
+        // Reauth goes to the provider that issued the attached identity.
+        FlowMode::Reauth(..) => {
+            let issuer = match &auth {
+                Ok(AuthUser(user)) => user.oidc_issuer.clone().unwrap_or_default(),
+                Err(_) => String::new(),
+            };
+            match providers::for_issuer(&state.cfg, &issuer) {
+                Some(p) => p,
+                // A page link, not an API call: send the person back with a reason.
+                None => {
+                    return Ok(error_redirect(
+                        back.path(),
+                        "your single sign-on provider is no longer set up on this server; ask your admin",
+                    ))
+                }
+            }
         }
-        (Err(e), _) => return Err(e.into()),
+        _ => providers::pick(&state.cfg, q.provider.as_deref())?,
     };
-    let http = http_client()?;
-    let meta = discover(&s, &http).await?;
-    let redirect = RedirectUrl::new(s.redirect.clone()).map_err(|e| Error::msg(e.to_string()))?;
-    let client = CoreClient::from_provider_metadata(
-        meta,
-        ClientId::new(s.client_id),
-        Some(ClientSecret::new(s.client_secret)),
-    )
-    .set_redirect_uri(redirect);
     let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
+    if provider.is_oauth_only() {
+        let csrf = CsrfToken::new_random();
+        let url = github::authorize_url(
+            &provider,
+            &redirect_url(&state),
+            csrf.secret(),
+            challenge.as_str(),
+        )?;
+        let flow = FlowCookie {
+            state: csrf.secret().clone(),
+            // GitHub has no ID token to bind a nonce to.
+            nonce: "-".into(),
+            verifier: verifier.secret().clone(),
+            provider: provider.id,
+            mode,
+            terms,
+        };
+        return flow_redirect(&state, &url, &flow);
+    }
+    let http = http_client()?;
+    let client = oidc_client(&state, &provider, &http).await?;
     let mut request = client
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
@@ -182,7 +236,7 @@ pub(super) async fn start(
         .add_scope(Scope::new("email".into()))
         .add_scope(Scope::new("profile".into()))
         .set_pkce_challenge(challenge);
-    if matches!(mode, FlowMode::Reauth(_)) {
+    if matches!(mode, FlowMode::Reauth(..)) {
         // Ask the provider for a real sign-in, not a silent one from its own session, and to
         // say when it happened.
         request = request
@@ -194,10 +248,16 @@ pub(super) async fn start(
         state: csrf.secret().clone(),
         nonce: nonce.secret().clone(),
         verifier: verifier.secret().clone(),
+        provider: provider.id,
         mode,
         terms,
     };
-    let mut res = Redirect::to(url.as_str()).into_response();
+    flow_redirect(&state, url.as_str(), &flow)
+}
+
+/// Send the browser to the provider with the flow cookie set.
+fn flow_redirect(state: &AppState, url: &str, flow: &FlowCookie) -> ApiResult<Response> {
+    let mut res = Redirect::to(url).into_response();
     set_cookie(
         &mut res,
         &flow_cookie(&flow.encode(), FLOW_MAX_AGE_SECS, state.cfg.cookie_secure()),
@@ -228,6 +288,7 @@ struct Identity {
     name: Option<String>,
     /// When the person signed in at the provider, if the ID token says.
     auth_time: Option<DateTime<Utc>>,
+    provider: ProviderId,
 }
 
 /// Always redirects: home with a session, the login page with a pending link or a reason, or
@@ -269,9 +330,9 @@ pub(super) async fn callback(
             Ok(()) => Redirect::to(&format!("{CONNECT_RETURN}?sso=connected")).into_response(),
             Err(e) => error_redirect(CONNECT_RETURN, &reason(&e)),
         },
-        FlowMode::Reauth(user_id) => match reauth(&state, &headers, user_id, flow, q).await {
-            Ok(()) => Redirect::to(&format!("{REAUTH_RETURN}?reauth=done")).into_response(),
-            Err(e) => error_redirect(REAUTH_RETURN, &reason(&e)),
+        FlowMode::Reauth(user_id, back) => match reauth(&state, &headers, user_id, flow, q).await {
+            Ok(()) => Redirect::to(&format!("{}?reauth=done", back.path())).into_response(),
+            Err(e) => error_redirect(back.path(), &reason(&e)),
         },
     };
     // The flow cookie is single use, whatever the outcome.
@@ -321,16 +382,29 @@ async fn provider_identity(
     let code = q
         .code
         .ok_or_else(|| Error::BadRequest("missing code".into()))?;
-    let s = settings(state)?;
+    let provider = providers::find(&state.cfg, flow.provider)?;
     let http = http_client()?;
-    let meta = discover(&s, &http).await?;
-    let redirect = RedirectUrl::new(s.redirect.clone()).map_err(|e| Error::msg(e.to_string()))?;
-    let client = CoreClient::from_provider_metadata(
-        meta,
-        ClientId::new(s.client_id.clone()),
-        Some(ClientSecret::new(s.client_secret.clone())),
-    )
-    .set_redirect_uri(redirect);
+    if provider.is_oauth_only() {
+        let gh = github::identity(
+            &http,
+            &provider,
+            &redirect_url(state),
+            &code,
+            &flow.verifier,
+        )
+        .await?;
+        return Ok(Identity {
+            issuer: provider.issuer,
+            subject: gh.subject,
+            email: gh.email,
+            // Only verified addresses are taken from GitHub.
+            email_verified: true,
+            name: gh.name,
+            auth_time: None,
+            provider: provider.id,
+        });
+    }
+    let client = oidc_client(state, &provider, &http).await?;
 
     let tokens = client
         .exchange_code(AuthorizationCode::new(code))
@@ -384,12 +458,13 @@ async fn provider_identity(
     let email = email.ok_or_else(|| Error::BadRequest("provider sent no email".into()))?;
 
     Ok(Identity {
-        issuer: s.issuer,
+        issuer: provider.issuer,
         subject: sub.as_str().to_string(),
         email,
         email_verified: email_verified == Some(true),
         name,
         auth_time,
+        provider: provider.id,
     })
 }
 
@@ -532,7 +607,9 @@ async fn reauth(
             "sign in with the single sign-on account connected to Linkdean".into(),
         ));
     }
-    if !fresh_auth_time(id.auth_time, Utc::now()) {
+    // GitHub cannot be asked for a fresh sign-in or say when one happened, so a GitHub round
+    // trip counts as is: it proves the person controls the GitHub account right now.
+    if id.provider != ProviderId::GitHub && !fresh_auth_time(id.auth_time, Utc::now()) {
         return Err(Error::BadRequest(
             "the provider did not confirm a fresh sign-in; try again".into(),
         ));
@@ -627,7 +704,7 @@ enum FlowMode {
     SignIn,
     Connect(Uuid),
     /// Sign in again with the attached identity, for a step-up.
-    Reauth(Uuid),
+    Reauth(Uuid, ReauthReturn),
 }
 
 #[derive(Debug, PartialEq)]
@@ -635,34 +712,53 @@ struct FlowCookie {
     state: String,
     nonce: String,
     verifier: String,
+    provider: ProviderId,
     mode: FlowMode,
     /// Terms version presented at sign-in start; always `None` in connect mode.
     terms: Option<String>,
 }
 
 impl FlowCookie {
-    /// `state.nonce.verifier`, plus `.terms.<version>` in sign-in mode, `.connect.<user id>`
-    /// in connect mode or `.reauth.<user id>` in reauth mode. The three values are URL-safe base64, a UUID has no `.`, and the terms
-    /// version is a date, so `.` cannot occur inside a part.
+    /// `state.nonce.verifier.provider`, plus `.terms.<version>` in sign-in mode,
+    /// `.connect.<user id>` in connect mode or `.reauth.<user id>` in reauth mode. The three
+    /// values are URL-safe base64 (the nonce is `-` for GitHub), a provider id and a UUID have no
+    /// `.`, and the terms version is a date, so `.` cannot occur inside a part.
     fn encode(&self) -> String {
-        let base = format!("{}.{}.{}", self.state, self.nonce, self.verifier);
+        let base = format!(
+            "{}.{}.{}.{}",
+            self.state,
+            self.nonce,
+            self.verifier,
+            self.provider.as_str()
+        );
         match (self.mode, &self.terms) {
             (FlowMode::SignIn, None) => base,
             (FlowMode::SignIn, Some(v)) => format!("{base}.terms.{v}"),
             (FlowMode::Connect(id), _) => format!("{base}.connect.{id}"),
-            (FlowMode::Reauth(id), _) => format!("{base}.reauth.{id}"),
+            (FlowMode::Reauth(id, ReauthReturn::Settings), _) => format!("{base}.reauth.{id}"),
+            (FlowMode::Reauth(id, ReauthReturn::Profile), _) => {
+                format!("{base}.reauth-profile.{id}")
+            }
         }
     }
 
     fn decode(raw: &str) -> Option<Self> {
         let parts: Vec<&str> = raw.split('.').collect();
         let (mode, terms) = match parts.as_slice() {
-            [_, _, _] => (FlowMode::SignIn, None),
-            [_, _, _, "terms", v] if !v.is_empty() => (FlowMode::SignIn, Some((*v).to_string())),
-            [_, _, _, "connect", id] => (FlowMode::Connect(id.parse().ok()?), None),
-            [_, _, _, "reauth", id] => (FlowMode::Reauth(id.parse().ok()?), None),
+            [_, _, _, _] => (FlowMode::SignIn, None),
+            [_, _, _, _, "terms", v] if !v.is_empty() => (FlowMode::SignIn, Some((*v).to_string())),
+            [_, _, _, _, "connect", id] => (FlowMode::Connect(id.parse().ok()?), None),
+            [_, _, _, _, "reauth", id] => (
+                FlowMode::Reauth(id.parse().ok()?, ReauthReturn::Settings),
+                None,
+            ),
+            [_, _, _, _, "reauth-profile", id] => (
+                FlowMode::Reauth(id.parse().ok()?, ReauthReturn::Profile),
+                None,
+            ),
             _ => return None,
         };
+        let provider = ProviderId::parse(parts[3])?;
         let (state, nonce, verifier) = (parts[0], parts[1], parts[2]);
         if [state, nonce, verifier].iter().any(|p| p.is_empty()) {
             return None;
@@ -671,6 +767,7 @@ impl FlowCookie {
             state: state.into(),
             nonce: nonce.into(),
             verifier: verifier.into(),
+            provider,
             mode,
             terms,
         })
@@ -732,10 +829,11 @@ mod tests {
             state: "s-_1".into(),
             nonce: "n".into(),
             verifier: "v".into(),
+            provider: ProviderId::Oidc,
             mode: FlowMode::SignIn,
             terms: None,
         };
-        assert_eq!(flow.encode(), "s-_1.n.v");
+        assert_eq!(flow.encode(), "s-_1.n.v.oidc");
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
     }
 
@@ -745,13 +843,14 @@ mod tests {
             state: "s".into(),
             nonce: "n".into(),
             verifier: "v".into(),
+            provider: ProviderId::Oidc,
             mode: FlowMode::SignIn,
             terms: Some(TERMS_VERSION.into()),
         };
-        assert_eq!(flow.encode(), format!("s.n.v.terms.{TERMS_VERSION}"));
+        assert_eq!(flow.encode(), format!("s.n.v.oidc.terms.{TERMS_VERSION}"));
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
-        assert_eq!(FlowCookie::decode("s.n.v.terms."), None);
-        assert_eq!(FlowCookie::decode("s.n.v.terms.x.y"), None);
+        assert_eq!(FlowCookie::decode("s.n.v.oidc.terms."), None);
+        assert_eq!(FlowCookie::decode("s.n.v.oidc.terms.x.y"), None);
     }
 
     #[test]
@@ -761,16 +860,19 @@ mod tests {
             state: "s".into(),
             nonce: "n".into(),
             verifier: "v".into(),
+            provider: ProviderId::Oidc,
             mode: FlowMode::Connect(id),
             terms: None,
         };
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
         for raw in [
-            "s.n.v.connect".to_string(),
-            "s.n.v.connect.not-a-uuid".to_string(),
-            format!("s.n.v.other.{id}"),
-            format!("s.n.v.connect.{id}.x"),
-            format!(".n.v.connect.{id}"),
+            "s.n.v.oidc.connect".to_string(),
+            "s.n.v.oidc.connect.not-a-uuid".to_string(),
+            format!("s.n.v.oidc.other.{id}"),
+            format!("s.n.v.oidc.connect.{id}.x"),
+            format!(".n.v.oidc.connect.{id}"),
+            format!("s.n.v.nope.connect.{id}"),
+            format!("s.n.v.connect.{id}"),
         ] {
             assert_eq!(FlowCookie::decode(&raw), None, "{raw}");
         }
@@ -783,13 +885,30 @@ mod tests {
             state: "s".into(),
             nonce: "n".into(),
             verifier: "v".into(),
-            mode: FlowMode::Reauth(id),
+            provider: ProviderId::Oidc,
+            mode: FlowMode::Reauth(id, ReauthReturn::Settings),
             terms: None,
         };
-        assert_eq!(flow.encode(), format!("s.n.v.reauth.{id}"));
+        assert_eq!(flow.encode(), format!("s.n.v.oidc.reauth.{id}"));
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
-        assert_eq!(FlowCookie::decode("s.n.v.reauth.nope"), None);
-        assert_eq!(FlowCookie::decode(&format!("s.n.v.reauth.{id}.x")), None);
+        assert_eq!(FlowCookie::decode("s.n.v.oidc.reauth.nope"), None);
+        assert_eq!(
+            FlowCookie::decode(&format!("s.n.v.oidc.reauth.{id}.x")),
+            None
+        );
+        let to_profile = FlowCookie {
+            state: "s".into(),
+            nonce: "n".into(),
+            verifier: "v".into(),
+            provider: ProviderId::GitHub,
+            mode: FlowMode::Reauth(id, ReauthReturn::Profile),
+            terms: None,
+        };
+        assert_eq!(
+            to_profile.encode(),
+            format!("s.n.v.github.reauth-profile.{id}")
+        );
+        assert_eq!(FlowCookie::decode(&to_profile.encode()), Some(to_profile));
     }
 
     #[test]
@@ -824,7 +943,7 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(
             header::COOKIE,
-            HeaderValue::from_static("linkdean_oidc=s.n.v; linkdean_oidc_link=abc"),
+            HeaderValue::from_static("linkdean_oidc=s.n.v.oidc; linkdean_oidc_link=abc"),
         );
         assert_eq!(read_link_cookie(&headers).as_deref(), Some("abc"));
         assert_eq!(
@@ -834,14 +953,22 @@ mod tests {
         let mut only_flow = HeaderMap::new();
         only_flow.insert(
             header::COOKIE,
-            HeaderValue::from_static("linkdean_oidc=s.n.v"),
+            HeaderValue::from_static("linkdean_oidc=s.n.v.oidc"),
         );
         assert_eq!(read_link_cookie(&only_flow), None);
     }
 
     #[test]
     fn flow_cookie_rejects_malformed_values() {
-        for raw in ["", "a.b", "a.b.c.d", "a..c", ".b.c"] {
+        for raw in [
+            "",
+            "a.b",
+            "a.b.c",
+            "a.b.c.d",
+            "a..c.oidc",
+            ".b.c.oidc",
+            "a.b.c.saml",
+        ] {
             assert_eq!(FlowCookie::decode(raw), None, "{raw}");
         }
     }
@@ -851,12 +978,13 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(
             header::COOKIE,
-            HeaderValue::from_static("linkdean_session=abc; linkdean_oidc=s.n.v; other=1"),
+            HeaderValue::from_static("linkdean_session=abc; linkdean_oidc=s.n.v.github; other=1"),
         );
         let flow = read_flow_cookie(&headers).expect("flow");
         assert_eq!(flow.state, "s");
         assert_eq!(flow.nonce, "n");
         assert_eq!(flow.verifier, "v");
+        assert_eq!(flow.provider, ProviderId::GitHub);
     }
 
     #[test]

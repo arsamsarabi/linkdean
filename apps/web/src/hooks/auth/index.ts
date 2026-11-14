@@ -19,3 +19,4 @@ export {
 } from './useEmailVerification'
 export { usePendingOidcLink, useDisconnectSso } from './useSso'
 export { useAcceptTerms, useScheduleAccountDeletion, useCancelAccountDeletion } from './useAccountDeletion'
+export { useAddPasskey, useDeletePasskey, usePasskeyLogin, usePasskeys, useRenamePasskey } from './usePasskeys'

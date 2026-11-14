@@ -1,0 +1,15 @@
+{% extends "layout.mjml" %}
+{% block title %}A passkey was added{% endblock %}
+{% block preview %}A passkey ({{ name }}) was added to your {{ site.instance }} account.{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">A passkey was added</mj-text>
+    <mj-text>A passkey named "{{ name }}" was added to your account. It can sign in without your password.</mj-text>
+    <mj-text>Not you? Remove it under Profile, change your password and tell your admin.</mj-text>
+    {{ action(site.app_url ~ "/profile", "Review passkeys") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this email because a passkey was added to your account.{% endblock %}

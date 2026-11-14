@@ -96,6 +96,9 @@ async fn run_once(state: &AppState) {
         Err(e) => tracing::warn!(error = %e, "session purge failed"),
     }
 
+    if let Err(e) = linkdean_db::purge_expired_webauthn_challenges(&state.pool).await {
+        tracing::warn!(error = %e, "passkey challenge purge failed");
+    }
     match linkdean_db::reap_unused_tags(&state.pool).await {
         Ok(0) => {}
         Ok(n) => tracing::info!(tags = n, "removed unused tags"),

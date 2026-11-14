@@ -34,6 +34,7 @@ hyper-util = { version = "0.1", features = ["tokio"] }
 meilisearch-sdk = "0.33"
 oauth2 = "5"
 openidconnect = "4"
+webauthn-rs = { version = "0.6.2", features = ["danger-allow-state-serialisation", "conditional-ui"] }
 rand = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 scraper = "0.29"

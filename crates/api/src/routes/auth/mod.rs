@@ -1,7 +1,10 @@
 mod email_verification;
 mod extension;
+mod github;
 mod oidc;
+mod passkey;
 mod password_reset;
+pub(crate) mod providers;
 
 pub(crate) use password_reset::reset_url;
 
@@ -47,6 +50,29 @@ pub fn router() -> Router<AppState> {
         .route("/auth/config", get(auth_config))
         .route("/auth/extension/authorize", post(extension::authorize))
         .route("/auth/extension/token", post(extension::token))
+        .route("/auth/passkey/start", post(passkey::login_start))
+        .route("/auth/passkey/finish", post(passkey::login_finish))
+        .route("/users/me/passkeys", get(passkey::list))
+        .route(
+            "/users/me/passkeys/register/start",
+            post(passkey::register_start),
+        )
+        .route(
+            "/users/me/passkeys/register/finish",
+            post(passkey::register_finish),
+        )
+        .route(
+            "/users/me/passkeys/{id}",
+            axum::routing::patch(passkey::rename).delete(passkey::remove),
+        )
+}
+
+/// The sign-in buttons: `[{ "id": "github", "label": "GitHub" }, …]`, in display order.
+fn sso_providers(state: &AppState) -> Value {
+    json!(providers::configured(&state.cfg)
+        .into_iter()
+        .map(|p| json!({ "id": p.id.as_str(), "label": p.label }))
+        .collect::<Vec<_>>())
 }
 
 async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value>> {
@@ -56,6 +82,7 @@ async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value
         "needs_bootstrap": count == 0,
         "bootstrap_token_required": count == 0 && state.cfg.bootstrap_token.is_some(),
         "oidc_enabled": state.cfg.oidc_enabled(),
+        "sso_providers": sso_providers(&state),
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),
         "turnstile_site_key": state.cfg.turnstile_site_key,
@@ -66,6 +93,7 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     let platform = db::get_platform_settings(&state.pool).await?;
     Ok(Json(json!({
         "oidc_enabled": state.cfg.oidc_enabled(),
+        "sso_providers": sso_providers(&state),
         "app_url": state.cfg.app_url,
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),

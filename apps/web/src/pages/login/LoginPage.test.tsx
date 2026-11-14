@@ -14,6 +14,7 @@ const state: {
   pending: Pending
   pendingEnabled: boolean | null
   login: ReturnType<typeof vi.fn>
+  passkeyLogin: ReturnType<typeof vi.fn>
   loginStatus: { isPending: boolean; isSuccess: boolean }
 } = {
   loginStatus: { isPending: false, isSuccess: false },
@@ -21,10 +22,12 @@ const state: {
   pending: { isError: false },
   pendingEnabled: null,
   login: vi.fn(),
+  passkeyLogin: vi.fn(),
   bootstrap: {
     needs_bootstrap: false,
     bootstrap_token_required: false,
     oidc_enabled: false,
+    sso_providers: [],
     registration_open: true,
     mail_enabled: false,
   },
@@ -34,6 +37,7 @@ vi.mock('@/hooks', () => ({
   useDropSignedOutCache: () => undefined,
   useBootstrap: () => ({ data: state.bootstrap, isLoading: false, isError: false, error: null, refetch: vi.fn() }),
   useLogin: () => ({ ...state.loginStatus, isError: false, error: null, mutateAsync: state.login }),
+  usePasskeyLogin: () => ({ isPending: false, mutateAsync: state.passkeyLogin }),
   usePendingOidcLink: (enabled: boolean) => {
     state.pendingEnabled = enabled
     return state.pending
@@ -42,7 +46,12 @@ vi.mock('@/hooks', () => ({
 
 const notify = vi.hoisted(() => vi.fn())
 vi.mock('@mantine/notifications', () => ({ notifications: { show: notify } }))
-vi.mock('@/api', () => ({ api: { getSettings: () => Promise.resolve({ settings: { default_landing: '/' } }) } }))
+vi.mock('@/api', () => ({
+  api: { getSettings: () => Promise.resolve({ settings: { default_landing: '/' } }) },
+  ApiError: class ApiError extends Error {
+    status = 0
+  },
+}))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
@@ -157,9 +166,52 @@ describe('LoginPage terms for single sign-on', () => {
 
   it('starts OIDC with the terms version only after the checkbox is ticked', async () => {
     renderPage()
-    const button = screen.getByText('Sign in with OIDC').closest('a')!
+    const button = screen.getByText('Sign in with single sign-on').closest('a')!
     expect(button.getAttribute('href')).toBeNull()
     await userEvent.click(screen.getByRole('checkbox'))
-    expect(button.getAttribute('href')).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}`)
+    expect(button.getAttribute('href')).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}&provider=oidc`)
+  })
+
+  it('shows one button per provider the server offers', async () => {
+    state.bootstrap = {
+      ...state.bootstrap,
+      sso_providers: [
+        { id: 'oidc', label: 'Authentik' },
+        { id: 'github', label: 'GitHub' },
+      ],
+    }
+    renderPage()
+    await userEvent.click(screen.getByRole('checkbox'))
+    expect(screen.getByText('Sign in with Authentik').closest('a')!.getAttribute('href')).toContain('provider=oidc')
+    expect(screen.getByText('Sign in with GitHub').closest('a')!.getAttribute('href')).toContain('provider=github')
+    state.bootstrap = { ...state.bootstrap, sso_providers: [] }
+  })
+})
+
+describe('LoginPage passkeys', () => {
+  beforeEach(() => {
+    state.search = {}
+    state.passkeyLogin.mockReset()
+    notify.mockClear()
+    vi.stubGlobal('PublicKeyCredential', function PublicKeyCredential() {})
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    cleanup()
+  })
+
+  it('signs in with a passkey without an email', async () => {
+    state.passkeyLogin.mockResolvedValue({ user: { onboarding_completed: true }, token: 't' })
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }))
+    expect(state.passkeyLogin).toHaveBeenCalled()
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  it('says nothing when the passkey dialog is closed', async () => {
+    state.passkeyLogin.mockRejectedValue(new DOMException('closed', 'NotAllowedError'))
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with a passkey' }))
+    expect(notify).not.toHaveBeenCalled()
   })
 })

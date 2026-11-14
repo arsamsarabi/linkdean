@@ -77,6 +77,15 @@ pub struct UserPublic {
     pub terms_current: bool,
 }
 
+/// A passkey as its owner sees it in the list.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PasskeySummary {
+    pub id: Uuid,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
+}
+
 /// Body of `POST /users/me/terms`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct AcceptTerms {

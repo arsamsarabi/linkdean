@@ -17,6 +17,15 @@ pub struct Config {
     pub oidc_issuer: Option<String>,
     pub oidc_client_id: Option<String>,
     pub oidc_client_secret: Option<String>,
+    /// Button label for the generic OIDC provider (`OIDC_NAME`), such as "Authentik".
+    pub oidc_name: Option<String>,
+    /// Google sign-in: client ID and secret (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`).
+    pub google_sso: Option<(String, String)>,
+    /// Microsoft Entra ID sign-in for one tenant.
+    pub microsoft_sso: Option<MicrosoftSso>,
+    /// GitHub sign-in (OAuth app): client ID and secret (`GITHUB_CLIENT_ID`,
+    /// `GITHUB_CLIENT_SECRET`).
+    pub github_sso: Option<(String, String)>,
     /// Empty = reflect `APP_URL` only. Use `*` for any-origin (dev/homelab convenience).
     pub cors_origins: Vec<String>,
     /// Behind a reverse proxy, read the client address from `X-Forwarded-For`.
@@ -154,6 +163,13 @@ impl Config {
             oidc_client_secret: std::env::var("OIDC_CLIENT_SECRET")
                 .ok()
                 .filter(|s| !s.is_empty()),
+            oidc_name: std::env::var("OIDC_NAME")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
+            google_sso: optional_pair("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET")?,
+            microsoft_sso: microsoft_sso()?,
+            github_sso: optional_pair("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET")?,
             cors_origins,
             trust_forwarded_for: env_bool("TRUST_FORWARDED_FOR", false),
             hsts_max_age: std::env::var("HSTS_MAX_AGE")
@@ -206,10 +222,19 @@ impl Config {
         self
     }
 
-    pub fn oidc_enabled(&self) -> bool {
+    /// Whether the generic OIDC provider (`OIDC_ISSUER` and its client) is set.
+    pub fn generic_oidc_enabled(&self) -> bool {
         self.oidc_issuer.is_some()
             && self.oidc_client_id.is_some()
             && self.oidc_client_secret.is_some()
+    }
+
+    /// Whether any single sign-on provider is set.
+    pub fn oidc_enabled(&self) -> bool {
+        self.generic_oidc_enabled()
+            || self.google_sso.is_some()
+            || self.microsoft_sso.is_some()
+            || self.github_sso.is_some()
     }
 
     pub fn turnstile_enabled(&self) -> bool {
@@ -228,6 +253,50 @@ impl Config {
     pub fn cookie_secure(&self) -> bool {
         self.app_url.starts_with("https://")
     }
+}
+
+/// Microsoft Entra ID app registration for a single tenant.
+#[derive(Debug, Clone)]
+pub struct MicrosoftSso {
+    pub client_id: String,
+    pub client_secret: String,
+    /// Directory (tenant) ID. The issuer is per tenant, so `common` cannot be checked.
+    pub tenant_id: String,
+}
+
+/// `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` and `MICROSOFT_TENANT_ID`: all three or none.
+fn microsoft_sso() -> anyhow::Result<Option<MicrosoftSso>> {
+    let Some((client_id, client_secret)) =
+        optional_pair("MICROSOFT_CLIENT_ID", "MICROSOFT_CLIENT_SECRET")?
+    else {
+        if std::env::var("MICROSOFT_TENANT_ID").is_ok_and(|v| !v.trim().is_empty()) {
+            anyhow::bail!("MICROSOFT_TENANT_ID is set but MICROSOFT_CLIENT_ID is missing");
+        }
+        return Ok(None);
+    };
+    let tenant_id = std::env::var("MICROSOFT_TENANT_ID")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| {
+            anyhow::anyhow!("MICROSOFT_CLIENT_ID is set but MICROSOFT_TENANT_ID is missing")
+        })?;
+    if !is_tenant_id(&tenant_id) {
+        anyhow::bail!(
+            "MICROSOFT_TENANT_ID must be the directory (tenant) ID, a GUID; common, organizations \
+             and consumers are not supported"
+        );
+    }
+    Ok(Some(MicrosoftSso {
+        client_id,
+        client_secret,
+        tenant_id,
+    }))
+}
+
+/// A GUID such as `72f988bf-86f1-41af-91ab-2d7cd011db47`.
+fn is_tenant_id(s: &str) -> bool {
+    uuid::Uuid::parse_str(s).is_ok() && s.len() == 36
 }
 
 fn required(key: &str) -> anyhow::Result<String> {

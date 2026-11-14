@@ -70,6 +70,7 @@ describe('OnboardingPage', () => {
       needs_bootstrap: true,
       bootstrap_token_required: false,
       oidc_enabled: false,
+      sso_providers: [],
       registration_open: true,
       mail_enabled: false,
     })
@@ -96,6 +97,7 @@ describe('OnboardingPage', () => {
       needs_bootstrap: true,
       bootstrap_token_required: true,
       oidc_enabled: false,
+      sso_providers: [],
       registration_open: true,
       mail_enabled: false,
     })
@@ -127,6 +129,7 @@ describe('OnboardingPage', () => {
       needs_bootstrap: false,
       bootstrap_token_required: false,
       oidc_enabled: false,
+      sso_providers: [],
       registration_open: true,
       mail_enabled: false,
     })

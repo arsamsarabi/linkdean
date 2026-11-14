@@ -180,6 +180,12 @@ Share invites and notifications:
 
 ### Single sign-on
 
+Turn on any mix of a generic OpenID Connect provider, Google, Microsoft and GitHub (see [environment](./environment.md#single-sign-on)). An account holds one provider identity at a time; to switch, disconnect the old one first.
+
+- **Google** and **Microsoft** are OpenID Connect issuers like any other. Microsoft works for one tenant (`MICROSOFT_TENANT_ID`); personal Microsoft accounts and multi-tenant apps are not supported yet.
+- **GitHub** is OAuth only. Linkdean reads the numeric user id (stable across renames) and the primary email when GitHub marks it verified, otherwise the first verified one; an account with no verified email is refused. Identities are stored with the issuer `https://github.com`. GitHub cannot be asked for a fresh sign-in, so for an account that signs in only with GitHub, the step-up before deleting it or adding a passkey is a plain GitHub round trip.
+- **Passkeys** sign in without a password or email. Adding one needs the current password, or a fresh single sign-on for an account without one, and emails the account. The passkey's user handle is the account id, and the API keeps the challenge server side for 5 minutes, single use.
+
 Accounts are matched to the identity provider by issuer and subject, never by email alone. When an OIDC sign-in brings an address that a password account already uses:
 
 - The login page says "An account already uses x•••@example.com. Sign in with its password to connect single sign-on." Signing in with that account's password attaches the provider identity to it and shows **Single sign-on connected**. From then on the provider alone signs in.

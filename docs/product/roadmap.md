@@ -53,10 +53,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
 
 7. **Legal review** (S). Counsel review of the Terms, Privacy and Acceptable Use copy before charging money. When the copy changes, bump `TERMS_VERSION` in `crates/core/src/legal` and `apps/web/src/lib/legal` together, so every account is asked to accept it.
 
-8. **More sign-in options** (M).
-    - Passkeys / WebAuthn.
-    - Preset SSO providers: Authentik, Google, Microsoft, GitHub. OIDC with any standard issuer already works; GitHub needs OAuth, not OIDC.
-
 9. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
     - An OpenAPI spec generated from the routes, published as the API reference on the docs site.
     - One error body shape (`code`, `message`, details) across every route.

@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Passkeys**: add one under **Profile → Edit profile → Passkeys**, then **Sign in with a passkey** from the login page, with no email or password to type.
+- **Sign in with Google, Microsoft or GitHub**: self-hosters can turn on each with its own client ID and secret, next to any OpenID Connect provider such as Authentik (now named on its button with `OIDC_NAME`).
 - **Quick peek**: open a bookmark inside Linkdean from a card, row or dashboard tile. Maximize, minimize, detach, open in a new tab, or close with Esc; size is remembered. Vault bookmarks stay out. Sites that block embedding fall back to preview, title, description and **Open in new tab**. Peeking counts as an open.
 - **Icon-only sidebar rail**: on tablets and wider, ⌘B (or the header button) collapses the sidebar to a narrow strip of icons with tooltips instead of hiding it. Phones keep the burger menu and bottom tabs.
 - **Updated terms prompt**: when the Terms of Service change, the app asks you to accept the new version, or sign out, before you carry on.

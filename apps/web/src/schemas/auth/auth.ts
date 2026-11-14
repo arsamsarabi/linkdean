@@ -50,11 +50,20 @@ export const meResponseSchema = z.object({
   require_verified_email: z.boolean().default(false),
 })
 
+export const ssoProviderSchema = z.object({
+  /** `oidc`, `google`, `microsoft` or `github`. */
+  id: z.string(),
+  /** The name on the button, such as "GitHub" or the admin's `OIDC_NAME`. */
+  label: z.string(),
+})
+
 export const bootstrapStatusSchema = z.object({
   needs_bootstrap: z.boolean(),
   /** The server has a BOOTSTRAP_TOKEN, so the first account must enter it. */
   bootstrap_token_required: z.boolean().default(false),
   oidc_enabled: z.boolean(),
+  /** One sign-in button each, in order. Older servers send none: show one generic button when `oidc_enabled`. */
+  sso_providers: z.array(ssoProviderSchema).default([]),
   registration_open: z.boolean().default(true),
   /** Outbound mail is on, so a forgotten password can be reset by email. */
   mail_enabled: z.boolean().default(false),
@@ -268,6 +277,7 @@ export type UserSettings = z.infer<typeof userSettingsSchema>
 export type ScheduleDeletionResponse = z.infer<typeof scheduleDeletionResponseSchema>
 export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
+export type SsoProvider = z.infer<typeof ssoProviderSchema>
 export type ExperimentalFlags = z.infer<typeof experimentalFlagsSchema>
 export type AuthConfig = z.infer<typeof authConfigSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
@@ -286,3 +296,21 @@ export type AdminEmailVerifiedResponse = z.infer<typeof adminEmailVerifiedRespon
 export type AdminEmailChangeResponse = z.infer<typeof adminEmailChangeResponseSchema>
 export type RegistrationInvite = z.infer<typeof registrationInviteSchema>
 export type CreateRegistrationInviteResponse = z.infer<typeof createRegistrationInviteResponseSchema>
+
+export const passkeySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  created_at: z.string(),
+  last_used_at: z.string().nullish(),
+})
+
+export const passkeyListSchema = z.object({ passkeys: z.array(passkeySchema) })
+
+/** The start of a WebAuthn ceremony: options for the browser, and the id to finish it with. */
+export const webauthnStartSchema = z.object({
+  challenge_id: z.string(),
+  options: z.record(z.string(), z.unknown()),
+})
+
+export type Passkey = z.infer<typeof passkeySchema>
+export type WebauthnStart = z.infer<typeof webauthnStartSchema>

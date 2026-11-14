@@ -57,17 +57,23 @@ Off by default. Public beta hosts usually set all three with SMTP.
 
 The API refuses to start when only one Turnstile key is set.
 
-### Single sign-on (OIDC)
+### Single sign-on
 
-On when all three are set. Details and how SSO meets existing password accounts: [Single sign-on](./operations.md#single-sign-on).
+Each provider is on when its variables are all set, and gets its own button on the sign-in page, in this order. Details and how SSO meets existing password accounts: [Single sign-on](./operations.md#single-sign-on).
 
 | Variable | What it does |
 | --- | --- |
-| `OIDC_ISSUER` | Issuer exactly as the provider's `/.well-known/openid-configuration` reports it, trailing slash included. Authentik: `https://auth.example.com/application/o/<slug>/` |
+| `OIDC_ISSUER` | Any OpenID Connect provider (Authentik, Keycloak, …). Issuer exactly as the provider's `/.well-known/openid-configuration` reports it, trailing slash included. Authentik: `https://auth.example.com/application/o/<slug>/` |
 | `OIDC_CLIENT_ID` | Client ID from the provider |
 | `OIDC_CLIENT_SECRET` | Client secret from the provider |
+| `OIDC_NAME` | Name on its button, such as `Authentik`. Default: "single sign-on" |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in (an OAuth client of type "Web application" in Google Cloud) |
+| `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID` | Microsoft Entra ID sign-in for one tenant. The tenant is the directory (tenant) ID, a GUID; `common`, `organizations` and `consumers` are refused because their issuer cannot be checked |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub sign-in (a GitHub OAuth app) |
 
-Register `{APP_URL}/api/auth/oidc/callback` as the redirect URI. A new identity gets an account only while registration is open.
+Register `{APP_URL}/api/auth/oidc/callback` as the redirect URI with every provider. A new identity gets an account only while registration is open. The API refuses to start when a pair or the Microsoft triple is only partly set.
+
+Passkeys need no variables. They belong to the host in `APP_URL`: changing that host strands every passkey, and browsers allow them only over `https://` (or `http://localhost`).
 
 ### Screenshots
 
