@@ -1,0 +1,23 @@
+{
+  "count": 3,
+  "more": 0,
+  "groups": [
+    {
+      "label": "Likes",
+      "items": [
+        { "message": "Ada liked “Rust book”", "url": "https://links.example.com/library" },
+        { "message": "Grace liked “Rust book”", "url": "https://links.example.com/library" }
+      ]
+    },
+    {
+      "label": "Comments",
+      "items": [
+        { "message": "Ada commented on “Rust book”", "url": "https://links.example.com/library" }
+      ]
+    }
+  ],
+  "kinds": "Likes and Comments",
+  "url": "https://links.example.com/",
+  "settings_url": "https://links.example.com/settings?tab=notifications",
+  "unsubscribe_url": "https://links.example.com/unsubscribe?u=00000000-0000-0000-0000-000000000000&s=digest&t=sample"
+}

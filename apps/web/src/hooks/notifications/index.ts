@@ -5,4 +5,6 @@ export {
   useMarkAllNotificationsRead,
   useNotificationEmailPrefs,
   useSetNotificationEmailPref,
+  useUnsubscribeLink,
+  useUnsubscribe,
 } from './useNotifications'

@@ -1745,6 +1745,12 @@ impl NotificationKind {
         matches!(self, Self::ShareInvite | Self::ModerationChanges)
     }
 
+    /// Whether this kind may wait for the daily digest. Share invites go out at once (the share
+    /// route reports whether the invite email went), and so do moderation changes.
+    pub fn allows_digest(self) -> bool {
+        !matches!(self, Self::ShareInvite | Self::ModerationChanges)
+    }
+
     /// What settings and the email footer call this kind.
     pub fn label(self) -> &'static str {
         match self {
@@ -1786,6 +1792,34 @@ impl NotificationKind {
             "user_followed" => Ok(Self::UserFollowed),
             "moderation_changes" => Ok(Self::ModerationChanges),
             _ => Err(format!("unknown notification kind: {s}")),
+        }
+    }
+}
+
+/// How a notification kind's email arrives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum EmailDelivery {
+    /// One email per notification, within seconds.
+    #[default]
+    Instant,
+    /// Collected into one email a day.
+    Daily,
+}
+
+impl EmailDelivery {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Instant => "instant",
+            Self::Daily => "daily",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "instant" => Ok(Self::Instant),
+            "daily" => Ok(Self::Daily),
+            _ => Err(format!("unknown email delivery: {s}")),
         }
     }
 }

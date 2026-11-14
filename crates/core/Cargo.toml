@@ -13,6 +13,7 @@ chrono.workspace = true
 crypto_box.workspace = true
 csv.workspace = true
 hex.workspace = true
+hmac.workspace = true
 image.workspace = true
 rand.workspace = true
 serde.workspace = true

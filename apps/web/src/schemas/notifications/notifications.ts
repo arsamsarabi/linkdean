@@ -49,11 +49,17 @@ export type Notification = z.infer<typeof notificationSchema>
 export type NotificationKind = z.infer<typeof notificationKindSchema>
 export type NotificationSubjectType = z.infer<typeof notificationSubjectTypeSchema>
 
+/** How a kind's email arrives: one per notification, or in one daily digest. */
+export const emailDeliverySchema = z.enum(['instant', 'daily'])
+
 export const notificationEmailPrefSchema = z.object({
   kind: notificationKindSchema,
   label: z.string(),
   enabled: z.boolean(),
   default: z.boolean(),
+  delivery: emailDeliverySchema.default('instant'),
+  /** False for kinds that always go out at once (share invites, moderation changes). */
+  digest_allowed: z.boolean().default(false),
 })
 
 export const notificationEmailPrefsEnvelopeSchema = z.object({
@@ -61,3 +67,17 @@ export const notificationEmailPrefsEnvelopeSchema = z.object({
 })
 
 export type NotificationEmailPref = z.infer<typeof notificationEmailPrefSchema>
+export type EmailDelivery = z.infer<typeof emailDeliverySchema>
+
+/** What a signed unsubscribe link turns off (`GET /email/unsubscribe`). */
+export const unsubscribeLinkSchema = z.object({
+  scope: z.string(),
+  label: z.string(),
+})
+
+export const unsubscribeResultSchema = unsubscribeLinkSchema.extend({
+  unsubscribed: z.array(z.string()).default([]),
+})
+
+export type UnsubscribeLink = z.infer<typeof unsubscribeLinkSchema>
+export type UnsubscribeResult = z.infer<typeof unsubscribeResultSchema>

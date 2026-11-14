@@ -58,6 +58,7 @@ fn email(to: &str) -> NewOutboxEmail {
         subject: "Hello".into(),
         html: "<p>Hi</p>".into(),
         text: "Hi".into(),
+        list_unsubscribe: None,
     }
 }
 

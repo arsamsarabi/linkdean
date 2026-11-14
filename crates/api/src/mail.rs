@@ -11,6 +11,8 @@ use std::time::Duration;
 const POLL: Duration = Duration::from_secs(5);
 /// How many emails one pass claims.
 const BATCH: i64 = 20;
+/// Look for due daily digests every this many ticks (one minute).
+const DIGEST_EVERY_TICKS: u64 = 12;
 /// Longest one send may take. lettre's own timeout applies per SMTP step, so a stalled server
 /// could otherwise hold an email past its five-minute claim.
 const SEND_TIMEOUT: Duration = Duration::from_secs(60);
@@ -45,6 +47,17 @@ pub async fn enqueue(
     template: &str,
     data: &Value,
 ) -> linkdean_core::Result<Queued> {
+    enqueue_with_unsubscribe(state, to, template, data, None).await
+}
+
+/// [`enqueue`], with a one-click unsubscribe URL for the `List-Unsubscribe` header.
+pub async fn enqueue_with_unsubscribe(
+    state: &AppState,
+    to: &str,
+    template: &str,
+    data: &Value,
+    list_unsubscribe: Option<String>,
+) -> linkdean_core::Result<Queued> {
     let Some(mail) = state.mail.as_deref() else {
         return Ok(Queued::Disabled);
     };
@@ -58,6 +71,7 @@ pub async fn enqueue(
             subject: r.subject,
             html: r.html,
             text: r.text,
+            list_unsubscribe,
         },
     )
     .await?;
@@ -76,9 +90,15 @@ pub async fn run_sender(state: AppState) {
             crate::notification_mail::discard_notification_emails(&state.pool).await;
         }
     };
+    // Digests are due at most once a day per user, so checking every minute is plenty.
+    let mut ticks: u64 = 0;
     loop {
         tick.tick().await;
         crate::notification_mail::queue_notification_emails(&state).await;
+        if ticks.is_multiple_of(DIGEST_EVERY_TICKS) {
+            crate::notification_mail::queue_notification_digests(&state).await;
+        }
+        ticks = ticks.wrapping_add(1);
         deliver_due(&state.pool, &mail.mailer).await;
     }
 }
@@ -111,9 +131,16 @@ pub async fn deliver_due(pool: &PgPool, mailer: &Mailer) -> usize {
             html: email.html.clone(),
             text: email.text.clone(),
         };
-        let sent = tokio::time::timeout(SEND_TIMEOUT, mailer.send(&email.recipient, &rendered))
-            .await
-            .unwrap_or_else(|_| Err("SMTP send timed out after 60 s".into()));
+        let sent = tokio::time::timeout(
+            SEND_TIMEOUT,
+            mailer.send_with_unsubscribe(
+                &email.recipient,
+                &rendered,
+                email.list_unsubscribe.as_deref(),
+            ),
+        )
+        .await
+        .unwrap_or_else(|_| Err("SMTP send timed out after 60 s".into()));
         match sent {
             Ok(()) => {
                 if let Err(e) = db::mark_email_sent(pool, email.id).await {
@@ -169,6 +196,7 @@ mod tests {
                 subject: r.subject,
                 html: r.html,
                 text: r.text,
+                list_unsubscribe: None,
             },
         )
         .await
