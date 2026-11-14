@@ -25,10 +25,28 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The text of an API error body (`{ code, message, details?, error }`). `error` is the same
+ * text, read as a fallback for older servers.
+ */
+export function errorMessage(body: unknown): string | null {
+  if (!body || typeof body !== 'object') return null
+  const { message, error } = body as { message?: unknown; error?: unknown }
+  if (typeof message === 'string') return message
+  return typeof error === 'string' ? error : null
+}
+
+/** The machine-readable `code` of an API error body. */
+export function errorCode(body: unknown): string | null {
+  if (!body || typeof body !== 'object') return null
+  const { code } = body as { code?: unknown }
+  return typeof code === 'string' ? code : null
+}
+
 /** The ban in a 403 body, or null for anything else. */
 export function banFromBody(body: unknown): BanNotice | null {
   if (!body || typeof body !== 'object' || (body as { code?: unknown }).code !== 'banned') return null
-  return banNoticeSchema.safeParse((body as { ban?: unknown }).ban).data ?? null
+  return banNoticeSchema.safeParse((body as { details?: { ban?: unknown } }).details?.ban).data ?? null
 }
 
 /** The hard gate's 403: this account must verify its email before using the app. */
@@ -81,14 +99,7 @@ export async function req<T>(path: string, init: RequestInit = {}, schema?: z.Zo
     let body: unknown
     try {
       body = await res.json()
-      if (
-        body &&
-        typeof body === 'object' &&
-        'error' in body &&
-        typeof (body as { error: unknown }).error === 'string'
-      ) {
-        msg = (body as { error: string }).error
-      }
+      msg = errorMessage(body) ?? msg
     } catch {
       /* ignore body parse */
     }

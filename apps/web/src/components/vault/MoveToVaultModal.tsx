@@ -9,7 +9,7 @@ import { useChildDialog } from '@/hooks/render'
 import { vaultMoveBlockerSchema, type VaultMoveBlocker } from '@/schemas'
 
 const OUT_OF_VAULT = 'out'
-const blockedBodySchema = z.object({ blockers: z.array(vaultMoveBlockerSchema) })
+const blockedBodySchema = z.object({ details: z.object({ blockers: z.array(vaultMoveBlockerSchema) }) })
 
 type Props = {
   categoryIds: string[]
@@ -45,7 +45,7 @@ export function MoveToVaultModal({ categoryIds, bookmarkIds, onClose }: Props): 
     } catch (e) {
       const parsed = e instanceof ApiError && e.status === 409 ? blockedBodySchema.safeParse(e.body) : null
       if (parsed?.success) {
-        setBlockers(parsed.data.blockers)
+        setBlockers(parsed.data.details.blockers)
         return
       }
       notifications.show({ color: 'red', message: e instanceof Error ? e.message : String(e) })

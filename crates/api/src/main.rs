@@ -72,6 +72,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(metrics::router())
         // Without its own fallback, /api would inherit the app shell below.
         .fallback(api_not_found)
+        .layer(axum::middleware::from_fn(error::normalize_error_body))
         .layer(axum::middleware::from_fn(metrics::track_http))
         .with_state(state);
 

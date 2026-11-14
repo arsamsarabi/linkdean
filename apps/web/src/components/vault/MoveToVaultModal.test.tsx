@@ -76,10 +76,14 @@ describe('MoveToVaultModal', () => {
 
   it('lists every blocker and stays open', async () => {
     const blocked = new ApiError('This move is blocked.', 409, {
-      blockers: [
-        { kind: 'shared', subject_id: 'c1', message: 'Remove 2 people from sharing on “Reading”' },
-        { kind: 'dashboard', subject_id: 'b1', related_id: 'd1', message: 'Remove “Rust” from dashboard “Home”' },
-      ],
+      code: 'vault_move_blocked',
+      message: 'This move is blocked.',
+      details: {
+        blockers: [
+          { kind: 'shared', subject_id: 'c1', message: 'Remove 2 people from sharing on “Reading”' },
+          { kind: 'dashboard', subject_id: 'b1', related_id: 'd1', message: 'Remove “Rust” from dashboard “Home”' },
+        ],
+      },
     })
     hooks.rejectWith = blocked
     const onClose = vi.fn()

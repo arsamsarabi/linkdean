@@ -298,8 +298,11 @@ async fn move_items(
     let outcome = db::move_to_vault(&state.pool, user.id, req, &keyring).await?;
     let (left_search, joined_search) = match outcome {
         VaultMoveOutcome::Blocked(blockers) => {
-            let body = json!({ "error": "This move is blocked.", "blockers": blockers });
-            return Ok((StatusCode::CONFLICT, Json(body)).into_response());
+            return Ok(
+                crate::error::ErrorBody::new("vault_move_blocked", "This move is blocked.")
+                    .with_details(json!({ "blockers": blockers }))
+                    .into_response_with(StatusCode::CONFLICT),
+            );
         }
         VaultMoveOutcome::Moved {
             left_search,

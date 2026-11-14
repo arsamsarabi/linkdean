@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { isSignedIn, markSignedIn } from '@/lib'
-import { banFromBody, req } from './client'
+import { banFromBody, errorCode, errorMessage, req } from './client'
 
 function respond(status: number, body: unknown): void {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })))
 }
 
-const banned = { error: 'banned', code: 'banned', ban: { reason: 'Spam', ends_at: null } }
+const banned = {
+  code: 'banned',
+  message: 'banned',
+  error: 'banned',
+  details: { ban: { reason: 'Spam', ends_at: null } },
+}
 
 describe('banned responses', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -148,5 +153,15 @@ describe('expired sessions', () => {
     await expect(req('/auth/me')).rejects.toThrow()
     expect(isSignedIn()).toBe(false)
     expect(assign).not.toHaveBeenCalled()
+  })
+})
+
+describe('error body helpers', () => {
+  it('reads message, falling back to the legacy error field', () => {
+    expect(errorMessage({ code: 'not_found', message: 'not found', error: 'old' })).toBe('not found')
+    expect(errorMessage({ error: 'old server' })).toBe('old server')
+    expect(errorMessage('nope')).toBeNull()
+    expect(errorCode({ code: 'quota_exceeded' })).toBe('quota_exceeded')
+    expect(errorCode({})).toBeNull()
   })
 })

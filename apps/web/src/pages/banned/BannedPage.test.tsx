@@ -27,7 +27,7 @@ function ui(): ReactElement {
 }
 
 const banned = (ends_at: string | null) =>
-  new ApiError('banned', 403, { code: 'banned', ban: { reason: 'Spam', ends_at } })
+  new ApiError('banned', 403, { code: 'banned', message: 'banned', details: { ban: { reason: 'Spam', ends_at } } })
 
 describe('BannedPage', () => {
   afterEach(() => {

@@ -45,6 +45,8 @@ sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "postgres",
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
+utoipa = { version = "6.0.0", features = ["axum_extras", "chrono", "uuid", "preserve_order", "preserve_path_order"] }
+utoipa-axum = "0.3.0"
 tower-http = { version = "0.7", features = ["cors", "trace", "fs", "request-id"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
