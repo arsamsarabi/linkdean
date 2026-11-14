@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod disposable_email;
 mod error;
+mod http_cache;
 mod logging;
 mod mail;
 mod maintenance;
@@ -73,6 +74,7 @@ async fn main() -> anyhow::Result<()> {
         // Without its own fallback, /api would inherit the app shell below.
         .fallback(api_not_found)
         .layer(axum::middleware::from_fn(error::normalize_error_body))
+        .layer(axum::middleware::from_fn(http_cache::caching_headers))
         .layer(axum::middleware::from_fn(metrics::track_http))
         .with_state(state);
 
