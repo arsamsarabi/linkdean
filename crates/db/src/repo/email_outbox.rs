@@ -12,6 +12,8 @@ pub struct NewOutboxEmail {
     pub subject: String,
     pub html: String,
     pub text: String,
+    /// The one-click unsubscribe URL for the `List-Unsubscribe` header, when the email has one.
+    pub list_unsubscribe: Option<String>,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -21,6 +23,7 @@ pub struct OutboxEmail {
     pub subject: String,
     pub html: String,
     pub text: String,
+    pub list_unsubscribe: Option<String>,
     pub attempts: i32,
 }
 
@@ -48,8 +51,8 @@ fn db_err(e: sqlx::Error) -> Error {
 pub async fn enqueue_email(pool: &PgPool, email: &NewOutboxEmail) -> Result<Uuid> {
     let (id,): (Uuid,) = sqlx::query_as(
         r#"
-        INSERT INTO email_outbox (recipient, template, subject, html, text)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO email_outbox (recipient, template, subject, html, text, list_unsubscribe)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
         "#,
     )
@@ -58,6 +61,7 @@ pub async fn enqueue_email(pool: &PgPool, email: &NewOutboxEmail) -> Result<Uuid
     .bind(&email.subject)
     .bind(&email.html)
     .bind(&email.text)
+    .bind(&email.list_unsubscribe)
     .fetch_one(pool)
     .await
     .map_err(db_err)?;
@@ -79,7 +83,7 @@ pub async fn claim_due_emails(pool: &PgPool, limit: i64) -> Result<Vec<OutboxEma
             LIMIT $1
             FOR UPDATE SKIP LOCKED
         )
-        RETURNING id, recipient, subject, html, text, attempts
+        RETURNING id, recipient, subject, html, text, list_unsubscribe, attempts
         "#,
     )
     .bind(limit)

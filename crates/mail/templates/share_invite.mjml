@@ -12,4 +12,4 @@
   </mj-column>
 </mj-section>
 {% endblock %}
-{% block why %}You got this because email for {{ kind_label }} is on. Turn it off in <a href="{{ settings_url }}" style="color:#636772">Settings → Notifications</a>.{% endblock %}
+{% block why %}You got this because email for {{ kind_label }} is on. <a href="{{ unsubscribe_url }}" style="color:#636772">Unsubscribe from {{ kind_label }}</a> or change it in <a href="{{ settings_url }}" style="color:#636772">Settings → Notifications</a>.{% endblock %}

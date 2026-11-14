@@ -6,7 +6,14 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { Notification, NotificationEmailPref, NotificationKind } from '@/schemas'
+import type {
+  EmailDelivery,
+  Notification,
+  NotificationEmailPref,
+  NotificationKind,
+  UnsubscribeLink,
+  UnsubscribeResult,
+} from '@/schemas'
 
 export function useUnreadNotificationCount(enabled = true): UseQueryResult<{ count: number }> {
   return useQuery({
@@ -56,10 +63,10 @@ export function useNotificationEmailPrefs(enabled = true): UseQueryResult<{ pref
   })
 }
 
-type EmailPrefVars = { kind: NotificationKind; enabled: boolean }
+type EmailPrefVars = { kind: NotificationKind; enabled: boolean; delivery?: EmailDelivery }
 type EmailPrefContext = { previous?: { prefs: NotificationEmailPref[] } }
 
-/** Saves one kind's email switch, showing the new value at once and restoring it on failure. */
+/** Saves one kind's email setting, showing the new value at once and restoring it on failure. */
 export function useSetNotificationEmailPref(): UseMutationResult<
   NotificationEmailPref,
   Error,
@@ -68,13 +75,13 @@ export function useSetNotificationEmailPref(): UseMutationResult<
 > {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ kind, enabled }) => api.setNotificationEmailPref(kind, enabled),
-    onMutate: async ({ kind, enabled }) => {
+    mutationFn: ({ kind, enabled, delivery }) => api.setNotificationEmailPref(kind, enabled, delivery),
+    onMutate: async ({ kind, enabled, delivery }) => {
       await qc.cancelQueries({ queryKey: EMAIL_PREFS_KEY })
       const previous = qc.getQueryData<{ prefs: NotificationEmailPref[] }>(EMAIL_PREFS_KEY)
       if (previous) {
         qc.setQueryData(EMAIL_PREFS_KEY, {
-          prefs: previous.prefs.map((p) => (p.kind === kind ? { ...p, enabled } : p)),
+          prefs: previous.prefs.map((p) => (p.kind === kind ? { ...p, enabled, delivery: delivery ?? p.delivery } : p)),
         })
       }
       return { previous }
@@ -87,5 +94,24 @@ export function useSetNotificationEmailPref(): UseMutationResult<
         cur ? { prefs: cur.prefs.map((p) => (p.kind === saved.kind ? saved : p)) } : cur
       )
     },
+  })
+}
+
+/** What a signed unsubscribe link turns off. Checking changes nothing. */
+export function useUnsubscribeLink(query: string): UseQueryResult<UnsubscribeLink> {
+  return useQuery({
+    queryKey: ['unsubscribe-link', query],
+    queryFn: () => api.checkUnsubscribeLink(query),
+    retry: false,
+    staleTime: Infinity,
+  })
+}
+
+/** Turns off the email a signed unsubscribe link names. Works signed out. */
+export function useUnsubscribe(): UseMutationResult<UnsubscribeResult, Error, string> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (query: string) => api.unsubscribe(query),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: EMAIL_PREFS_KEY }),
   })
 }

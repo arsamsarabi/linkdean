@@ -1,9 +1,9 @@
 import { type ReactElement } from 'react'
 import { MantineProvider } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NotificationEmailPref } from '@/schemas'
 import { NotificationEmailsPanel } from './NotificationEmailsPanel'
 
@@ -19,8 +19,22 @@ vi.mock('@/api', async (importOriginal) => {
 })
 
 const PREFS: NotificationEmailPref[] = [
-  { kind: 'share_invite', label: 'Share invites', enabled: true, default: true },
-  { kind: 'social_comment', label: 'Comments', enabled: false, default: false },
+  {
+    kind: 'share_invite',
+    label: 'Share invites',
+    enabled: true,
+    default: true,
+    delivery: 'instant',
+    digest_allowed: false,
+  },
+  {
+    kind: 'social_comment',
+    label: 'Comments',
+    enabled: false,
+    default: false,
+    delivery: 'instant',
+    digest_allowed: true,
+  },
 ]
 
 function ui(): ReactElement {
@@ -33,11 +47,23 @@ function ui(): ReactElement {
   )
 }
 
-function toggle(name: string): HTMLInputElement {
-  return screen.getByRole<HTMLInputElement>('switch', { name: new RegExp(`^${name}`) })
+function choice(kind: string, label: string): HTMLInputElement {
+  const group = screen.getByRole('radiogroup', { name: `Email for ${kind}` })
+  return within(group).getByRole<HTMLInputElement>('radio', { name: label })
 }
 
 describe('NotificationEmailsPanel', () => {
+  beforeAll(() => {
+    // SegmentedControl measures its options.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      }
+    )
+  })
   beforeEach(() => {
     api.bootstrap.mockResolvedValue({ mail_enabled: true })
     api.notificationEmailPrefs.mockResolvedValue({ prefs: PREFS })
@@ -45,46 +71,49 @@ describe('NotificationEmailsPanel', () => {
   })
   afterEach(cleanup)
 
-  it('shows one switch per kind, with the default hint', async () => {
+  it('shows each kind with its current choice, and the digest only where it is allowed', async () => {
     render(ui())
-    expect((await screen.findByRole('switch', { name: /^Share invites/ })) as HTMLInputElement).toBeTruthy()
-    expect(toggle('Share invites').checked).toBe(true)
-    expect(toggle('Comments').checked).toBe(false)
+    await screen.findByRole('radiogroup', { name: 'Email for Share invites' })
+    expect(choice('Share invites', 'Each one').checked).toBe(true)
+    expect(choice('Comments', 'Off').checked).toBe(true)
+    expect(choice('Comments', 'Daily digest')).toBeTruthy()
+    const invites = screen.getByRole('radiogroup', { name: 'Email for Share invites' })
+    expect(within(invites).queryByRole('radio', { name: 'Daily digest' })).toBeNull()
     expect(screen.getAllByText('On by default')).toHaveLength(1)
     expect(screen.queryByText(/need outbound email/)).toBeNull()
   })
 
-  it('saves on toggle and shows the new value at once', async () => {
+  it('saves the daily digest and shows it at once', async () => {
     let resolve: (p: NotificationEmailPref) => void = () => {}
     api.setNotificationEmailPref.mockReturnValue(new Promise((r) => (resolve = r)))
     render(ui())
-    await screen.findByRole('switch', { name: /^Comments/ })
-    await waitFor(() => expect(toggle('Comments').disabled).toBe(false))
-    await userEvent.click(toggle('Comments'))
-    expect(api.setNotificationEmailPref).toHaveBeenCalledWith('social_comment', true)
-    await waitFor(() => expect(toggle('Comments').checked).toBe(true))
-    resolve({ kind: 'social_comment', label: 'Comments', enabled: true, default: false })
-    await waitFor(() => expect(toggle('Comments').checked).toBe(true))
+    await screen.findByRole('radiogroup', { name: 'Email for Comments' })
+    await waitFor(() => expect(choice('Comments', 'Daily digest').disabled).toBe(false))
+    await userEvent.click(choice('Comments', 'Daily digest'))
+    expect(api.setNotificationEmailPref).toHaveBeenCalledWith('social_comment', true, 'daily')
+    await waitFor(() => expect(choice('Comments', 'Daily digest').checked).toBe(true))
+    resolve({ ...PREFS[1], enabled: true, delivery: 'daily' })
+    await waitFor(() => expect(choice('Comments', 'Daily digest').checked).toBe(true))
   })
 
-  it('puts the switch back when saving fails', async () => {
+  it('turns a kind off and puts it back when saving fails', async () => {
     let reject: (e: Error) => void = () => {}
     api.setNotificationEmailPref.mockReturnValue(new Promise((_, r) => (reject = r)))
     render(ui())
-    await screen.findByRole('switch', { name: /^Share invites/ })
-    await waitFor(() => expect(toggle('Share invites').disabled).toBe(false))
-    await userEvent.click(toggle('Share invites'))
-    expect(api.setNotificationEmailPref).toHaveBeenCalledWith('share_invite', false)
-    await waitFor(() => expect(toggle('Share invites').checked).toBe(false))
+    await screen.findByRole('radiogroup', { name: 'Email for Share invites' })
+    await waitFor(() => expect(choice('Share invites', 'Off').disabled).toBe(false))
+    await userEvent.click(choice('Share invites', 'Off'))
+    expect(api.setNotificationEmailPref).toHaveBeenCalledWith('share_invite', false, undefined)
+    await waitFor(() => expect(choice('Share invites', 'Off').checked).toBe(true))
     reject(new Error('nope'))
-    await waitFor(() => expect(toggle('Share invites').checked).toBe(true))
+    await waitFor(() => expect(choice('Share invites', 'Each one').checked).toBe(true))
   })
 
-  it('explains and disables the switches with mail off', async () => {
+  it('explains and disables the choices with mail off', async () => {
     api.bootstrap.mockResolvedValue({ mail_enabled: false })
     render(ui())
     expect(await screen.findByText('Email notifications need outbound email. Ask your admin.')).toBeTruthy()
-    expect(toggle('Share invites').disabled).toBe(true)
-    expect(toggle('Comments').disabled).toBe(true)
+    expect(choice('Share invites', 'Off').disabled).toBe(true)
+    expect(choice('Comments', 'Daily digest').disabled).toBe(true)
   })
 })

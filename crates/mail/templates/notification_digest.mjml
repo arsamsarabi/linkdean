@@ -1,0 +1,29 @@
+{% extends "layout.mjml" %}
+{% block title %}Your daily digest{% endblock %}
+{% block preview %}{{ count }} new {{ "notification" if count == 1 else "notifications" }} in Linkdean{% endblock %}
+{% block content %}
+{% from "macros.mjml" import action %}
+<mj-section>
+  <mj-column>
+    <mj-text font-size="20px" font-weight="700">Your daily digest</mj-text>
+    <mj-text>{{ count }} new {{ "notification" if count == 1 else "notifications" }} since your last digest.</mj-text>
+  </mj-column>
+</mj-section>
+{% for group in groups %}
+<mj-section padding="0 0 8px">
+  <mj-column>
+    <mj-text font-size="13px" font-weight="700" color="#636772" padding-bottom="0">{{ group.label }}</mj-text>
+    {% for item in group.items %}
+    <mj-text padding-top="4px" padding-bottom="4px"><a href="{{ item.url }}" style="color:#1B1E25;text-decoration:none">{{ item.message }}</a></mj-text>
+    {% endfor %}
+  </mj-column>
+</mj-section>
+{% endfor %}
+<mj-section>
+  <mj-column>
+    {% if more > 0 %}<mj-text color="#636772">And {{ more }} more in Linkdean.</mj-text>{% endif %}
+    {{ action(url, "Open Linkdean") }}
+  </mj-column>
+</mj-section>
+{% endblock %}
+{% block why %}You got this because you chose a daily digest for {{ kinds }}. <a href="{{ unsubscribe_url }}" style="color:#636772">Unsubscribe from the daily digest</a> or change it in <a href="{{ settings_url }}" style="color:#636772">Settings → Notifications</a>.{% endblock %}

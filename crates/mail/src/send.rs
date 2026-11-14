@@ -1,5 +1,6 @@
 use crate::config::{MailConfig, TlsMode};
 use crate::render::Rendered;
+use lettre::message::header::{HeaderName, HeaderValue};
 use lettre::message::{Mailbox, MultiPart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
@@ -34,6 +35,17 @@ impl Mailer {
 
     /// Deliver one message. The error text is what the Admin panel shows.
     pub async fn send(&self, to: &str, mail: &Rendered) -> Result<(), String> {
+        self.send_with_unsubscribe(to, mail, None).await
+    }
+
+    /// [`Mailer::send`], adding RFC 8058 one-click unsubscribe headers when `unsubscribe` is set:
+    /// mail apps then show an Unsubscribe button that POSTs to that URL.
+    pub async fn send_with_unsubscribe(
+        &self,
+        to: &str,
+        mail: &Rendered,
+        unsubscribe: Option<&str>,
+    ) -> Result<(), String> {
         let to: Mailbox = to
             .parse()
             .map_err(|e| format!("invalid recipient {to}: {e}"))?;
@@ -43,8 +55,19 @@ impl Mailer {
             uuid::Uuid::new_v4().simple(),
             self.from.email.domain()
         );
-        let message = Message::builder()
-            .message_id(Some(message_id))
+        let mut builder = Message::builder().message_id(Some(message_id));
+        if let Some(url) = unsubscribe {
+            builder = builder
+                .raw_header(HeaderValue::new(
+                    HeaderName::new_from_ascii_str("List-Unsubscribe"),
+                    format!("<{url}>"),
+                ))
+                .raw_header(HeaderValue::new(
+                    HeaderName::new_from_ascii_str("List-Unsubscribe-Post"),
+                    "List-Unsubscribe=One-Click".into(),
+                ));
+        }
+        let message = builder
             .from(self.from.clone())
             .to(to)
             .subject(mail.subject.clone())
