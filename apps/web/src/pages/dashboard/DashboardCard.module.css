@@ -1,4 +1,9 @@
 /* Dashboard card: one link, same height as its neighbors, details in the body. */
+.wrap {
+  position: relative;
+  height: 100%;
+}
+
 .card {
   display: flex;
   flex-direction: column;
@@ -14,14 +19,31 @@
     transform 140ms ease;
 }
 
-.card:hover {
+.peek {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  background: color-mix(in srgb, var(--mantine-color-body) 90%, transparent);
+}
+
+.wrap:hover .peek,
+.wrap:focus-within .peek {
+  opacity: 1;
+}
+
+.wrap:hover .card,
+.wrap:focus-within .card {
   border-color: color-mix(in srgb, var(--dash-accent, var(--mantine-color-violet-6)) 55%, transparent);
   transform: translateY(-1px);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .card,
-  .card:hover {
+  .wrap:hover .card,
+  .wrap:focus-within .card {
     transition: none;
     transform: none;
   }

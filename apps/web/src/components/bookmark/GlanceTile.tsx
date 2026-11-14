@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { Badge, Group, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import { IconExternalLink, IconLock, IconWorld } from '@tabler/icons-react'
+import { PeekButton } from '@/components/peek'
 import { ShareBadge } from '@/components/share-badge'
 import { useRecordBookmarkOpen } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
@@ -39,51 +40,54 @@ export function GlanceTile({ bookmark: b, viewerUserId, meta, fresh = false }: P
   const showOutgoing = !share && !!b.shared_out
 
   return (
-    <UnstyledButton
-      component="a"
-      href={b.url}
-      target="_blank"
-      rel="noreferrer"
-      className={styles.tile}
-      aria-label={`Open ${title}`}
-      onClick={() => {
-        if (!b.is_vault) recordOpen(b.id)
-      }}
-    >
-      <Group gap="sm" wrap="nowrap" align="center" className={styles.inner}>
-        <div className={styles.iconWrap}>
-          {iconSrc ? (
-            <ApiImage src={iconSrc} alt="" w={20} h={20} fit="contain" onError={() => setIconFailed(true)} />
-          ) : (
-            <IconWorld size={18} stroke={1.5} color="var(--mantine-color-dimmed)" />
-          )}
-        </div>
-        <div className={styles.text}>
-          <Group gap={6} wrap="nowrap" align="center">
-            <Text fw={600} size="sm" lineClamp={1} className={styles.title}>
-              {title}
+    <div className={styles.wrap}>
+      <UnstyledButton
+        component="a"
+        href={b.url}
+        target="_blank"
+        rel="noreferrer"
+        className={styles.tile}
+        aria-label={`Open ${title}`}
+        onClick={() => {
+          if (!b.is_vault) recordOpen(b.id)
+        }}
+      >
+        <Group gap="sm" wrap="nowrap" align="center" className={styles.inner}>
+          <div className={styles.iconWrap}>
+            {iconSrc ? (
+              <ApiImage src={iconSrc} alt="" w={20} h={20} fit="contain" onError={() => setIconFailed(true)} />
+            ) : (
+              <IconWorld size={18} stroke={1.5} color="var(--mantine-color-dimmed)" />
+            )}
+          </div>
+          <div className={styles.text}>
+            <Group gap={6} wrap="nowrap" align="center">
+              <Text fw={600} size="sm" lineClamp={1} className={styles.title}>
+                {title}
+              </Text>
+              {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} /> : null}
+              {showOutgoing ? <ShareBadge outgoing sharedWith={b.shared_with} /> : null}
+              {fresh ? (
+                <Tooltip label="Saved in the last day">
+                  <span className={styles.fresh} role="img" aria-label="New" />
+                </Tooltip>
+              ) : null}
+              {b.is_vault ? (
+                <Tooltip label="Stored in vault">
+                  <Badge size="xs" variant="light" leftSection={<IconLock size={8} stroke={1.5} />}>
+                    vault
+                  </Badge>
+                </Tooltip>
+              ) : null}
+            </Group>
+            <Text size="xs" c="dimmed" lineClamp={1} title={b.url}>
+              {meta ? `${hostname(b.url)} · ${meta}` : b.url}
             </Text>
-            {share ? <ShareBadge access={share} ownerLabel={b.owner_display_name} /> : null}
-            {showOutgoing ? <ShareBadge outgoing sharedWith={b.shared_with} /> : null}
-            {fresh ? (
-              <Tooltip label="Saved in the last day">
-                <span className={styles.fresh} role="img" aria-label="New" />
-              </Tooltip>
-            ) : null}
-            {b.is_vault ? (
-              <Tooltip label="Stored in vault">
-                <Badge size="xs" variant="light" leftSection={<IconLock size={8} stroke={1.5} />}>
-                  vault
-                </Badge>
-              </Tooltip>
-            ) : null}
-          </Group>
-          <Text size="xs" c="dimmed" lineClamp={1} title={b.url}>
-            {meta ? `${hostname(b.url)} · ${meta}` : b.url}
-          </Text>
-        </div>
-        <IconExternalLink size={14} stroke={1.5} className={styles.external} aria-hidden />
-      </Group>
-    </UnstyledButton>
+          </div>
+          <IconExternalLink size={14} stroke={1.5} className={styles.external} aria-hidden />
+        </Group>
+      </UnstyledButton>
+      <PeekButton bookmark={b} className={styles.peek} size={14} />
+    </div>
   )
 }
