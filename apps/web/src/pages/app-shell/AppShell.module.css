@@ -41,6 +41,25 @@
   border-top: 1px solid var(--mantine-color-default-border);
 }
 
+/* Icon rail: hide labels/badges, center icons, no scrollbar clutter. */
+.rail :global(.mantine-ScrollArea-scrollbar) {
+  display: none;
+}
+
+.railLink {
+  padding-inline: 0;
+  justify-content: center;
+}
+
+.railLink :global(.mantine-NavLink-label),
+.railLink :global(.mantine-NavLink-section[data-position='right']) {
+  display: none;
+}
+
+.railLink :global(.mantine-NavLink-section[data-position='left']) {
+  margin-inline-end: 0;
+}
+
 .tabBar {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
