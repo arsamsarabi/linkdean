@@ -8,6 +8,7 @@ import {
   IconCheck,
   IconCopy,
   IconDotsVertical,
+  IconEye,
   IconHeart,
   IconLock,
   IconMessageCircle,
@@ -49,6 +50,8 @@ type Props = {
   onEdit: () => void
   onDelete: () => void
   onMoveToVault?: () => void
+  /** Hidden for vault / non-https. */
+  onPeek?: () => void
 }
 
 export function BookmarkCardMenu({
@@ -73,6 +76,7 @@ export function BookmarkCardMenu({
   onEdit,
   onDelete,
   onMoveToVault,
+  onPeek,
 }: Props): ReactElement {
   const ownerSuffix = ownerLabel ? ` ${ownerLabel}` : ''
   return (
@@ -85,6 +89,11 @@ export function BookmarkCardMenu({
         </Tooltip>
       </Menu.Target>
       <Menu.Dropdown>
+        {onPeek ? (
+          <Menu.Item leftSection={<IconEye size={14} stroke={1.5} />} onClick={onPeek}>
+            Peek
+          </Menu.Item>
+        ) : null}
         <CopyButton value={url} timeout={1500}>
           {({ copied, copy }) => (
             <Menu.Item

@@ -31,6 +31,7 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Phase 2, page text: reader-mode text taken from the snapshot and indexed in Meilisearch, so search covers page contents, not only titles and notes.
     - Downloads: per bookmark, download the copy as HTML, PDF or reader-mode Markdown. The full export gains an option to include archives (zip).
     - Dead links: when the broken-link check finds a page gone, the bookmark offers its archived copy. Re-archive on demand.
+    - Quick peek fallback: when a site refuses to embed, show the archived copy or its reader-mode text instead of only the preview image.
     - Vaults: archived copies of vault bookmarks are encrypted with the vault key and never indexed.
     - Media (images, audio, video) last, behind a size cap per item and per account.
     - Deploy: archive volume and mount convention, a worker concurrency limit, the archive volume in the restic backup, self-host settings to turn it off or cap it.
@@ -62,19 +63,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the OpenTelemetry tracing the API already exports.
     - The managed service uses the same hooks with its own backend.
     - Document exactly what is collected.
-
-19. **Icon-only sidebar when collapsed** (S–M). On tablets and wider, collapsing the sidebar (⌘B) hides it completely today, so getting to Library, Dashboards or Vaults takes a reopen.
-    - From the `sm` breakpoint up, collapsed means a narrow rail of icons with tooltips: the main pages, then pinned or recent folders. Phones keep the burger menu and bottom tabs.
-    - The folder tree, counts and labels show only when expanded. The rail keeps the active page highlighted.
-    - The collapsed choice stays saved per browser, as it is now.
-    - Check at tablet and desktop widths, in both themes, and with keyboard focus moving through the rail.
-
-21. **Quick peek** (M). Checking what a bookmark is means opening a new tab and coming back. A peek shows the page inside Linkdean, from any bookmark card, row or dashboard tile.
-    - Opens in a panel with window controls: maximize to fill the app, minimize to a small bar that stays open while you browse, detach into its own browser window, open in a new tab, and close. Esc closes it; the panel keeps its size and place per browser.
-    - Many sites refuse to be shown inside another page (`X-Frame-Options` or CSP `frame-ancestors`), and the frame then stays blank. Detect it where possible and fall back to the bookmark's preview image, title and description, with an "Open in new tab" button. Once **Archive & downloads** (12) lands, the fallback shows the archived copy or its reader-mode text.
-    - Security: the app's CSP allows frames only from Cloudflare Turnstile today (`frame-src` in `crates/api/src/security.rs`). Peek needs `frame-src https:` and a sandboxed iframe (no same-origin access, no top navigation), so a peeked page cannot reach the user's session. Vault bookmarks stay out of peek, or need an explicit confirm.
-    - Opening a page in peek counts as an open, the same as clicking the link.
-    - Open questions: a keyboard shortcut (Space on the focused bookmark?), whether peek is a user setting or always on, and whether the desktop app (Far out) uses a real webview without the frame limits.
 
 ---
 

@@ -21,6 +21,11 @@ vi.mock('@/hooks', () => ({
   useApiImage: () => ({ src: undefined, failed: false }),
 }))
 
+vi.mock('@/components/peek', () => ({
+  useOpenPeek: () => vi.fn(),
+  PeekButton: () => null,
+}))
+
 vi.mock('@/components/social', () => ({ SocialDrawer: () => null }))
 
 const bookmark: BookmarkCardItem = {
@@ -63,5 +68,17 @@ describe('BookmarkCard row layout', () => {
     await userEvent.click(screen.getByRole('button', { name: /actions|menu|more/i }))
     await userEvent.click(await screen.findByRole('menuitem', { name: /edit/i }))
     expect(h.onEdit).toHaveBeenCalledWith('b1')
+  })
+
+  it('offers Peek in the actions menu for https bookmarks', async () => {
+    renderRow()
+    await userEvent.click(screen.getByRole('button', { name: /actions|menu|more/i }))
+    expect(await screen.findByRole('menuitem', { name: /^peek$/i })).toBeTruthy()
+  })
+
+  it('hides Peek for vault bookmarks', async () => {
+    renderRow({ bookmark: { ...bookmark, is_vault: true } })
+    await userEvent.click(screen.getByRole('button', { name: /actions|menu|more/i }))
+    expect(screen.queryByRole('menuitem', { name: /^peek$/i })).toBeNull()
   })
 })

@@ -35,7 +35,6 @@ Archiving and AI assistance come first. They are the biggest gaps on the [compar
 - **Legal review.** A lawyer reviews the Terms and Privacy Policy before anything costs money.
 - **Plans and pricing for the managed service.** Deciding what stays free, what a paid plan would add, and the limits of each. Self-hosting stays free for non-commercial use.
 - **Privacy-respecting usage statistics.** Aggregate counts only (active users, bookmarks saved, features used), nothing per person and no page content or addresses. Off by default when you self-host.
-- **A slimmer sidebar.** On tablets and wider, a collapsed sidebar becomes a narrow strip of icons instead of disappearing.
 
 ## Later
 

@@ -12,7 +12,7 @@ use axum::Router;
 pub const CONTENT_SECURITY_POLICY: &str = "\
 default-src 'self'; \
 script-src 'self' https://challenges.cloudflare.com; \
-frame-src https://challenges.cloudflare.com; \
+frame-src https://challenges.cloudflare.com https:; \
 style-src 'self' 'unsafe-inline'; \
 img-src 'self' data: blob:; \
 font-src 'self' data:; \
@@ -152,7 +152,13 @@ mod tests {
     fn csp_allows_the_turnstile_widget() {
         let csp = CONTENT_SECURITY_POLICY;
         assert!(csp.contains("script-src 'self' https://challenges.cloudflare.com;"));
-        assert!(csp.contains("frame-src https://challenges.cloudflare.com;"));
+        assert!(csp.contains("frame-src https://challenges.cloudflare.com https:;"));
+    }
+
+    #[test]
+    fn csp_allows_https_frames_for_peek() {
+        let csp = CONTENT_SECURITY_POLICY;
+        assert!(csp.contains("frame-src https://challenges.cloudflare.com https:;"));
     }
 
     #[test]
