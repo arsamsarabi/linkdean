@@ -45,7 +45,7 @@ const config: Config = {
               'guides/fast-capture.md': 'docs/guides/fast-capture.md',
               'architecture.md': 'docs/product/architecture.md',
               'changelog.md': 'docs/CHANGELOG.md',
-              'intro.md': 'apps/docs/docs/intro.md',
+              'intro.mdx': 'apps/docs/docs/intro.mdx',
             };
             const path =
               sourceByDoc[docPath] ?? `apps/docs/docs/${docPath}`;

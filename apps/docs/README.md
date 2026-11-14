@@ -16,7 +16,7 @@ pnpm build   # sync + build into build/
 
 **Do not edit** the generated markdown under `docs/self-hosting/`, `docs/guides/`, `docs/features.md`, or `docs/architecture.md`. Change the sources in `/docs` and re-run `pnpm sync`.
 
-Hand-written pages (e.g. `docs/intro.md`) are edited here.
+Hand-written pages (e.g. `docs/intro.mdx`) are edited here.
 
 ## Stack
 
