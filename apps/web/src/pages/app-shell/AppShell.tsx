@@ -3,7 +3,7 @@ import { Group, Loader, AppShell as MantineAppShell } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { CommandPalette, NotificationsDrawer, PageContainer, QueryErrorAlert } from '@/components'
+import { CommandPalette, NotificationsDrawer, PageContainer, PeekPanel, QueryErrorAlert } from '@/components'
 import {
   useBootstrap,
   useLogout,
@@ -73,7 +73,11 @@ export function AppShell(): ReactElement {
   return (
     <MantineAppShell
       header={{ height: 64 }}
-      navbar={{ width: 248, breakpoint: 'sm', collapsed: { mobile: !shell.navOpen, desktop: shell.navCollapsed } }}
+      navbar={{
+        width: { base: 248, sm: shell.navCollapsed ? 64 : 248 },
+        breakpoint: 'sm',
+        collapsed: { mobile: !shell.navOpen, desktop: false },
+      }}
       footer={{ height: { base: 64, sm: 0 } }}
       padding={{ base: 'md', sm: 'lg' }}
     >
@@ -127,6 +131,7 @@ export function AppShell(): ReactElement {
 
       <CommandPalette opened={shell.paletteOpen} onClose={shell.closePalette} />
       <NotificationsDrawer opened={shell.notifOpen} onClose={shell.closeNotif} />
+      <PeekPanel />
     </MantineAppShell>
   )
 }

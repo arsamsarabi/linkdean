@@ -3,10 +3,12 @@ import { Card, Checkbox, Group, Highlight, Pill, Spoiler, Stack, Text, Tooltip, 
 import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useOpenPeek } from '@/components/peek'
 import { SocialDrawer } from '@/components/social'
 import { useOwnerActions, useRecordBookmarkOpen, useSaveBookmarkCopy } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
 import { FOLDER_UNCATEGORIZED, hostname, previewSrcCandidates } from '@/services'
+import { canPeekBookmark } from '@/stores'
 import { BlockOwnerModal } from './BlockOwnerModal'
 import styles from './BookmarkCard.module.css'
 import { BookmarkCardBadges } from './BookmarkCardBadges'
@@ -60,6 +62,7 @@ export function BookmarkCard({
   const canFollowOwner = !!viewerUserId && !!b.owner_user_id && b.owner_user_id !== viewerUserId
   const saveCopy = useSaveBookmarkCopy()
   const recordOpen = useRecordBookmarkOpen()
+  const openPeek = useOpenPeek()
   const owner = useOwnerActions(b.owner_user_id, b.owner_display_name, canFollowOwner)
   const navigate = useNavigate()
   const [socialOpen, setSocialOpen] = useState(false)
@@ -165,6 +168,7 @@ export function BookmarkCard({
       onMoveToVault={
         onMoveToVault && b.owner_user_id === viewerUserId && !b.deleted_at ? () => onMoveToVault(b.id) : undefined
       }
+      onPeek={canPeekBookmark(b) ? () => openPeek(b) : undefined}
     />
   )
 
