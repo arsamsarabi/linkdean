@@ -60,20 +60,33 @@ if [ "${CHECK_APP:-false}" = true ]; then
   fi
 fi
 
-check_static() {
-  local host=$1 dir=$2 want got
-  want="$(sha256sum "$STACK/static/$dir/index.html" | cut -d' ' -f1)"
-  got="$(caddy_get "$host" / | sha256sum | cut -d' ' -f1)" || fail "$host unreachable through Caddy"
-  [ "$got" = "$want" ] || fail "$host serves an index.html that differs from static/$dir"
-  echo "$host: serves the checked-out build"
+# The file the caddy container holds at /srv/<dir>/<path>, as served from its image.
+image_file() {
+  "${COMPOSE[@]}" exec -T caddy cat "/srv/$1"
 }
 
+check_static() {
+  local host=$1 dir=$2 want got
+  want="$(image_file "$dir/index.html" | sha256sum | cut -d' ' -f1)" || fail "caddy has no /srv/$dir/index.html"
+  got="$(caddy_get "$host" / | sha256sum | cut -d' ' -f1)" || fail "$host unreachable through Caddy"
+  [ "$got" = "$want" ] || fail "$host serves an index.html that differs from the image's /srv/$dir"
+  echo "$host: serves the image's build"
+}
+
+if [ "${CHECK_DOCS:-false}" = true ] || [ "${CHECK_SITE:-false}" = true ]; then
+  if [ -n "${RELEASE_TAG:-}" ]; then
+    want="ghcr.io/arsamsarabi/linkdean-static:${RELEASE_TAG#v}"
+    got="$("${COMPOSE[@]}" ps --format '{{.Image}}' caddy)"
+    [ "$got" = "$want" ] || fail "caddy runs $got, expected $want"
+    echo "caddy: $got"
+  fi
+fi
 if [ "${CHECK_DOCS:-false}" = true ]; then
   check_static docs.linkdean.app docs
   # A docs page must come back as its own pre-rendered file, not the root shell.
-  want="$(sha256sum "$STACK/static/docs/docs/intro/index.html" | cut -d' ' -f1)"
+  want="$(image_file docs/docs/intro/index.html | sha256sum | cut -d' ' -f1)" || fail "caddy has no docs intro page"
   got="$(caddy_get docs.linkdean.app /docs/intro/ | sha256sum | cut -d' ' -f1)" || fail "docs /docs/intro/ unreachable"
-  [ "$got" = "$want" ] || fail "docs.linkdean.app/docs/intro/ does not serve static/docs/docs/intro/index.html"
+  [ "$got" = "$want" ] || fail "docs.linkdean.app/docs/intro/ does not serve /srv/docs/docs/intro/index.html"
   echo "docs.linkdean.app: serves pre-rendered pages"
 fi
 if [ "${CHECK_SITE:-false}" = true ]; then check_static linkdean.app site; fi

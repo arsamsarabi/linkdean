@@ -1,7 +1,6 @@
 {
     "ignoredFiles": [
         "brand/**",
-        "apps/site/public/**",
-        "deploy/public-beta/static/**"
+        "apps/site/public/**"
     ]
 }

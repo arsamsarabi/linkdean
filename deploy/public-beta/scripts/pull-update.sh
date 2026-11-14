@@ -4,8 +4,9 @@
 # The Release workflow runs this over SSH after checking out the release tag:
 #   RELEASE_TAG=v0.2.0 UPDATE_APP=true UPDATE_DOCS=false UPDATE_SITE=true bash pull-update.sh
 #
-# RELEASE_TAG (optional) pins the api image: LINKDEAN_VERSION in .env becomes the tag
-# without its leading "v", so a later manual `docker compose up` keeps the same image.
+# RELEASE_TAG (optional) pins the images: LINKDEAN_VERSION (api) and, when docs or site
+# change, LINKDEAN_STATIC_VERSION (caddy) in .env become the tag without its leading "v",
+# so a later manual `docker compose up` keeps the same images.
 # UPDATE_APP / UPDATE_DOCS / UPDATE_SITE pick what to refresh. If none is set, they are
 # worked out from the files changed between REF_BEFORE (or ORIG_HEAD) and HEAD.
 set -euo pipefail
@@ -31,8 +32,8 @@ UPDATE_SITE="${UPDATE_SITE:-}"
 if [ -z "$UPDATE_APP$UPDATE_DOCS$UPDATE_SITE" ]; then
   UPDATE_APP=false UPDATE_DOCS=false UPDATE_SITE=false
   if changed '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)'; then UPDATE_APP=true; fi
-  if changed '^(apps/docs/|deploy/public-beta/static/docs/|deploy/public-beta/Caddyfile$|docs/(self-hosting/[^/]+|product/(features|architecture)|guides/fast-capture)\.md$)'; then UPDATE_DOCS=true; fi
-  if changed '^(apps/site/|deploy/public-beta/static/site/)'; then UPDATE_SITE=true; fi
+  if changed '^(apps/docs/|deploy/docker/Dockerfile\.static|deploy/public-beta/Caddyfile$|docs/)'; then UPDATE_DOCS=true; fi
+  if changed '^(apps/site/|deploy/docker/Dockerfile\.static)'; then UPDATE_SITE=true; fi
 fi
 
 # Screenshots are on when .env points the api at the chrome service.
@@ -55,16 +56,18 @@ ensure_browser_network() {
 
 echo "update app=$UPDATE_APP docs=$UPDATE_DOCS site=$UPDATE_SITE tag=${RELEASE_TAG:-none}"
 
-if [ "$UPDATE_APP" = true ]; then
-  if [ -n "${RELEASE_TAG:-}" ]; then
-    version="${RELEASE_TAG#v}"
-    if grep -q '^LINKDEAN_VERSION=' "$STACK/.env"; then
-      sed -i.bak "s/^LINKDEAN_VERSION=.*/LINKDEAN_VERSION=$version/" "$STACK/.env"
-    else
-      printf '\nLINKDEAN_VERSION=%s\n' "$version" >> "$STACK/.env"
-    fi
-    echo "LINKDEAN_VERSION=$version"
+# Set KEY=value in .env, adding the line when it is missing.
+pin() {
+  if grep -q "^$1=" "$STACK/.env"; then
+    sed -i.bak "s/^$1=.*/$1=$2/" "$STACK/.env"
+  else
+    printf '\n%s=%s\n' "$1" "$2" >> "$STACK/.env"
   fi
+  echo "$1=$2"
+}
+
+if [ "$UPDATE_APP" = true ]; then
+  if [ -n "${RELEASE_TAG:-}" ]; then pin LINKDEAN_VERSION "${RELEASE_TAG#v}"; fi
   if chrome_on; then
     ensure_browser_network
     "${COMPOSE[@]}" --profile chrome pull api chrome
@@ -76,9 +79,12 @@ if [ "$UPDATE_APP" = true ]; then
   fi
 fi
 
-# Docs and site are bind-mounted from deploy/public-beta/static/, so the checkout already
-# holds the new files. Restart Caddy so nothing stale stays cached in the container.
+# Docs and site are built into the caddy image (deploy/docker/Dockerfile.static). Pull the
+# release's image and recreate Caddy; restart it too, so a changed Caddyfile is read even
+# when the image did not change.
 if [ "$UPDATE_DOCS" = true ] || [ "$UPDATE_SITE" = true ]; then
+  if [ -n "${RELEASE_TAG:-}" ]; then pin LINKDEAN_STATIC_VERSION "${RELEASE_TAG#v}"; fi
+  "${COMPOSE[@]}" pull caddy
   "${COMPOSE[@]}" up -d caddy
   "${COMPOSE[@]}" restart caddy
 fi
