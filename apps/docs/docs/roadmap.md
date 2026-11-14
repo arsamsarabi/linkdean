@@ -31,7 +31,7 @@ Archiving and AI assistance come first. They are the biggest gaps on the [compar
   - Hints for related and near-duplicate bookmarks.
   - Later, dashboard sections suggested from what you save and open.
   - Suggestions wait for your click. Vault contents are never sent to a model.
-- **More for AI agents.** Folders and tags already work as [Agent Skills](/docs/guides/agent-skills). Next: a read-only MCP server, and archived page text inside skills.
+- **More for AI agents.** Folders and tags already work as [Agent Skills](/docs/guides/agent-skills) (experimental, off by default). Next: a read-only MCP server, and archived page text inside skills.
 - **Email digests and one-click unsubscribe.** A daily digest for the chattier notifications (edits, likes, comments), and an unsubscribe link for each kind in every email.
 - **Account and legal polish.** Tighter checks around deleting single sign-on accounts, a prompt to accept updated Terms, and a legal review of the Terms and Privacy Policy before anything costs money.
 - **More ways to sign in.** Passkeys, and ready-made sign-in with Google, Microsoft, GitHub and Authentik. Any standard OpenID Connect provider already works on a self-hosted instance.

@@ -11,6 +11,7 @@ import {
   adminUserEnvelopeSchema,
   adminUsersEnvelopeSchema,
   apiKeysEnvelopeSchema,
+  authConfigSchema,
   authTokenResponseSchema,
   bansEnvelopeSchema,
   blockEnvelopeSchema,
@@ -94,6 +95,7 @@ import {
   type AdminResetLink,
   type AdminUserSummary,
   type ApiKey,
+  type AuthConfig,
   type AuthTokenResponse,
   type BanDurationBody,
   type BanView,
@@ -199,6 +201,7 @@ export type AgentSkillSource = { folder: string } | { tag: string }
 
 export const api = {
   bootstrap: (): Promise<BootstrapStatus> => req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
+  authConfig: (): Promise<AuthConfig> => req('/auth/config', {}, authConfigSchema),
 
   getPlatformSettings: (): Promise<{
     settings: PlatformSettings

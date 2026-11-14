@@ -3,7 +3,7 @@ import { Alert, Button, FileInput, Group, Paper, Select, SimpleGrid, Stack, Them
 import { notifications } from '@mantine/notifications'
 import { IconDownload, IconFileExport, IconInfoCircle, IconUpload } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
-import { useExportBookmarks, useImportBookmarks, useImportPreview, useMe } from '@/hooks'
+import { useExperimentalFlags, useExportBookmarks, useImportBookmarks, useImportPreview, useMe } from '@/hooks'
 import type { DuplicateDecisions, ImportPreview, ImportResult } from '@/schemas'
 import { AgentSkillCard } from './AgentSkillCard'
 import { ImportDuplicatesDrawer } from './ImportDuplicatesDrawer'
@@ -20,6 +20,7 @@ function resultMessage(res: ImportResult): string {
 }
 
 export function ImportExportPanel(): ReactElement {
+  const experimental = useExperimentalFlags()
   const [format, setFormat] = useState<string | null>('netscape')
   const [file, setFile] = useState<File | null>(null)
   const importMut = useImportBookmarks()
@@ -156,7 +157,7 @@ export function ImportExportPanel(): ReactElement {
           </Stack>
         </Paper>
 
-        <AgentSkillCard />
+        {experimental.agent_skills ? <AgentSkillCard /> : null}
       </SimpleGrid>
       {review ? (
         <ImportDuplicatesDrawer

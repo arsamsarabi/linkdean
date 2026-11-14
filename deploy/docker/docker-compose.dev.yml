@@ -117,6 +117,8 @@ services:
       GOATCOUNTER_URL: ${GOATCOUNTER_URL:-}
       REQUIRE_VERIFIED_EMAIL: ${REQUIRE_VERIFIED_EMAIL:-}
       BLOCK_DISPOSABLE_EMAILS: ${BLOCK_DISPOSABLE_EMAILS:-}
+      # Experimental features, on for development.
+      EXPERIMENTAL_AGENT_SKILLS: ${EXPERIMENTAL_AGENT_SKILLS:-true}
     ports:
       - "127.0.0.1:8080:8080"
     volumes:

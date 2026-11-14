@@ -6,12 +6,14 @@ import { ImportExportPanel } from './ImportExportPanel'
 
 const importMut = { isPending: false, mutateAsync: vi.fn() }
 const previewMut = { isPending: false, mutateAsync: vi.fn() }
+const flags = { agent_skills: false }
 
 vi.mock('@/hooks', async (orig) => ({
   ...(await orig<typeof import('@/hooks')>()),
   useImportBookmarks: () => importMut,
   useImportPreview: () => previewMut,
   useMe: () => ({ data: { vault_unlocked: false } }),
+  useExperimentalFlags: () => flags,
   useExportBookmarks: () => ({
     exportBookmarks: vi.fn(),
     isExporting: false,
@@ -21,7 +23,7 @@ vi.mock('@/hooks', async (orig) => ({
 }))
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 // The Agent Skill card has its own tests.
-vi.mock('./AgentSkillCard', () => ({ AgentSkillCard: () => null }))
+vi.mock('./AgentSkillCard', () => ({ AgentSkillCard: () => <p>Agent Skill card</p> }))
 
 beforeAll(() => {
   vi.stubGlobal(
@@ -36,6 +38,7 @@ beforeAll(() => {
 beforeEach(() => {
   importMut.mutateAsync.mockReset().mockResolvedValue({ total: 1, imported: 1, failed: 0, skipped: 0, replaced: 0 })
   previewMut.mutateAsync.mockReset()
+  flags.agent_skills = false
 })
 afterEach(cleanup)
 
@@ -98,5 +101,26 @@ describe('ImportExportPanel import', () => {
         duplicates: { default: 'skip', overrides: {} },
       })
     )
+  })
+})
+
+describe('ImportExportPanel Agent Skill card', () => {
+  function renderPanel(): void {
+    render(
+      <MantineProvider env="test">
+        <ImportExportPanel />
+      </MantineProvider>
+    )
+  }
+
+  it('is hidden while the experimental flag is off', () => {
+    renderPanel()
+    expect(screen.queryByText('Agent Skill card')).toBeNull()
+  })
+
+  it('shows when the server turns the flag on', () => {
+    flags.agent_skills = true
+    renderPanel()
+    expect(screen.getByText('Agent Skill card')).toBeTruthy()
   })
 })

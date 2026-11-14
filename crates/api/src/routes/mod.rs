@@ -24,14 +24,17 @@ mod vault;
 use crate::state::AppState;
 use axum::Router;
 
-/// Every `/api` route. The development-only pages join only when `dev_routes` is on.
-pub fn api_router(dev_routes: bool) -> Router<AppState> {
-    let routes = router();
+/// Every `/api` route. The development-only pages join only when `dev_routes` is on, and
+/// experimental features only when their flag is on (otherwise they answer 404).
+pub fn api_router(dev_routes: bool, agent_skills: bool) -> Router<AppState> {
+    let mut routes = router();
     if dev_routes {
-        routes.merge(dev::router())
-    } else {
-        routes
+        routes = routes.merge(dev::router());
     }
+    if agent_skills {
+        routes = routes.merge(agent_skills::router());
+    }
+    routes
 }
 
 fn router() -> Router<AppState> {
@@ -52,7 +55,6 @@ fn router() -> Router<AppState> {
         .merge(trash::router())
         .merge(search::router())
         .merge(import_export::router())
-        .merge(agent_skills::router())
         .merge(vault::router())
         .merge(public::router())
         .merge(reports::router())

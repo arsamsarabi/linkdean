@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useMe } from '@/hooks/auth'
+import { useExperimentalFlags, useMe } from '@/hooks/auth'
 import { useCategoryFolderActions } from '@/hooks/categories'
 import { useDownloadAgentSkill } from '@/hooks/import-export'
 import { buildLibrarySearch } from '@/lib'
@@ -114,6 +114,7 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
   })
 
   const agentSkill = useDownloadAgentSkill()
+  const experimental = useExperimentalFlags()
   const categoryActions = useCategoryFolderActions({
     onDeleted: (id) => {
       if (url.folderId !== id) return
@@ -147,7 +148,7 @@ export function useLibraryPage(scope: LibraryScope = 'library') {
       onFork: () => categoryActions.forkCategory(cat),
       onDelete: () => categoryActions.openDelete(cat.id, cat.is_vault),
       onMoveToVault: () => categoryActions.openMove(cat),
-      onAgentSkill: () => void agentSkill.download({ folder: cat.id }),
+      onAgentSkill: experimental.agent_skills ? () => void agentSkill.download({ folder: cat.id }) : undefined,
       forkPending: categoryActions.forkPending,
     }
   }

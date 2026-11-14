@@ -2,6 +2,8 @@
 
 Coding and research agents keep asking for the same references. Your folders already hold them. Linkdean turns a folder or a tag into an [Agent Skill](https://agentskills.io): a small folder with a `SKILL.md` file that Claude Code, Codex, Cursor and other agents load when your task matches it. Capability summary: [features.md](../product/features.md).
 
+**Experimental.** Agent Skills are off unless the server sets `EXPERIMENTAL_AGENT_SKILLS=true` ([environment variables](../self-hosting/environment.md#experimental-features)). On Linkdean's hosted beta they are not switched on yet.
+
 ## What is in a skill
 
 - A **name** and a **description** that say what the links cover and when to use them. The description lists the subfolders and the most used tags, so the agent picks the skill for the right tasks.
