@@ -11,20 +11,21 @@
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Query, State};
-use axum::routing::get;
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::unsubscribe::{self, UnsubscribeScope};
 use linkdean_core::Error;
 use linkdean_db as db;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new().route("/email/unsubscribe", get(check).post(apply))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().routes(routes!(check, apply))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct UnsubscribeLink {
     u: Option<String>,
     s: Option<String>,
@@ -49,6 +50,18 @@ fn describe(scope: UnsubscribeScope) -> Value {
     json!({ "scope": scope.as_str(), "label": scope.label() })
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "email_unsubscribe_check",
+    path = "/email/unsubscribe",
+    tag = "email",
+    params(UnsubscribeLink),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn check(
     State(state): State<AppState>,
     Query(link): Query<UnsubscribeLink>,
@@ -57,6 +70,18 @@ async fn check(
     Ok(Json(describe(scope)))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "email_unsubscribe_apply",
+    path = "/email/unsubscribe",
+    tag = "email",
+    params(UnsubscribeLink),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn apply(
     State(state): State<AppState>,
     Query(link): Query<UnsubscribeLink>,

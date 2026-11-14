@@ -4,8 +4,7 @@ use crate::notification_mail::{self, InviteEmail};
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{Path, Query, State};
-use axum::routing::{get, patch, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::{
     CategoryPublicLinkView, CategoryShareView, CategorySharesEnvelope, CategoryView,
     CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, ForkCategory,
@@ -15,38 +14,27 @@ use linkdean_core::{
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/categories", get(list).post(create))
-        .route("/categories/{id}", patch(update).delete(delete_one))
-        .route("/categories/{id}/fork", post(fork))
-        .route(
-            "/categories/{id}/shares",
-            get(list_shares).post(create_share),
-        )
-        .route(
-            "/categories/{id}/shares/{user_id}",
-            patch(update_share).delete(delete_share),
-        )
-        .route(
-            "/categories/{id}/pending-shares/{pending_id}",
-            patch(update_pending_share).delete(delete_pending_share),
-        )
-        .route(
-            "/categories/{id}/public-link",
-            get(get_public_link)
-                .post(enable_public_link)
-                .delete(disable_public_link),
-        )
-        .route(
-            "/categories/{id}/public-link/rotate",
-            post(rotate_public_link),
-        )
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(list, create))
+        .routes(routes!(update, delete_one))
+        .routes(routes!(fork))
+        .routes(routes!(list_shares, create_share))
+        .routes(routes!(update_share, delete_share))
+        .routes(routes!(update_pending_share, delete_pending_share))
+        .routes(routes!(
+            get_public_link,
+            enable_public_link,
+            disable_public_link
+        ))
+        .routes(routes!(rotate_public_link))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ListQuery {
     #[serde(default)]
     pub include_hidden: bool,
@@ -54,6 +42,19 @@ pub struct ListQuery {
     pub include_vault: bool,
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "categories_list",
+    path = "/categories",
+    tag = "categories",
+    params(ListQuery),
+    responses(
+        (status = 200, description = "OK", body = Vec<CategoryView>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -80,6 +81,18 @@ async fn list(
     Ok(Json(cats))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "categories_create",
+    path = "/categories",
+    tag = "categories",
+    responses(
+        (status = 200, description = "OK", body = CategoryView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -89,6 +102,19 @@ async fn create(
     Ok(Json(cat))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "categories_update",
+    path = "/categories/{id}",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn update(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -105,6 +131,19 @@ async fn update(
     Ok(Json(cat))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "categories_delete_one",
+    path = "/categories/{id}",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -114,6 +153,19 @@ async fn delete_one(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "categories_fork",
+    path = "/categories/{id}/fork",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn fork(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -133,6 +185,19 @@ async fn fork(
     })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "categories_list_shares",
+    path = "/categories/{id}/shares",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategorySharesEnvelope),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list_shares(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -145,6 +210,19 @@ async fn list_shares(
     Ok(Json(CategorySharesEnvelope { shares, pending }))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "categories_create_share",
+    path = "/categories/{id}/shares",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn create_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -162,6 +240,19 @@ async fn create_share(
     Ok(Json(notification_mail::with_invite_email(&outcome, email)))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "categories_update_share",
+    path = "/categories/{id}/shares/{user_id}",
+    tag = "categories",
+    params(("id" = Uuid, Path), ("user_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryShareView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn update_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -172,6 +263,19 @@ async fn update_share(
     Ok(Json(share))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "categories_delete_share",
+    path = "/categories/{id}/shares/{user_id}",
+    tag = "categories",
+    params(("id" = Uuid, Path), ("user_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -181,6 +285,19 @@ async fn delete_share(
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "categories_update_pending_share",
+    path = "/categories/{id}/pending-shares/{pending_id}",
+    tag = "categories",
+    params(("id" = Uuid, Path), ("pending_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = PendingShareInviteView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn update_pending_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -199,6 +316,19 @@ async fn update_pending_share(
     Ok(Json(invite))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "categories_delete_pending_share",
+    path = "/categories/{id}/pending-shares/{pending_id}",
+    tag = "categories",
+    params(("id" = Uuid, Path), ("pending_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_pending_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -215,6 +345,19 @@ async fn delete_pending_share(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "categories_get_public_link",
+    path = "/categories/{id}/public-link",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryPublicLinkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_public_link(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -224,6 +367,19 @@ async fn get_public_link(
     Ok(Json(link))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "categories_enable_public_link",
+    path = "/categories/{id}/public-link",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryPublicLinkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn enable_public_link(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -233,6 +389,19 @@ async fn enable_public_link(
     Ok(Json(link))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "categories_rotate_public_link",
+    path = "/categories/{id}/public-link/rotate",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryPublicLinkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn rotate_public_link(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -242,6 +411,19 @@ async fn rotate_public_link(
     Ok(Json(link))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "categories_disable_public_link",
+    path = "/categories/{id}/public-link",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryPublicLinkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn disable_public_link(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

@@ -3,19 +3,20 @@ use crate::error::ApiResult;
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{Query, State};
-use axum::routing::get;
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::SearchHit;
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new().route("/search", get(search))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().routes(routes!(search))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct SearchQuery {
     pub q: String,
     #[serde(default = "default_limit")]
@@ -30,6 +31,19 @@ fn clamp_limit(limit: usize) -> usize {
     limit.clamp(1, 100)
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "search_search",
+    path = "/search",
+    tag = "search",
+    params(SearchQuery),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn search(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

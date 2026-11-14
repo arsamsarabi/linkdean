@@ -6,8 +6,7 @@ use crate::vault_keys::VaultSession;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, patch, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::{
     ChangeGlobalPassphraseRequest, CreateVaultRequest, DeleteVaultRequest, Error,
     MoveToVaultRequest, RecoverVaultRequest, RenameVaultRequest, Vault, VaultKeyring,
@@ -15,30 +14,27 @@ use linkdean_core::{
 };
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/vaults", get(list).post(create))
-        .route("/vaults/lock-all", post(lock_all))
-        .route("/vaults/move", post(move_items))
-        .route(
-            "/vaults/global",
-            get(global_status)
-                .post(global_enable)
-                .put(global_change)
-                .delete(global_disable),
-        )
-        .route("/vaults/global/unlock", post(global_unlock))
-        .route("/vaults/{id}", patch(rename).delete(delete_one))
-        .route("/vaults/{id}/unlock", post(unlock_one))
-        .route("/vaults/{id}/lock", post(lock_one))
-        .route("/vaults/{id}/recover", post(recover))
-        .route("/vaults/{id}/recovery-key", post(new_recovery_key))
-        .route(
-            "/vaults/{id}/global",
-            post(global_join).delete(global_leave),
-        )
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(list, create))
+        .routes(routes!(lock_all))
+        .routes(routes!(move_items))
+        .routes(routes!(
+            global_status,
+            global_enable,
+            global_change,
+            global_disable
+        ))
+        .routes(routes!(global_unlock))
+        .routes(routes!(rename, delete_one))
+        .routes(routes!(unlock_one))
+        .routes(routes!(lock_one))
+        .routes(routes!(recover))
+        .routes(routes!(new_recovery_key))
+        .routes(routes!(global_join, global_leave))
 }
 
 fn check_passphrase(passphrase: &str) -> Result<(), crate::error::ApiError> {
@@ -67,6 +63,18 @@ async fn to_view(state: &AppState, keyring: &VaultKeyring, vault: Vault) -> ApiR
     })
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "vault_list",
+    path = "/vaults",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -80,6 +88,18 @@ async fn list(
     Ok(Json(json!({ "vaults": vaults })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_create",
+    path = "/vaults",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -98,6 +118,19 @@ async fn create(
     Ok(Json(json!({ "vault": view, "recovery_key": recovery_key })))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "vault_rename",
+    path = "/vaults/{id}",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn rename(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -111,6 +144,19 @@ async fn rename(
     Ok(Json(json!({ "vault": view })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "vault_delete_one",
+    path = "/vaults/{id}",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -122,6 +168,19 @@ async fn delete_one(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_unlock_one",
+    path = "/vaults/{id}/unlock",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn unlock_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -140,6 +199,19 @@ async fn unlock_one(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_lock_one",
+    path = "/vaults/{id}/lock",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn lock_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -150,6 +222,18 @@ async fn lock_one(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_lock_all",
+    path = "/vaults/lock-all",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn lock_all(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -158,6 +242,19 @@ async fn lock_all(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_recover",
+    path = "/vaults/{id}/recover",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn recover(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -186,6 +283,19 @@ async fn recover(
 
 /// Replacing the recovery key cancels the old one, so it takes the vault passphrase even
 /// when the vault is unlocked.
+#[utoipa::path(
+    post,
+    operation_id = "vault_new_recovery_key",
+    path = "/vaults/{id}/recovery-key",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn new_recovery_key(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -200,6 +310,18 @@ async fn new_recovery_key(
     Ok(Json(json!({ "recovery_key": recovery_key })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "vault_global_status",
+    path = "/vaults/global",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn global_status(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -208,6 +330,18 @@ async fn global_status(
     Ok(Json(json!({ "enabled": enabled })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_global_enable",
+    path = "/vaults/global",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn global_enable(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -218,6 +352,18 @@ async fn global_enable(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    put,
+    operation_id = "vault_global_change",
+    path = "/vaults/global",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn global_change(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -234,6 +380,18 @@ async fn global_change(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "vault_global_disable",
+    path = "/vaults/global",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn global_disable(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -246,6 +404,18 @@ async fn global_disable(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_global_unlock",
+    path = "/vaults/global/unlock",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn global_unlock(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -267,6 +437,19 @@ async fn global_unlock(
     Ok(Json(json!({ "unlocked": ids })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_global_join",
+    path = "/vaults/{id}/global",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn global_join(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -279,6 +462,19 @@ async fn global_join(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "vault_global_leave",
+    path = "/vaults/{id}/global",
+    tag = "vaults",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn global_leave(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -288,6 +484,18 @@ async fn global_leave(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "vault_move_items",
+    path = "/vaults/move",
+    tag = "vaults",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn move_items(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

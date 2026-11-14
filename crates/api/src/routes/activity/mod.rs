@@ -2,24 +2,38 @@ use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Query, State};
-use axum::routing::get;
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::{ActivityAction, ActivitySubjectType, ListActivityFilter};
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-pub fn router() -> Router<AppState> {
-    Router::new().route("/activity", get(list))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().routes(routes!(list))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListQuery {
     limit: Option<i64>,
     subject_type: Option<String>,
     action: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "activity_list",
+    path = "/activity",
+    tag = "activity",
+    params(ListQuery),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

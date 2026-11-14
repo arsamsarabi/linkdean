@@ -7,13 +7,12 @@ use axum::http::header::AUTHORIZATION;
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
-use axum::Router;
 use prometheus::{
     Encoder, HistogramOpts, HistogramVec, IntCounterVec, Opts, Registry, TextEncoder,
 };
 use std::sync::OnceLock;
 use std::time::Instant;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 static REGISTRY: OnceLock<Registry> = OnceLock::new();
 static HTTP_REQUESTS: OnceLock<IntCounterVec> = OnceLock::new();
@@ -112,6 +111,17 @@ fn bearer_matches(headers: &HeaderMap, token: &str) -> bool {
     a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "metrics_metrics_handler",
+    path = "/metrics",
+    tag = "metrics",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn metrics_handler(State(state): State<AppState>, headers: HeaderMap) -> Response {
     match state.cfg.metrics_token.as_deref() {
         None => return StatusCode::NOT_FOUND.into_response(),
@@ -141,14 +151,16 @@ async fn metrics_handler(State(state): State<AppState>, headers: HeaderMap) -> R
         .into_response()
 }
 
-pub fn router() -> Router<AppState> {
-    Router::new().route("/metrics", get(metrics_handler))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().routes(routes!(metrics_handler))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::http::HeaderValue;
+    use axum::routing::get;
+    use axum::Router;
     use tower::ServiceExt;
 
     #[tokio::test]

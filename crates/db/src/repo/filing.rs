@@ -5,20 +5,20 @@ use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct FolderSuggestion {
     pub id: Uuid,
     /// Bookmarks on the same site in this folder.
     pub count: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct TagSuggestion {
     pub name: String,
     pub count: i64,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct FilingSuggestions {
     pub folders: Vec<FolderSuggestion>,
     pub tags: Vec<TagSuggestion>,

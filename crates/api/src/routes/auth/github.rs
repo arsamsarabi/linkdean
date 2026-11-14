@@ -39,20 +39,20 @@ pub(super) fn authorize_url(
     Ok(url.into())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 struct TokenAnswer {
     access_token: Option<String>,
     error: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 struct GitHubUser {
     id: u64,
     name: Option<String>,
     login: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, utoipa::ToSchema)]
 pub(super) struct GitHubEmail {
     pub email: String,
     pub primary: bool,

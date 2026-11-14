@@ -4,24 +4,38 @@ use crate::auth::AdminUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::{AbuseAction, ResolveAbuseReport};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/admin/reports", get(list_reports))
-        .route("/admin/reports/{id}/resolve", post(resolve_report))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(list_reports))
+        .routes(routes!(resolve_report))
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ListQuery {
     status: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_reports_list_reports",
+    path = "/admin/reports",
+    tag = "admin",
+    params(ListQuery),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn list_reports(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -31,6 +45,19 @@ async fn list_reports(
     Ok(Json(json!({ "reports": reports })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "admin_reports_resolve_report",
+    path = "/admin/reports/{id}/resolve",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn resolve_report(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,

@@ -6,8 +6,7 @@ use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
-use axum::routing::{get, patch, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::avatar::{self, process_avatar};
 use linkdean_core::{
     AcceptTerms, ChangePassword, EmailDelivery, Error, NotificationKind, ProfileBookmarksPage,
@@ -16,55 +15,42 @@ use linkdean_core::{
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 /// The image limit in `process_avatar`, plus multipart framing.
 const MAX_AVATAR_BODY: usize = 6 * 1024 * 1024;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/users/me", patch(update_me))
-        .route("/users/me/password", post(change_password))
-        .route("/users/me/terms", post(accept_terms))
-        .route(
-            "/users/me/deletion",
-            post(schedule_deletion).delete(cancel_deletion),
-        )
-        .route(
-            "/users/me/settings",
-            get(get_settings).patch(patch_settings),
-        )
-        .route("/users/me/quota-usage", get(quota_usage))
-        .route(
-            "/users/me/avatar",
-            get(get_avatar)
-                .post(upload_avatar)
-                .delete(delete_avatar)
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(update_me))
+        .routes(routes!(change_password))
+        .routes(routes!(accept_terms))
+        .routes(routes!(schedule_deletion, cancel_deletion))
+        .routes(routes!(get_settings, patch_settings))
+        .routes(routes!(quota_usage))
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(get_avatar, upload_avatar, delete_avatar))
                 .layer(DefaultBodyLimit::max(MAX_AVATAR_BODY)),
         )
-        .route("/users/me/notification-emails", get(notification_emails))
-        .route(
-            "/users/me/notification-emails/{kind}",
-            axum::routing::put(set_notification_email),
-        )
-        .route("/users/me/followers", get(my_followers))
-        .route("/users/me/following", get(my_following))
-        .route("/users/me/blocked", get(my_blocked))
-        .route("/users/me/muted", get(my_muted))
-        .route(
-            "/users/{id}/follow",
-            post(follow_user).delete(unfollow_user),
-        )
-        .route("/users/{id}/follow-status", get(follow_status))
-        .route("/users/{id}/block", post(block_user).delete(unblock_user))
-        .route("/users/{id}/block-status", get(block_status))
-        .route("/users/{id}/mute", post(mute_user).delete(unmute_user))
-        .route("/users/{id}/mute-status", get(mute_status))
-        .route("/users/{id}/profile", get(user_profile))
-        .route("/users/{id}/bookmarks", get(user_bookmarks))
-        .route("/users/{id}/followers", get(user_followers))
-        .route("/users/{id}/following", get(user_following))
-        .route("/users/{id}/avatar", get(user_avatar))
+        .routes(routes!(notification_emails))
+        .routes(routes!(set_notification_email))
+        .routes(routes!(my_followers))
+        .routes(routes!(my_following))
+        .routes(routes!(my_blocked))
+        .routes(routes!(my_muted))
+        .routes(routes!(follow_user, unfollow_user))
+        .routes(routes!(follow_status))
+        .routes(routes!(block_user, unblock_user))
+        .routes(routes!(block_status))
+        .routes(routes!(mute_user, unmute_user))
+        .routes(routes!(mute_status))
+        .routes(routes!(user_profile))
+        .routes(routes!(user_bookmarks))
+        .routes(routes!(user_followers))
+        .routes(routes!(user_following))
+        .routes(routes!(user_avatar))
 }
 
 fn notification_email_pref(p: db::NotificationEmailPref) -> Value {
@@ -79,6 +65,18 @@ fn notification_email_pref(p: db::NotificationEmailPref) -> Value {
 }
 
 /// Which notification kinds the user also gets by email, and how, in settings order.
+#[utoipa::path(
+    get,
+    operation_id = "users_notification_emails",
+    path = "/users/me/notification-emails",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn notification_emails(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -88,13 +86,26 @@ async fn notification_emails(
     Ok(Json(json!({ "prefs": prefs })))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 struct SetNotificationEmail {
     enabled: bool,
     /// Left out: keep how this kind is delivered now.
     delivery: Option<EmailDelivery>,
 }
 
+#[utoipa::path(
+    put,
+    operation_id = "users_set_notification_email",
+    path = "/users/me/notification-emails/{kind}",
+    tag = "users",
+    params(("kind" = String, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn set_notification_email(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -119,6 +130,18 @@ async fn set_notification_email(
     })))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "users_update_me",
+    path = "/users/me",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn update_me(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -129,6 +152,18 @@ async fn update_me(
     Ok(Json(json!({ "user": public })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "users_change_password",
+    path = "/users/me/password",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn change_password(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -155,6 +190,18 @@ async fn change_password(
 }
 
 /// Accepts the current Terms of Service, after they changed since the account last did.
+#[utoipa::path(
+    post,
+    operation_id = "users_accept_terms",
+    path = "/users/me/terms",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn accept_terms(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -170,6 +217,18 @@ async fn accept_terms(
 
 /// Schedules the account for deletion after the grace period. The session stays signed in, so
 /// the person can still export their data and cancel.
+#[utoipa::path(
+    post,
+    operation_id = "users_schedule_deletion",
+    path = "/users/me/deletion",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn schedule_deletion(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -198,6 +257,18 @@ async fn schedule_deletion(
     Ok(Json(json!({ "deletion_scheduled_at": at })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "users_cancel_deletion",
+    path = "/users/me/deletion",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn cancel_deletion(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -206,6 +277,18 @@ async fn cancel_deletion(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_get_settings",
+    path = "/users/me/settings",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_settings(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -214,6 +297,18 @@ async fn get_settings(
     Ok(Json(json!({ "settings": settings })))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "users_patch_settings",
+    path = "/users/me/settings",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn patch_settings(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -227,6 +322,18 @@ async fn patch_settings(
     Ok(Json(json!({ "settings": settings })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_quota_usage",
+    path = "/users/me/quota-usage",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn quota_usage(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -235,6 +342,19 @@ async fn quota_usage(
     Ok(Json(json!(usage)))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "users_upload_avatar",
+    path = "/users/me/avatar",
+    tag = "users",
+    request_body(content_type = "multipart/form-data", description = "A `file` field with the image."),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn upload_avatar(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -288,6 +408,18 @@ async fn upload_avatar(
     Ok(Json(json!({ "user": public })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "users_delete_avatar",
+    path = "/users/me/avatar",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_avatar(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -303,6 +435,18 @@ async fn delete_avatar(
     Ok(Json(json!({ "user": public })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_get_avatar",
+    path = "/users/me/avatar",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_avatar(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -332,6 +476,18 @@ async fn avatar_response(
     Ok((StatusCode::OK, headers, bytes))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_my_followers",
+    path = "/users/me/followers",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn my_followers(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -340,6 +496,18 @@ async fn my_followers(
     Ok(Json(json!({ "users": users })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_my_following",
+    path = "/users/me/following",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn my_following(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -351,6 +519,19 @@ async fn my_following(
 // Known issue: Hidden profiles and blocks can be detected through follower counts and differing
 // status codes here, in profile routes and in share routes. Fix: gate them through
 // `require_viewable_profile` and return uniform responses.
+#[utoipa::path(
+    post,
+    operation_id = "users_follow_user",
+    path = "/users/{id}/follow",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn follow_user(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -360,6 +541,19 @@ async fn follow_user(
     Ok(Json(json!({ "follow": relation })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "users_unfollow_user",
+    path = "/users/{id}/follow",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn unfollow_user(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -369,6 +563,19 @@ async fn unfollow_user(
     Ok(Json(json!({ "follow": relation })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_follow_status",
+    path = "/users/{id}/follow-status",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn follow_status(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -378,6 +585,18 @@ async fn follow_status(
     Ok(Json(json!({ "follow": relation })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_my_blocked",
+    path = "/users/me/blocked",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn my_blocked(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -386,6 +605,18 @@ async fn my_blocked(
     Ok(Json(json!({ "users": users })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_my_muted",
+    path = "/users/me/muted",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn my_muted(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -394,6 +625,19 @@ async fn my_muted(
     Ok(Json(json!({ "users": users })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "users_block_user",
+    path = "/users/{id}/block",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn block_user(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -403,6 +647,19 @@ async fn block_user(
     Ok(Json(json!({ "block": relation })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "users_unblock_user",
+    path = "/users/{id}/block",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn unblock_user(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -412,6 +669,19 @@ async fn unblock_user(
     Ok(Json(json!({ "block": relation })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_block_status",
+    path = "/users/{id}/block-status",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn block_status(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -421,6 +691,19 @@ async fn block_status(
     Ok(Json(json!({ "block": relation })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "users_mute_user",
+    path = "/users/{id}/mute",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn mute_user(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -430,6 +713,19 @@ async fn mute_user(
     Ok(Json(json!({ "mute": relation })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "users_unmute_user",
+    path = "/users/{id}/mute",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn unmute_user(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -439,6 +735,19 @@ async fn unmute_user(
     Ok(Json(json!({ "mute": relation })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_mute_status",
+    path = "/users/{id}/mute-status",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn mute_status(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -448,12 +757,26 @@ async fn mute_status(
     Ok(Json(json!({ "mute": relation })))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct ProfileBookmarksQuery {
     limit: Option<i64>,
     offset: Option<i64>,
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_user_profile",
+    path = "/users/{id}/profile",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = ProfileView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn user_profile(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -462,6 +785,19 @@ async fn user_profile(
     Ok(Json(db::get_profile(&state.pool, user.id, id).await?))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_user_bookmarks",
+    path = "/users/{id}/bookmarks",
+    tag = "users",
+    params(("id" = Uuid, Path), ProfileBookmarksQuery),
+    responses(
+        (status = 200, description = "OK", body = ProfileBookmarksPage),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn user_bookmarks(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -473,6 +809,19 @@ async fn user_bookmarks(
     Ok(Json(page))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_user_followers",
+    path = "/users/{id}/followers",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn user_followers(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -482,6 +831,19 @@ async fn user_followers(
     Ok(Json(json!({ "users": users })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_user_following",
+    path = "/users/{id}/following",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn user_following(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -491,6 +853,19 @@ async fn user_following(
     Ok(Json(json!({ "users": users })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "users_user_avatar",
+    path = "/users/{id}/avatar",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn user_avatar(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

@@ -31,7 +31,8 @@ async fn index() -> Html<String> {
     ))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct PreviewQuery {
     format: Option<String>,
 }

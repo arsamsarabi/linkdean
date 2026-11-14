@@ -35,7 +35,7 @@ pub enum EmailRetry {
 
 /// Sent and failed counts and the latest error cover the last 24 hours; queued is everything
 /// still waiting.
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct EmailStats {
     pub sent: i64,
     pub queued: i64,

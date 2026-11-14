@@ -7,20 +7,20 @@ use crate::state::AppState;
 use axum::extract::{Query, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_TYPE};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
-use axum::Router;
 use chrono::Utc;
 use linkdean_core::agent_skill::build_skill;
 use linkdean_core::Error;
 use linkdean_db::{self as db, SkillFrom};
 use serde::Deserialize;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new().route("/agent-skill", get(agent_skill))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().routes(routes!(agent_skill))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 struct SkillQuery {
     folder: Option<Uuid>,
     tag: Option<String>,
@@ -38,6 +38,19 @@ fn source(q: &SkillQuery) -> Result<SkillFrom, Error> {
     }
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "agent_skills_agent_skill",
+    path = "/agent-skill",
+    tag = "agent-skill",
+    params(SkillQuery),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn agent_skill(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

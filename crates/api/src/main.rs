@@ -70,7 +70,6 @@ async fn main() -> anyhow::Result<()> {
             cfg.dev_routes,
             cfg.experimental_agent_skills,
         ))
-        .merge(metrics::router())
         // Without its own fallback, /api would inherit the app shell below.
         .fallback(api_not_found)
         .layer(axum::middleware::from_fn(error::normalize_error_body))

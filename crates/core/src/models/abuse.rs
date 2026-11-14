@@ -10,7 +10,7 @@ pub const ABUSE_REASONS: &[&str] = &["spam", "harassment", "illegal", "impersona
 pub const MAX_ABUSE_DETAILS_CHARS: usize = 2000;
 pub const MAX_ABUSE_NOTE_CHARS: usize = 500;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AbuseTargetType {
     PublicList,
@@ -28,7 +28,7 @@ impl AbuseTargetType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AbuseAction {
     Dismiss,
@@ -49,7 +49,7 @@ impl AbuseAction {
 }
 
 /// `target_id` is a public list's slug or category id, a user id, or a comment id.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateAbuseReport {
     pub target_type: AbuseTargetType,
     pub target_id: String,
@@ -107,7 +107,7 @@ pub fn clean_abuse_contact_email(email: Option<&str>) -> Result<Option<String>> 
     Ok(Some(email.to_string()))
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ResolveAbuseReport {
     pub action: AbuseAction,
     pub note: Option<String>,
@@ -134,7 +134,7 @@ impl ResolveAbuseReport {
 }
 
 /// One report as admins see it.
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct AbuseReport {
     pub id: Uuid,
     pub reporter_user_id: Uuid,

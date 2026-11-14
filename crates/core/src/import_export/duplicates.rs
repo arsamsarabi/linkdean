@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// What to do with an imported bookmark whose URL is already in the library.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DuplicateAction {
     /// Drop the imported bookmark.
@@ -22,7 +22,7 @@ pub enum DuplicateAction {
 }
 
 /// The person's choices, by index into the parsed file. Missing means `Keep` for every row.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DuplicateDecisions {
     #[serde(default)]
     pub default: DuplicateAction,
@@ -36,7 +36,7 @@ impl DuplicateDecisions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct DuplicateExisting {
     pub id: Uuid,
     pub title: String,
@@ -47,7 +47,7 @@ pub struct DuplicateExisting {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct DuplicateIncoming {
     pub title: Option<String>,
     pub description: Option<String>,
@@ -55,7 +55,7 @@ pub struct DuplicateIncoming {
     pub folders: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct ImportDuplicate {
     pub index: usize,
     pub url: String,
@@ -63,13 +63,13 @@ pub struct ImportDuplicate {
     pub incoming: DuplicateIncoming,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct ImportFolderCounts {
     pub reused: usize,
     pub created: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct ImportPreview {
     pub total: usize,
     pub new: usize,

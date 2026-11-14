@@ -13,7 +13,7 @@ use uuid::Uuid;
 pub const DEFAULT_PAGE_LIMIT: i64 = 50;
 pub const MAX_PAGE_LIMIT: i64 = 100;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum BookmarkSort {
     #[default]
@@ -61,7 +61,7 @@ pub struct BookmarkPageFilter {
     pub cursor: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 struct CursorPayload {
     /// Sort key that produced this cursor.
     k: String,
@@ -454,7 +454,7 @@ pub async fn list_bookmark_ids_matching(
 }
 
 /// Live bookmarks per folder the person can open, and in their Unsorted.
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, utoipa::ToSchema)]
 pub struct FolderCounts {
     /// Direct bookmarks per folder (not counting subfolders). Folders with none are absent.
     pub folders: std::collections::HashMap<Uuid, i64>,

@@ -6,18 +6,30 @@ use crate::error::ApiResult;
 use crate::rate_limit::report_limit;
 use crate::state::AppState;
 use axum::extract::State;
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::CreateAbuseReport;
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/reports", post(create_report))
-        .route("/reports/config", get(report_config))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(create_report))
+        .routes(routes!(report_config))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "reports_create_report",
+    path = "/reports",
+    tag = "reports",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn create_report(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -33,6 +45,18 @@ async fn create_report(
 }
 
 /// Where to send abuse and takedown requests that do not fit the report form.
+#[utoipa::path(
+    get,
+    operation_id = "reports_report_config",
+    path = "/reports/config",
+    tag = "reports",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn report_config(
     State(state): State<AppState>,
     AuthUser(_user): AuthUser,

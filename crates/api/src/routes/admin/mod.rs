@@ -5,8 +5,7 @@ use crate::auth::AdminUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, State};
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
     ChangeBans, CreateBan, CreateRegistrationInvite, LiftBans, ModerateRequest, UpdateAdminUser,
@@ -14,39 +13,43 @@ use linkdean_core::{
 };
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route(
-            "/admin/platform-settings",
-            get(get_platform_settings).patch(patch_platform_settings),
-        )
-        .route("/admin/users", get(list_users))
-        .route("/admin/users/{id}", axum::routing::patch(patch_user))
-        .route("/admin/users/{id}/ban", post(ban_user))
-        .route("/admin/users/{id}/reset-link", post(create_reset_link))
-        .route("/admin/users/{id}/email-verified", post(set_email_verified))
-        .route("/admin/users/{id}/email", post(change_email))
-        .route(
-            "/admin/users/{id}/moderation-actions",
-            get(moderation_actions),
-        )
-        .route("/admin/users/{id}/exposed-content", get(exposed_content))
-        .route("/admin/users/{id}/moderate", post(moderate))
-        .route("/admin/bans", get(list_bans).patch(change_bans))
-        .route("/admin/bans/lift", post(lift_bans))
-        .route("/admin/invites", get(list_invites).post(create_invite))
-        .route("/admin/invites/{id}", axum::routing::delete(revoke_invite))
-        .route("/admin/search/reindex", post(reindex_search))
-        .route(
-            "/admin/screenshots/retry",
-            get(screenshot_retry_status).post(retry_screenshots),
-        )
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(get_platform_settings, patch_platform_settings))
+        .routes(routes!(list_users))
+        .routes(routes!(patch_user))
+        .routes(routes!(ban_user))
+        .routes(routes!(create_reset_link))
+        .routes(routes!(set_email_verified))
+        .routes(routes!(change_email))
+        .routes(routes!(moderation_actions))
+        .routes(routes!(exposed_content))
+        .routes(routes!(moderate))
+        .routes(routes!(list_bans, change_bans))
+        .routes(routes!(lift_bans))
+        .routes(routes!(list_invites, create_invite))
+        .routes(routes!(revoke_invite))
+        .routes(routes!(reindex_search))
+        .routes(routes!(screenshot_retry_status, retry_screenshots))
         .merge(email::router())
         .merge(reports::router())
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_get_platform_settings",
+    path = "/admin/platform-settings",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn get_platform_settings(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -61,6 +64,18 @@ async fn get_platform_settings(
     })))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "admin_patch_platform_settings",
+    path = "/admin/platform-settings",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn patch_platform_settings(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -144,13 +159,26 @@ async fn patch_platform_settings(
     })))
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 struct SetEmailVerified {
     verified: bool,
 }
 
 /// Mark an account verified (its waiting invites attach) or remove its verification (new
 /// invites wait; accepted shares stay).
+#[utoipa::path(
+    post,
+    operation_id = "admin_set_email_verified",
+    path = "/admin/users/{id}/email-verified",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn set_email_verified(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -161,13 +189,26 @@ async fn set_email_verified(
     Ok(Json(json!({ "ok": true, "email_verified": req.verified })))
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 struct ChangeEmail {
     email: String,
 }
 
 /// Change an account's email at once. The admin vouches for the address, so it counts as
 /// verified.
+#[utoipa::path(
+    post,
+    operation_id = "admin_change_email",
+    path = "/admin/users/{id}/email",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn change_email(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -181,6 +222,18 @@ async fn change_email(
     ))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_list_users",
+    path = "/admin/users",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn list_users(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -189,6 +242,19 @@ async fn list_users(
     Ok(Json(json!({ "users": users })))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "admin_patch_user",
+    path = "/admin/users/{id}",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn patch_user(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -203,6 +269,19 @@ async fn patch_user(
 const ADMIN_LINK_HOURS: i64 = 24;
 
 /// A reset link to hand over privately; the only way back in when mail is off.
+#[utoipa::path(
+    post,
+    operation_id = "admin_create_reset_link",
+    path = "/admin/users/{id}/reset-link",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn create_reset_link(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
@@ -235,6 +314,19 @@ async fn create_reset_link(
     ))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "admin_ban_user",
+    path = "/admin/users/{id}/ban",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn ban_user(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
@@ -246,6 +338,18 @@ async fn ban_user(
     Ok(Json(json!({ "ban": ban })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_list_bans",
+    path = "/admin/bans",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn list_bans(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -254,6 +358,18 @@ async fn list_bans(
     Ok(Json(json!({ "bans": bans })))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "admin_change_bans",
+    path = "/admin/bans",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn change_bans(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
@@ -263,6 +379,18 @@ async fn change_bans(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "admin_lift_bans",
+    path = "/admin/bans/lift",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn lift_bans(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
@@ -272,6 +400,19 @@ async fn lift_bans(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_moderation_actions",
+    path = "/admin/users/{id}/moderation-actions",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn moderation_actions(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -281,6 +422,19 @@ async fn moderation_actions(
     Ok(Json(json!({ "actions": actions })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_exposed_content",
+    path = "/admin/users/{id}/exposed-content",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn exposed_content(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -290,6 +444,19 @@ async fn exposed_content(
     Ok(Json(json!({ "content": content })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "admin_moderate",
+    path = "/admin/users/{id}/moderate",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn moderate(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
@@ -305,6 +472,18 @@ async fn moderate(
     Ok(Json(json!({ "outcome": outcome })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_list_invites",
+    path = "/admin/invites",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn list_invites(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -313,6 +492,18 @@ async fn list_invites(
     Ok(Json(json!({ "invites": invites })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "admin_create_invite",
+    path = "/admin/invites",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn create_invite(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
@@ -325,6 +516,19 @@ async fn create_invite(
     })))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "admin_revoke_invite",
+    path = "/admin/invites/{id}",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn revoke_invite(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -335,6 +539,18 @@ async fn revoke_invite(
 }
 
 /// Clear Meili bookmarks index and re-upsert all non-vault, non-deleted bookmarks.
+#[utoipa::path(
+    post,
+    operation_id = "admin_reindex_search",
+    path = "/admin/search/reindex",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn reindex_search(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -388,6 +604,18 @@ async fn reindex_search(
 
 /// What the retry button needs: how many failed screenshots a retry would take, and when it
 /// is next allowed.
+#[utoipa::path(
+    get,
+    operation_id = "admin_screenshot_retry_status",
+    path = "/admin/screenshots/retry",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn screenshot_retry_status(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -418,6 +646,18 @@ async fn retry_status_json(
 
 /// Queue failed screenshots for another try, at most once per cooldown. Only failures older
 /// than the cooldown are taken, so a page that just failed is not tried again at once.
+#[utoipa::path(
+    post,
+    operation_id = "admin_retry_screenshots",
+    path = "/admin/screenshots/retry",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn retry_screenshots(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,

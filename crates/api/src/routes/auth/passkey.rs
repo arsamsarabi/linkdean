@@ -72,7 +72,7 @@ fn sign_in_failed() -> Error {
     Error::Unauthorized
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub(super) struct RegisterStart {
     /// Required when the account has a password.
     #[serde(default)]
@@ -80,6 +80,18 @@ pub(super) struct RegisterStart {
 }
 
 /// Starts adding a passkey to the signed-in account. Login sessions only, not API keys.
+#[utoipa::path(
+    post,
+    operation_id = "auth_passkey_register_start",
+    path = "/users/me/passkeys/register/start",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub(super) async fn register_start(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -158,14 +170,28 @@ mod tests {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub(super) struct RegisterFinish {
     challenge_id: Uuid,
     name: String,
+    /// The browser's WebAuthn credential, as JSON.
+    #[schema(value_type = Object)]
     credential: RegisterPublicKeyCredential,
 }
 
 /// Saves the passkey the browser made, and tells the account's address.
+#[utoipa::path(
+    post,
+    operation_id = "auth_passkey_register_finish",
+    path = "/users/me/passkeys/register/finish",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub(super) async fn register_finish(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -209,6 +235,18 @@ pub(super) async fn register_finish(
     Ok(Json(json!({ "passkey": summary })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "auth_passkey_list",
+    path = "/users/me/passkeys",
+    tag = "users",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub(super) async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -217,11 +255,24 @@ pub(super) async fn list(
     Ok(Json(json!({ "passkeys": passkeys })))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub(super) struct Rename {
     name: String,
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "auth_passkey_rename",
+    path = "/users/me/passkeys/{id}",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub(super) async fn rename(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -233,6 +284,19 @@ pub(super) async fn rename(
 }
 
 /// Removes a passkey. Passkeys are never an account's only way in, so no check is needed.
+#[utoipa::path(
+    delete,
+    operation_id = "auth_passkey_remove",
+    path = "/users/me/passkeys/{id}",
+    tag = "users",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub(super) async fn remove(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -244,6 +308,17 @@ pub(super) async fn remove(
 }
 
 /// Starts a passkey sign-in. Anyone may ask; it costs a row that expires in minutes.
+#[utoipa::path(
+    post,
+    operation_id = "auth_passkey_login_start",
+    path = "/auth/passkey/start",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub(super) async fn login_start(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -262,13 +337,26 @@ pub(super) async fn login_start(
     Ok(Json(json!({ "challenge_id": id, "options": options })))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub(super) struct LoginFinish {
     challenge_id: Uuid,
+    /// The browser's WebAuthn credential, as JSON.
+    #[schema(value_type = Object)]
     credential: PublicKeyCredential,
 }
 
 /// Checks the passkey's answer and signs in. Failures count against the address's sign-in limit.
+#[utoipa::path(
+    post,
+    operation_id = "auth_passkey_login_finish",
+    path = "/auth/passkey/finish",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub(super) async fn login_finish(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
