@@ -6,7 +6,7 @@ Linkdean stays self-hosted first: the same image runs both, and everything SaaS-
 
 ## Public beta on a home server
 
-Status: in progress. Public app, docs, and marketing are live on Nova via LXD + Cloudflare Tunnel (`app.linkdean.app`, [docs.linkdean.app](https://docs.linkdean.app), [linkdean.app](https://linkdean.app)). Docs source: [`apps/docs`](../../apps/docs) (Docusaurus → `deploy/public-beta/static/docs`). Marketing: [`apps/site`](../../apps/site) (Astro → `deploy/public-beta/static/site`; footer contact `contact@linkdean.app`). Next: finish go-live hardening (SMTP, Turnstile, uptime, restore drill) — do **not** announce until the checklist below is green. Membership pricing explore (#12) stays after that. Backups + Infisical: [BACKUP.md](../../deploy/public-beta/BACKUP.md). Deploy package: [`deploy/public-beta/`](../../deploy/public-beta/).
+Status: in progress. Public app, docs, and marketing are live on Nova via LXD + Cloudflare Tunnel (`app.linkdean.app`, [docs.linkdean.app](https://docs.linkdean.app), [linkdean.app](https://linkdean.app)). Docs source: [`apps/docs`](../../apps/docs) (Docusaurus). Marketing: [`apps/site`](../../apps/site) (Astro; footer contact `contact@linkdean.app`). Both ship in one Caddy image built by the Release workflow (`deploy/docker/Dockerfile.static`). Next: finish go-live hardening (SMTP, Turnstile, uptime, restore drill) — do **not** announce until the checklist below is green. Membership pricing explore (#12) stays after that. Backups + Infisical: [BACKUP.md](../../deploy/public-beta/BACKUP.md). Deploy package: [`deploy/public-beta/`](../../deploy/public-beta/).
 
 **Shape.** A stand-alone Linkdean stack, separate from any personal instance, serving the whole `linkdean.app` domain:
 

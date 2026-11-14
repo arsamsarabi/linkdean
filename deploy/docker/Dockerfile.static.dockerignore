@@ -1,0 +1,11 @@
+# Context for Dockerfile.static: only the docs and site sources and the repo docs/ they sync.
+*
+!apps/docs
+!apps/site
+!docs
+**/node_modules
+apps/docs/build
+apps/docs/.docusaurus
+apps/site/dist
+apps/site/.astro
+**/.DS_Store

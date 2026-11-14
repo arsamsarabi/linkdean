@@ -60,7 +60,7 @@ docker compose --profile chrome up -d
 
 Smoke: `https://app.linkdean.app/api/health` and the app shell.
 
-Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `static/docs/` (served at `docs.linkdean.app`). `pnpm --dir apps/site build` publishes the Astro marketing site into `static/site/` (served at `linkdean.app`).
+Static sites: Caddy's image, `ghcr.io/arsamsarabi/linkdean-static`, has the docs site (`docs.linkdean.app`) and the marketing site (`linkdean.app`) built in from `deploy/docker/Dockerfile.static`. `LINKDEAN_STATIC_VERSION` in `.env` picks its tag (default `latest`). Only the Caddyfile is mounted from the checkout. To try a local build: `docker build -f deploy/docker/Dockerfile.static -t linkdean-static .` from the repo root.
 
 **Do not seed accounts.** First admin is onboarding on an empty instance. Leave `BOOTSTRAP_TOKEN` for the operator if needed.
 
@@ -68,7 +68,7 @@ Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `s
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| [CI](../../.github/workflows/ci.yml) | PR and push to `main` | Tests and builds every app; the site build must match the committed `static/site` |
+| [CI](../../.github/workflows/ci.yml) | PR and push to `main` | Tests and builds every app |
 | [Release](../../.github/workflows/release.yml) | Tag `v*.*.*` on a commit in `main` | Builds and deploys only the apps changed since the previous tag, then checks they are live |
 
 **What counts as changed** (diff from the previous `v*.*.*` tag to this one; the first tag deploys everything):
@@ -76,8 +76,8 @@ Static sites: from the repo root, `pnpm --dir apps/docs build` publishes into `s
 | App | Paths | Deploy |
 | --- | --- | --- |
 | app | `crates/`, `apps/web/`, `migrations/`, `deploy/docker/`, `Cargo.toml`, `Cargo.lock` | GHCR `:x.y.z`, `:x.y`, `:latest`; the guest's `LINKDEAN_VERSION` set to the tag, api pulled and restarted |
-| docs | `apps/docs/`, `static/docs/`, `docs/self-hosting/`, `docs/product/`, `docs/guides/` | guest checks out the tag; Caddy restarted |
-| site | `apps/site/`, `static/site/` | guest checks out the tag; Caddy restarted |
+| docs | `apps/docs/`, `docs/`, `deploy/docker/Dockerfile.static`, `deploy/public-beta/Caddyfile` | GHCR `linkdean-static:x.y.z` and `:latest`; the guest's `LINKDEAN_STATIC_VERSION` set to the tag, Caddy pulled and restarted |
+| site | `apps/site/`, `deploy/docker/Dockerfile.static` | same image as docs |
 
 An app release needs the tag to match the version in `Cargo.toml` and `apps/web/package.json`; a docs- or site-only release does not.
 

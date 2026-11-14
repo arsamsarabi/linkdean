@@ -99,12 +99,13 @@ services:
       retries: 12
       start_period: 40s
 
+  # Caddy with the docs and marketing sites built in (deploy/docker/Dockerfile.static).
+  # The Release workflow pins LINKDEAN_STATIC_VERSION in .env when either site changes.
   caddy:
-    image: caddy:2-alpine
+    image: ghcr.io/arsamsarabi/linkdean-static:${LINKDEAN_STATIC_VERSION:-latest}
     restart: unless-stopped
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./static:/srv:ro
     networks: [edge]
     depends_on:
       api:
