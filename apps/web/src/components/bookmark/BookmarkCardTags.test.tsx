@@ -21,6 +21,11 @@ vi.mock('@/hooks', () => ({
   useApiImage: () => ({ src: undefined, failed: false }),
 }))
 
+vi.mock('@/components/peek', () => ({
+  useOpenPeek: () => vi.fn(),
+  PeekButton: () => null,
+}))
+
 vi.mock('@/components/social', () => ({ SocialDrawer: () => null }))
 
 const bookmark: BookmarkCardItem = {
