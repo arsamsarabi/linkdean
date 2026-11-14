@@ -10,7 +10,7 @@ pnpm install
 pnpm build
 ```
 
-The build writes straight into `deploy/public-beta/static/site/` (`outDir` in `astro.config.mjs`), which Caddy serves on the apex host. Commit that folder with any change to `apps/site`: CI rebuilds it and fails if the committed copy differs.
+The build writes `dist/`, which is not committed. The Release workflow builds the site and the docs into one Caddy image (`deploy/docker/Dockerfile.static`, pushed as `ghcr.io/arsamsarabi/linkdean-static`) that serves the apex host.
 
 `pnpm dev` runs a local preview on `http://localhost:4321`.
 

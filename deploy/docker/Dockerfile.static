@@ -1,0 +1,24 @@
+# The public-beta edge image: Caddy serving the docs site (docs.linkdean.app) and the
+# marketing site (linkdean.app). Both are built here from source, so their output is never
+# committed. The Caddyfile stays bind-mounted from the checkout (deploy/public-beta).
+#
+#   docker build -f deploy/docker/Dockerfile.static -t linkdean-static .
+
+FROM node:22-alpine AS docs
+WORKDIR /repo/apps/docs
+COPY apps/docs/package.json apps/docs/pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
+COPY docs /repo/docs
+COPY apps/docs ./
+RUN pnpm build
+
+FROM node:24-alpine AS site
+WORKDIR /repo/apps/site
+COPY apps/site/package.json apps/site/pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
+COPY apps/site ./
+RUN pnpm build
+
+FROM caddy:2-alpine
+COPY --from=docs /repo/apps/docs/build /srv/docs
+COPY --from=site /repo/apps/site/dist /srv/site

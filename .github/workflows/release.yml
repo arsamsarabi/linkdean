@@ -3,7 +3,9 @@ name: Release
 # Push a tag such as v0.2.0 on a commit in main. The workflow:
 #   1. works out which apps changed since the previous release tag (app, docs, site),
 #   2. runs CI,
-#   3. builds and pushes the app image only when the app changed,
+#   3. builds and pushes the app image only when the app changed, and the static image
+#      (Caddy with the docs and marketing sites, deploy/docker/Dockerfile.static) only when
+#      docs or site changed,
 #   4. rolls the public-beta guest forward to the tag, refreshing only the changed apps,
 #   5. checks on the guest and over the public URLs that each changed app is live,
 #   6. submits the browser extension to the Chrome Web Store and AMO when its build inputs
@@ -77,8 +79,8 @@ jobs:
             has() { if grep -Eq "$1" <<<"$files"; then echo true; else echo false; fi; }
             # Keep these patterns in step with deploy/public-beta/scripts/pull-update.sh.
             out app  "$(has '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)')"
-            out docs "$(has '^(apps/docs/|deploy/public-beta/static/docs/|deploy/public-beta/Caddyfile$|docs/(self-hosting/[^/]+|product/(features|architecture)|guides/fast-capture)\.md$)')"
-            out site "$(has '^(apps/site/|deploy/public-beta/static/site/)')"
+            out docs "$(has '^(apps/docs/|deploy/docker/Dockerfile\.static|deploy/public-beta/Caddyfile$|docs/)')"
+            out site "$(has '^(apps/site/|deploy/docker/Dockerfile\.static)')"
           fi
 
           # The extension goes to the stores only when its build inputs changed since the
@@ -159,15 +161,60 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  static-image:
+    name: Build and push the docs and site image
+    needs: [changes, ci]
+    if: needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkdean-static" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Linkdean static sites
+            org.opencontainers.image.description=Caddy serving docs.linkdean.app and linkdean.app
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.static
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=static
+          cache-to: type=gha,mode=max,scope=static
+
   deploy:
     name: Deploy to the public-beta guest
-    needs: [changes, ci, image]
-    # The image job is skipped when the app did not change; deploy still runs for docs or site.
+    needs: [changes, ci, image, static-image]
+    # Each image job is skipped when its apps did not change; deploy runs for whatever did.
     if: >
       always() &&
       vars.NOVA_DEPLOY_ENABLED == 'true' &&
       needs.ci.result == 'success' &&
       (needs.image.result == 'success' || needs.image.result == 'skipped') &&
+      (needs.static-image.result == 'success' || needs.static-image.result == 'skipped') &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true')
     # Self-hosted on Nova (label linkdean-nova). Do not use this label on pull_request jobs.
     runs-on: [self-hosted, linkdean-nova]
@@ -284,7 +331,7 @@ jobs:
 
   github-release:
     name: Create GitHub release
-    needs: [changes, ci, image, deploy, extension]
+    needs: [changes, ci, image, static-image, deploy, extension]
     # Publish once CI passed, the image (if any) pushed, the deploy (if enabled) succeeded and
     # the extension (if changed) went to the stores.
     if: >
@@ -292,6 +339,7 @@ jobs:
       github.event_name == 'push' &&
       needs.ci.result == 'success' &&
       (needs.image.result == 'success' || needs.image.result == 'skipped') &&
+      (needs.static-image.result == 'success' || needs.static-image.result == 'skipped') &&
       (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') &&
       (needs.extension.result == 'success' || needs.extension.result == 'skipped')
     runs-on: ubuntu-24.04

@@ -150,12 +150,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/docs/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      # Webpack content hashes differ between macOS and Linux, so the committed
-      # deploy/public-beta/static/docs tree is not compared byte for byte; the build must pass.
+      # The output is not committed: the Release workflow builds it into the static image.
       - run: pnpm build
 
   site:
-    name: Site (Astro build, committed output in sync)
+    name: Site (Astro build)
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -173,10 +172,3 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --prod
       - run: pnpm build
-      # The build lands in deploy/public-beta/static/site, which Caddy serves. Fail if the
-      # committed copy is stale, so the deployed site always matches apps/site.
-      - name: Committed build is current
-        working-directory: .
-        run: |
-          git status --porcelain -- deploy/public-beta/static/site
-          test -z "$(git status --porcelain -- deploy/public-beta/static/site)"

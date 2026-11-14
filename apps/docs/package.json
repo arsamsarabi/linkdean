@@ -7,7 +7,7 @@
     "docusaurus": "docusaurus",
     "sync": "node scripts/sync-content.mjs",
     "start": "pnpm sync && docusaurus start",
-    "build": "pnpm sync && docusaurus build && node scripts/publish-static.mjs",
+    "build": "pnpm sync && docusaurus build",
     "build:only": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "clear": "docusaurus clear",
