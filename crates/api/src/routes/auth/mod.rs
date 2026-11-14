@@ -2,6 +2,7 @@ mod email_verification;
 mod extension;
 mod github;
 mod oidc;
+mod passkey;
 mod password_reset;
 pub(crate) mod providers;
 
@@ -49,6 +50,21 @@ pub fn router() -> Router<AppState> {
         .route("/auth/config", get(auth_config))
         .route("/auth/extension/authorize", post(extension::authorize))
         .route("/auth/extension/token", post(extension::token))
+        .route("/auth/passkey/start", post(passkey::login_start))
+        .route("/auth/passkey/finish", post(passkey::login_finish))
+        .route("/users/me/passkeys", get(passkey::list))
+        .route(
+            "/users/me/passkeys/register/start",
+            post(passkey::register_start),
+        )
+        .route(
+            "/users/me/passkeys/register/finish",
+            post(passkey::register_finish),
+        )
+        .route(
+            "/users/me/passkeys/{id}",
+            axum::routing::patch(passkey::rename).delete(passkey::remove),
+        )
 }
 
 /// The sign-in buttons: `[{ "id": "github", "label": "GitHub" }, …]`, in display order.

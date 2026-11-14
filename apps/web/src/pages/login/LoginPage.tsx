@@ -15,9 +15,9 @@ import {
   Title,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconLogin, IconUserPlus } from '@tabler/icons-react'
+import { IconFingerprint, IconLogin, IconUserPlus } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { api } from '@/api'
+import { api, ApiError } from '@/api'
 import {
   LegalFooterLinks,
   LogoMark,
@@ -28,8 +28,8 @@ import {
   SsoProviderIcon,
   TermsAgreement,
 } from '@/components'
-import { useBootstrap, useDropSignedOutCache, useLogin, usePendingOidcLink } from '@/hooks'
-import { oidcStartUrl, resolveDefaultLanding, ssoButtons } from '@/lib'
+import { useBootstrap, useDropSignedOutCache, useLogin, usePasskeyLogin, usePendingOidcLink } from '@/hooks'
+import { isPasskeyCancel, oidcStartUrl, passkeysSupported, resolveDefaultLanding, ssoButtons } from '@/lib'
 import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -41,6 +41,8 @@ export function LoginPage(): ReactElement {
   const [password, setPassword] = useState('')
   const [termsAccepted, setTermsAccepted] = useState(false)
   const bootstrap = useBootstrap()
+  const passkeyLogin = usePasskeyLogin()
+  const [canUsePasskeys] = useState(passkeysSupported)
   const login = useLogin()
   const { oidc_error: oidcError, link } = useSearch({ from: '/login' })
   // Signing in spends the link and clears the cache, so stop asking once it starts.
@@ -52,6 +54,15 @@ export function LoginPage(): ReactElement {
     }
   }, [bootstrap.data, nav])
 
+  async function goIn(onboarded: boolean): Promise<void> {
+    if (!onboarded) {
+      void nav({ to: '/onboarding' })
+      return
+    }
+    const { settings } = await api.getSettings()
+    void nav({ to: resolveDefaultLanding(settings.default_landing) })
+  }
+
   async function submit(): Promise<void> {
     if (login.isPending) return
     try {
@@ -59,14 +70,24 @@ export function LoginPage(): ReactElement {
       if (res.sso_connected) {
         notifications.show({ message: 'Single sign-on connected' })
       }
-      if (!res.user.onboarding_completed) {
-        void nav({ to: '/onboarding' })
-        return
-      }
-      const { settings } = await api.getSettings()
-      void nav({ to: resolveDefaultLanding(settings.default_landing) })
+      await goIn(res.user.onboarding_completed)
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
+    }
+  }
+
+  async function signInWithPasskey(): Promise<void> {
+    if (passkeyLogin.isPending) return
+    try {
+      const res = await passkeyLogin.mutateAsync()
+      await goIn(res.user.onboarding_completed)
+    } catch (e) {
+      if (isPasskeyCancel(e)) return
+      notifications.show({
+        color: 'red',
+        message:
+          e instanceof ApiError && e.status === 401 ? 'That passkey did not work. Try another sign-in.' : String(e),
+      })
     }
   }
 
@@ -159,6 +180,16 @@ export function LoginPage(): ReactElement {
             <Button leftSection={<IconLogin {...iconSm} />} loading={login.isPending} onClick={() => void submit()}>
               Sign in
             </Button>
+            {canUsePasskeys ? (
+              <Button
+                variant="default"
+                leftSection={<IconFingerprint {...iconSm} />}
+                loading={passkeyLogin.isPending}
+                onClick={() => void signInWithPasskey()}
+              >
+                Sign in with a passkey
+              </Button>
+            ) : null}
             {sso.length > 0 ? (
               <>
                 <Divider label="or" labelPosition="center" />

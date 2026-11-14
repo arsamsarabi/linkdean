@@ -60,6 +60,8 @@ import {
   okSchema,
   okUserEnvelopeSchema,
   pageDetailsSchema,
+  passkeyListSchema,
+  passkeySchema,
   pendingOidcLinkSchema,
   pendingShareInviteSchema,
   platformSettingsEnvelopeSchema,
@@ -88,6 +90,7 @@ import {
   unsubscribeResultSchema,
   userEnvelopeSchema,
   vaultsEnvelopeSchema,
+  webauthnStartSchema,
   type AbuseReport,
   type ActivityAction,
   type ActivityEvent,
@@ -142,6 +145,7 @@ import {
   type Notification,
   type NotificationEmailPref,
   type NotificationKind,
+  type Passkey,
   type PatchDashboard,
   type PendingOidcLink,
   type PendingShareInvite,
@@ -171,6 +175,7 @@ import {
   type UserPublic,
   type UserSettings,
   type Vault,
+  type WebauthnStart,
 } from '@/schemas'
 import { req } from './client'
 
@@ -429,6 +434,36 @@ export const api = {
 
   login: (body: { email: string; password: string }): Promise<AuthTokenResponse> =>
     req('/auth/login', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
+
+  /** Starts a passkey sign-in: options for `navigator.credentials.get`. */
+  passkeyLoginStart: (): Promise<WebauthnStart> =>
+    req('/auth/passkey/start', { method: 'POST', body: '{}' }, webauthnStartSchema),
+
+  passkeyLoginFinish: (body: { challenge_id: string; credential: unknown }): Promise<AuthTokenResponse> =>
+    req('/auth/passkey/finish', { method: 'POST', body: JSON.stringify(body) }, authTokenResponseSchema),
+
+  listPasskeys: (): Promise<{ passkeys: Passkey[] }> => req('/users/me/passkeys', {}, passkeyListSchema),
+
+  /** Starts adding a passkey. Password accounts send their password. */
+  passkeyRegisterStart: (body: { password?: string }): Promise<WebauthnStart> =>
+    req('/users/me/passkeys/register/start', { method: 'POST', body: JSON.stringify(body) }, webauthnStartSchema),
+
+  passkeyRegisterFinish: (body: {
+    challenge_id: string
+    name: string
+    credential: unknown
+  }): Promise<{ passkey: Passkey }> =>
+    req(
+      '/users/me/passkeys/register/finish',
+      { method: 'POST', body: JSON.stringify(body) },
+      z.object({ passkey: passkeySchema })
+    ),
+
+  renamePasskey: (id: string, name: string): Promise<{ ok: boolean }> =>
+    req(`/users/me/passkeys/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }, okSchema),
+
+  deletePasskey: (id: string): Promise<{ ok: boolean }> =>
+    req(`/users/me/passkeys/${id}`, { method: 'DELETE' }, okSchema),
 
   /** The single sign-on this browser holds waiting for a password sign-in; 404 when there is none. */
   pendingOidcLink: (): Promise<PendingOidcLink> => req('/auth/oidc/pending-link', {}, pendingOidcLinkSchema),

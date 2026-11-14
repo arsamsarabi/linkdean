@@ -143,7 +143,9 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 ## Auth & accounts
 
 - Local email / password accounts
-- Optional OIDC sign-in with any standard issuer (discovery, PKCE, nonce and ID token checks)
+- Optional OIDC sign-in with any standard issuer (discovery, PKCE, nonce and ID token checks), with its button named by `OIDC_NAME` (for example "Authentik")
+- Sign-in presets next to it: **Google**, **Microsoft** (Entra ID, one tenant) and **GitHub** (OAuth, verified primary email from the GitHub API). Each configured provider gets its own **Sign in with …** button and its own **Connect …** button under **Profile → Edit profile → Single sign-on**. An account still holds one provider identity
+- Passkeys: **Profile → Edit profile → Passkeys** adds one (current password, or a fresh single sign-on for accounts without one), lists them with when they were added and last used, and renames or removes them; the account gets a "A passkey was added" email. **Sign in with a passkey** on the login page needs no email: the browser offers the passkeys it holds for the site. Up to 20 per account; failed passkey sign-ins count against the address's sign-in limit
 - Single sign-on linking: an OIDC sign-in whose address belongs to a password account asks for that account's password once, then connects; the account gets a "Single sign-on was connected" email. **Profile → Edit profile → Single sign-on** shows the connected provider, with **Connect** (any provider address) and **Disconnect** (needs the password; not offered to SSO-only accounts)
 - First registered user becomes admin (bootstrap)
 - Admin page in sections, like Config options: General, Users, Reports, Bans, Invites, Quotas, Email, Screenshots and Search index (`/admin?tab=…`), down the side on wide screens and as a scrolling row on phones

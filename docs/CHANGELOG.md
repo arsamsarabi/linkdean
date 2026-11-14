@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Passkeys**: add one under **Profile → Edit profile → Passkeys**, then **Sign in with a passkey** from the login page, with no email or password to type.
+- **Sign in with Google, Microsoft or GitHub**: self-hosters can turn on each with its own client ID and secret, next to any OpenID Connect provider such as Authentik (now named on its button with `OIDC_NAME`).
+
 - **Updated terms prompt**: when the Terms of Service change, the app asks you to accept the new version, or sign out, before you carry on.
 - **Sign in again before deleting an SSO account**: an account without a password now confirms with a fresh single sign-on before it can schedule deletion, instead of the email alone.
 

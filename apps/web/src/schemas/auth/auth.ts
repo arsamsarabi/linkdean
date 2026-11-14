@@ -296,3 +296,21 @@ export type AdminEmailVerifiedResponse = z.infer<typeof adminEmailVerifiedRespon
 export type AdminEmailChangeResponse = z.infer<typeof adminEmailChangeResponseSchema>
 export type RegistrationInvite = z.infer<typeof registrationInviteSchema>
 export type CreateRegistrationInviteResponse = z.infer<typeof createRegistrationInviteResponseSchema>
+
+export const passkeySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  created_at: z.string(),
+  last_used_at: z.string().nullish(),
+})
+
+export const passkeyListSchema = z.object({ passkeys: z.array(passkeySchema) })
+
+/** The start of a WebAuthn ceremony: options for the browser, and the id to finish it with. */
+export const webauthnStartSchema = z.object({
+  challenge_id: z.string(),
+  options: z.record(z.string(), z.unknown()),
+})
+
+export type Passkey = z.infer<typeof passkeySchema>
+export type WebauthnStart = z.infer<typeof webauthnStartSchema>

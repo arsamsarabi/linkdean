@@ -61,6 +61,12 @@ pub fn login_limits(ip: IpAddr, email: &str) -> [Limit; 3] {
     ]
 }
 
+/// Failed passkey sign-ins share the address's sign-in counter: there is no account to count
+/// against until the passkey names one.
+pub fn passkey_login_limit(ip: IpAddr) -> [Limit; 1] {
+    [(format!("login-address:{ip}"), LOGIN_ADDRESS)]
+}
+
 pub fn register_limit(ip: IpAddr) -> [Limit; 1] {
     [(format!("register:{ip}"), REGISTER_ADDRESS)]
 }

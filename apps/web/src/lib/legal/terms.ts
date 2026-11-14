@@ -25,5 +25,8 @@ export function ssoButtons(
 /** Signs in again with the attached single sign-on, for a step that needs a fresh sign-in. Returns to Settings. */
 export const OIDC_REAUTH_URL = '/api/auth/oidc/start?mode=reauth'
 
+/** The same, returning to the profile page (for adding a passkey). */
+export const OIDC_REAUTH_PROFILE_URL = '/api/auth/oidc/start?mode=reauth&return=profile'
+
 /** The API's refusal when a single sign-on only account must sign in again first. */
 export const REAUTH_REQUIRED_MESSAGE = 'confirm it is you: sign in again with single sign-on'

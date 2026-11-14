@@ -53,8 +53,23 @@ const LINK_COOKIE_PATH: &str = "/api/auth";
 const LINK_MAX_AGE_SECS: u32 = (db::PENDING_OIDC_LINK_MINUTES * 60) as u32;
 /// Where a connect-mode flow returns: the profile page holds the account's sign-in settings.
 const CONNECT_RETURN: &str = "/profile";
-/// Where a reauth-mode flow returns: the settings page holds account deletion.
-const REAUTH_RETURN: &str = "/settings";
+/// Where a reauth-mode flow returns: the page that asked for it.
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum ReauthReturn {
+    /// Settings holds account deletion.
+    Settings,
+    /// Profile holds passkeys.
+    Profile,
+}
+
+impl ReauthReturn {
+    fn path(self) -> &'static str {
+        match self {
+            Self::Settings => "/settings",
+            Self::Profile => "/profile",
+        }
+    }
+}
 /// How old the provider's `auth_time` may be for a reauth to count, to allow for clock skew and
 /// a slow sign-in page.
 const REAUTH_MAX_AUTH_AGE_SECS: i64 = 300;
@@ -122,6 +137,9 @@ pub(super) struct StartQuery {
     terms_version: Option<String>,
     /// `oidc`, `google`, `microsoft` or `github`; the first configured one when unset.
     provider: Option<String>,
+    /// Reauth mode: `profile` returns to the profile page, anything else to settings.
+    #[serde(rename = "return")]
+    return_to: Option<String>,
 }
 
 /// `?mode=connect` attaches the provider identity to the signed-in account instead of signing
@@ -133,6 +151,10 @@ pub(super) async fn start(
     Query(q): Query<StartQuery>,
     auth: Result<AuthUser, ApiError>,
 ) -> ApiResult<Response> {
+    let back = match q.return_to.as_deref() {
+        Some("profile") => ReauthReturn::Profile,
+        _ => ReauthReturn::Settings,
+    };
     let mode = match q.mode.as_deref() {
         None | Some("") | Some("signin") => FlowMode::SignIn,
         Some("connect") => match &auth {
@@ -145,10 +167,10 @@ pub(super) async fn start(
             }
         },
         Some("reauth") => match &auth {
-            Ok(AuthUser(user)) if user.oidc_subject.is_some() => FlowMode::Reauth(user.id),
+            Ok(AuthUser(user)) if user.oidc_subject.is_some() => FlowMode::Reauth(user.id, back),
             Ok(_) => {
                 return Ok(error_redirect(
-                    REAUTH_RETURN,
+                    back.path(),
                     "this account has no single sign-on to confirm with",
                 ))
             }
@@ -161,11 +183,11 @@ pub(super) async fn start(
             require_current_terms(q.terms_version.as_deref())?;
             Some(TERMS_VERSION.to_string())
         }
-        FlowMode::Connect(_) | FlowMode::Reauth(_) => None,
+        FlowMode::Connect(_) | FlowMode::Reauth(..) => None,
     };
     let provider = match mode {
         // Reauth goes to the provider that issued the attached identity.
-        FlowMode::Reauth(_) => {
+        FlowMode::Reauth(..) => {
             let issuer = match &auth {
                 Ok(AuthUser(user)) => user.oidc_issuer.clone().unwrap_or_default(),
                 Err(_) => String::new(),
@@ -175,7 +197,7 @@ pub(super) async fn start(
                 // A page link, not an API call: send the person back with a reason.
                 None => {
                     return Ok(error_redirect(
-                        REAUTH_RETURN,
+                        back.path(),
                         "your single sign-on provider is no longer set up on this server; ask your admin",
                     ))
                 }
@@ -214,7 +236,7 @@ pub(super) async fn start(
         .add_scope(Scope::new("email".into()))
         .add_scope(Scope::new("profile".into()))
         .set_pkce_challenge(challenge);
-    if matches!(mode, FlowMode::Reauth(_)) {
+    if matches!(mode, FlowMode::Reauth(..)) {
         // Ask the provider for a real sign-in, not a silent one from its own session, and to
         // say when it happened.
         request = request
@@ -308,9 +330,9 @@ pub(super) async fn callback(
             Ok(()) => Redirect::to(&format!("{CONNECT_RETURN}?sso=connected")).into_response(),
             Err(e) => error_redirect(CONNECT_RETURN, &reason(&e)),
         },
-        FlowMode::Reauth(user_id) => match reauth(&state, &headers, user_id, flow, q).await {
-            Ok(()) => Redirect::to(&format!("{REAUTH_RETURN}?reauth=done")).into_response(),
-            Err(e) => error_redirect(REAUTH_RETURN, &reason(&e)),
+        FlowMode::Reauth(user_id, back) => match reauth(&state, &headers, user_id, flow, q).await {
+            Ok(()) => Redirect::to(&format!("{}?reauth=done", back.path())).into_response(),
+            Err(e) => error_redirect(back.path(), &reason(&e)),
         },
     };
     // The flow cookie is single use, whatever the outcome.
@@ -682,7 +704,7 @@ enum FlowMode {
     SignIn,
     Connect(Uuid),
     /// Sign in again with the attached identity, for a step-up.
-    Reauth(Uuid),
+    Reauth(Uuid, ReauthReturn),
 }
 
 #[derive(Debug, PartialEq)]
@@ -713,7 +735,10 @@ impl FlowCookie {
             (FlowMode::SignIn, None) => base,
             (FlowMode::SignIn, Some(v)) => format!("{base}.terms.{v}"),
             (FlowMode::Connect(id), _) => format!("{base}.connect.{id}"),
-            (FlowMode::Reauth(id), _) => format!("{base}.reauth.{id}"),
+            (FlowMode::Reauth(id, ReauthReturn::Settings), _) => format!("{base}.reauth.{id}"),
+            (FlowMode::Reauth(id, ReauthReturn::Profile), _) => {
+                format!("{base}.reauth-profile.{id}")
+            }
         }
     }
 
@@ -723,7 +748,14 @@ impl FlowCookie {
             [_, _, _, _] => (FlowMode::SignIn, None),
             [_, _, _, _, "terms", v] if !v.is_empty() => (FlowMode::SignIn, Some((*v).to_string())),
             [_, _, _, _, "connect", id] => (FlowMode::Connect(id.parse().ok()?), None),
-            [_, _, _, _, "reauth", id] => (FlowMode::Reauth(id.parse().ok()?), None),
+            [_, _, _, _, "reauth", id] => (
+                FlowMode::Reauth(id.parse().ok()?, ReauthReturn::Settings),
+                None,
+            ),
+            [_, _, _, _, "reauth-profile", id] => (
+                FlowMode::Reauth(id.parse().ok()?, ReauthReturn::Profile),
+                None,
+            ),
             _ => return None,
         };
         let provider = ProviderId::parse(parts[3])?;
@@ -854,7 +886,7 @@ mod tests {
             nonce: "n".into(),
             verifier: "v".into(),
             provider: ProviderId::Oidc,
-            mode: FlowMode::Reauth(id),
+            mode: FlowMode::Reauth(id, ReauthReturn::Settings),
             terms: None,
         };
         assert_eq!(flow.encode(), format!("s.n.v.oidc.reauth.{id}"));
@@ -864,6 +896,19 @@ mod tests {
             FlowCookie::decode(&format!("s.n.v.oidc.reauth.{id}.x")),
             None
         );
+        let to_profile = FlowCookie {
+            state: "s".into(),
+            nonce: "n".into(),
+            verifier: "v".into(),
+            provider: ProviderId::GitHub,
+            mode: FlowMode::Reauth(id, ReauthReturn::Profile),
+            terms: None,
+        };
+        assert_eq!(
+            to_profile.encode(),
+            format!("s.n.v.github.reauth-profile.{id}")
+        );
+        assert_eq!(FlowCookie::decode(&to_profile.encode()), Some(to_profile));
     }
 
     #[test]
