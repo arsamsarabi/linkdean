@@ -30,7 +30,7 @@ use tower_http::trace::TraceLayer;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
-    logging::init()?;
+    let _tracing = logging::init()?;
 
     let cfg = config::Config::from_env()?;
     let state = AppState::new(cfg.clone()).await?;
@@ -96,7 +96,11 @@ async fn main() -> anyhow::Result<()> {
         }))
         // Last `.layer` is outermost: normalize → set id → trace → propagate → security → cors.
         .layer(PropagateRequestIdLayer::x_request_id())
-        .layer(TraceLayer::new_for_http().make_span_with(request_id::RequestIdMakeSpan))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(request_id::RequestIdMakeSpan)
+                .on_response(request_id::RecordStatus),
+        )
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(axum::middleware::from_fn(request_id::normalize_request_id));
 
