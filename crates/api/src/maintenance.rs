@@ -20,10 +20,8 @@ pub async fn run(state: AppState) {
 
 /// Hard-deletes accounts whose deletion grace period has ended, then drops what lives outside
 /// Postgres: search entries, preview files and the avatar. One failing account does not stop
-/// the rest; a failed purge is retried on the next tick because the schedule stays set.
-// Known issue: the last-admin check runs when deletion is scheduled, not here, so admins who
-// each schedule deletion while another admin exists can leave the instance with none. Fix: re-check
-// under the `user_bans` lock in `purge_account` and skip the purge.
+/// the rest; a failed purge is retried on the next tick because the schedule stays set. The last
+/// active admin is kept, still scheduled, until another admin exists.
 async fn purge_deleted_accounts(state: &AppState) {
     let due = match linkdean_db::list_users_due_for_deletion(&state.pool).await {
         Ok(due) => due,
@@ -35,7 +33,15 @@ async fn purge_deleted_accounts(state: &AppState) {
     let preview_dir = Path::new(&state.cfg.preview_dir);
     for user_id in due {
         let bookmark_ids = match linkdean_db::purge_account(&state.pool, user_id).await {
-            Ok(ids) => ids,
+            Ok(linkdean_db::PurgeOutcome::Purged(ids)) => ids,
+            Ok(linkdean_db::PurgeOutcome::NotDue) => continue,
+            Ok(linkdean_db::PurgeOutcome::LastAdmin) => {
+                tracing::warn!(
+                    %user_id,
+                    "account deletion is due but it is the last admin; kept until another admin exists"
+                );
+                continue;
+            }
             Err(e) => {
                 tracing::warn!(%user_id, error = %e, "account purge failed");
                 continue;

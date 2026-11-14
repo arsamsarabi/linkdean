@@ -1,4 +1,4 @@
-import { type ReactElement } from 'react'
+import { useCallback, type ReactElement } from 'react'
 import { Group, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -24,7 +24,7 @@ function isSettingsTab(v: unknown): v is SettingsTab {
 
 export function SettingsPage(): ReactElement {
   const nav = useNavigate()
-  const search = useSearch({ strict: false }) as { tab?: string }
+  const search = useSearch({ strict: false }) as { tab?: string; reauth?: string; oidc_error?: string }
   const { setColorScheme } = useMantineColorScheme()
   const me = useMe()
   const tab: SettingsTab = isSettingsTab(search.tab) ? search.tab : 'general'
@@ -43,6 +43,8 @@ export function SettingsPage(): ReactElement {
       onError: (e) => notifications.show({ color: 'red', message: String(e) }),
     })
   }
+
+  const clearReturn = useCallback(() => void nav({ to: '/settings', search: {}, replace: true }), [nav])
 
   function setTab(next: string | null): void {
     if (!isSettingsTab(next)) return
@@ -94,7 +96,12 @@ export function SettingsPage(): ReactElement {
         <Tabs.Panel value="general">
           <Stack gap="lg" maw={1100}>
             <GeneralSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
-            <DeleteAccountCard user={me.data?.user} />
+            <DeleteAccountCard
+              user={me.data?.user}
+              reauthed={search.reauth === 'done'}
+              ssoError={search.oidc_error}
+              onReturnHandled={clearReturn}
+            />
           </Stack>
         </Tabs.Panel>
 

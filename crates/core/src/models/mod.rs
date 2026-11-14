@@ -28,9 +28,19 @@ pub struct User {
     pub email_verified_at: Option<DateTime<Utc>>,
     /// When the account is purged after a self-serve delete request. `None` when not scheduled.
     pub deletion_scheduled_at: Option<DateTime<Utc>>,
+    /// The Terms of Service version the account last accepted. `None` for accounts created
+    /// before terms were recorded.
+    #[sqlx(default)]
+    #[serde(default)]
+    pub terms_version: Option<String>,
 }
 
 impl User {
+    /// Whether the account accepted the current Terms of Service.
+    pub fn terms_current(&self) -> bool {
+        self.terms_version.as_deref() == Some(crate::legal::TERMS_VERSION)
+    }
+
     /// The issuer host of the attached single sign-on identity, if any.
     pub fn sso_provider(&self) -> Option<String> {
         match (&self.oidc_issuer, &self.oidc_subject) {
@@ -62,6 +72,16 @@ pub struct UserPublic {
     /// Set while the account is scheduled for deletion.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deletion_scheduled_at: Option<DateTime<Utc>>,
+    /// False when the Terms of Service changed since the account last accepted them; the web
+    /// app then asks the person to accept the new version.
+    pub terms_current: bool,
+}
+
+/// Body of `POST /users/me/terms`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AcceptTerms {
+    /// Must equal `legal::TERMS_VERSION`.
+    pub terms_version: String,
 }
 
 /// Body of `POST /users/me/deletion`.

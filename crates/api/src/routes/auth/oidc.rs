@@ -8,7 +8,9 @@
 //! A sign-in whose address belongs to a password account does not sign in. It leaves a pending
 //! link, bound to the browser by the `linkdean_oidc_link` cookie, that the next password
 //! sign-in to that account attaches. In connect mode a signed-in user attaches the identity to
-//! their own account directly.
+//! their own account directly. In reauth mode a signed-in user signs in again with the identity
+//! already attached, which gives that session a short step-up for steps such as deleting an
+//! account that has no password.
 
 use super::email_verification::mask_email;
 use super::{bearer_or_cookie, session_cookie};
@@ -21,11 +23,14 @@ use axum::extract::{ConnectInfo, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::Json;
+use chrono::{DateTime, Utc};
 use linkdean_core::crypto::constant_time_eq;
 use linkdean_core::legal::{require_current_terms, TERMS_VERSION};
 use linkdean_core::{issuer_host, Error, User};
 use linkdean_db::{self as db};
-use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
+use openidconnect::core::{
+    CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreProviderMetadata,
+};
 use openidconnect::{
     AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse,
@@ -46,6 +51,11 @@ const LINK_COOKIE_PATH: &str = "/api/auth";
 const LINK_MAX_AGE_SECS: u32 = (db::PENDING_OIDC_LINK_MINUTES * 60) as u32;
 /// Where a connect-mode flow returns: the profile page holds the account's sign-in settings.
 const CONNECT_RETURN: &str = "/profile";
+/// Where a reauth-mode flow returns: the settings page holds account deletion.
+const REAUTH_RETURN: &str = "/settings";
+/// How old the provider's `auth_time` may be for a reauth to count, to allow for clock skew and
+/// a slow sign-in page.
+const REAUTH_MAX_AUTH_AGE_SECS: i64 = 300;
 
 struct OidcSettings {
     issuer: String,
@@ -123,6 +133,16 @@ pub(super) async fn start(
                 ))
             }
         },
+        Some("reauth") => match auth {
+            Ok(AuthUser(user)) if user.oidc_subject.is_some() => FlowMode::Reauth(user.id),
+            Ok(_) => {
+                return Ok(error_redirect(
+                    REAUTH_RETURN,
+                    "this account has no single sign-on to confirm with",
+                ))
+            }
+            Err(_) => return Ok(error_redirect("/login", "sign in first")),
+        },
         Some(_) => return Err(Error::BadRequest("unknown sign-in mode".into()).into()),
     };
     let terms = match mode {
@@ -130,9 +150,19 @@ pub(super) async fn start(
             require_current_terms(q.terms_version.as_deref())?;
             Some(TERMS_VERSION.to_string())
         }
-        FlowMode::Connect(_) => None,
+        FlowMode::Connect(_) | FlowMode::Reauth(_) => None,
     };
-    let s = settings(&state)?;
+    let s = match (settings(&state), mode) {
+        (Ok(s), _) => s,
+        // A page link, not an API call: send the person back with a reason, not a JSON error.
+        (Err(_), FlowMode::Reauth(_)) => {
+            return Ok(error_redirect(
+                REAUTH_RETURN,
+                "single sign-on is not set up on this server; ask your admin",
+            ))
+        }
+        (Err(e), _) => return Err(e.into()),
+    };
     let http = http_client()?;
     let meta = discover(&s, &http).await?;
     let redirect = RedirectUrl::new(s.redirect.clone()).map_err(|e| Error::msg(e.to_string()))?;
@@ -143,7 +173,7 @@ pub(super) async fn start(
     )
     .set_redirect_uri(redirect);
     let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
-    let (url, csrf, nonce) = client
+    let mut request = client
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
             CsrfToken::new_random,
@@ -151,8 +181,15 @@ pub(super) async fn start(
         )
         .add_scope(Scope::new("email".into()))
         .add_scope(Scope::new("profile".into()))
-        .set_pkce_challenge(challenge)
-        .url();
+        .set_pkce_challenge(challenge);
+    if matches!(mode, FlowMode::Reauth(_)) {
+        // Ask the provider for a real sign-in, not a silent one from its own session, and to
+        // say when it happened.
+        request = request
+            .add_prompt(CoreAuthPrompt::Login)
+            .set_max_age(Duration::from_secs(0));
+    }
+    let (url, csrf, nonce) = request.url();
     let flow = FlowCookie {
         state: csrf.secret().clone(),
         nonce: nonce.secret().clone(),
@@ -189,6 +226,8 @@ struct Identity {
     email: String,
     email_verified: bool,
     name: Option<String>,
+    /// When the person signed in at the provider, if the ID token says.
+    auth_time: Option<DateTime<Utc>>,
 }
 
 /// Always redirects: home with a session, the login page with a pending link or a reason, or
@@ -229,6 +268,10 @@ pub(super) async fn callback(
         FlowMode::Connect(user_id) => match connect(&state, &headers, user_id, flow, q).await {
             Ok(()) => Redirect::to(&format!("{CONNECT_RETURN}?sso=connected")).into_response(),
             Err(e) => error_redirect(CONNECT_RETURN, &reason(&e)),
+        },
+        FlowMode::Reauth(user_id) => match reauth(&state, &headers, user_id, flow, q).await {
+            Ok(()) => Redirect::to(&format!("{REAUTH_RETURN}?reauth=done")).into_response(),
+            Err(e) => error_redirect(REAUTH_RETURN, &reason(&e)),
         },
     };
     // The flow cookie is single use, whatever the outcome.
@@ -310,6 +353,7 @@ async fn provider_identity(
         })?
         .clone();
     let sub = claims.subject().clone();
+    let auth_time = claims.auth_time();
 
     // Providers may leave email out of the ID token; userinfo fills it in for the same subject.
     let (mut email, mut email_verified, mut name) = (
@@ -345,6 +389,7 @@ async fn provider_identity(
         email,
         email_verified: email_verified == Some(true),
         name,
+        auth_time,
     })
 }
 
@@ -463,6 +508,54 @@ async fn connect(
     Ok(())
 }
 
+/// Reauth mode: the account that started the flow, still signed in with a login session, signed
+/// in again at its provider with the identity attached to it just now. Marks that session.
+async fn reauth(
+    state: &AppState,
+    headers: &HeaderMap,
+    user_id: Uuid,
+    flow: Option<FlowCookie>,
+    q: CallbackQuery,
+) -> Result<(), Error> {
+    let token = bearer_or_cookie(headers)
+        .filter(|t| !crate::auth::is_api_key(t))
+        .ok_or_else(|| Error::BadRequest("you were signed out; sign in and try again".into()))?;
+    let user = db::user_from_token(&state.pool, &token)
+        .await?
+        .filter(|u| u.id == user_id)
+        .ok_or_else(|| Error::BadRequest("you were signed out; sign in and try again".into()))?;
+    let id = provider_identity(state, flow, q).await?;
+    let same = user.oidc_issuer.as_deref() == Some(id.issuer.as_str())
+        && user.oidc_subject.as_deref() == Some(id.subject.as_str());
+    if !same {
+        return Err(Error::BadRequest(
+            "sign in with the single sign-on account connected to Linkdean".into(),
+        ));
+    }
+    if !fresh_auth_time(id.auth_time, Utc::now()) {
+        return Err(Error::BadRequest(
+            "the provider did not confirm a fresh sign-in; try again".into(),
+        ));
+    }
+    db::mark_session_reauthenticated(
+        &state.pool,
+        user.id,
+        &linkdean_core::crypto::hash_token(&token),
+    )
+    .await?;
+    tracing::info!(user_id = %user.id, "single sign-on step-up");
+    Ok(())
+}
+
+/// Whether the provider's `auth_time` is recent enough to count as signing in again. A token
+/// without one does not count: `max_age` was sent, so the provider must include it.
+fn fresh_auth_time(auth_time: Option<DateTime<Utc>>, now: DateTime<Utc>) -> bool {
+    match auth_time {
+        Some(at) => (now - at).num_seconds() <= REAUTH_MAX_AUTH_AGE_SECS,
+        None => false,
+    }
+}
+
 /// Tell the account's address that single sign-on was connected. Best effort.
 pub(super) async fn notify_sso_connected(
     state: &AppState,
@@ -533,6 +626,8 @@ async fn mark_verified(state: &AppState, user_id: uuid::Uuid) {
 enum FlowMode {
     SignIn,
     Connect(Uuid),
+    /// Sign in again with the attached identity, for a step-up.
+    Reauth(Uuid),
 }
 
 #[derive(Debug, PartialEq)]
@@ -546,8 +641,8 @@ struct FlowCookie {
 }
 
 impl FlowCookie {
-    /// `state.nonce.verifier`, plus `.terms.<version>` in sign-in mode or `.connect.<user id>`
-    /// in connect mode. The three values are URL-safe base64, a UUID has no `.`, and the terms
+    /// `state.nonce.verifier`, plus `.terms.<version>` in sign-in mode, `.connect.<user id>`
+    /// in connect mode or `.reauth.<user id>` in reauth mode. The three values are URL-safe base64, a UUID has no `.`, and the terms
     /// version is a date, so `.` cannot occur inside a part.
     fn encode(&self) -> String {
         let base = format!("{}.{}.{}", self.state, self.nonce, self.verifier);
@@ -555,6 +650,7 @@ impl FlowCookie {
             (FlowMode::SignIn, None) => base,
             (FlowMode::SignIn, Some(v)) => format!("{base}.terms.{v}"),
             (FlowMode::Connect(id), _) => format!("{base}.connect.{id}"),
+            (FlowMode::Reauth(id), _) => format!("{base}.reauth.{id}"),
         }
     }
 
@@ -564,6 +660,7 @@ impl FlowCookie {
             [_, _, _] => (FlowMode::SignIn, None),
             [_, _, _, "terms", v] if !v.is_empty() => (FlowMode::SignIn, Some((*v).to_string())),
             [_, _, _, "connect", id] => (FlowMode::Connect(id.parse().ok()?), None),
+            [_, _, _, "reauth", id] => (FlowMode::Reauth(id.parse().ok()?), None),
             _ => return None,
         };
         let (state, nonce, verifier) = (parts[0], parts[1], parts[2]);
@@ -677,6 +774,37 @@ mod tests {
         ] {
             assert_eq!(FlowCookie::decode(&raw), None, "{raw}");
         }
+    }
+
+    #[test]
+    fn reauth_flow_cookie_carries_the_user() {
+        let id = Uuid::new_v4();
+        let flow = FlowCookie {
+            state: "s".into(),
+            nonce: "n".into(),
+            verifier: "v".into(),
+            mode: FlowMode::Reauth(id),
+            terms: None,
+        };
+        assert_eq!(flow.encode(), format!("s.n.v.reauth.{id}"));
+        assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
+        assert_eq!(FlowCookie::decode("s.n.v.reauth.nope"), None);
+        assert_eq!(FlowCookie::decode(&format!("s.n.v.reauth.{id}.x")), None);
+    }
+
+    #[test]
+    fn only_a_recent_auth_time_counts_as_signing_in_again() {
+        let now = Utc::now();
+        assert!(fresh_auth_time(Some(now), now));
+        assert!(fresh_auth_time(
+            Some(now - chrono::Duration::seconds(REAUTH_MAX_AUTH_AGE_SECS)),
+            now
+        ));
+        assert!(!fresh_auth_time(
+            Some(now - chrono::Duration::seconds(REAUTH_MAX_AUTH_AGE_SECS + 1)),
+            now
+        ));
+        assert!(!fresh_auth_time(None, now));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { Alert, Button, Group, Paper, Stack, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconAlertTriangle, IconTrash } from '@tabler/icons-react'
@@ -8,11 +8,26 @@ import { DeleteAccountModal, formatDeletionDate } from './DeleteAccountModal'
 
 type Props = {
   user: UserPublic | undefined
+  /** Back from signing in again with single sign-on: reopen the dialog to finish. */
+  reauthed?: boolean
+  /** Why signing in again failed, from the provider round trip. */
+  ssoError?: string
+  /** Drops the sign-in-again result from the URL once shown. */
+  onReturnHandled?: () => void
 }
 
-export function DeleteAccountCard({ user }: Props): ReactElement | null {
+export function DeleteAccountCard({ user, reauthed = false, ssoError, onReturnHandled }: Props): ReactElement | null {
   const cancel = useCancelAccountDeletion()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(reauthed || !!ssoError)
+  const [stepUp] = useState(reauthed)
+  const [returnError, setReturnError] = useState(ssoError)
+  const handled = useRef(false)
+
+  useEffect(() => {
+    if (handled.current || (!reauthed && !ssoError)) return
+    handled.current = true
+    onReturnHandled?.()
+  }, [reauthed, ssoError, onReturnHandled])
 
   if (!user) return null
   const scheduledAt = user.deletion_scheduled_at
@@ -59,7 +74,17 @@ export function DeleteAccountCard({ user }: Props): ReactElement | null {
         )}
       </Stack>
       {open ? (
-        <DeleteAccountModal email={user.email} hasPassword={!!user.has_password} onClose={() => setOpen(false)} />
+        <DeleteAccountModal
+          email={user.email}
+          hasPassword={!!user.has_password}
+          ssoProvider={user.sso_provider}
+          reauthed={stepUp}
+          signInError={returnError}
+          onClose={() => {
+            setReturnError(undefined)
+            setOpen(false)
+          }}
+        />
       ) : null}
     </Paper>
   )
