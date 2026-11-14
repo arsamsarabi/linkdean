@@ -79,12 +79,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - The managed service uses the same hooks with its own backend.
     - Document exactly what is collected.
 
-19. **Icon-only sidebar when collapsed** (S–M). On tablets and wider, collapsing the sidebar (⌘B) hides it completely today, so getting to Library, Dashboards or Vaults takes a reopen.
-    - From the `sm` breakpoint up, collapsed means a narrow rail of icons with tooltips: the main pages, then pinned or recent folders. Phones keep the burger menu and bottom tabs.
-    - The folder tree, counts and labels show only when expanded. The rail keeps the active page highlighted.
-    - The collapsed choice stays saved per browser, as it is now.
-    - Check at tablet and desktop widths, in both themes, and with keyboard focus moving through the rail.
-
 ---
 
 ## Later

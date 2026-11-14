@@ -22,6 +22,7 @@ const folders = vi.hoisted(() => [
 ])
 
 const unsorted = vi.hoisted(() => ({ count: 0 }))
+const iconRail = vi.hoisted(() => ({ on: false }))
 
 vi.mock('@/hooks', () => ({
   useUnsortedCount: () => ({ data: unsorted.count }),
@@ -29,6 +30,10 @@ vi.mock('@/hooks', () => ({
   usePrefetchActivity: () => () => undefined,
   useCategories: () => ({ isLoading: false, data: folders }),
   useShareInvites: () => ({ data: { invites: [{ id: 'i1', rejected_at: null }] } }),
+}))
+
+vi.mock('./useIconRail', () => ({
+  useIconRail: () => iconRail.on,
 }))
 
 beforeAll(() => {
@@ -63,7 +68,10 @@ function renderSidebar(
 }
 
 describe('AppSidebar', () => {
-  beforeEach(() => useShellUi.setState({ navOpen: true }))
+  beforeEach(() => {
+    iconRail.on = false
+    useShellUi.setState({ navOpen: true, navCollapsed: false })
+  })
   afterEach(() => {
     cleanup()
     localStorage.clear()
@@ -157,5 +165,29 @@ describe('AppSidebar', () => {
     expect(screen.queryByRole('link', { name: 'Unsorted' })).toBeNull()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Filter folders' }), 'zzz')
     expect(screen.getByText('No folders match.')).toBeTruthy()
+  })
+
+  it('shows an icon rail of main destinations when collapsed, without folder tree labels', () => {
+    iconRail.on = true
+    useShellUi.setState({ navCollapsed: true })
+    renderSidebar({ vaultUnlocked: true, isAdmin: true })
+    expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('href')).toBe('/')
+    expect(screen.getByRole('link', { name: 'Library' }).getAttribute('href')).toBe('/library')
+    expect(screen.getByRole('link', { name: 'Shared' }).getAttribute('href')).toBe('/shared')
+    expect(screen.getByRole('link', { name: 'Categories' }).getAttribute('href')).toBe('/categories')
+    expect(screen.getByRole('link', { name: 'Vaults' }).getAttribute('href')).toBe('/vaults')
+    expect(screen.getByRole('link', { name: 'Deleted items' }).getAttribute('href')).toBe('/trash')
+    expect(screen.getByRole('link', { name: 'Config options' }).getAttribute('href')).toBe('/settings')
+    expect(screen.getByRole('link', { name: 'Admin' }).getAttribute('href')).toBe('/admin')
+    expect(screen.queryByRole('button', { name: 'Folders' })).toBeNull()
+    expect(screen.queryByText('Quick views')).toBeNull()
+    expect(screen.queryByText('Library health')).toBeNull()
+  })
+
+  it('keeps Library health and folder sections when expanded', () => {
+    renderSidebar()
+    expect(screen.getByText('Library health')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Folders' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Broken links' })).toBeTruthy()
   })
 })

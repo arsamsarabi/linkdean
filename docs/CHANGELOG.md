@@ -5,6 +5,7 @@
 ### Added
 
 - **Quick peek**: open a bookmark inside Linkdean from a card, row or dashboard tile. Maximize, minimize, detach, open in a new tab, or close with Esc; size is remembered. Vault bookmarks stay out. Sites that block embedding fall back to preview, title, description and **Open in new tab**. Peeking counts as an open.
+- **Icon-only sidebar rail**: on tablets and wider, ⌘B (or the header button) collapses the sidebar to a narrow strip of icons with tooltips instead of hiding it. Phones keep the burger menu and bottom tabs.
 - **Daily notification digests and one-click unsubscribe**: in **Settings → Notifications** each kind is now **Off**, **Each one** or **Daily digest**, and digest kinds arrive in one email a day after 8:00 in your time zone. Every notification email has an unsubscribe link for its kind and `List-Unsubscribe` headers, so mail apps offer one-click unsubscribe; it works signed out and asks before turning anything off.
 - **Agent Skills** (experimental, off by default; set `EXPERIMENTAL_AGENT_SKILLS=true`): turn a folder or a tag into an [Agent Skill](https://agentskills.io) for Claude Code, Codex, Cursor and other agents, so they use your curated links instead of searching the web. Download it from **Config options → Import / Export** or a folder's menu, or fetch it with an API key (`GET /api/agent-skill`). Vault bookmarks are never included.
 - **Show keyboard hints** setting (Settings → General → Keyboard): turn it off to hide key numbers, key hint lines and shortcut keys for a cleaner look. Shortcuts keep working.

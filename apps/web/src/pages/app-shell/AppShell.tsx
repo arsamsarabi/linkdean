@@ -72,7 +72,11 @@ export function AppShell(): ReactElement {
   return (
     <MantineAppShell
       header={{ height: 64 }}
-      navbar={{ width: 248, breakpoint: 'sm', collapsed: { mobile: !shell.navOpen, desktop: shell.navCollapsed } }}
+      navbar={{
+        width: { base: 248, sm: shell.navCollapsed ? 64 : 248 },
+        breakpoint: 'sm',
+        collapsed: { mobile: !shell.navOpen, desktop: false },
+      }}
       footer={{ height: { base: 64, sm: 0 } }}
       padding={{ base: 'md', sm: 'lg' }}
     >
