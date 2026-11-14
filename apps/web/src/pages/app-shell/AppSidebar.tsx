@@ -23,6 +23,8 @@ import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
 import { SidebarFolders } from './SidebarFolders'
 import { EXACT } from './sidebarLinks'
+import { SidebarRail } from './SidebarRail'
+import { useIconRail } from './useIconRail'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 
@@ -56,6 +58,7 @@ function Group({ label, children }: { label: string; children: ReactNode }): Rea
  */
 export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props): ReactElement {
   const closeNav = useShellUi((s) => s.closeNav)
+  const iconRail = useIconRail()
   const prefetchBroken = usePrefetchBrokenLinks()
   const prefetchHistory = usePrefetchActivity()
   const invites = useShareInvites()
@@ -65,6 +68,10 @@ export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props):
   const flags = onLibrary ? asStringList(search.flag) : []
   const folder = onLibrary && typeof search.folder === 'string' && search.folder !== 'all' ? search.folder : undefined
   const plainLibrary = onLibrary && flags.length === 0 && !folder
+
+  if (iconRail) {
+    return <SidebarRail pathname={pathname} search={search} vaultUnlocked={vaultUnlocked} isAdmin={isAdmin} />
+  }
 
   return (
     <>

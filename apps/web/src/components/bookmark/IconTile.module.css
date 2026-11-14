@@ -1,5 +1,10 @@
-.tile {
+.wrap {
   position: relative;
+  width: 56px;
+  height: 56px;
+}
+
+.tile {
   display: grid;
   place-items: center;
   width: 56px;
@@ -13,7 +18,8 @@
     box-shadow 160ms ease;
 }
 
-.tile:hover {
+.wrap:hover .tile,
+.wrap:focus-within .tile {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--mantine-color-violet-filled) 45%, transparent);
   box-shadow: 0 4px 14px color-mix(in srgb, var(--mantine-color-violet-filled) 12%, transparent);
@@ -55,4 +61,18 @@
   border-radius: 50%;
   background: var(--mantine-color-ice-5);
   box-shadow: 0 0 0 2px var(--mantine-color-body);
+}
+
+.peek {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  background: color-mix(in srgb, var(--mantine-color-body) 88%, transparent);
+}
+
+.wrap:hover .peek,
+.wrap:focus-within .peek {
+  opacity: 1;
 }
