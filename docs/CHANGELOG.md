@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Updated terms prompt**: when the Terms of Service change, the app asks you to accept the new version, or sign out, before you carry on.
+- **Sign in again before deleting an SSO account**: an account without a password now confirms with a fresh single sign-on before it can schedule deletion, instead of the email alone.
+
 - **Daily notification digests and one-click unsubscribe**: in **Settings → Notifications** each kind is now **Off**, **Each one** or **Daily digest**, and digest kinds arrive in one email a day after 8:00 in your time zone. Every notification email has an unsubscribe link for its kind and `List-Unsubscribe` headers, so mail apps offer one-click unsubscribe; it works signed out and asks before turning anything off.
 - **Agent Skills** (experimental, off by default; set `EXPERIMENTAL_AGENT_SKILLS=true`): turn a folder or a tag into an [Agent Skill](https://agentskills.io) for Claude Code, Codex, Cursor and other agents, so they use your curated links instead of searching the web. Download it from **Config options → Import / Export** or a folder's menu, or fetch it with an API key (`GET /api/agent-skill`). Vault bookmarks are never included.
 - **Show keyboard hints** setting (Settings → General → Keyboard): turn it off to hide key numbers, key hint lines and shortcut keys for a cleaner look. Shortcuts keep working.
@@ -23,6 +26,7 @@
 
 ### Changed
 
+- Account deletion checks for the last admin again when the purge runs. If every other admin left in the meantime, the account stays scheduled until another admin exists.
 - Dashboard cards are redesigned: preview, site, title, and a footer with rank and opens, when you opened it or when it was saved. No tags, folders or "More" text, so cards in a row line up. Pointing at a section no longer pushes its header down: the key hint now replaces the caption line in place.
 - Bookmark cards: folders now sit right under the title, shown as breadcrumbs, and tags hide behind a **N tags** toggle so cards stay short. List rows open tags in a popover.
 - The library list filters, sorts and pages in the database, so each page costs the same however large the library is.

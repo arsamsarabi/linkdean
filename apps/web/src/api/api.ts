@@ -497,6 +497,10 @@ export const api = {
 
   cancelAccountDeletion: (): Promise<{ ok: boolean }> => req('/users/me/deletion', { method: 'DELETE' }, okSchema),
 
+  /** Accepts the current Terms of Service after they changed. */
+  acceptTerms: (terms_version: string): Promise<{ user: UserPublic }> =>
+    req('/users/me/terms', { method: 'POST', body: JSON.stringify({ terms_version }) }, userEnvelopeSchema),
+
   getSettings: (): Promise<{ settings: UserSettings }> => req('/users/me/settings', {}, settingsEnvelopeSchema),
 
   updateSettings: (

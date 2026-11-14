@@ -194,6 +194,7 @@ Signed-in people manage it under **Profile → Edit profile → Single sign-on**
 - **Connect** runs the provider sign-in and attaches that identity to the signed-in account, even when the provider's address differs. The account's address stays as it is.
 - **Disconnect** needs the current password and is only offered to accounts that have one, so nobody loses their only way to sign in. Wrong passwords count against the login limits.
 - One provider identity belongs to at most one account, and an account has at most one identity. Connecting an identity already attached elsewhere is refused: "This sign-in is already connected to another account."
+- **Deleting an SSO-only account** asks the person to sign in again with the provider first. Linkdean sends `prompt=login` and `max_age=0` and accepts the answer only for the identity already attached and only when the ID token's `auth_time` is under 5 minutes old, so the provider must include `auth_time` (the OIDC spec requires it when `max_age` is sent; Authentik and Keycloak do). The step-up lasts 10 minutes, in that browser session only.
 
 ### API clients
 

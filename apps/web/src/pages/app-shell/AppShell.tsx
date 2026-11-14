@@ -19,6 +19,7 @@ import { useShellUi, useUi } from '@/stores'
 import { AppShellHeader } from './AppShellHeader'
 import { AppSidebar } from './AppSidebar'
 import { MobileTabBar } from './MobileTabBar'
+import { TermsUpdateModal } from './TermsUpdateModal'
 import { VerifyEmailBanner } from './VerifyEmailBanner'
 
 export function AppShell(): ReactElement {
@@ -101,6 +102,12 @@ export function AppShell(): ReactElement {
             <QueryErrorAlert error={me.error} onRetry={() => void me.refetch()} title="Failed to load account" />
           ) : null}
           <VerifyEmailBanner unverified={user ? !user.email_verified : false} mailEnabled={mailEnabled} />
+          <TermsUpdateModal
+            outdated={
+              !!me.data && me.data.user.onboarding_completed && !me.data.user.terms_current && !isGated(me.data)
+            }
+            onSignOut={() => void onLogout()}
+          />
           {loading ? (
             <Group justify="center" py={80}>
               <Loader color="violet" type="dots" />

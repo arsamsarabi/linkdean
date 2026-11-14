@@ -42,6 +42,56 @@ pub async fn user_from_token(pool: &PgPool, token: &str) -> Result<Option<User>>
     }
 }
 
+/// Minutes a fresh sign-in in a session counts for steps that need one.
+pub const REAUTH_WINDOW_MINUTES: i64 = 10;
+
+/// Records that the person behind the session with `token_hash` just signed in again with their
+/// provider. Only that session gains the step-up; it lasts [`REAUTH_WINDOW_MINUTES`].
+pub async fn mark_session_reauthenticated(
+    pool: &PgPool,
+    user_id: Uuid,
+    token_hash: &str,
+) -> Result<()> {
+    let done = sqlx::query(
+        r#"
+        UPDATE sessions SET reauthenticated_at = now()
+        WHERE token_hash = $1 AND user_id = $2 AND expires_at > now()
+        "#,
+    )
+    .bind(token_hash)
+    .bind(user_id)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if done.rows_affected() == 0 {
+        return Err(Error::Unauthorized);
+    }
+    Ok(())
+}
+
+/// Whether the session with `token_hash` signed in again within [`REAUTH_WINDOW_MINUTES`].
+pub async fn session_recently_reauthenticated(
+    pool: &PgPool,
+    user_id: Uuid,
+    token_hash: &str,
+) -> Result<bool> {
+    sqlx::query_scalar(
+        r#"
+        SELECT EXISTS (
+            SELECT 1 FROM sessions
+            WHERE token_hash = $1 AND user_id = $2 AND expires_at > now()
+              AND reauthenticated_at > now() - make_interval(mins => $3::int)
+        )
+        "#,
+    )
+    .bind(token_hash)
+    .bind(user_id)
+    .bind(REAUTH_WINDOW_MINUTES as i32)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
 pub async fn delete_session(pool: &PgPool, token: &str) -> Result<()> {
     let token_hash = hash_token(token);
     sqlx::query("DELETE FROM sessions WHERE token_hash = $1")

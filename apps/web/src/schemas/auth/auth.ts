@@ -21,6 +21,8 @@ export const userPublicSchema = z.object({
   sso_provider: z.string().nullish(),
   /** ISO time the account is purged; set while a delete is scheduled, so it can still be cancelled. */
   deletion_scheduled_at: z.string().nullish(),
+  /** False when the Terms of Service changed since the account last accepted them. Older servers send nothing. */
+  terms_current: z.boolean().default(true),
 })
 
 export const userSettingsSchema = z.object({

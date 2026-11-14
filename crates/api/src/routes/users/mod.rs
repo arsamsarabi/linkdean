@@ -10,8 +10,8 @@ use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::avatar::{self, process_avatar};
 use linkdean_core::{
-    ChangePassword, EmailDelivery, Error, NotificationKind, ProfileBookmarksPage, ProfileView,
-    ScheduleAccountDeletion, UpdateProfile, UpdateSettings,
+    AcceptTerms, ChangePassword, EmailDelivery, Error, NotificationKind, ProfileBookmarksPage,
+    ProfileView, ScheduleAccountDeletion, UpdateProfile, UpdateSettings,
 };
 use linkdean_db::{self as db};
 use serde::Deserialize;
@@ -25,6 +25,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/users/me", patch(update_me))
         .route("/users/me/password", post(change_password))
+        .route("/users/me/terms", post(accept_terms))
         .route(
             "/users/me/deletion",
             post(schedule_deletion).delete(cancel_deletion),
@@ -153,16 +154,36 @@ async fn change_password(
     })))
 }
 
+/// Accepts the current Terms of Service, after they changed since the account last did.
+async fn accept_terms(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Json(body): Json<AcceptTerms>,
+) -> ApiResult<Json<Value>> {
+    db::accept_terms(&state.pool, user.id, &body.terms_version).await?;
+    let user = db::find_user_by_id(&state.pool, user.id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    let public = db::to_public(&state.pool, &user).await?;
+    Ok(Json(json!({ "user": public })))
+}
+
 /// Schedules the account for deletion after the grace period. The session stays signed in, so
 /// the person can still export their data and cancel.
 async fn schedule_deletion(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    session: VaultSession,
     Json(body): Json<ScheduleAccountDeletion>,
 ) -> ApiResult<Json<Value>> {
-    let at =
-        db::schedule_account_deletion(&state.pool, user.id, &body.confirm_email, body.password)
-            .await?;
+    let at = db::schedule_account_deletion(
+        &state.pool,
+        user.id,
+        &body.confirm_email,
+        body.password,
+        session.token_hash(),
+    )
+    .await?;
     let deletion_date = at.format("%-d %b %Y, %H:%M UTC").to_string();
     if let Err(e) = enqueue(
         &state,

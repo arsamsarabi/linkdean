@@ -233,7 +233,29 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
         sso_connected: user.oidc_subject.is_some(),
         sso_provider: user.sso_provider(),
         deletion_scheduled_at: user.deletion_scheduled_at,
+        terms_current: user.terms_current(),
     })
+}
+
+/// Records that the account accepted Terms of Service `version`, which must be the current one.
+pub async fn accept_terms(pool: &PgPool, user_id: Uuid, version: &str) -> Result<()> {
+    linkdean_core::legal::require_current_terms(Some(version))?;
+    let done = sqlx::query(
+        r#"
+        UPDATE users
+        SET terms_version = $2, terms_accepted_at = now(), updated_at = now()
+        WHERE id = $1
+        "#,
+    )
+    .bind(user_id)
+    .bind(linkdean_core::legal::TERMS_VERSION)
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    if done.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
 }
 
 fn admin_summary(user: User, ban: Option<&BanWindow>) -> AdminUserSummary {

@@ -50,11 +50,7 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - With item 12, include the archived reader-mode text so the agent can read a page without fetching it.
     - Skills from a saved library search, once saved searches exist.
 
-7. **Account and legal follow-ups** (S). Gaps left when account deletion and the legal pages shipped.
-    - Fresh OIDC step-up before an SSO-only account schedules deletion.
-    - Check for the last admin when the purge runs, not only when deletion is scheduled.
-    - A re-accept flow when `TERMS_VERSION` changes.
-    - Counsel review of the Terms, Privacy and Acceptable Use copy before charging money.
+7. **Legal review** (S). Counsel review of the Terms, Privacy and Acceptable Use copy before charging money. When the copy changes, bump `TERMS_VERSION` in `crates/core/src/legal` and `apps/web/src/lib/legal` together, so every account is asked to accept it.
 
 8. **More sign-in options** (M).
     - Passkeys / WebAuthn.

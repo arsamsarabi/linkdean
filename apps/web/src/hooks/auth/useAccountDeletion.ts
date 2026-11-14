@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { api } from '@/api'
-import type { ScheduleDeletionResponse } from '@/schemas'
+import type { ScheduleDeletionResponse, UserPublic } from '@/schemas'
 
 export function useScheduleAccountDeletion(): UseMutationResult<
   ScheduleDeletionResponse,
@@ -10,6 +10,14 @@ export function useScheduleAccountDeletion(): UseMutationResult<
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body) => api.scheduleAccountDeletion(body),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['me'] }),
+  })
+}
+
+export function useAcceptTerms(): UseMutationResult<{ user: UserPublic }, Error, string> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (version) => api.acceptTerms(version),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['me'] }),
   })
 }
