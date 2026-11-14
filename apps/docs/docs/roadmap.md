@@ -33,7 +33,6 @@ Archiving and AI assistance come first. They are the biggest gaps on the [compar
   - Suggestions wait for your click. Vault contents are never sent to a model.
 - **More for AI agents.** Folders and tags already work as [Agent Skills](/docs/guides/agent-skills) (experimental, off by default). Next: a read-only MCP server, and archived page text inside skills.
 - **Legal review.** A lawyer reviews the Terms and Privacy Policy before anything costs money.
-- **An API to build on.** API keys already work. Next: a published OpenAPI reference on this site, one error format across every endpoint, caching headers, and optional tracing.
 - **Plans and pricing for the managed service.** Deciding what stays free, what a paid plan would add, and the limits of each. Self-hosting stays free for non-commercial use.
 - **Privacy-respecting usage statistics.** Aggregate counts only (active users, bookmarks saved, features used), nothing per person and no page content or addresses. Off by default when you self-host.
 - **A slimmer sidebar.** On tablets and wider, a collapsed sidebar becomes a narrow strip of icons instead of disappearing.

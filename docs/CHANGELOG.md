@@ -6,7 +6,8 @@
 
 - **Passkeys**: add one under **Profile → Edit profile → Passkeys**, then **Sign in with a passkey** from the login page, with no email or password to type.
 - **Sign in with Google, Microsoft or GitHub**: self-hosters can turn on each with its own client ID and secret, next to any OpenID Connect provider such as Authentik (now named on its button with `OIDC_NAME`).
-
+- **API reference**: every endpoint documented on the docs site, from an OpenAPI document the API also serves at `/api/openapi.json`.
+- **OpenTelemetry tracing** for self-hosters: set `OTEL_EXPORTER_OTLP_ENDPOINT` to send request traces to your collector.
 - **Updated terms prompt**: when the Terms of Service change, the app asks you to accept the new version, or sign out, before you carry on.
 - **Sign in again before deleting an SSO account**: an account without a password now confirms with a fresh single sign-on before it can schedule deletion, instead of the email alone.
 
@@ -29,6 +30,8 @@
 
 ### Changed
 
+- **API errors** all answer `{ code, message, details?, error }`; ban, quota and vault-move data moved into `details`. `error` still holds the message.
+- **API reads** send `ETag` and `Cache-Control`, so unchanged data comes back as `304`.
 - Account deletion checks for the last admin again when the purge runs. If every other admin left in the meantime, the account stays scheduled until another admin exists.
 - Dashboard cards are redesigned: preview, site, title, and a footer with rank and opens, when you opened it or when it was saved. No tags, folders or "More" text, so cards in a row line up. Pointing at a section no longer pushes its header down: the key hint now replaces the caption line in place.
 - Bookmark cards: folders now sit right under the title, shown as breadcrumbs, and tags hide behind a **N tags** toggle so cards stay short. List rows open tags in a popover.

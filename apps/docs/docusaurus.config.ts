@@ -104,6 +104,7 @@ const config: Config = {
             { label: 'Roadmap', to: '/docs/roadmap' },
             { label: 'Changelog', to: '/docs/changelog' },
             { label: 'Self-hosting', to: '/docs/self-hosting/quick-start' },
+            { label: 'API reference', to: '/docs/api-reference' },
           ],
         },
         {

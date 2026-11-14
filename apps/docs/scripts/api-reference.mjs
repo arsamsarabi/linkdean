@@ -117,7 +117,7 @@ for (const [path, item] of Object.entries(spec.paths)) {
     byTag.get(tag).push({ path, method, op });
   }
 }
-const titles = { me: 'Me', meta: 'This document' };
+const titles = { meta: 'This document', 'api-keys': 'API keys', 'agent-skill': 'Agent Skill' };
 out.push('## Endpoints', '');
 for (const tag of [...byTag.keys()].sort()) {
   const title = titles[tag] ?? tag.charAt(0).toUpperCase() + tag.slice(1).replace(/-/g, ' ');
