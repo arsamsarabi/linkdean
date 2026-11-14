@@ -8,6 +8,7 @@ mod bookmarks;
 mod categories;
 mod dashboards;
 mod dev;
+mod email_unsubscribe;
 mod health;
 mod import_export;
 mod notifications;
@@ -55,6 +56,7 @@ fn router() -> Router<AppState> {
         .merge(trash::router())
         .merge(search::router())
         .merge(import_export::router())
+        .merge(email_unsubscribe::router())
         .merge(vault::router())
         .merge(public::router())
         .merge(reports::router())

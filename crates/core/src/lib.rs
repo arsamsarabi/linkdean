@@ -7,6 +7,7 @@ pub mod import_export;
 pub mod legal;
 pub mod models;
 pub mod preview_image;
+pub mod unsubscribe;
 
 pub use error::{Error, Result};
 pub use models::*;

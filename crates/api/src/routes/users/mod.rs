@@ -10,7 +10,7 @@ use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use linkdean_core::avatar::{self, process_avatar};
 use linkdean_core::{
-    ChangePassword, Error, NotificationKind, ProfileBookmarksPage, ProfileView,
+    ChangePassword, EmailDelivery, Error, NotificationKind, ProfileBookmarksPage, ProfileView,
     ScheduleAccountDeletion, UpdateProfile, UpdateSettings,
 };
 use linkdean_db::{self as db};
@@ -66,31 +66,32 @@ pub fn router() -> Router<AppState> {
         .route("/users/{id}/avatar", get(user_avatar))
 }
 
-fn notification_email_pref(kind: NotificationKind, enabled: bool) -> Value {
+fn notification_email_pref(p: db::NotificationEmailPref) -> Value {
     json!({
-        "kind": kind,
-        "label": kind.label(),
-        "enabled": enabled,
-        "default": kind.email_by_default(),
+        "kind": p.kind,
+        "label": p.kind.label(),
+        "enabled": p.enabled,
+        "default": p.kind.email_by_default(),
+        "delivery": p.delivery,
+        "digest_allowed": p.kind.allows_digest(),
     })
 }
 
-/// Which notification kinds the user also gets by email, in settings order.
+/// Which notification kinds the user also gets by email, and how, in settings order.
 async fn notification_emails(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<Value>> {
     let prefs = db::get_notification_email_prefs(&state.pool, user.id).await?;
-    let prefs: Vec<Value> = prefs
-        .into_iter()
-        .map(|(kind, enabled)| notification_email_pref(kind, enabled))
-        .collect();
+    let prefs: Vec<Value> = prefs.into_iter().map(notification_email_pref).collect();
     Ok(Json(json!({ "prefs": prefs })))
 }
 
 #[derive(Deserialize)]
 struct SetNotificationEmail {
     enabled: bool,
+    /// Left out: keep how this kind is delivered now.
+    delivery: Option<EmailDelivery>,
 }
 
 async fn set_notification_email(
@@ -100,8 +101,21 @@ async fn set_notification_email(
     Json(req): Json<SetNotificationEmail>,
 ) -> ApiResult<Json<Value>> {
     let kind = NotificationKind::parse(&kind).map_err(Error::BadRequest)?;
-    db::set_notification_email_pref(&state.pool, user.id, kind, req.enabled).await?;
-    Ok(Json(notification_email_pref(kind, req.enabled)))
+    let delivery = match req.delivery {
+        Some(d) => d,
+        None => db::get_notification_email_prefs(&state.pool, user.id)
+            .await?
+            .into_iter()
+            .find(|p| p.kind == kind)
+            .map(|p| p.delivery)
+            .unwrap_or_default(),
+    };
+    db::set_notification_email_pref(&state.pool, user.id, kind, req.enabled, delivery).await?;
+    Ok(Json(notification_email_pref(db::NotificationEmailPref {
+        kind,
+        enabled: req.enabled,
+        delivery,
+    })))
 }
 
 async fn update_me(

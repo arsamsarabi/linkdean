@@ -50,10 +50,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - With item 12, include the archived reader-mode text so the agent can read a page without fetching it.
     - Skills from a saved library search, once saved searches exist.
 
-6. **Notification digests and one-click unsubscribe (`List-Unsubscribe`)** (S–M). Notification emails go out one at a time today, so the noisy kinds (edits, likes, comments) are off by default, and **Settings → Notifications** is the only way to stop them.
-    - A daily digest for the noisy kinds.
-    - A one-click unsubscribe link per kind in every notification email, with the `List-Unsubscribe` and `List-Unsubscribe-Post` headers.
-
 7. **Account and legal follow-ups** (S). Gaps left when account deletion and the legal pages shipped.
     - Fresh OIDC step-up before an SSO-only account schedules deletion.
     - Check for the last admin when the purge runs, not only when deletion is scheduled.

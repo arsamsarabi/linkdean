@@ -40,6 +40,7 @@ const TEMPLATES: &[Template] = &[
     template!("share_invite"),
     template!("share_invite_pending"),
     template!("notification"),
+    template!("notification_digest"),
     template!("account_deletion_scheduled"),
     template!("abuse_warning"),
 ];
@@ -379,6 +380,7 @@ mod tests {
             "owner": name, "subject_kind": "folder", "name": name,
             "access": "read-only", "url": "https://links.example.com/shared",
             "kind_label": name, "settings_url": "https://links.example.com/settings",
+            "unsubscribe_url": "https://links.example.com/unsubscribe?s=x",
         });
         let pending = json!({
             "owner": name, "subject_kind": "folder", "name": name,
@@ -387,11 +389,19 @@ mod tests {
         let notification = json!({
             "heading": name, "message": name, "url": "https://links.example.com/",
             "kind_label": name, "settings_url": "https://links.example.com/settings",
+            "unsubscribe_url": "https://links.example.com/unsubscribe?s=x",
+        });
+        let digest = json!({
+            "count": 1, "more": 0, "kinds": name, "url": "https://links.example.com/",
+            "groups": [{ "label": name, "items": [{ "message": name, "url": "https://links.example.com/" }] }],
+            "settings_url": "https://links.example.com/settings",
+            "unsubscribe_url": "https://links.example.com/unsubscribe?s=digest",
         });
         for (template, data) in [
             ("share_invite", invite),
             ("share_invite_pending", pending),
             ("notification", notification),
+            ("notification_digest", digest),
         ] {
             let r = render(template, &data, &site()).unwrap();
             assert!(!r.html.contains("<b>"), "{template} html");
@@ -401,6 +411,29 @@ mod tests {
             );
             assert!(r.text.contains(name), "{template} text: {}", r.text);
         }
+    }
+
+    #[test]
+    fn notification_emails_carry_their_unsubscribe_link() {
+        for name in ["notification", "share_invite", "notification_digest"] {
+            let data = sample(name).unwrap();
+            let url = data["unsubscribe_url"]
+                .as_str()
+                .unwrap()
+                .replace('&', "&amp;");
+            let r = render(name, &data, &site()).unwrap();
+            assert!(r.html.contains(&format!("href=\"{url}\"")), "{name} html");
+            assert!(r.text.contains("Unsubscribe from"), "{name} text");
+        }
+        let r = render(
+            "notification_digest",
+            &sample("notification_digest").unwrap(),
+            &site(),
+        )
+        .unwrap();
+        assert_eq!(r.subject, "Your daily digest on links.example.com: 3 new");
+        assert!(r.text.contains("Grace liked"));
+        assert!(r.text.contains("Comments"));
     }
 
     #[test]

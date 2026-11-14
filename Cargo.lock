@@ -2155,6 +2155,7 @@ dependencies = [
  "crypto_box",
  "csv",
  "hex",
+ "hmac 0.13.0",
  "image",
  "rand 0.10.3",
  "serde",

@@ -2,8 +2,8 @@
 //! Requires `DATABASE_URL`. Skips when unset.
 
 use linkdean_core::{
-    CreateCategory, CreateCategoryShare, NotificationKind, NotificationSubjectType, ShareAccess,
-    User,
+    CreateCategory, CreateCategoryShare, EmailDelivery, NotificationKind, NotificationSubjectType,
+    ShareAccess, User,
 };
 use linkdean_db::{self as db, NotificationSubject};
 use serde_json::json;
@@ -93,8 +93,14 @@ async fn every_kind_has_its_default() {
         .await
         .expect("prefs");
     assert_eq!(prefs.len(), NotificationKind::ALL.len());
-    for (kind, enabled) in prefs {
-        assert_eq!(enabled, kind.email_by_default(), "{kind:?}");
+    for pref in prefs {
+        assert_eq!(
+            pref.enabled,
+            pref.kind.email_by_default(),
+            "{:?}",
+            pref.kind
+        );
+        assert_eq!(pref.delivery, EmailDelivery::Instant);
     }
     assert!(NotificationKind::ShareInvite.email_by_default());
     assert!(NotificationKind::ModerationChanges.email_by_default());
@@ -107,20 +113,38 @@ async fn a_preference_overrides_the_default() {
         return;
     };
     let u = user(&pool, "override", true).await;
-    db::set_notification_email_pref(&pool, u.id, NotificationKind::SocialComment, true)
-        .await
-        .expect("on");
-    db::set_notification_email_pref(&pool, u.id, NotificationKind::ShareInvite, false)
-        .await
-        .expect("off");
+    db::set_notification_email_pref(
+        &pool,
+        u.id,
+        NotificationKind::SocialComment,
+        true,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("on");
+    db::set_notification_email_pref(
+        &pool,
+        u.id,
+        NotificationKind::ShareInvite,
+        false,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("off");
     // Setting it again replaces the row.
-    db::set_notification_email_pref(&pool, u.id, NotificationKind::ShareInvite, false)
-        .await
-        .expect("off again");
+    db::set_notification_email_pref(
+        &pool,
+        u.id,
+        NotificationKind::ShareInvite,
+        false,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("off again");
     let prefs = db::get_notification_email_prefs(&pool, u.id)
         .await
         .expect("prefs");
-    let get = |k| prefs.iter().find(|(kind, _)| *kind == k).unwrap().1;
+    let get = |k| prefs.iter().find(|p| p.kind == k).unwrap().enabled;
     assert!(get(NotificationKind::SocialComment));
     assert!(!get(NotificationKind::ShareInvite));
     assert!(get(NotificationKind::ModerationChanges));
@@ -135,9 +159,15 @@ async fn a_share_invite_is_pending_only_when_wanted_and_verified() {
     let owner = user(&pool, "owner", true).await;
     let wants = user(&pool, "wants", true).await;
     let opted_out = user(&pool, "optout", true).await;
-    db::set_notification_email_pref(&pool, opted_out.id, NotificationKind::ShareInvite, false)
-        .await
-        .expect("off");
+    db::set_notification_email_pref(
+        &pool,
+        opted_out.id,
+        NotificationKind::ShareInvite,
+        false,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("off");
 
     let cat = db::create_category(
         &pool,
@@ -187,9 +217,15 @@ async fn a_share_invite_is_pending_only_when_wanted_and_verified() {
 
     // A kind that is off by default stays off until the user turns it on.
     notify(&pool, wants.id, owner.id, NotificationKind::SocialComment).await;
-    db::set_notification_email_pref(&pool, wants.id, NotificationKind::SocialComment, true)
-        .await
-        .expect("on");
+    db::set_notification_email_pref(
+        &pool,
+        wants.id,
+        NotificationKind::SocialComment,
+        true,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("on");
     notify(&pool, wants.id, owner.id, NotificationKind::SocialComment).await;
     let mut s: Vec<String> = states(&pool, wants.id, NotificationKind::SocialComment)
         .await
@@ -208,9 +244,15 @@ async fn claiming_queues_each_pending_email_once() {
     let _turn = SERIAL.lock().await;
     let actor = user(&pool, "actor", true).await;
     let to = user(&pool, "claimer", true).await;
-    db::set_notification_email_pref(&pool, to.id, NotificationKind::SocialLike, true)
-        .await
-        .expect("on");
+    db::set_notification_email_pref(
+        &pool,
+        to.id,
+        NotificationKind::SocialLike,
+        true,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("on");
     notify(&pool, to.id, actor.id, NotificationKind::SocialLike).await;
     notify(&pool, to.id, actor.id, NotificationKind::SocialLike).await;
     notify(&pool, to.id, actor.id, NotificationKind::SocialRating).await;
@@ -250,9 +292,15 @@ async fn muted_and_blocked_actors_send_no_email() {
     let muter = user(&pool, "muter", true).await;
     let blocker = user(&pool, "blocker", true).await;
     for u in [&muter, &blocker] {
-        db::set_notification_email_pref(&pool, u.id, NotificationKind::SocialComment, true)
-            .await
-            .expect("on");
+        db::set_notification_email_pref(
+            &pool,
+            u.id,
+            NotificationKind::SocialComment,
+            true,
+            EmailDelivery::Instant,
+        )
+        .await
+        .expect("on");
     }
     db::mute_user(&pool, muter.id, actor.id)
         .await
@@ -271,9 +319,15 @@ async fn muted_and_blocked_actors_send_no_email() {
 
     // Muting after the notification was made still stops its email.
     let later = user(&pool, "later", true).await;
-    db::set_notification_email_pref(&pool, later.id, NotificationKind::SocialComment, true)
-        .await
-        .expect("on");
+    db::set_notification_email_pref(
+        &pool,
+        later.id,
+        NotificationKind::SocialComment,
+        true,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("on");
     notify(&pool, later.id, actor.id, NotificationKind::SocialComment).await;
     db::mute_user(&pool, later.id, actor.id)
         .await
@@ -389,4 +443,239 @@ async fn a_new_share_invite_email_can_be_found_and_cancelled() {
         .expect("cancel twice"));
     let s = states(&pool, invitee.id, NotificationKind::ShareInvite).await;
     assert_eq!(s, [(found, "none".to_string())]);
+}
+
+async fn set_timezone(pool: &PgPool, user_id: Uuid, tz: Option<&str>) {
+    sqlx::query("UPDATE users SET timezone = $2 WHERE id = $1")
+        .bind(user_id)
+        .bind(tz)
+        .execute(pool)
+        .await
+        .expect("timezone");
+}
+
+/// The hour it is now in `tz`, so a test can ask for a digest hour already passed or still ahead.
+async fn local_hour(pool: &PgPool, tz: &str) -> u32 {
+    let (h,): (f64,) = sqlx::query_as("SELECT extract(hour FROM now() AT TIME ZONE $1)::float8")
+        .bind(tz)
+        .fetch_one(pool)
+        .await
+        .expect("hour");
+    h as u32
+}
+
+/// Every due digest, for any recipient, keeping only those to `users`.
+async fn digests_for(pool: &PgPool, hour: u32, users: &[Uuid]) -> Vec<db::NotificationDigest> {
+    db::claim_due_notification_digests(pool, hour, 500)
+        .await
+        .expect("claim digests")
+        .into_iter()
+        .filter(|d| users.contains(&d.recipient_user_id))
+        .collect()
+}
+
+#[tokio::test]
+async fn a_daily_kind_waits_for_the_digest_and_goes_out_once_a_day() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _turn = SERIAL.lock().await;
+    let to = user(&pool, "digest-to", true).await;
+    let from = user(&pool, "digest-from", true).await;
+    set_timezone(&pool, to.id, Some("Asia/Tehran")).await;
+    db::set_notification_email_pref(
+        &pool,
+        to.id,
+        NotificationKind::SocialLike,
+        true,
+        EmailDelivery::Daily,
+    )
+    .await
+    .expect("daily");
+    notify(&pool, to.id, from.id, NotificationKind::SocialLike).await;
+    notify(&pool, to.id, from.id, NotificationKind::SocialLike).await;
+    let st = states(&pool, to.id, NotificationKind::SocialLike).await;
+    assert!(st.iter().all(|(_, s)| s == "digest"), "{st:?}");
+    // Not sent one by one.
+    assert!(claim_all(&pool)
+        .await
+        .iter()
+        .all(|n| n.recipient_user_id != to.id));
+
+    let now = local_hour(&pool, "Asia/Tehran").await;
+    if now < 23 {
+        // The digest hour is still ahead in their zone: nothing yet.
+        assert!(digests_for(&pool, now + 1, &[to.id]).await.is_empty());
+    }
+    let sent = digests_for(&pool, now, &[to.id]).await;
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].items.len(), 2);
+    assert_eq!(sent[0].recipient_email, to.email);
+    assert!(sent[0].items[0].created_at <= sent[0].items[1].created_at);
+    let st = states(&pool, to.id, NotificationKind::SocialLike).await;
+    assert!(st.iter().all(|(_, s)| s == "queued"), "{st:?}");
+
+    // A later notification the same day waits for tomorrow.
+    notify(&pool, to.id, from.id, NotificationKind::SocialLike).await;
+    assert!(digests_for(&pool, now, &[to.id]).await.is_empty());
+    // Once the last digest is a day old, it goes out.
+    sqlx::query(
+        "UPDATE notification_digest_runs SET last_sent_at = now() - interval '1 day' WHERE user_id = $1",
+    )
+    .bind(to.id)
+    .execute(&pool)
+    .await
+    .expect("age");
+    let sent = digests_for(&pool, now, &[to.id]).await;
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].items.len(), 1);
+}
+
+#[tokio::test]
+async fn a_digest_uses_utc_without_a_valid_time_zone_and_skips_muted_actors() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _turn = SERIAL.lock().await;
+    let bad_zone = user(&pool, "digest-badzone", true).await;
+    let muter = user(&pool, "digest-muter", true).await;
+    let from = user(&pool, "digest-actor", true).await;
+    set_timezone(&pool, bad_zone.id, Some("Not/AZone")).await;
+    for u in [&bad_zone, &muter] {
+        db::set_notification_email_pref(
+            &pool,
+            u.id,
+            NotificationKind::SocialComment,
+            true,
+            EmailDelivery::Daily,
+        )
+        .await
+        .expect("daily");
+        notify(&pool, u.id, from.id, NotificationKind::SocialComment).await;
+    }
+    db::mute_user(&pool, muter.id, from.id).await.expect("mute");
+    let now = local_hour(&pool, "UTC").await;
+    let sent = digests_for(&pool, now, &[bad_zone.id, muter.id]).await;
+    assert_eq!(sent.len(), 1, "the muter's only item is dropped");
+    assert_eq!(sent[0].recipient_user_id, bad_zone.id);
+    let st = states(&pool, muter.id, NotificationKind::SocialComment).await;
+    assert!(st.iter().all(|(_, s)| s == "queued"), "{st:?}");
+}
+
+#[tokio::test]
+async fn changing_delivery_moves_waiting_emails() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _turn = SERIAL.lock().await;
+    let to = user(&pool, "move-to", true).await;
+    let from = user(&pool, "move-from", true).await;
+    let kind = NotificationKind::SharedEdit;
+    db::set_notification_email_pref(&pool, to.id, kind, true, EmailDelivery::Daily)
+        .await
+        .expect("daily");
+    notify(&pool, to.id, from.id, kind).await;
+    assert_eq!(states(&pool, to.id, kind).await[0].1, "digest");
+    db::set_notification_email_pref(&pool, to.id, kind, true, EmailDelivery::Instant)
+        .await
+        .expect("instant");
+    assert_eq!(states(&pool, to.id, kind).await[0].1, "pending");
+    db::set_notification_email_pref(&pool, to.id, kind, true, EmailDelivery::Daily)
+        .await
+        .expect("daily again");
+    assert_eq!(states(&pool, to.id, kind).await[0].1, "digest");
+    db::set_notification_email_pref(&pool, to.id, kind, false, EmailDelivery::Daily)
+        .await
+        .expect("off");
+    assert_eq!(states(&pool, to.id, kind).await[0].1, "none");
+    let prefs = db::get_notification_email_prefs(&pool, to.id)
+        .await
+        .expect("prefs");
+    let p = prefs.iter().find(|p| p.kind == kind).unwrap();
+    assert!(!p.enabled);
+    assert_eq!(p.delivery, EmailDelivery::Daily);
+
+    // Invites and moderation changes never wait.
+    for k in [
+        NotificationKind::ShareInvite,
+        NotificationKind::ModerationChanges,
+    ] {
+        assert!(
+            db::set_notification_email_pref(&pool, to.id, k, true, EmailDelivery::Daily)
+                .await
+                .is_err(),
+            "{k:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn unsubscribing_turns_off_a_kind_or_the_digest() {
+    use linkdean_core::unsubscribe::UnsubscribeScope;
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _turn = SERIAL.lock().await;
+    let to = user(&pool, "unsub-to", true).await;
+    let from = user(&pool, "unsub-from", true).await;
+    // A default-on kind with no saved row.
+    notify(&pool, to.id, from.id, NotificationKind::ModerationChanges).await;
+    let out = db::unsubscribe(
+        &pool,
+        to.id,
+        UnsubscribeScope::Kind(NotificationKind::ModerationChanges),
+    )
+    .await
+    .expect("unsubscribe kind");
+    assert_eq!(out.kinds, vec![NotificationKind::ModerationChanges]);
+    assert_eq!(
+        states(&pool, to.id, NotificationKind::ModerationChanges).await[0].1,
+        "none"
+    );
+
+    for k in [NotificationKind::SocialLike, NotificationKind::SocialRating] {
+        db::set_notification_email_pref(&pool, to.id, k, true, EmailDelivery::Daily)
+            .await
+            .expect("daily");
+        notify(&pool, to.id, from.id, k).await;
+    }
+    db::set_notification_email_pref(
+        &pool,
+        to.id,
+        NotificationKind::SocialComment,
+        true,
+        EmailDelivery::Instant,
+    )
+    .await
+    .expect("instant");
+    let mut out = db::unsubscribe(&pool, to.id, UnsubscribeScope::Digest)
+        .await
+        .expect("unsubscribe digest");
+    out.kinds.sort_by_key(|k| k.as_str());
+    assert_eq!(
+        out.kinds,
+        vec![NotificationKind::SocialLike, NotificationKind::SocialRating]
+    );
+    let prefs = db::get_notification_email_prefs(&pool, to.id)
+        .await
+        .expect("prefs");
+    let on = |k| prefs.iter().find(|p| p.kind == k).unwrap().enabled;
+    assert!(!on(NotificationKind::SocialLike));
+    assert!(!on(NotificationKind::SocialRating));
+    assert!(
+        on(NotificationKind::SocialComment),
+        "an instant kind is left on"
+    );
+    assert_eq!(
+        states(&pool, to.id, NotificationKind::SocialLike).await[0].1,
+        "none"
+    );
+    // Unsubscribing twice is fine; a missing user is not found.
+    db::unsubscribe(&pool, to.id, UnsubscribeScope::Digest)
+        .await
+        .expect("again");
+    assert!(matches!(
+        db::unsubscribe(&pool, Uuid::new_v4(), UnsubscribeScope::Digest).await,
+        Err(linkdean_core::Error::NotFound)
+    ));
 }

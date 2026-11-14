@@ -5,23 +5,65 @@
 //! the outbox. While mail is off, each tick discards pending rows, so turning mail on later sends
 //! no backlog.
 //!
+//! Kinds the user set to a daily digest wait as `digest` rows; once a day, after
+//! [`DIGEST_LOCAL_HOUR`] in the user's time zone, they go out together in one email.
+//!
+//! Every notification email carries a signed unsubscribe link for its kind (the digest's turns off
+//! the digest) and RFC 8058 `List-Unsubscribe` headers, so mail apps offer one-click unsubscribe.
+//!
 //! Invites to an address (no account, or an unverified one) carry a claim token that only the
 //! request that created it sees, so the share routes email those themselves.
 
-use crate::mail::{enqueue, Queued};
+use crate::mail::{enqueue, enqueue_with_unsubscribe, Queued};
 use crate::rate_limit::invite_email_limit;
 use crate::state::AppState;
+use linkdean_core::unsubscribe::{self, UnsubscribeScope};
 use linkdean_core::{
     NotificationKind, NotificationSubjectType, PendingShareInviteView, PendingShareSubjectType,
     ShareAccess, User,
 };
-use linkdean_db::{self as db, PendingNotificationEmail};
+use linkdean_db::{self as db, NotificationDigest, PendingNotificationEmail};
 use serde_json::{json, Value};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 /// How many notification emails one tick renders.
 const CLAIM_BATCH: i64 = 50;
+/// Daily digests go out once the user's local time passes this hour.
+pub const DIGEST_LOCAL_HOUR: u32 = 8;
+/// How many users' digests one tick renders.
+const DIGEST_BATCH: i64 = 20;
+/// The most notifications one digest lists; it counts the rest.
+const DIGEST_ITEMS_SHOWN: usize = 50;
+
+/// The unsubscribe page in the web app, which the email body links to. It asks before turning
+/// anything off, so a link scanner opening it changes nothing.
+pub fn unsubscribe_page_url(
+    app_url: &str,
+    secret: &str,
+    user_id: Uuid,
+    scope: UnsubscribeScope,
+) -> String {
+    format!(
+        "{}/unsubscribe?{}",
+        app_url.trim_end_matches('/'),
+        unsubscribe::query(secret, user_id, scope)
+    )
+}
+
+/// The RFC 8058 one-click URL for `List-Unsubscribe`: a POST to it unsubscribes at once.
+pub fn one_click_unsubscribe_url(
+    app_url: &str,
+    secret: &str,
+    user_id: Uuid,
+    scope: UnsubscribeScope,
+) -> String {
+    format!(
+        "{}/api/email/unsubscribe?{}",
+        app_url.trim_end_matches('/'),
+        unsubscribe::query(secret, user_id, scope)
+    )
+}
 
 /// Collapses whitespace, newlines included, so a value can go into a subject line.
 fn one_line(s: &str) -> String {
@@ -103,10 +145,16 @@ fn heading_for(n: &PendingNotificationEmail) -> String {
 }
 
 /// The template and data for one notification email.
-fn email_for(n: &PendingNotificationEmail, app_url: &str) -> (&'static str, Value) {
+fn email_for(n: &PendingNotificationEmail, app_url: &str, secret: &str) -> (&'static str, Value) {
     let url = format!("{app_url}{}", path_for(n));
     let kind_label = n.kind.label();
     let settings = settings_url(app_url);
+    let unsubscribe = unsubscribe_page_url(
+        app_url,
+        secret,
+        n.recipient_user_id,
+        UnsubscribeScope::Kind(n.kind),
+    );
     if n.kind == NotificationKind::ShareInvite {
         let access = n
             .payload
@@ -126,6 +174,7 @@ fn email_for(n: &PendingNotificationEmail, app_url: &str) -> (&'static str, Valu
                     "url": url,
                     "kind_label": kind_label,
                     "settings_url": settings,
+                    "unsubscribe_url": unsubscribe,
                 }),
             );
         }
@@ -138,8 +187,93 @@ fn email_for(n: &PendingNotificationEmail, app_url: &str) -> (&'static str, Valu
             "url": url,
             "kind_label": kind_label,
             "settings_url": settings,
+            "unsubscribe_url": unsubscribe,
         }),
     )
+}
+
+/// "A", "A and B", "A, B and C".
+fn and_list(items: &[&str]) -> String {
+    match items {
+        [] => String::new(),
+        [one] => (*one).to_string(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
+}
+
+/// The data for one daily digest: its notifications grouped by kind in settings order, newest
+/// first within a kind, up to [`DIGEST_ITEMS_SHOWN`] in all.
+fn digest_email_data(d: &NotificationDigest, app_url: &str, secret: &str) -> Value {
+    let mut shown = 0;
+    let mut groups = Vec::new();
+    let mut labels = Vec::new();
+    for kind in NotificationKind::ALL {
+        let mut items: Vec<&PendingNotificationEmail> =
+            d.items.iter().filter(|n| n.kind == kind).collect();
+        if items.is_empty() {
+            continue;
+        }
+        labels.push(kind.label());
+        items.sort_by_key(|n| std::cmp::Reverse(n.created_at));
+        let take = items.len().min(DIGEST_ITEMS_SHOWN - shown);
+        if take == 0 {
+            continue;
+        }
+        shown += take;
+        groups.push(json!({
+            "label": kind.label(),
+            "items": items[..take].iter().map(|n| json!({
+                "message": one_line(&n.body),
+                "url": format!("{app_url}{}", path_for(n)),
+            })).collect::<Vec<_>>(),
+        }));
+    }
+    json!({
+        "count": d.items.len(),
+        "more": d.items.len() - shown,
+        "groups": groups,
+        "kinds": and_list(&labels),
+        "url": format!("{app_url}/"),
+        "settings_url": settings_url(app_url),
+        "unsubscribe_url": unsubscribe_page_url(app_url, secret, d.recipient_user_id, UnsubscribeScope::Digest),
+    })
+}
+
+/// One tick while mail is on: claim the daily digests now due and queue them. Returns how many.
+pub async fn queue_notification_digests(state: &AppState) -> usize {
+    let digests = match db::claim_due_notification_digests(
+        &state.pool,
+        DIGEST_LOCAL_HOUR,
+        DIGEST_BATCH,
+    )
+    .await
+    {
+        Ok(d) => d,
+        Err(e) => {
+            tracing::warn!(error = %e, "claiming notification digests failed");
+            return 0;
+        }
+    };
+    let base = app_url(state);
+    let secret = state.cfg.session_secret.as_str();
+    for d in &digests {
+        let data = digest_email_data(d, base, secret);
+        let header =
+            one_click_unsubscribe_url(base, secret, d.recipient_user_id, UnsubscribeScope::Digest);
+        // Claimed rows are queued at most once: a failure here loses this digest, never repeats it.
+        if let Err(e) = enqueue_with_unsubscribe(
+            state,
+            &d.recipient_email,
+            "notification_digest",
+            &data,
+            Some(header),
+        )
+        .await
+        {
+            tracing::warn!(user_id = %d.recipient_user_id, error = %e, "queueing notification digest failed");
+        }
+    }
+    digests.len()
 }
 
 /// One tick while mail is on: claim pending notification emails and queue them in the outbox.
@@ -153,10 +287,19 @@ pub async fn queue_notification_emails(state: &AppState) -> usize {
         }
     };
     let base = app_url(state);
+    let secret = state.cfg.session_secret.as_str();
     for n in &batch {
-        let (template, data) = email_for(n, base);
+        let (template, data) = email_for(n, base, secret);
+        let header = one_click_unsubscribe_url(
+            base,
+            secret,
+            n.recipient_user_id,
+            UnsubscribeScope::Kind(n.kind),
+        );
         // Claimed rows are queued at most once: a failure here loses this email, never repeats it.
-        if let Err(e) = enqueue(state, &n.recipient_email, template, &data).await {
+        if let Err(e) =
+            enqueue_with_unsubscribe(state, &n.recipient_email, template, &data, Some(header)).await
+        {
             tracing::warn!(notification_id = %n.id, error = %e, "queueing notification email failed");
         }
     }
@@ -261,8 +404,8 @@ async fn email_pending_invite(
         let prefs = db::get_notification_email_prefs(&state.pool, account.id).await?;
         let wants = prefs
             .iter()
-            .find(|(k, _)| *k == NotificationKind::ShareInvite)
-            .is_none_or(|(_, on)| *on);
+            .find(|p| p.kind == NotificationKind::ShareInvite)
+            .is_none_or(|p| p.enabled);
         if !wants {
             return Ok(InviteEmail::default());
         }
@@ -376,6 +519,86 @@ mod tests {
     }
 
     const APP: &str = "https://links.example.com";
+    const SECRET: &str = "a-test-secret-of-some-length";
+
+    #[test]
+    fn every_email_links_a_signed_unsubscribe_for_its_kind() {
+        let n = pending(
+            NotificationKind::SocialLike,
+            NotificationSubjectType::Bookmark,
+        );
+        let (_, data) = email_for(&n, APP, SECRET);
+        let url = url::Url::parse(data["unsubscribe_url"].as_str().unwrap()).unwrap();
+        assert_eq!(url.path(), "/unsubscribe");
+        let q: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+        assert_eq!(q["s"], "social_like");
+        let user: Uuid = q["u"].parse().unwrap();
+        assert!(unsubscribe::verify(
+            SECRET,
+            user,
+            UnsubscribeScope::Kind(NotificationKind::SocialLike),
+            &q["t"]
+        ));
+        let one_click = one_click_unsubscribe_url(
+            APP,
+            SECRET,
+            user,
+            UnsubscribeScope::Kind(NotificationKind::SocialLike),
+        );
+        assert!(one_click.starts_with("https://links.example.com/api/email/unsubscribe?u="));
+    }
+
+    #[test]
+    fn a_digest_groups_by_kind_newest_first_and_counts_the_rest() {
+        let mut items = Vec::new();
+        for i in 0..(DIGEST_ITEMS_SHOWN + 3) {
+            let kind = if i % 2 == 0 {
+                NotificationKind::SocialComment
+            } else {
+                NotificationKind::SocialLike
+            };
+            let mut n = pending(kind, NotificationSubjectType::Bookmark);
+            n.body = format!("item {i}\nsecond line");
+            n.created_at = Utc::now() + chrono::Duration::seconds(i as i64);
+            items.push(n);
+        }
+        let d = NotificationDigest {
+            recipient_user_id: Uuid::nil(),
+            recipient_email: "to@example.com".into(),
+            items,
+        };
+        let data = digest_email_data(&d, APP, SECRET);
+        assert_eq!(data["count"], DIGEST_ITEMS_SHOWN + 3);
+        assert_eq!(data["more"], 3);
+        assert_eq!(data["kinds"], "Likes and Comments");
+        let groups = data["groups"].as_array().unwrap();
+        assert_eq!(groups[0]["label"], "Likes", "settings order");
+        assert_eq!(groups[1]["label"], "Comments");
+        let likes = groups[0]["items"].as_array().unwrap();
+        assert_eq!(
+            likes[0]["message"],
+            format!("item {} second line", DIGEST_ITEMS_SHOWN + 1)
+        );
+        let shown: usize = groups
+            .iter()
+            .map(|g| g["items"].as_array().unwrap().len())
+            .sum();
+        assert_eq!(shown, DIGEST_ITEMS_SHOWN);
+        assert!(data["unsubscribe_url"]
+            .as_str()
+            .unwrap()
+            .contains("s=digest"));
+        let site = linkdean_mail::Site::new(APP);
+        let r = linkdean_mail::render("notification_digest", &data, &site).unwrap();
+        assert!(r.text.contains("And 3 more"));
+    }
+
+    #[test]
+    fn kinds_read_as_a_list() {
+        assert_eq!(and_list(&["A"]), "A");
+        assert_eq!(and_list(&["A", "B"]), "A and B");
+        assert_eq!(and_list(&["A", "B", "C"]), "A, B and C");
+    }
 
     #[test]
     fn a_share_invite_uses_the_invite_template() {
@@ -383,7 +606,7 @@ mod tests {
             NotificationKind::ShareInvite,
             NotificationSubjectType::Category,
         );
-        let (template, data) = email_for(&n, APP);
+        let (template, data) = email_for(&n, APP, SECRET);
         assert_eq!(template, "share_invite");
         assert_eq!(data["owner"], "Ada Lovelace");
         assert_eq!(data["subject_kind"], "folder");
@@ -406,7 +629,7 @@ mod tests {
             NotificationKind::SocialComment,
             NotificationSubjectType::Bookmark,
         );
-        let (template, data) = email_for(&n, APP);
+        let (template, data) = email_for(&n, APP, SECRET);
         assert_eq!(template, "notification");
         assert_eq!(data["heading"], "New comment");
         assert_eq!(data["message"], "Ada did something");
@@ -456,8 +679,11 @@ mod tests {
     fn every_kind_renders() {
         let site = linkdean_mail::Site::new(APP);
         for kind in NotificationKind::ALL {
-            let (template, data) =
-                email_for(&pending(kind, NotificationSubjectType::Dashboard), APP);
+            let (template, data) = email_for(
+                &pending(kind, NotificationSubjectType::Dashboard),
+                APP,
+                SECRET,
+            );
             linkdean_mail::render(template, &data, &site).unwrap();
         }
     }

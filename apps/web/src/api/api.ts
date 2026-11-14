@@ -84,6 +84,8 @@ import {
   trashItemsSchema,
   trashPurgeResultSchema,
   unreadCountSchema,
+  unsubscribeLinkSchema,
+  unsubscribeResultSchema,
   userEnvelopeSchema,
   vaultsEnvelopeSchema,
   type AbuseReport,
@@ -121,6 +123,7 @@ import {
   type DuplicateDecisions,
   type DuplicateGroup,
   type EmailChangeResponse,
+  type EmailDelivery,
   type EmailStatus,
   type ExposedContent,
   type FilingSuggestions,
@@ -163,6 +166,8 @@ import {
   type TestEmailResult,
   type TrashItem,
   type TrashKind,
+  type UnsubscribeLink,
+  type UnsubscribeResult,
   type UserPublic,
   type UserSettings,
   type Vault,
@@ -351,12 +356,23 @@ export const api = {
   notificationEmailPrefs: (): Promise<{ prefs: NotificationEmailPref[] }> =>
     req('/users/me/notification-emails', {}, notificationEmailPrefsEnvelopeSchema),
 
-  setNotificationEmailPref: (kind: NotificationKind, enabled: boolean): Promise<NotificationEmailPref> =>
+  setNotificationEmailPref: (
+    kind: NotificationKind,
+    enabled: boolean,
+    delivery?: EmailDelivery
+  ): Promise<NotificationEmailPref> =>
     req(
       `/users/me/notification-emails/${kind}`,
-      { method: 'PUT', body: JSON.stringify({ enabled }) },
+      { method: 'PUT', body: JSON.stringify({ enabled, delivery }) },
       notificationEmailPrefSchema
     ),
+
+  /** Checks a signed unsubscribe link (`u`, `s`, `t` from the email) without changing anything. */
+  checkUnsubscribeLink: (query: string): Promise<UnsubscribeLink> =>
+    req(`/email/unsubscribe?${query}`, {}, unsubscribeLinkSchema),
+
+  unsubscribe: (query: string): Promise<UnsubscribeResult> =>
+    req(`/email/unsubscribe?${query}`, { method: 'POST' }, unsubscribeResultSchema),
 
   shareInvites: (): Promise<{ invites: ShareInvite[] }> => req('/share-invites', {}, shareInvitesEnvelopeSchema),
 

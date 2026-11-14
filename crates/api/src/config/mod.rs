@@ -5,9 +5,8 @@ pub struct Config {
     pub meili_url: String,
     pub meili_key: String,
     pub app_url: String,
-    /// Reserved for future cookie/HMAC signing. Sessions today use hashed opaque tokens in Postgres.
-    /// Validated at startup (min length); not yet applied to token hashing.
-    #[allow(dead_code)]
+    /// Signs one-click unsubscribe links in notification email. Sessions use hashed opaque tokens
+    /// in Postgres, not this. Validated at startup (min length); changing it voids old links.
     pub session_secret: String,
     pub session_days: i64,
     pub avatar_dir: String,

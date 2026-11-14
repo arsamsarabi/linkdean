@@ -3,5 +3,6 @@
   "message": "Ada commented on “Rust book”",
   "url": "https://links.example.com/b/1",
   "kind_label": "Comments",
-  "settings_url": "https://links.example.com/settings?tab=notifications"
+  "settings_url": "https://links.example.com/settings?tab=notifications",
+  "unsubscribe_url": "https://links.example.com/unsubscribe?u=00000000-0000-0000-0000-000000000000&s=social_comment&t=sample"
 }
