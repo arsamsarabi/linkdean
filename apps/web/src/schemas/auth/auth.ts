@@ -60,6 +60,16 @@ export const bootstrapStatusSchema = z.object({
   turnstile_site_key: z.string().nullish(),
 })
 
+/** Experimental features the server has switched on (`EXPERIMENTAL_*` env vars). Off when missing. */
+export const experimentalFlagsSchema = z.object({
+  agent_skills: z.boolean().default(false),
+})
+
+/** `GET /auth/config`: public server settings. Only the fields the app reads are listed. */
+export const authConfigSchema = z.object({
+  experimental: experimentalFlagsSchema.default({ agent_skills: false }),
+})
+
 export const platformSettingsSchema = z.object({
   registration_open: z.boolean(),
   api_keys_enabled: z.boolean().default(true),
@@ -256,6 +266,8 @@ export type UserSettings = z.infer<typeof userSettingsSchema>
 export type ScheduleDeletionResponse = z.infer<typeof scheduleDeletionResponseSchema>
 export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
+export type ExperimentalFlags = z.infer<typeof experimentalFlagsSchema>
+export type AuthConfig = z.infer<typeof authConfigSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
 export type PendingOidcLink = z.infer<typeof pendingOidcLinkSchema>
 export type PlatformSettings = z.infer<typeof platformSettingsSchema>

@@ -45,6 +45,8 @@ pub struct Config {
     pub block_disposable_emails: bool,
     /// Development-only routes such as `/api/dev/emails`. On with `ALLOW_DEFAULT_SECRETS`.
     pub dev_routes: bool,
+    /// Experimental: `GET /api/agent-skill` and its UI. Off unless `EXPERIMENTAL_AGENT_SKILLS`.
+    pub experimental_agent_skills: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
@@ -184,6 +186,7 @@ impl Config {
             require_verified_email: env_bool("REQUIRE_VERIFIED_EMAIL", false),
             block_disposable_emails: env_bool("BLOCK_DISPOSABLE_EMAILS", false),
             dev_routes: env_bool("ALLOW_DEFAULT_SECRETS", false),
+            experimental_agent_skills: env_bool("EXPERIMENTAL_AGENT_SKILLS", false),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),

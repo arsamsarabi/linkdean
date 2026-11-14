@@ -105,6 +105,14 @@ A background worker checks saved links and flags dead ones under **Library healt
 | `LINK_CHECK_PER_HOST_DELAY_MS` | `1000` | Pause between two requests to the same host |
 | `LINK_CHECK_RECHECK_DAYS` | `7` | Days before a checked link is checked again |
 
+### Experimental features
+
+Off by default. They may change or go away between releases.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `EXPERIMENTAL_AGENT_SKILLS` | `false` | `true` turns on [Agent Skills](../guides/agent-skills.md): `GET /api/agent-skill`, the **Agent Skill** card under Import / Export and the folder menu item. Off, the route answers `404` and the app hides both |
+
 ### Advanced
 
 These have working defaults inside the image. Change them only for a reason.
