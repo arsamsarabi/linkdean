@@ -9,10 +9,10 @@ Canonical operator docs live under the repo `docs/` tree (`self-hosting/`, `prod
 ```bash
 pnpm sync    # copies those files into apps/docs/docs/ with frontmatter + link rewrites
 pnpm start   # sync + local preview
-pnpm build   # sync + build + publish into deploy/public-beta/static/docs/
+pnpm build   # sync + build into build/
 ```
 
-`pnpm build` writes `deploy/public-beta/static/docs/`. Webpack asset hashes differ between macOS and Linux, so CI builds on Ubuntu and uploads a `docs-site-static` artifact instead of requiring a byte-identical committed tree (unlike `apps/site`, where Astro output matches). On the guest, either unpack that artifact or run `pnpm --dir apps/docs build` after pull.
+`pnpm build` writes `build/`, which is not committed. The Release workflow builds the docs and the marketing site into one Caddy image (`deploy/docker/Dockerfile.static`, pushed as `ghcr.io/arsamsarabi/linkdean-static`) that serves `docs.linkdean.app`.
 
 **Do not edit** the generated markdown under `docs/self-hosting/`, `docs/guides/`, `docs/features.md`, or `docs/architecture.md`. Change the sources in `/docs` and re-run `pnpm sync`.
 

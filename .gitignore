@@ -18,7 +18,8 @@ apps/web/.pnpm-store/
 
 # taste-skill deal history (local)
 apps/site/.taste-skill/
-deploy/public-beta/static/site/.taste-skill/
+# Older checkouts served built docs and site from here; the edge image holds them now.
+deploy/public-beta/static/
 
 .pnpm-store/
 
