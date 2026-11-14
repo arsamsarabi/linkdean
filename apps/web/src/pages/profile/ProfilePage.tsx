@@ -21,6 +21,7 @@ import {
   useUpdateProfile,
   useUploadAvatar,
 } from '@/hooks'
+import { ssoButtons } from '@/lib'
 import type { ProfileVisibility } from '@/schemas'
 import { validatePasswordPair } from '@/services'
 import { ChangeEmailModal } from './ChangeEmailModal'
@@ -262,6 +263,7 @@ export function ProfilePage(): ReactElement {
 
             {oidcEnabled ? (
               <ProfileSsoCard
+                providers={ssoButtons(oidcEnabled, bootstrap?.sso_providers)}
                 connected={!!user.sso_connected}
                 provider={user.sso_provider}
                 hasPassword={!!user.has_password}

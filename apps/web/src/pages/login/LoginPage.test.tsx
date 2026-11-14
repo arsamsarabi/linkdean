@@ -25,6 +25,7 @@ const state: {
     needs_bootstrap: false,
     bootstrap_token_required: false,
     oidc_enabled: false,
+    sso_providers: [],
     registration_open: true,
     mail_enabled: false,
   },
@@ -157,9 +158,24 @@ describe('LoginPage terms for single sign-on', () => {
 
   it('starts OIDC with the terms version only after the checkbox is ticked', async () => {
     renderPage()
-    const button = screen.getByText('Sign in with OIDC').closest('a')!
+    const button = screen.getByText('Sign in with single sign-on').closest('a')!
     expect(button.getAttribute('href')).toBeNull()
     await userEvent.click(screen.getByRole('checkbox'))
-    expect(button.getAttribute('href')).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}`)
+    expect(button.getAttribute('href')).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}&provider=oidc`)
+  })
+
+  it('shows one button per provider the server offers', async () => {
+    state.bootstrap = {
+      ...state.bootstrap,
+      sso_providers: [
+        { id: 'oidc', label: 'Authentik' },
+        { id: 'github', label: 'GitHub' },
+      ],
+    }
+    renderPage()
+    await userEvent.click(screen.getByRole('checkbox'))
+    expect(screen.getByText('Sign in with Authentik').closest('a')!.getAttribute('href')).toContain('provider=oidc')
+    expect(screen.getByText('Sign in with GitHub').closest('a')!.getAttribute('href')).toContain('provider=github')
+    state.bootstrap = { ...state.bootstrap, sso_providers: [] }
   })
 })

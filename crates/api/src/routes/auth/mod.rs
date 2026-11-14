@@ -1,7 +1,9 @@
 mod email_verification;
 mod extension;
+mod github;
 mod oidc;
 mod password_reset;
+pub(crate) mod providers;
 
 pub(crate) use password_reset::reset_url;
 
@@ -49,6 +51,14 @@ pub fn router() -> Router<AppState> {
         .route("/auth/extension/token", post(extension::token))
 }
 
+/// The sign-in buttons: `[{ "id": "github", "label": "GitHub" }, …]`, in display order.
+fn sso_providers(state: &AppState) -> Value {
+    json!(providers::configured(&state.cfg)
+        .into_iter()
+        .map(|p| json!({ "id": p.id.as_str(), "label": p.label }))
+        .collect::<Vec<_>>())
+}
+
 async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     let count = db::count_users(&state.pool).await?;
     let platform = db::get_platform_settings(&state.pool).await?;
@@ -56,6 +66,7 @@ async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value
         "needs_bootstrap": count == 0,
         "bootstrap_token_required": count == 0 && state.cfg.bootstrap_token.is_some(),
         "oidc_enabled": state.cfg.oidc_enabled(),
+        "sso_providers": sso_providers(&state),
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),
         "turnstile_site_key": state.cfg.turnstile_site_key,
@@ -66,6 +77,7 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     let platform = db::get_platform_settings(&state.pool).await?;
     Ok(Json(json!({
         "oidc_enabled": state.cfg.oidc_enabled(),
+        "sso_providers": sso_providers(&state),
         "app_url": state.cfg.app_url,
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),

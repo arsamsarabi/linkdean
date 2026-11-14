@@ -1,13 +1,14 @@
 import { type ReactElement } from 'react'
 import { Alert, Badge, Button, Group, Paper, Stack, Text, ThemeIcon, Title } from '@mantine/core'
-import { IconLink, IconLinkOff, IconShieldLock } from '@tabler/icons-react'
+import { IconLinkOff, IconShieldLock } from '@tabler/icons-react'
+import { SsoProviderIcon } from '@/components'
+import { ssoConnectUrl } from '@/lib'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
-/** Where Connect sends the browser: the provider, then back to this page. */
-export const SSO_CONNECT_URL = '/api/auth/oidc/start?mode=connect'
-
 type Props = {
+  /** The sign-in providers this server offers; Connect shows one button each. */
+  providers: { id: string; label: string }[]
   connected: boolean
   provider: string | null | undefined
   hasPassword: boolean
@@ -19,6 +20,7 @@ type Props = {
 
 /** Single sign-on state. Disconnect needs a password, so accounts without one cannot lose their only sign-in. */
 export function ProfileSsoCard({
+  providers,
   connected,
   provider,
   hasPassword,
@@ -70,9 +72,17 @@ export function ProfileSsoCard({
               Sign in with your identity provider as well as your password. Your email stays the same.
             </Text>
             <Group>
-              <Button component="a" href={SSO_CONNECT_URL} variant="light" leftSection={<IconLink {...iconSm} />}>
-                Connect
-              </Button>
+              {providers.map((p) => (
+                <Button
+                  key={p.id}
+                  component="a"
+                  href={ssoConnectUrl(p.id)}
+                  variant="light"
+                  leftSection={<SsoProviderIcon id={p.id} />}
+                >
+                  Connect {p.label}
+                </Button>
+              ))}
             </Group>
           </>
         )}

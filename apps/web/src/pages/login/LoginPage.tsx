@@ -25,10 +25,11 @@ import {
   MASCOT_LOGIN_DISPLAY_PX,
   MascotFigure,
   QueryErrorAlert,
+  SsoProviderIcon,
   TermsAgreement,
 } from '@/components'
 import { useBootstrap, useDropSignedOutCache, useLogin, usePendingOidcLink } from '@/hooks'
-import { oidcStartUrl, resolveDefaultLanding } from '@/lib'
+import { oidcStartUrl, resolveDefaultLanding, ssoButtons } from '@/lib'
 import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -89,7 +90,7 @@ export function LoginPage(): ReactElement {
     )
   }
 
-  const oidc = bootstrap.data?.oidc_enabled ?? false
+  const sso = ssoButtons(bootstrap.data?.oidc_enabled ?? false, bootstrap.data?.sso_providers)
   const registrationOpen = bootstrap.data?.registration_open ?? true
   const mailEnabled = bootstrap.data?.mail_enabled ?? false
 
@@ -158,7 +159,7 @@ export function LoginPage(): ReactElement {
             <Button leftSection={<IconLogin {...iconSm} />} loading={login.isPending} onClick={() => void submit()}>
               Sign in
             </Button>
-            {oidc ? (
+            {sso.length > 0 ? (
               <>
                 <Divider label="or" labelPosition="center" />
                 <TermsAgreement
@@ -166,16 +167,19 @@ export function LoginPage(): ReactElement {
                   onChange={setTermsAccepted}
                   description="Needed to create an account with single sign-on."
                 />
-                <Button
-                  component="a"
-                  // No href until accepted: the link is neither clickable nor focusable.
-                  href={termsAccepted ? oidcStartUrl() : undefined}
-                  disabled={!termsAccepted}
-                  variant="light"
-                  leftSection={<IconLogin {...iconSm} />}
-                >
-                  Sign in with OIDC
-                </Button>
+                {sso.map((p) => (
+                  <Button
+                    key={p.id}
+                    component="a"
+                    // No href until accepted: the link is neither clickable nor focusable.
+                    href={termsAccepted ? oidcStartUrl(p.id) : undefined}
+                    disabled={!termsAccepted}
+                    variant="light"
+                    leftSection={<SsoProviderIcon id={p.id} />}
+                  >
+                    Sign in with {p.label}
+                  </Button>
+                ))}
               </>
             ) : null}
             {registrationOpen ? (
