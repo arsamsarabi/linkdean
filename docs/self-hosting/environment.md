@@ -14,7 +14,7 @@ The stack does not start without these. Generate each with `openssl rand -hex 32
 | --- | --- |
 | `POSTGRES_PASSWORD` | Password of the `linkdean` database user. Postgres applies it only when the `pgdata` volume is first created; changing it later needs `ALTER USER`, see [Upgrading an existing install](./operations.md#upgrading-an-existing-install) |
 | `MEILI_MASTER_KEY` | Meilisearch master key. The search container runs with it, and the API uses it to index and search. At least 16 bytes |
-| `SESSION_SECRET` | At least 16 characters. Checked at startup and reserved for signing; sessions today are random tokens stored hashed in Postgres |
+| `SESSION_SECRET` | At least 16 characters. Signs the one-click unsubscribe links in notification email, so changing it voids links already sent. Sessions are random tokens stored hashed in Postgres, not signed with this |
 
 ### Recommended
 
