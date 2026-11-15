@@ -5,7 +5,8 @@ use std::path::Path;
 use std::time::Duration;
 
 /// How often trash retention, the session purge, the unused tag reap, the old email purge, the old
-/// reset link purge, the old pending single sign-on link purge and the vault key sweep run.
+/// reset link purge, the old pending single sign-on link purge, the old bookmark open purge and
+/// the vault key sweep run.
 const INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 /// Run housekeeping now, then every [`INTERVAL`], for the life of the process.
@@ -121,6 +122,12 @@ async fn run_once(state: &AppState) {
         Ok(0) => {}
         Ok(n) => tracing::info!(links = n, "purged old pending single sign-on links"),
         Err(e) => tracing::warn!(error = %e, "pending single sign-on link purge failed"),
+    }
+
+    match linkdean_db::purge_old_bookmark_opens(&state.pool).await {
+        Ok(0) => {}
+        Ok(n) => tracing::info!(opens = n, "purged bookmark opens older than 30 days"),
+        Err(e) => tracing::warn!(error = %e, "bookmark open purge failed"),
     }
 
     // Vault keys of sessions that ended or sat idle past the owner's auto-lock time.

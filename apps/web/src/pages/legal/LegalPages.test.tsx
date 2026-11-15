@@ -32,4 +32,18 @@ describe('legal pages', () => {
     expect(screen.getByRole('heading', { level: 3, name: '6.1 Illegal or harmful content' })).toBeTruthy()
     expect(screen.getByRole('heading', { level: 3, name: '6.3 Enforcement' })).toBeTruthy()
   })
+
+  it.each([
+    ['Terms of Service', TermsPage],
+    ['Privacy Policy', PrivacyPage],
+  ])('%s has no unfilled [placeholder] and links its contact addresses', (_title, Page) => {
+    const { container } = render(
+      <MantineProvider>
+        <Page />
+      </MantineProvider>
+    )
+    expect(container.textContent).not.toMatch(/\[[^\]]+\]/)
+    const mail = [...container.querySelectorAll('a[href^="mailto:"]')].map((a) => a.getAttribute('href'))
+    expect(mail).toContain('mailto:abuse@linkdean.app')
+  })
 })

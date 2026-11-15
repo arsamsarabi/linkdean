@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { List, Text } from '@mantine/core'
-import { LegalLayout, LegalSection, LegalSubsection } from './LegalLayout'
+import { LegalLayout, LegalSection, LegalSubsection, MailLink } from './LegalLayout'
+import { OPERATOR } from './operator'
 
 export function PrivacyPage(): ReactElement {
   return (
@@ -12,9 +13,9 @@ export function PrivacyPage(): ReactElement {
         </Text>
         <Text>For this instance, the data controller is:</Text>
         <Text fw={600}>
-          Arsam Sarabi (sole trader)
+          {OPERATOR.legalName} (sole trader)
           <br />
-          Contact: [privacy contact email address]
+          Contact: <MailLink address={OPERATOR.privacyEmail} />
         </Text>
         <Text>
           In this Privacy Policy, &ldquo;we&rdquo;, &ldquo;us&rdquo; and &ldquo;our&rdquo; mean that operator.
@@ -32,6 +33,12 @@ export function PrivacyPage(): ReactElement {
               A cryptographic hash of your password. We do not store your password in readable form.
             </List.Item>
             <List.Item>The version of the Terms you accepted and the time you accepted them.</List.Item>
+            <List.Item>
+              If you add passkeys, each passkey&apos;s public key, the name it is given (for example &ldquo;Chrome on
+              macOS&rdquo;), when you added it and when you last used it. The private key stays on your device or in
+              your password manager; we never receive it.
+            </List.Item>
+            <List.Item>Your profile details if you add them, such as a bio and your time zone.</List.Item>
           </List>
         </LegalSubsection>
         <LegalSubsection heading="Your content">
@@ -54,6 +61,11 @@ export function PrivacyPage(): ReactElement {
             <List.Item>Login sessions.</List.Item>
             <List.Item>API keys.</List.Item>
             <List.Item>Shares, comments and ratings you create.</List.Item>
+            <List.Item>
+              When you open a bookmark from Linkdean, a record that you opened it and when. We keep a count and the time
+              of your last open for each bookmark, which power dashboard sections such as Most opened and Recently
+              visited.
+            </List.Item>
             <List.Item>Other actions necessary to operate the service.</List.Item>
           </List>
         </LegalSubsection>
@@ -73,7 +85,7 @@ export function PrivacyPage(): ReactElement {
         <List>
           <List.Item>
             <code>linkdean_session</code>, which keeps you signed in. It is HttpOnly and is removed when you sign out or
-            when it expires.
+            when it expires. It lasts 30 days unless you sign out sooner.
           </List.Item>
           <List.Item>
             <code>linkdean_oidc</code> and <code>linkdean_oidc_link</code>, which are short-lived cookies used during
@@ -83,8 +95,10 @@ export function PrivacyPage(): ReactElement {
         <Text>We do not use advertising cookies.</Text>
         <Text>We do not use analytics or tracking cookies.</Text>
         <Text>
-          The beta notice may remember that you dismissed it using your browser&apos;s session storage. This information
-          remains in your browser and is not sent to us.
+          The app also keeps a few interface preferences in your browser&apos;s local and session storage, such as
+          whether the sidebar is collapsed, the folder you last saved to, which dashboard sections you collapsed, and
+          notices you dismissed. The marketing site remembers your light or dark theme the same way. This stays on your
+          device and is not sent to us.
         </Text>
         <Text>
           Because strictly necessary cookies are used to provide the service, consent may not be required for those
@@ -98,12 +112,15 @@ export function PrivacyPage(): ReactElement {
           browser.
         </Text>
         <Text>
-          For linkdean.app, GoatCounter is used through: <strong>stats.linkdean.app</strong>
+          For linkdean.app, we run GoatCounter ourselves at <strong>stats.linkdean.app</strong>, on our own server, so
+          no outside analytics company receives this data.
         </Text>
         <Text>When you open a page, the information sent may include:</Text>
         <List>
           <List.Item>The page being viewed.</List.Item>
-          <List.Item>The referring site or page where applicable.</List.Item>
+          <List.Item>
+            On the marketing site and documentation only, the site or page you came from. The app does not send it.
+          </List.Item>
           <List.Item>Your screen size.</List.Item>
           <List.Item>Your browser&apos;s user agent.</List.Item>
           <List.Item>
@@ -115,7 +132,6 @@ export function PrivacyPage(): ReactElement {
           recorded as <code>/library</code> or <code>/bookmarks/$id</code> rather than including individual bookmark
           IDs, folder names, search terms or bookmark titles.
         </Text>
-        <Text>On the marketing site and documentation, the page address and referring site may be recorded.</Text>
         <Text>
           GoatCounter uses technical information to generate aggregate statistics such as browser type, operating system
           and country. According to its operation, it does not retain the IP address as part of the stored statistics
@@ -182,18 +198,23 @@ export function PrivacyPage(): ReactElement {
         <Text>Depending on the configuration of an instance, these may include the following.</Text>
         <LegalSubsection heading="Email delivery">
           <Text>
-            The SMTP provider configured for the instance receives the email address and message content necessary to
-            deliver emails we send, such as verification emails, password resets and invitations.
+            We send email through Apple&apos;s iCloud Mail, which receives the recipient address and the message content
+            needed to deliver the emails we send, such as verification emails, password resets and invitations.
           </Text>
         </LegalSubsection>
-        <LegalSubsection heading="Cloudflare Turnstile">
+        <LegalSubsection heading="Cloudflare">
           <Text>
-            If Cloudflare Turnstile is enabled, the relevant page may load Turnstile to help distinguish people from
-            automated traffic.
+            All traffic to linkdean.app, app.linkdean.app and docs.linkdean.app passes through Cloudflare. It provides
+            our DNS, encrypted connections (HTTPS), caching and protection against attacks. Cloudflare therefore
+            processes your IP address, information about your browser and the requests you make, including their
+            content, as they pass through its network.
           </Text>
           <Text>
-            Cloudflare may process technical information, including information about your browser and IP address, in
-            accordance with its own privacy documentation.
+            The sign-up page also loads Cloudflare Turnstile to help distinguish people from automated traffic.
+          </Text>
+          <Text>
+            Cloudflare may set strictly necessary security cookies, such as <code>__cf_bm</code>, when it checks for
+            automated traffic. It processes this information in accordance with its own privacy documentation.
           </Text>
         </LegalSubsection>
         <LegalSubsection heading="Single sign-on providers">
@@ -267,6 +288,7 @@ export function PrivacyPage(): ReactElement {
           <List.Item>The page address.</List.Item>
           <List.Item>The page title.</List.Item>
           <List.Item>Text you selected to save.</List.Item>
+          <List.Item>Any note, tags or folder you choose before saving.</List.Item>
         </List>
         <Text>
           The extension may also read your folders and tags from your Linkdean instance to help you organize bookmarks.
@@ -299,14 +321,22 @@ export function PrivacyPage(): ReactElement {
         <Text>The retention period depends on the type of information and how it is used.</Text>
         <Text>For example:</Text>
         <List>
-          <List.Item>Account and content data is generally kept while your account remains active.</List.Item>
+          <List.Item>Account and content data is kept while your account is active.</List.Item>
           <List.Item>
-            Deleted accounts and content may remain available for a short grace period and may remain temporarily in
-            backups or technical systems before being permanently removed.
+            When you delete your account, it is permanently removed 7 days later, unless you cancel before then.
           </List.Item>
           <List.Item>
-            Security, abuse and legal records may be retained for longer where reasonably necessary.
+            Items in Deleted items are permanently removed after 30 days, or after the period you set in your settings
+            (1 day to 10 years).
           </List.Item>
+          <List.Item>Sign-in sessions expire after 30 days.</List.Item>
+          <List.Item>
+            Records of individual bookmark opens are kept for 30 days. The count and last open for each bookmark stay
+            until you delete the bookmark or your account.
+          </List.Item>
+          <List.Item>Copies of the emails we send are kept for 7 days, or 30 days if delivery failed.</List.Item>
+          <List.Item>Deleted data may remain in backups for a limited period before it is overwritten.</List.Item>
+          <List.Item>Security, abuse and legal records may be kept longer where reasonably necessary.</List.Item>
           <List.Item>Information may be retained where required by law.</List.Item>
         </List>
         <Text>
@@ -341,9 +371,13 @@ export function PrivacyPage(): ReactElement {
 
       <LegalSection heading="13. Contact">
         <Text>For privacy questions or requests about your personal data, contact:</Text>
-        <Text fw={600}>[Privacy contact email address]</Text>
+        <Text fw={600}>
+          <MailLink address={OPERATOR.privacyEmail} />
+        </Text>
         <Text>For abuse reports, contact:</Text>
-        <Text fw={600}>[Abuse contact email address]</Text>
+        <Text fw={600}>
+          <MailLink address={OPERATOR.abuseEmail} />
+        </Text>
       </LegalSection>
 
       <LegalSection heading="14. Children">
