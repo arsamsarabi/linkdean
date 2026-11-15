@@ -4,19 +4,25 @@ import { TERMS_VERSION } from '@/lib'
 
 type Props = {
   title: string
+  /** Which document the beta notice names, such as "These Terms" or "This Privacy Policy". */
+  noticeSubject: string
   children: ReactNode
 }
 
 /** Shared frame for the signed-out legal pages. */
-export function LegalLayout({ title, children }: Props): ReactElement {
+export function LegalLayout({ title, noticeSubject, children }: Props): ReactElement {
   return (
     <Stack maw={720} mx="auto" mt={48} px="md" pb={64} gap="lg" component="main">
       <Stack gap={4}>
         <Title order={1} c="violet">
           {title}
         </Title>
+        <Text size="sm" fw={600}>
+          Version: {TERMS_VERSION}
+        </Text>
         <Text size="sm" c="dimmed">
-          Version {TERMS_VERSION}. Draft for the public beta; it has not been reviewed by a lawyer and may change.
+          <strong>Public beta notice:</strong> Linkdean is currently in public beta. {noticeSubject} not been reviewed
+          by a lawyer and may be updated as the service develops.
         </Text>
       </Stack>
       {children}
