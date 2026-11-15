@@ -101,12 +101,15 @@ export function PrivacyPage(): ReactElement {
           browser.
         </Text>
         <Text>
-          For linkdean.app, GoatCounter is used through: <strong>stats.linkdean.app</strong>
+          For linkdean.app, we run GoatCounter ourselves at <strong>stats.linkdean.app</strong>, on our own server, so
+          no outside analytics company receives this data.
         </Text>
         <Text>When you open a page, the information sent may include:</Text>
         <List>
           <List.Item>The page being viewed.</List.Item>
-          <List.Item>The referring site or page where applicable.</List.Item>
+          <List.Item>
+            On the marketing site and documentation only, the site or page you came from. The app does not send it.
+          </List.Item>
           <List.Item>Your screen size.</List.Item>
           <List.Item>Your browser&apos;s user agent.</List.Item>
           <List.Item>
@@ -118,7 +121,6 @@ export function PrivacyPage(): ReactElement {
           recorded as <code>/library</code> or <code>/bookmarks/$id</code> rather than including individual bookmark
           IDs, folder names, search terms or bookmark titles.
         </Text>
-        <Text>On the marketing site and documentation, the page address and referring site may be recorded.</Text>
         <Text>
           GoatCounter uses technical information to generate aggregate statistics such as browser type, operating system
           and country. According to its operation, it does not retain the IP address as part of the stored statistics
