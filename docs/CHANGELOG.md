@@ -43,6 +43,7 @@
 
 ### Fixed
 
+- The collapsed sidebar rail centers its icons in square buttons, marks the current page with a highlight and an edge bar, and separates recent folders from the main pages.
 - Docs: the **Intro** and **Getting started** pages show their screenshots again, instead of a stray `import Shot …` line.
 - Dashboard: key numbers are no longer clipped at the top of a section, small tiles have more room between them, the focused bookmark has one ring instead of two. Press **G** to jump straight into the sections.
 - Side drawers no longer spill past their right edge when a field holds a long item, such as a bookmark with a long title in the section settings, and are a little wider (520 px instead of 440 px) on tablets and desktops.
