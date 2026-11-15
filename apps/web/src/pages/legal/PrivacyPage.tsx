@@ -288,6 +288,7 @@ export function PrivacyPage(): ReactElement {
           <List.Item>The page address.</List.Item>
           <List.Item>The page title.</List.Item>
           <List.Item>Text you selected to save.</List.Item>
+          <List.Item>Any note, tags or folder you choose before saving.</List.Item>
         </List>
         <Text>
           The extension may also read your folders and tags from your Linkdean instance to help you organize bookmarks.
