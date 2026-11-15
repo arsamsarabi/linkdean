@@ -53,13 +53,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
 
 7. **Legal review** (S). Counsel review of the Terms, Privacy and Acceptable Use copy before charging money. When the copy changes, bump `TERMS_VERSION` in `crates/core/src/legal` and `apps/web/src/lib/legal` together, so every account is asked to accept it.
 
-9. **API platform** (M). Rate limits, API keys and Prometheus metrics already ship. Fill the remaining gaps so the API can be built on:
-    - An OpenAPI spec generated from the routes, published as the API reference on the docs site.
-    - One error body shape (`code`, `message`, details) across every route.
-    - `ETag` / `Cache-Control` on read endpoints that are safe to cache.
-    - Optional OpenTelemetry tracing, tied to the request ID from the structured logs.
-    - API tests per route for auth, authorization and error responses.
-
 10. **Membership tiers and pricing for managed services** (M, explore). Before anyone pays and before Stripe or plan gates land in code.
     - Start from the plan sketch in the [organizations and teams design](../design/organizations-and-teams.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
     - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats). Limits plug into the existing quota resolver.
@@ -67,7 +60,7 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
 
 11. **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
     - Aggregate counts only (active users, bookmarks saved, features used), no personal data, page content or URLs, and nothing per person.
-    - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the tracing in **API platform**.
+    - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the OpenTelemetry tracing the API already exports.
     - The managed service uses the same hooks with its own backend.
     - Document exactly what is collected.
 

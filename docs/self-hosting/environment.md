@@ -98,6 +98,19 @@ Every HTTP response includes `X-Request-Id`. A valid inbound value (1–128 char
 | --- | --- | --- |
 | `METRICS_TOKEN` | unset | Turns on `GET /api/metrics` (Prometheus format), which then needs `Authorization: Bearer <token>`. Unset, the route returns `404` |
 
+### Tracing
+
+Off unless an endpoint is set. Details: [Tracing](./operations.md#tracing).
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | Base URL of an OpenTelemetry collector that takes OTLP over HTTP (protobuf), such as `http://otel-collector:4318`. Spans go to `<endpoint>/v1/traces`. Set, the API exports a span per request |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | unset | Full traces URL instead of the base one |
+| `OTEL_EXPORTER_OTLP_HEADERS` | unset | Headers for the collector, such as `x-honeycomb-team=<key>` or `Authorization=Basic <base64>` (comma-separated `name=value`) |
+| `OTEL_SERVICE_NAME` | `linkdean-api` | Service name on every span |
+| `OTEL_TRACES_SAMPLER` | `parentbased_always_on` | `always_on`, `always_off`, `traceidratio` or the `parentbased_` forms |
+| `OTEL_TRACES_SAMPLER_ARG` | `1.0` | Ratio for the `traceidratio` samplers, such as `0.1` for one request in ten |
+
 ### Broken-link checker
 
 A background worker checks saved links and flags dead ones under **Library health**. Vault bookmarks and private hosts are skipped.

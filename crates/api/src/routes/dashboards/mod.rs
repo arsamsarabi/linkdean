@@ -4,8 +4,7 @@ use crate::notification_mail::{self, InviteEmail};
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{Path, State};
-use axum::routing::{get, patch};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::{
     CreateDashboard, CreateDashboardShare, CreateDashboardShareOutcome, DashboardShareView,
     DashboardSharesEnvelope, DashboardSummary, DashboardView, PatchDashboard,
@@ -14,33 +13,31 @@ use linkdean_core::{
 };
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/dashboards", get(list).post(create))
-        .route("/dashboards/default", get(get_default).put(put_default))
-        .route(
-            "/dashboards/{id}",
-            get(get_one)
-                .put(put_one)
-                .patch(patch_one)
-                .delete(delete_one),
-        )
-        .route(
-            "/dashboards/{id}/shares",
-            get(list_shares).post(create_share),
-        )
-        .route(
-            "/dashboards/{id}/shares/{user_id}",
-            patch(update_share).delete(delete_share),
-        )
-        .route(
-            "/dashboards/{id}/pending-shares/{pending_id}",
-            patch(update_pending_share).delete(delete_pending_share),
-        )
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(list, create))
+        .routes(routes!(get_default, put_default))
+        .routes(routes!(get_one, put_one, patch_one, delete_one))
+        .routes(routes!(list_shares, create_share))
+        .routes(routes!(update_share, delete_share))
+        .routes(routes!(update_pending_share, delete_pending_share))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "dashboards_list",
+    path = "/dashboards",
+    tag = "dashboards",
+    responses(
+        (status = 200, description = "OK", body = Vec<DashboardSummary>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -51,6 +48,18 @@ async fn list(
     Ok(Json(rows))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "dashboards_create",
+    path = "/dashboards",
+    tag = "dashboards",
+    responses(
+        (status = 200, description = "OK", body = DashboardView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -62,6 +71,18 @@ async fn create(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "dashboards_get_default",
+    path = "/dashboards/default",
+    tag = "dashboards",
+    responses(
+        (status = 200, description = "OK", body = DashboardView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_default(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -72,6 +93,18 @@ async fn get_default(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    put,
+    operation_id = "dashboards_put_default",
+    path = "/dashboards/default",
+    tag = "dashboards",
+    responses(
+        (status = 200, description = "OK", body = DashboardView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn put_default(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -83,6 +116,19 @@ async fn put_default(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "dashboards_get_one",
+    path = "/dashboards/{id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = DashboardView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -94,6 +140,19 @@ async fn get_one(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    put,
+    operation_id = "dashboards_put_one",
+    path = "/dashboards/{id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = DashboardView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn put_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -106,6 +165,19 @@ async fn put_one(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "dashboards_patch_one",
+    path = "/dashboards/{id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = DashboardView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn patch_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -118,6 +190,19 @@ async fn patch_one(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "dashboards_delete_one",
+    path = "/dashboards/{id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = Vec<DashboardSummary>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -127,6 +212,19 @@ async fn delete_one(
     Ok(Json(rows))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "dashboards_list_shares",
+    path = "/dashboards/{id}/shares",
+    tag = "dashboards",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = DashboardSharesEnvelope),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list_shares(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -139,6 +237,19 @@ async fn list_shares(
     Ok(Json(DashboardSharesEnvelope { shares, pending }))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "dashboards_create_share",
+    path = "/dashboards/{id}/shares",
+    tag = "dashboards",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn create_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -156,6 +267,19 @@ async fn create_share(
     Ok(Json(notification_mail::with_invite_email(&outcome, email)))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "dashboards_update_share",
+    path = "/dashboards/{id}/shares/{user_id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path), ("user_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = DashboardShareView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn update_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -166,6 +290,19 @@ async fn update_share(
     Ok(Json(share))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "dashboards_delete_share",
+    path = "/dashboards/{id}/shares/{user_id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path), ("user_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = ()),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -175,6 +312,19 @@ async fn delete_share(
     Ok(Json(()))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "dashboards_update_pending_share",
+    path = "/dashboards/{id}/pending-shares/{pending_id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path), ("pending_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = PendingShareInviteView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn update_pending_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -193,6 +343,19 @@ async fn update_pending_share(
     Ok(Json(invite))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "dashboards_delete_pending_share",
+    path = "/dashboards/{id}/pending-shares/{pending_id}",
+    tag = "dashboards",
+    params(("id" = Uuid, Path), ("pending_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_pending_share(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

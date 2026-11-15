@@ -7,7 +7,7 @@ pub use abuse::*;
 mod moderation;
 pub use moderation::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct User {
     pub id: Uuid,
     pub email: String,
@@ -50,7 +50,7 @@ impl User {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UserPublic {
     pub id: Uuid,
     pub email: String,
@@ -78,7 +78,7 @@ pub struct UserPublic {
 }
 
 /// A passkey as its owner sees it in the list.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
 pub struct PasskeySummary {
     pub id: Uuid,
     pub name: String,
@@ -87,14 +87,14 @@ pub struct PasskeySummary {
 }
 
 /// Body of `POST /users/me/terms`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct AcceptTerms {
     /// Must equal `legal::TERMS_VERSION`.
     pub terms_version: String,
 }
 
 /// Body of `POST /users/me/deletion`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct ScheduleAccountDeletion {
     /// Must match the account email (case-insensitive).
     pub confirm_email: String,
@@ -112,7 +112,7 @@ pub fn issuer_host(issuer: &str) -> String {
         .unwrap_or_else(|| issuer.to_string())
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct UserSettings {
     pub user_id: Uuid,
     pub show_hidden: bool,
@@ -139,7 +139,7 @@ where
     Option::<T>::deserialize(deserializer).map(Some)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateProfile {
     #[serde(
         default,
@@ -166,7 +166,7 @@ pub struct UpdateProfile {
     pub profile_visibility: Option<ProfileVisibility>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ChangePassword {
     pub current_password: String,
     pub new_password: String,
@@ -175,7 +175,7 @@ pub struct ChangePassword {
     pub revoke_api_keys: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateSettings {
     pub show_hidden: Option<bool>,
     pub vault_search_mode: Option<String>,
@@ -192,7 +192,7 @@ pub struct UpdateSettings {
     pub show_keyboard_hints: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct PlatformSettings {
     pub registration_open: bool,
     pub api_keys_enabled: bool,
@@ -219,7 +219,7 @@ pub struct PlatformSettings {
 }
 
 /// Effective quotas for a user. Today = platform row; later may AND with a plan.
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ResolvedLimits {
     pub max_bookmarks: Option<i64>,
     pub max_stored_image_bytes: Option<i64>,
@@ -241,7 +241,7 @@ impl From<&PlatformSettings> for ResolvedLimits {
 }
 
 /// Usage snapshot for Settings. Limits mirror [`ResolvedLimits`]; used gauges/counters are filled in.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct QuotaUsageView {
     pub limits: ResolvedLimits,
     pub bookmarks: i64,
@@ -250,7 +250,7 @@ pub struct QuotaUsageView {
     pub enrich_period_start: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdatePlatformSettings {
     pub registration_open: Option<bool>,
     pub api_keys_enabled: Option<bool>,
@@ -293,7 +293,7 @@ where
     Ok(Some(Option::<i64>::deserialize(deserializer)?))
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ApiKey {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -306,7 +306,7 @@ pub struct ApiKey {
 }
 
 /// Public key metadata (never includes the secret).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ApiKeyView {
     pub id: Uuid,
     pub name: String,
@@ -316,20 +316,20 @@ pub struct ApiKeyView {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateApiKey {
     pub name: String,
 }
 
 /// One-shot create response: view + plaintext token (shown once).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateApiKeyResponse {
     pub key: ApiKeyView,
     pub token: String,
 }
 
 /// Minimal admin account row (no private user data).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AdminUserSummary {
     pub id: Uuid,
     pub email: String,
@@ -345,13 +345,13 @@ pub struct AdminUserSummary {
     pub email_verified: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateAdminUser {
     pub api_keys_enabled: Option<bool>,
     pub is_admin: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct RegistrationInvite {
     pub id: Uuid,
     pub code_hash: String,
@@ -366,7 +366,7 @@ pub struct RegistrationInvite {
 }
 
 /// Public invite metadata (never includes the secret code).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RegistrationInviteView {
     pub id: Uuid,
     pub code_prefix: String,
@@ -380,7 +380,7 @@ pub struct RegistrationInviteView {
     pub status: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateRegistrationInvite {
     /// Optional: bind invite to this email (case-insensitive match on register).
     pub email: Option<String>,
@@ -389,13 +389,13 @@ pub struct CreateRegistrationInvite {
 }
 
 /// One-shot create response: view + plaintext code (shown once).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateRegistrationInviteResponse {
     pub invite: RegistrationInviteView,
     pub code: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -404,7 +404,7 @@ pub struct Session {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Category {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -426,7 +426,7 @@ pub struct Category {
 }
 
 /// Effective access for the current user on a category.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CategoryAccess {
     Owner,
@@ -445,7 +445,7 @@ impl CategoryAccess {
 }
 
 /// Membership grant on a shared category (`read` / `write` only).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ShareAccess {
     Read,
@@ -482,7 +482,7 @@ impl ShareAccess {
 }
 
 /// Who can open a profile.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProfileVisibility {
     Members,
@@ -502,7 +502,7 @@ impl ProfileVisibility {
 
 /// Who can see a category's bookmarks on the owner's profile. "Public" is reserved for
 /// the no-login Public link, so the widest tier here is `Members`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CategoryVisibility {
     Private,
@@ -520,7 +520,7 @@ impl CategoryVisibility {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategoryView {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -578,7 +578,7 @@ impl CategoryView {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct CategoryShare {
     pub id: Uuid,
     pub category_id: Uuid,
@@ -589,7 +589,7 @@ pub struct CategoryShare {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategoryShareView {
     pub id: Uuid,
     pub category_id: Uuid,
@@ -602,19 +602,19 @@ pub struct CategoryShareView {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateCategoryShare {
     pub email: String,
     pub access: ShareAccess,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateCategoryShare {
     pub access: ShareAccess,
 }
 
 /// Subject for a pending (pre-account) share invite.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PendingShareSubjectType {
     Category,
@@ -638,7 +638,7 @@ impl PendingShareSubjectType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct PendingShareInvite {
     pub id: Uuid,
     pub subject_type: String,
@@ -659,7 +659,7 @@ pub struct PendingShareInvite {
     pub email_claim_token_hash: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PendingShareInviteView {
     pub id: Uuid,
     pub subject_type: PendingShareSubjectType,
@@ -675,7 +675,7 @@ pub struct PendingShareInviteView {
 }
 
 /// An invite as its invitee sees it. `rejected_at` is set when they declined it.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ShareInviteInboxItem {
     pub id: Uuid,
     pub subject_type: PendingShareSubjectType,
@@ -688,39 +688,39 @@ pub struct ShareInviteInboxItem {
     pub rejected_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategorySharesEnvelope {
     pub shares: Vec<CategoryShareView>,
     pub pending: Vec<PendingShareInviteView>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum CreateCategoryShareOutcome {
     Active { share: CategoryShareView },
     Pending { invite: PendingShareInviteView },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSharesEnvelope {
     pub shares: Vec<DashboardShareView>,
     pub pending: Vec<PendingShareInviteView>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum CreateDashboardShareOutcome {
     Active { share: DashboardShareView },
     Pending { invite: PendingShareInviteView },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdatePendingShareInvite {
     pub access: ShareAccess,
 }
 
 /// Owner-facing public-link state for a category (list).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategoryPublicLinkView {
     pub enabled: bool,
     /// Present when enabled. High-entropy unlisted slug.
@@ -732,7 +732,7 @@ pub struct CategoryPublicLinkView {
 }
 
 /// Anonymous read model for a published bookmark list.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PublicListView {
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -746,7 +746,7 @@ pub struct PublicListView {
 }
 
 /// Bookmark fields safe to expose on a public list (no notes / vault / owner ids).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PublicBookmarkView {
     pub id: Uuid,
     pub url: String,
@@ -765,7 +765,7 @@ pub struct PublicBookmarkView {
     pub tags: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct DashboardShare {
     pub id: Uuid,
     pub dashboard_id: Uuid,
@@ -776,7 +776,7 @@ pub struct DashboardShare {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardShareView {
     pub id: Uuid,
     pub dashboard_id: Uuid,
@@ -789,18 +789,18 @@ pub struct DashboardShareView {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateDashboardShare {
     pub email: String,
     pub access: ShareAccess,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateDashboardShare {
     pub access: ShareAccess,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Tag {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -809,7 +809,7 @@ pub struct Tag {
 }
 
 /// Last probe result from the broken-link checker worker.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkCheckStatus {
     Ok,
@@ -843,7 +843,7 @@ impl LinkCheckStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Bookmark {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -870,7 +870,7 @@ pub struct Bookmark {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategoryRef {
     pub id: Uuid,
     pub name: String,
@@ -878,7 +878,7 @@ pub struct CategoryRef {
     pub path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BookmarkView {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -929,7 +929,7 @@ pub struct BookmarkView {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Vault {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -945,7 +945,7 @@ pub struct Vault {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ImportJob {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -959,7 +959,7 @@ pub struct ImportJob {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct VaultPayload {
     pub url: String,
     pub title: String,
@@ -996,7 +996,7 @@ impl VaultKeyring {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct VaultView {
     pub id: Uuid,
     pub name: String,
@@ -1010,37 +1010,37 @@ pub struct VaultView {
     pub bookmark_count: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateVaultRequest {
     pub name: String,
     pub passphrase: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RenameVaultRequest {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RecoverVaultRequest {
     pub recovery_key: String,
     pub new_passphrase: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DeleteVaultRequest {
     pub name: String,
     #[serde(default)]
     pub password: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ChangeGlobalPassphraseRequest {
     pub current_passphrase: String,
     pub new_passphrase: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct MoveToVaultRequest {
     #[serde(default)]
     pub category_ids: Vec<Uuid>,
@@ -1049,7 +1049,7 @@ pub struct MoveToVaultRequest {
     pub destination_vault_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum VaultMoveBlockerKind {
     Shared,
@@ -1058,7 +1058,7 @@ pub enum VaultMoveBlockerKind {
     Dashboard,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct VaultMoveBlocker {
     pub kind: VaultMoveBlockerKind,
     pub subject_id: Uuid,
@@ -1076,7 +1076,7 @@ pub enum VaultMoveOutcome {
     Blocked(Vec<VaultMoveBlocker>),
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateBookmark {
     pub url: String,
     pub title: Option<String>,
@@ -1098,7 +1098,7 @@ pub struct CreateBookmark {
     pub vault_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateBookmark {
     pub url: Option<String>,
     pub title: Option<String>,
@@ -1135,7 +1135,7 @@ pub struct UpdateBookmark {
     pub is_private: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateCategory {
     pub name: String,
     pub parent_id: Option<Uuid>,
@@ -1147,13 +1147,13 @@ pub struct CreateCategory {
 }
 
 /// Copy a readable category tree (+ bookmarks) into a new owned root.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ForkCategory {
     /// Defaults to `{name} (copy)`.
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateCategory {
     pub name: Option<String>,
     #[serde(
@@ -1175,7 +1175,7 @@ pub struct UpdateCategory {
     pub visibility: Option<CategoryVisibility>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RegisterRequest {
     pub email: String,
     pub password: String,
@@ -1197,24 +1197,24 @@ pub struct RegisterRequest {
     pub terms_version: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AuthResponse {
     pub user: UserPublic,
     pub token: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct VaultUnlockRequest {
     pub passphrase: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SearchHit {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -1230,7 +1230,7 @@ pub struct SearchHit {
     pub can_write: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct LinkdeanExport {
     /// 1: categories and bookmarks with one category each. 2 adds every category of a
     /// bookmark, its flags and timestamps, and dashboards.
@@ -1242,7 +1242,7 @@ pub struct LinkdeanExport {
     pub dashboards: Vec<DashboardExport>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardExport {
     pub title: String,
     #[serde(default)]
@@ -1250,7 +1250,7 @@ pub struct DashboardExport {
     pub sections: Vec<DashboardSectionExport>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSectionExport {
     pub title: String,
     /// `BookmarkExport::id` values, in order.
@@ -1260,7 +1260,7 @@ pub struct DashboardSectionExport {
     pub settings: DashboardSectionSettings,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategoryExport {
     pub id: Uuid,
     pub parent_id: Option<Uuid>,
@@ -1272,7 +1272,7 @@ pub struct CategoryExport {
     pub position: i32,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BookmarkExport {
     /// Lets dashboards in the same file point at this bookmark. Not kept on import.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1312,7 +1312,7 @@ impl BookmarkExport {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Dashboard {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -1323,7 +1323,7 @@ pub struct Dashboard {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct DashboardSection {
     pub id: Uuid,
     pub dashboard_id: Uuid,
@@ -1372,7 +1372,7 @@ impl DashboardSection {
 }
 
 /// What fills a dashboard section.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DashboardSectionKind {
     /// Bookmarks pinned by hand.
@@ -1413,7 +1413,7 @@ impl DashboardSectionKind {
 }
 
 /// How a section shows its bookmarks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DashboardSectionDisplay {
     Small,
@@ -1452,7 +1452,7 @@ const DASHBOARD_GRID_MAX_Y: i32 = 10_000;
 
 /// A section's place and size on the dashboard's 12-column grid, in grid units. The web app
 /// packs sections upward, so `y` orders them more than it places them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSectionLayout {
     pub x: i32,
     pub y: i32,
@@ -1491,7 +1491,7 @@ impl DashboardSectionLayout {
 }
 
 /// The period "Most opened" counts opens over.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DashboardOpenWindow {
     #[serde(rename = "last_30_days")]
@@ -1518,7 +1518,7 @@ impl DashboardOpenWindow {
 }
 
 /// Filters for a section that fills itself. A bookmark must match every one that is set.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSectionSource {
     /// A folder of the owner's, with its subfolders.
     #[serde(default)]
@@ -1544,7 +1544,7 @@ fn default_section_item_limit() -> i32 {
 
 /// A section's type, display mode and source. Every field has a default, so older layouts
 /// and exports (title and pins only) still read as pinned, medium sections.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSectionSettings {
     #[serde(default)]
     pub kind: DashboardSectionKind,
@@ -1609,7 +1609,7 @@ pub fn normalize_site(input: &str) -> String {
         .to_string()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct DashboardItem {
     pub id: Uuid,
     pub section_id: Uuid,
@@ -1618,7 +1618,7 @@ pub struct DashboardItem {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardItemView {
     pub id: Uuid,
     pub position: i32,
@@ -1632,7 +1632,7 @@ pub struct DashboardItemView {
     pub last_opened_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSectionView {
     pub id: Uuid,
     pub title: String,
@@ -1642,7 +1642,7 @@ pub struct DashboardSectionView {
     pub items: Vec<DashboardItemView>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardView {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -1665,7 +1665,7 @@ pub struct DashboardView {
 }
 
 /// Lightweight row for switchers / settings (no sections).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSummary {
     pub id: Uuid,
     pub owner_user_id: Uuid,
@@ -1684,7 +1684,7 @@ pub struct DashboardSummary {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TrashKind {
     Bookmark,
@@ -1692,7 +1692,7 @@ pub enum TrashKind {
     Dashboard,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TrashItem {
     pub kind: TrashKind,
     pub id: Uuid,
@@ -1700,37 +1700,37 @@ pub struct TrashItem {
     pub deleted_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PurgeTrashRequest {
     pub items: Vec<TrashItemRef>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TrashItemRef {
     pub kind: TrashKind,
     pub id: Uuid,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateDashboard {
     pub title: Option<String>,
 }
 
 /// Rename and/or pin. Pinning a shared dashboard needs read access and only affects the caller.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PatchDashboard {
     pub title: Option<String>,
     pub is_default: Option<bool>,
 }
 
 /// Full layout replace for a personal dashboard.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PutDashboardLayout {
     pub title: Option<String>,
     pub sections: Vec<PutDashboardSection>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PutDashboardSection {
     pub title: String,
     /// Pins, for a pinned section. Ignored for sections that fill themselves.
@@ -1741,7 +1741,7 @@ pub struct PutDashboardSection {
 }
 
 /// Shared-activity notification kinds (Milestone 5).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationKind {
     ShareInvite,
@@ -1826,7 +1826,7 @@ impl NotificationKind {
 }
 
 /// How a notification kind's email arrives.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EmailDelivery {
     /// One email per notification, within seconds.
@@ -1853,7 +1853,7 @@ impl EmailDelivery {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationSubjectType {
     Category,
@@ -1884,14 +1884,14 @@ impl NotificationSubjectType {
 }
 
 /// Public follow-list entry (no email).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FollowUserView {
     pub id: Uuid,
     pub display_name: String,
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FollowRelation {
     pub following: bool,
     pub followers: i64,
@@ -1899,7 +1899,7 @@ pub struct FollowRelation {
 }
 
 /// A user's profile as another signed-in user sees it.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ProfileView {
     pub id: Uuid,
     pub display_name: String,
@@ -1916,30 +1916,30 @@ pub struct ProfileView {
 }
 
 /// One row of a follower or following list. Never carries an email.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ProfileSummary {
     pub id: Uuid,
     pub display_name: String,
     pub has_avatar: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ProfileBookmarksPage {
     pub bookmarks: Vec<PublicBookmarkView>,
     pub total: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BlockRelation {
     pub blocked: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct MuteRelation {
     pub muted: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Notification {
     pub id: Uuid,
     pub recipient_user_id: Uuid,
@@ -1954,7 +1954,7 @@ pub struct Notification {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct NotificationView {
     pub id: Uuid,
     pub kind: NotificationKind,
@@ -1970,7 +1970,7 @@ pub struct NotificationView {
 }
 
 /// Social subject (shared bookmark / list / dashboard).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SocialSubjectType {
     Bookmark,
@@ -2005,7 +2005,7 @@ impl SocialSubjectType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct SocialComment {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -2016,7 +2016,7 @@ pub struct SocialComment {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SocialCommentView {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -2027,17 +2027,17 @@ pub struct SocialCommentView {
     pub can_delete: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateSocialComment {
     pub body: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpsertSocialRating {
     pub rating: i16,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SocialSummary {
     pub subject_type: SocialSubjectType,
     pub subject_id: Uuid,
@@ -2051,7 +2051,7 @@ pub struct SocialSummary {
 }
 
 /// Personal activity history actions (create / edit / delete / restore).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActivityAction {
     Created,
@@ -2081,7 +2081,7 @@ impl ActivityAction {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActivitySubjectType {
     Bookmark,
@@ -2108,7 +2108,7 @@ impl ActivitySubjectType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ActivityEvent {
     pub id: Uuid,
     pub action: ActivityAction,

@@ -4,20 +4,20 @@ use crate::auth::AdminUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::State;
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::Error;
 use linkdean_db::{self as db};
 use linkdean_mail::MailConfig;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 /// Test sends per admin per rate-limit window (15 minutes).
 const TEST_SENDS: u32 = 5;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/admin/email", get(status))
-        .route("/admin/email/test", post(send_test))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(status))
+        .routes(routes!(send_test))
 }
 
 /// What an admin may see of the SMTP settings. Never the username or password.
@@ -30,6 +30,18 @@ fn config_json(cfg: &MailConfig) -> Value {
     })
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "admin_email_status",
+    path = "/admin/email",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn status(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
@@ -42,6 +54,18 @@ async fn status(
 }
 
 /// Sends straight away, skipping the outbox, so the admin sees the SMTP result at once.
+#[utoipa::path(
+    post,
+    operation_id = "admin_email_send_test",
+    path = "/admin/email/test",
+    tag = "admin",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 async fn send_test(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,

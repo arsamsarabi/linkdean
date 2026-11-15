@@ -131,7 +131,8 @@ async fn oidc_client(
     .set_redirect_uri(redirect))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct StartQuery {
     mode: Option<String>,
     terms_version: Option<String>,
@@ -146,6 +147,19 @@ pub(super) struct StartQuery {
 /// in; it needs a session. Sign-in may create an account, so it needs `?terms_version=` equal to
 /// the current terms version; the flow cookie carries it to the callback, which records it on a
 /// new account. Existing accounts sign in unchanged. Connect mode never creates an account.
+#[utoipa::path(
+    get,
+    operation_id = "auth_oidc_start",
+    path = "/auth/oidc/start",
+    tag = "auth",
+    params(StartQuery),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security((), ("api_key" = []), ("session_cookie" = [])),
+)]
 pub(super) async fn start(
     State(state): State<AppState>,
     Query(q): Query<StartQuery>,
@@ -265,7 +279,8 @@ fn flow_redirect(state: &AppState, url: &str, flow: &FlowCookie) -> ApiResult<Re
     Ok(res)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub(super) struct CallbackQuery {
     code: Option<String>,
     state: Option<String>,
@@ -293,6 +308,18 @@ struct Identity {
 
 /// Always redirects: home with a session, the login page with a pending link or a reason, or
 /// back to the profile page in connect mode.
+#[utoipa::path(
+    get,
+    operation_id = "auth_oidc_callback",
+    path = "/auth/oidc/callback",
+    tag = "auth",
+    params(CallbackQuery),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub(super) async fn callback(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -648,6 +675,17 @@ pub(super) async fn notify_sso_connected(
 
 /// The masked provider address of the browser's pending link, for the login prompt. 404 when
 /// there is none or it expired or was used.
+#[utoipa::path(
+    get,
+    operation_id = "auth_oidc_pending_link",
+    path = "/auth/oidc/pending-link",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub(super) async fn pending_link(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -659,13 +697,25 @@ pub(super) async fn pending_link(
     Ok(Json(json!({ "email": mask_email(&link.email) })))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub(super) struct DisconnectRequest {
     password: String,
 }
 
 /// Detach single sign-on after a password check. Accounts without a password cannot, so they
 /// keep a way to sign in. Wrong passwords count against the sign-in limits.
+#[utoipa::path(
+    post,
+    operation_id = "auth_oidc_disconnect",
+    path = "/auth/oidc/disconnect",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub(super) async fn disconnect(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,

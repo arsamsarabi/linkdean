@@ -2,16 +2,28 @@ use crate::state::AppState;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{routing::get, Json, Router};
+use axum::Json;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/health", get(health))
-        .route("/ready", get(ready))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(health))
+        .routes(routes!(ready))
 }
 
 /// Liveness. Reports the running version so a deploy can confirm which build is live.
+#[utoipa::path(
+    get,
+    operation_id = "health_health",
+    path = "/health",
+    tag = "health",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn health() -> Json<Value> {
     Json(json!({
         "status": "ok",
@@ -21,6 +33,17 @@ async fn health() -> Json<Value> {
 }
 
 /// Liveness of dependencies (Postgres + Meilisearch). Use for Compose / k8s probes.
+#[utoipa::path(
+    get,
+    operation_id = "health_ready",
+    path = "/ready",
+    tag = "ready",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn ready(State(state): State<AppState>) -> impl IntoResponse {
     let mut db_ok = false;
     let mut meili_ok = false;

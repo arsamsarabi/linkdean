@@ -5,8 +5,8 @@ use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Multipart, Path, Query, State};
 use axum::response::Response;
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::routing::get;
+use axum::Json;
 use chrono::{DateTime, Utc};
 use linkdean_core::preview_image::{self, process_bookmark_preview};
 use linkdean_core::VaultKeyring;
@@ -14,47 +14,41 @@ use linkdean_core::{BookmarkView, CreateBookmark, Error, UpdateBookmark};
 use linkdean_db::{self as db, BookmarkPageFilter, BookmarkSort, DEFAULT_PAGE_LIMIT};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 /// The image limit in `process_bookmark_preview`, plus multipart framing.
 const MAX_PREVIEW_BODY: usize = 9 * 1024 * 1024;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/bookmarks", get(list).post(create))
-        .route("/bookmarks/duplicates", get(duplicates))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(list, create))
+        .routes(routes!(duplicates))
         // Literal paths must stay registered as their own routes (not under `{id}`) so
         // axum never tries to parse names like `broken` as a Uuid → bare 400.
-        .route("/bookmarks/broken", get(broken))
+        .routes(routes!(broken))
         .route("/bookmarks/broken-links", get(broken))
-        .route("/bookmarks/ids", get(list_ids))
-        .route("/bookmarks/page-details", post(page_details))
-        .route("/bookmarks/lookup", get(lookup))
-        .route("/bookmarks/folder-counts", get(folder_counts))
-        .route("/bookmarks/url-hashes", get(url_hashes))
-        .route("/bookmarks/{id}/check-link", post(check_link))
-        .route("/bookmarks/{id}/open", post(record_open))
-        .route(
-            "/bookmarks/{id}/filing-suggestions",
-            get(filing_suggestions),
-        )
-        .route("/bookmarks/{id}/save", post(save_copy))
-        .route(
-            "/bookmarks/{id}/preview",
-            get(get_preview)
-                .post(upload_preview)
-                .delete(delete_preview)
+        .routes(routes!(list_ids))
+        .routes(routes!(page_details))
+        .routes(routes!(lookup))
+        .routes(routes!(folder_counts))
+        .routes(routes!(url_hashes))
+        .routes(routes!(check_link))
+        .routes(routes!(record_open))
+        .routes(routes!(filing_suggestions))
+        .routes(routes!(save_copy))
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(get_preview, upload_preview, delete_preview))
                 .layer(DefaultBodyLimit::max(MAX_PREVIEW_BODY)),
         )
-        .route("/bookmarks/{id}/favicon", get(get_favicon))
-        .route("/bookmarks/{id}/og", get(get_og))
-        .route(
-            "/bookmarks/{id}",
-            get(get_one).patch(update).delete(delete_one),
-        )
+        .routes(routes!(get_favicon))
+        .routes(routes!(get_og))
+        .routes(routes!(get_one, update, delete_one))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ListQuery {
     pub category_id: Option<Uuid>,
     pub folder: Option<String>,
@@ -75,14 +69,14 @@ pub struct ListQuery {
     pub vault_only: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct BookmarkListResponse {
     pub items: Vec<BookmarkView>,
     pub next_cursor: Option<String>,
     pub total: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct BookmarkIdsResponse {
     pub ids: Vec<Uuid>,
 }
@@ -130,6 +124,19 @@ fn page_filter(
     })
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_list",
+    path = "/bookmarks",
+    tag = "bookmarks",
+    params(ListQuery),
+    responses(
+        (status = 200, description = "OK", body = BookmarkListResponse),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -148,6 +155,19 @@ async fn list(
     }))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_list_ids",
+    path = "/bookmarks/ids",
+    tag = "bookmarks",
+    params(ListQuery),
+    responses(
+        (status = 200, description = "OK", body = BookmarkIdsResponse),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list_ids(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -162,6 +182,19 @@ async fn list_ids(
     Ok(Json(BookmarkIdsResponse { ids }))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_get_one",
+    path = "/bookmarks/{id}",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = BookmarkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -176,6 +209,18 @@ async fn get_one(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "bookmarks_create",
+    path = "/bookmarks",
+    tag = "bookmarks",
+    responses(
+        (status = 200, description = "OK", body = BookmarkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn create(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -200,6 +245,19 @@ async fn create(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    patch,
+    operation_id = "bookmarks_update",
+    path = "/bookmarks/{id}",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = BookmarkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn update(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -219,6 +277,19 @@ async fn update(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "bookmarks_delete_one",
+    path = "/bookmarks/{id}",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -232,6 +303,19 @@ async fn delete_one(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_get_preview",
+    path = "/bookmarks/{id}/preview",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_preview(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -244,6 +328,20 @@ async fn get_preview(
     assets::serve(&state, id, Asset::Preview, PRIVATE_CACHE).await
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "bookmarks_upload_preview",
+    path = "/bookmarks/{id}/preview",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    request_body(content_type = "multipart/form-data", description = "A `file` field with a PNG, JPEG or WebP image."),
+    responses(
+        (status = 200, description = "OK", body = BookmarkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn upload_preview(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -318,6 +416,19 @@ async fn upload_preview(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "bookmarks_delete_preview",
+    path = "/bookmarks/{id}/preview",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = BookmarkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn delete_preview(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -353,6 +464,19 @@ async fn delete_preview(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_get_favicon",
+    path = "/bookmarks/{id}/favicon",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_favicon(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -362,6 +486,19 @@ async fn get_favicon(
     assets::serve(&state, id, Asset::Favicon, PRIVATE_CACHE).await
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_get_og",
+    path = "/bookmarks/{id}/og",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn get_og(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -371,6 +508,18 @@ async fn get_og(
     assets::serve(&state, id, Asset::Og, PRIVATE_CACHE).await
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_duplicates",
+    path = "/bookmarks/duplicates",
+    tag = "bookmarks",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn duplicates(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -389,6 +538,18 @@ async fn duplicates(
     Ok(Json(json!({ "urls": urls, "groups": payload })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_broken",
+    path = "/bookmarks/broken",
+    tag = "bookmarks",
+    responses(
+        (status = 200, description = "OK", body = Vec<BookmarkView>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn broken(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -397,13 +558,27 @@ async fn broken(
     Ok(Json(items))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct LookupQuery {
     pub url: String,
 }
 
 /// The person's own bookmark at exactly this URL, if any, so quick save can open it instead
 /// of saving a second copy. Vault bookmarks are never matched.
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_lookup",
+    path = "/bookmarks/lookup",
+    tag = "bookmarks",
+    params(LookupQuery),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn lookup(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -413,7 +588,7 @@ async fn lookup(
     Ok(Json(json!({ "bookmark": bookmark })))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct PageDetailsRequest {
     pub url: String,
 }
@@ -421,6 +596,18 @@ pub struct PageDetailsRequest {
 /// Fetches a page's title, description and keyword tags so the bookmark form can fill in
 /// what the person has not typed yet. Nothing is saved. Counts as one enrich action and is
 /// rate limited per user. The SPA never calls it for a bookmark headed into a vault.
+#[utoipa::path(
+    post,
+    operation_id = "bookmarks_page_details",
+    path = "/bookmarks/page-details",
+    tag = "bookmarks",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn page_details(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -462,6 +649,19 @@ async fn page_details(
 
 /// Records that the signed-in person opened the bookmark, for the dashboard's Most opened
 /// and Recently visited sections. Vault bookmarks are not recorded.
+#[utoipa::path(
+    post,
+    operation_id = "bookmarks_record_open",
+    path = "/bookmarks/{id}/open",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn record_open(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -471,6 +671,19 @@ async fn record_open(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "bookmarks_check_link",
+    path = "/bookmarks/{id}/check-link",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = BookmarkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn check_link(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -494,6 +707,19 @@ async fn check_link(
     Ok(Json(view))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "bookmarks_save_copy",
+    path = "/bookmarks/{id}/save",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = BookmarkView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn save_copy(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -517,6 +743,19 @@ async fn save_copy(
 }
 
 /// Folders and tags the person already uses on this bookmark's site, for the filing queue.
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_filing_suggestions",
+    path = "/bookmarks/{id}/filing-suggestions",
+    tag = "bookmarks",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = db::FilingSuggestions),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn filing_suggestions(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -528,6 +767,18 @@ async fn filing_suggestions(
 }
 
 /// Hashes of every URL the person has saved, for the browser extension's saved-page icon.
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_url_hashes",
+    path = "/bookmarks/url-hashes",
+    tag = "bookmarks",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn url_hashes(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -541,6 +792,18 @@ async fn url_hashes(
 }
 
 /// Live bookmarks per folder and in Unsorted, for Explorer's folder tiles.
+#[utoipa::path(
+    get,
+    operation_id = "bookmarks_folder_counts",
+    path = "/bookmarks/folder-counts",
+    tag = "bookmarks",
+    responses(
+        (status = 200, description = "OK", body = db::FolderCounts),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn folder_counts(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

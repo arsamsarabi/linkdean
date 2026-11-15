@@ -3,8 +3,7 @@ use crate::error::ApiResult;
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{DefaultBodyLimit, Query, State};
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::import_export::{
     build_linkdean_export, export_netscape, parse_linkdean_json, parse_netscape, parse_pocket_csv,
     parse_raindrop_csv, DuplicateDecisions, ImportPreview, ParsedImport,
@@ -14,21 +13,24 @@ use linkdean_core::{ResolvedLimits, VaultKeyring};
 use linkdean_db::{self as db};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route(
-            "/import",
-            post(import).layer(DefaultBodyLimit::max(MAX_IMPORT_BODY)),
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(import))
+                .layer(DefaultBodyLimit::max(MAX_IMPORT_BODY)),
         )
-        .route(
-            "/import/preview",
-            post(preview).layer(DefaultBodyLimit::max(MAX_IMPORT_BODY)),
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(preview))
+                .layer(DefaultBodyLimit::max(MAX_IMPORT_BODY)),
         )
-        .route("/export", get(export))
+        .routes(routes!(export))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct ImportBody {
     pub format: String,
     pub content: String,
@@ -37,7 +39,8 @@ pub struct ImportBody {
     pub duplicates: DuplicateDecisions,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ExportQuery {
     #[serde(default = "default_format")]
     pub format: String,
@@ -118,6 +121,18 @@ async fn parse_import(
 
 /// What an import of this file would do: which bookmarks are already in the library, and
 /// how many folders would be reused. Writes nothing.
+#[utoipa::path(
+    post,
+    operation_id = "import_export_preview",
+    path = "/import/preview",
+    tag = "import",
+    responses(
+        (status = 200, description = "OK", body = ImportPreview),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn preview(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -133,6 +148,18 @@ async fn preview(
     ))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "import_export_import",
+    path = "/import",
+    tag = "import",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn import(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -217,6 +244,19 @@ async fn import(
     })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "import_export_export",
+    path = "/export",
+    tag = "export",
+    params(ExportQuery),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn export(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

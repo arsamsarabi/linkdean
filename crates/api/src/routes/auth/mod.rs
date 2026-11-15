@@ -18,53 +18,41 @@ use crate::vault_keys::VaultSession;
 use axum::extract::{ConnectInfo, State};
 use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::legal::{require_current_terms, TERMS_VERSION};
 use linkdean_core::{AuthResponse, Error, LoginRequest, RegisterRequest};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
 use std::net::SocketAddr;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/auth/register", post(register))
-        .route("/auth/login", post(login))
-        .route("/auth/logout", post(logout))
-        .route("/auth/password/forgot", post(password_reset::forgot))
-        .route("/auth/password/reset", post(password_reset::reset))
-        .route("/auth/email/resend", post(email_verification::resend))
-        .route("/auth/email/verify", post(email_verification::verify))
-        .route("/auth/email/change", post(email_verification::change))
-        .route(
-            "/auth/email/confirm-change",
-            post(email_verification::confirm_change),
-        )
-        .route("/auth/me", get(me))
-        .route("/auth/bootstrap-status", get(bootstrap_status))
-        .route("/auth/onboarding/complete", post(complete_onboarding))
-        .route("/auth/oidc/start", get(oidc::start))
-        .route("/auth/oidc/callback", get(oidc::callback))
-        .route("/auth/oidc/pending-link", get(oidc::pending_link))
-        .route("/auth/oidc/disconnect", post(oidc::disconnect))
-        .route("/auth/config", get(auth_config))
-        .route("/auth/extension/authorize", post(extension::authorize))
-        .route("/auth/extension/token", post(extension::token))
-        .route("/auth/passkey/start", post(passkey::login_start))
-        .route("/auth/passkey/finish", post(passkey::login_finish))
-        .route("/users/me/passkeys", get(passkey::list))
-        .route(
-            "/users/me/passkeys/register/start",
-            post(passkey::register_start),
-        )
-        .route(
-            "/users/me/passkeys/register/finish",
-            post(passkey::register_finish),
-        )
-        .route(
-            "/users/me/passkeys/{id}",
-            axum::routing::patch(passkey::rename).delete(passkey::remove),
-        )
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(register))
+        .routes(routes!(login))
+        .routes(routes!(logout))
+        .routes(routes!(password_reset::forgot))
+        .routes(routes!(password_reset::reset))
+        .routes(routes!(email_verification::resend))
+        .routes(routes!(email_verification::verify))
+        .routes(routes!(email_verification::change))
+        .routes(routes!(email_verification::confirm_change))
+        .routes(routes!(me))
+        .routes(routes!(bootstrap_status))
+        .routes(routes!(complete_onboarding))
+        .routes(routes!(oidc::start))
+        .routes(routes!(oidc::callback))
+        .routes(routes!(oidc::pending_link))
+        .routes(routes!(oidc::disconnect))
+        .routes(routes!(auth_config))
+        .routes(routes!(extension::authorize))
+        .routes(routes!(extension::token))
+        .routes(routes!(passkey::login_start))
+        .routes(routes!(passkey::login_finish))
+        .routes(routes!(passkey::list))
+        .routes(routes!(passkey::register_start))
+        .routes(routes!(passkey::register_finish))
+        .routes(routes!(passkey::rename, passkey::remove))
 }
 
 /// The sign-in buttons: `[{ "id": "github", "label": "GitHub" }, …]`, in display order.
@@ -75,6 +63,17 @@ fn sso_providers(state: &AppState) -> Value {
         .collect::<Vec<_>>())
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "auth_bootstrap_status",
+    path = "/auth/bootstrap-status",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     let count = db::count_users(&state.pool).await?;
     let platform = db::get_platform_settings(&state.pool).await?;
@@ -89,6 +88,17 @@ async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value
     })))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "auth_auth_config",
+    path = "/auth/config",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
     let platform = db::get_platform_settings(&state.pool).await?;
     Ok(Json(json!({
@@ -108,6 +118,17 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
 /// Local sign-up. The first account becomes admin and needs `BOOTSTRAP_TOKEN` when one is set;
 /// later ones need open registration or an invite. `create_user_gated` checks both and claims
 /// the invite under one lock and transaction.
+#[utoipa::path(
+    post,
+    operation_id = "auth_register",
+    path = "/auth/register",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn register(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -192,6 +213,17 @@ async fn register(
     ))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "auth_login",
+    path = "/auth/login",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn login(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -247,6 +279,17 @@ async fn login(
     Ok(res)
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "auth_logout",
+    path = "/auth/logout",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 async fn logout(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
@@ -267,6 +310,18 @@ async fn logout(
     Ok(res)
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "auth_me",
+    path = "/auth/me",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn me(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -291,6 +346,18 @@ async fn me(
     })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "auth_complete_onboarding",
+    path = "/auth/onboarding/complete",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn complete_onboarding(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

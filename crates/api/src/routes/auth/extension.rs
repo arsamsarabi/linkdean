@@ -22,7 +22,7 @@ use std::net::SocketAddr;
 const SPENT: &str =
     "This sign-in has expired or was already used. Sign in from the extension again.";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct AuthorizeRequest {
     /// The extension's base address, `chrome-extension://<id>/` or `moz-extension://<uuid>/`.
     pub extension_origin: String,
@@ -34,6 +34,18 @@ pub struct AuthorizeRequest {
 }
 
 /// Login sessions only, like creating any API key: a key must never mint another.
+#[utoipa::path(
+    post,
+    operation_id = "auth_extension_authorize",
+    path = "/auth/extension/authorize",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("session_token" = []), ("session_cookie" = [])),
+)]
 pub async fn authorize(
     State(state): State<AppState>,
     SessionUser(user): SessionUser,
@@ -74,7 +86,7 @@ pub async fn authorize(
     Ok(Json(json!({ "code": code, "state": req.state })))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct TokenRequest {
     pub code: String,
     pub code_verifier: String,
@@ -82,6 +94,17 @@ pub struct TokenRequest {
 }
 
 /// No session: the extension proves itself with the verifier only it holds.
+#[utoipa::path(
+    post,
+    operation_id = "auth_extension_token",
+    path = "/auth/extension/token",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub async fn token(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,

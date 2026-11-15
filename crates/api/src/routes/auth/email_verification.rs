@@ -20,12 +20,12 @@ use uuid::Uuid;
 const MAIL_OFF: &str = "email verification needs outbound email; ask your admin";
 const CHANGE_MAIL_OFF: &str = "changing your email needs outbound email; ask your admin";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct TokenRequest {
     pub token: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct ChangeRequest {
     pub password: String,
     pub new_email: String,
@@ -98,6 +98,18 @@ fn limit_resend(
 }
 
 /// Send a new verification link to the signed-in account's address.
+#[utoipa::path(
+    post,
+    operation_id = "auth_email_verification_resend",
+    path = "/auth/email/resend",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub async fn resend(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -120,6 +132,17 @@ pub async fn resend(
 }
 
 /// Verify an address with its link. No session needed.
+#[utoipa::path(
+    post,
+    operation_id = "auth_email_verification_verify",
+    path = "/auth/email/verify",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub async fn verify(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -133,6 +156,18 @@ pub async fn verify(
 
 /// Start an email change: the link goes to the new address, a notice to the old one. The
 /// address stays the same until the link is opened.
+#[utoipa::path(
+    post,
+    operation_id = "auth_email_verification_change",
+    path = "/auth/email/change",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 pub async fn change(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -165,6 +200,17 @@ pub async fn change(
 }
 
 /// Finish an email change with its link. No session needed.
+#[utoipa::path(
+    post,
+    operation_id = "auth_email_verification_confirm_change",
+    path = "/auth/email/confirm-change",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub async fn confirm_change(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,

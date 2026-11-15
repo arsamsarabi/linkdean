@@ -18,12 +18,12 @@ use std::net::SocketAddr;
 /// How long an emailed link works.
 pub const EMAIL_LINK_MINUTES: i64 = 30;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct ForgotRequest {
     pub email: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct ResetRequest {
     pub token: String,
     pub password: String,
@@ -48,6 +48,17 @@ pub fn reset_url(app_url: &str, token: &str) -> String {
 
 /// Always answers the same, at once; the lookup and email happen in the background, so neither
 /// the reply nor its timing says whether the address has an account.
+#[utoipa::path(
+    post,
+    operation_id = "auth_password_reset_forgot",
+    path = "/auth/password/forgot",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub async fn forgot(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -101,6 +112,17 @@ async fn send_reset_email(state: &AppState, email: &str) -> linkdean_core::Resul
 }
 
 /// Set the new password, end every session and sign this browser in.
+#[utoipa::path(
+    post,
+    operation_id = "auth_password_reset_reset",
+    path = "/auth/password/reset",
+    tag = "auth",
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+)]
 pub async fn reset(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,

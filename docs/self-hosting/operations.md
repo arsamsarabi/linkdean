@@ -204,6 +204,8 @@ Signed-in people manage it under **Profile → Edit profile → Single sign-on**
 
 ### API clients
 
+The API is described by an OpenAPI 3.1 document at `GET /api/openapi.json` on every instance, rendered as the [API reference](https://docs.linkdean.app/docs/api-reference). Errors share one body, `{ "code", "message", "details"?, "error" }`; match on `code`. JSON reads carry an `ETag`, and `If-None-Match` with it answers `304`.
+
 The browser extension (`apps/extension`) signs in to any instance: people type its address in the extension, approve it on `/connect/extension`, and the extension gets an API key. That needs API keys enabled, platform-wide and for the account (**Admin**). The extension asks the browser for access to the instance's host only. Self-hosted instances must be served over `https://`; plain `http://` works only for `localhost`.
 
 `PATCH` bodies distinguish a missing field from `null`:
@@ -243,6 +245,15 @@ The dev stack (`deploy/docker/docker-compose.dev.yml`) and `.env.example` use we
 The dev and production Compose files share a project name and volumes. Run one at a time. A database volume first created by the dev stack keeps the password `linkdean`; follow [Upgrading an existing install](#upgrading-an-existing-install) step 1 before switching that volume to production.
 
 Running the API and web on the host is covered in the README under Development.
+
+## Tracing
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` (see [environment](./environment.md#tracing)) and the API sends one span per request to that collector over OTLP/HTTP. Anything that takes OTLP works: an OpenTelemetry Collector, Jaeger, Grafana Tempo, Honeycomb, Grafana Cloud.
+
+- Each span is named by the HTTP method and carries `request_id` (the `X-Request-Id` header, also in the logs), `http.request.method`, `url.path` and `http.response.status_code`. `5xx` answers mark the span as an error.
+- Only the path is recorded, never the query string, since queries can hold search terms. Bodies, headers and user ids are not recorded.
+- Spans are batched and sent in the background; the API flushes what is left when it stops. A collector that is down costs nothing but the lost spans.
+- To find one request, take the `X-Request-Id` from a response or a log line and search the tracing backend for `request_id`.
 
 ## Healthchecks
 

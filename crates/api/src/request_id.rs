@@ -42,12 +42,40 @@ impl MakeSpan<Body> for RequestIdMakeSpan {
             .get::<RequestId>()
             .and_then(|id| id.header_value().to_str().ok())
             .unwrap_or("-");
+        // `otel.*` and the semantic-convention fields shape the span when OpenTelemetry export
+        // is on. Only the path is recorded: the query can hold search terms and tokens.
         tracing::info_span!(
             "http_request",
             method = %request.method(),
-            uri = %request.uri(),
+            uri = %request.uri().path(),
             request_id = %request_id,
+            otel.name = %request.method(),
+            otel.kind = "server",
+            http.request.method = %request.method(),
+            url.path = %request.uri().path(),
+            http.response.status_code = tracing::field::Empty,
+            otel.status_code = tracing::field::Empty,
         )
+    }
+}
+
+/// Records the response status on the request span, then logs as tower-http does by default.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RecordStatus;
+
+impl<B> tower_http::trace::OnResponse<B> for RecordStatus {
+    fn on_response(
+        self,
+        response: &axum::http::Response<B>,
+        latency: std::time::Duration,
+        span: &tracing::Span,
+    ) {
+        let status = response.status();
+        span.record("http.response.status_code", status.as_u16());
+        if status.is_server_error() {
+            span.record("otel.status_code", "ERROR");
+        }
+        tower_http::trace::DefaultOnResponse::default().on_response(response, latency, span);
     }
 }
 

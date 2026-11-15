@@ -3,21 +3,33 @@ use crate::error::ApiResult;
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
 use axum::extract::{Path, State};
-use axum::routing::{delete, get, post};
-use axum::{Json, Router};
+use axum::Json;
 use linkdean_core::{PurgeTrashRequest, TrashItem, TrashKind};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/trash", get(list))
-        .route("/trash/purge", post(purge_selected))
-        .route("/trash/{kind}/{id}/restore", post(restore))
-        .route("/trash/{kind}/{id}", delete(purge_one))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(list))
+        .routes(routes!(purge_selected))
+        .routes(routes!(restore))
+        .routes(routes!(purge_one))
 }
 
+#[utoipa::path(
+    get,
+    operation_id = "trash_list",
+    path = "/trash",
+    tag = "trash",
+    responses(
+        (status = 200, description = "OK", body = Vec<TrashItem>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -37,6 +49,19 @@ fn parse_kind(kind: &str) -> Result<TrashKind, linkdean_core::Error> {
     }
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "trash_restore",
+    path = "/trash/{kind}/{id}/restore",
+    tag = "trash",
+    params(("kind" = String, Path), ("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn restore(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -77,6 +102,19 @@ async fn require_unlocked(
     }
 }
 
+#[utoipa::path(
+    delete,
+    operation_id = "trash_purge_one",
+    path = "/trash/{kind}/{id}",
+    tag = "trash",
+    params(("kind" = String, Path), ("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn purge_one(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
@@ -101,6 +139,18 @@ async fn purge_one(
     Ok(Json(json!({ "ok": true })))
 }
 
+#[utoipa::path(
+    post,
+    operation_id = "trash_purge_selected",
+    path = "/trash/purge",
+    tag = "trash",
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
 async fn purge_selected(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,

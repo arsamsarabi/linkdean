@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct UserBan {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -16,7 +16,7 @@ pub struct UserBan {
 }
 
 /// An active ban, as listed for admins.
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct BanView {
     pub user_id: Uuid,
     pub email: String,
@@ -29,7 +29,7 @@ pub struct BanView {
 }
 
 /// `ends_at` or `days` sets the end. Neither means permanent.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateBan {
     pub reason: String,
     pub ends_at: Option<DateTime<Utc>>,
@@ -37,7 +37,7 @@ pub struct CreateBan {
 }
 
 /// Changes every listed ban. Fields left out keep their value.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ChangeBans {
     pub user_ids: Vec<Uuid>,
     pub reason: Option<String>,
@@ -47,12 +47,12 @@ pub struct ChangeBans {
     pub permanent: bool,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct LiftBans {
     pub user_ids: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ModerationActionView {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -66,7 +66,7 @@ pub struct ModerationActionView {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ExposedCategory {
     pub id: Uuid,
     pub name: String,
@@ -74,14 +74,14 @@ pub struct ExposedCategory {
     pub public_slug: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ExposedBookmark {
     pub id: Uuid,
     pub title: String,
     pub url: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ExposedShare {
     /// `category_share`, `dashboard_share` or `pending_share`.
     pub kind: String,
@@ -91,7 +91,7 @@ pub struct ExposedShare {
     pub access: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct ExposedComment {
     pub id: Uuid,
     pub body: String,
@@ -100,7 +100,7 @@ pub struct ExposedComment {
 }
 
 /// Everything a user shows to other people. Never private items or vault content.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ExposedContent {
     pub public_links: Vec<ExposedCategory>,
     pub categories: Vec<ExposedCategory>,
@@ -111,7 +111,7 @@ pub struct ExposedContent {
     pub comments: Vec<ExposedComment>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ModerateAction {
     pub action: String,
     /// Needed for `removed_to_trash` and `share_revoked`.
@@ -119,13 +119,13 @@ pub struct ModerateAction {
     pub subject_id: Uuid,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ModerateRequest {
     pub reason: String,
     pub actions: Vec<ModerateAction>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ModerateOutcome {
     pub applied: usize,
     pub skipped: usize,

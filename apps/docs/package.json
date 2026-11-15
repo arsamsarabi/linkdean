@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "docusaurus": "docusaurus",
-    "sync": "node scripts/sync-content.mjs",
+    "sync": "node scripts/sync-content.mjs && node scripts/api-reference.mjs",
     "start": "pnpm sync && docusaurus start",
     "build": "pnpm sync && docusaurus build",
     "build:only": "docusaurus build",
