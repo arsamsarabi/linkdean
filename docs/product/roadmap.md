@@ -58,12 +58,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats). Limits plug into the existing quota resolver.
     - Write the model into [managed-service.md](../ops/managed-service.md) and add a pricing section to the marketing site. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
-11. **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
-    - Aggregate counts only (active users, bookmarks saved, features used), no personal data, page content or URLs, and nothing per person.
-    - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the OpenTelemetry tracing the API already exports.
-    - The managed service uses the same hooks with its own backend.
-    - Document exactly what is collected.
-
 ---
 
 ## Later
@@ -86,9 +80,15 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
 
 Revisit once the stages above are done.
 
+- **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
+  - Aggregate counts only (active users, bookmarks saved, features used), no personal data, page content or URLs, and nothing per person.
+  - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the OpenTelemetry tracing the API already exports.
+  - The managed service uses the same hooks with its own backend.
+  - Document exactly what is collected.
 - **Client-held vault key** (L). True end-to-end encryption, where the server never sees the key. Makes vault search much harder.
 - **Cheap VPS** (S–M). Move the same Compose stack off the homelab when outages, upload bandwidth, CPU, or abuse on the home connection start to matter, or when charging begins. Same [quick-start.md](../self-hosting/quick-start.md); no multi-instance code changes. Triggers and notes: [managed-service.md](../ops/managed-service.md#when-to-move-off-the-home-server).
 - **GCP deployment** (L). Multi-instance managed hosting when one server is no longer enough: Cloud Run, Cloud SQL, object storage, shared rate limits, worker split, Terraform, Stripe and plan gates. Full plan: [managed-service.md](../ops/managed-service.md#moving-to-gcp).
+  - Legal copy in the same release (`apps/web/src/pages/legal/PrivacyPage.tsx`): add Google Cloud as a processor (section 7), name the region where data is stored (section 8), and give the backup and log retention periods (section 11). Keep the Cloudflare section only if Cloudflare stays in front of Cloud Run. Then bump `TERMS_VERSION` in `crates/core/src/legal/mod.rs` and `apps/web/src/lib/legal/terms.ts`.
 - **Native mobile apps** (L). iOS and Android, separate from the responsive web app and PWA.
 - **Desktop app** (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
 - **Gamification** (M). Points and badges on top of likes and ratings.
