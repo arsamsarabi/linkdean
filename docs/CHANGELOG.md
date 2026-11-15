@@ -31,7 +31,7 @@
 
 ### Changed
 
-- Rewritten Terms of Service and Privacy Policy. The Terms add operator details, a content license, intellectual property, a liability cap, governing law and general clauses, and acceptable use moves to section 6. The Privacy Policy adds the data controller, legal bases, international transfers, retention, your rights and children. Operator names and contact addresses are still placeholders.
+- Rewritten Terms of Service and Privacy Policy. The Terms add operator details, a content license, intellectual property, a liability cap, governing law and general clauses, and acceptable use moves to section 6. The Privacy Policy adds the data controller, legal bases, international transfers, retention, your rights and children. The operator is Arsam Sarabi (sole trader, trading as Linkdean), with contact@, privacy@ and abuse@linkdean.app, under the law of England and Wales. The Privacy Policy now matches the deployment: Cloudflare in front of every host, Turnstile on sign-up, self-hosted page view counts, iCloud Mail, passkeys and concrete retention periods.
 - The Acceptable Use Policy is now section 5 of the Terms of Service, so there are two legal documents to read and accept instead of three. `/acceptable-use` redirects there. The terms version is now 2026-11-15, so every account is asked to accept the updated Terms once.
 - **API errors** all answer `{ code, message, details?, error }`; ban, quota and vault-move data moved into `details`. `error` still holds the message.
 - **API reads** send `ETag` and `Cache-Control`, so unchanged data comes back as `304`.
@@ -45,6 +45,7 @@
 
 ### Fixed
 
+- Records of individual bookmark opens are now deleted after 30 days for everyone. Before, they were only pruned when the same person opened another bookmark.
 - The collapsed sidebar rail centers its icons in square buttons, marks the current page with a highlight and an edge bar, and separates recent folders from the main pages.
 - Docs: the **Intro** and **Getting started** pages show their screenshots again, instead of a stray `import Shot …` line.
 - Dashboard: key numbers are no longer clipped at the top of a section, small tiles have more room between them, the focused bookmark has one ring instead of two. Press **G** to jump straight into the sections.
