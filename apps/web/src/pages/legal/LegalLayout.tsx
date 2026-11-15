@@ -27,9 +27,6 @@ export function LegalLayout({ title, children }: Props): ReactElement {
         <Anchor href="/privacy" size="sm">
           Privacy Policy
         </Anchor>
-        <Anchor href="/acceptable-use" size="sm">
-          Acceptable Use Policy
-        </Anchor>
         <Anchor href="/login" size="sm">
           Back to sign in
         </Anchor>
@@ -40,13 +37,27 @@ export function LegalLayout({ title, children }: Props): ReactElement {
 
 type SectionProps = {
   heading: string
+  /** Anchor for deep links, such as `/terms#acceptable-use`. */
+  id?: string
   children: ReactNode
 }
 
-export function LegalSection({ heading, children }: SectionProps): ReactElement {
+export function LegalSection({ heading, id, children }: SectionProps): ReactElement {
   return (
-    <Stack gap="xs" component="section">
+    <Stack gap="xs" component="section" id={id} style={id ? { scrollMarginTop: 24 } : undefined}>
       <Title order={2} size="h4">
+        {heading}
+      </Title>
+      {children}
+    </Stack>
+  )
+}
+
+/** A numbered part inside a section, such as 5.1. */
+export function LegalSubsection({ heading, children }: Omit<SectionProps, 'id'>): ReactElement {
+  return (
+    <Stack gap="xs" component="section" pl="md">
+      <Title order={3} size="h5">
         {heading}
       </Title>
       {children}

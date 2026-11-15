@@ -51,7 +51,7 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - With item 12, include the archived reader-mode text so the agent can read a page without fetching it.
     - Skills from a saved library search, once saved searches exist.
 
-7. **Legal review** (S). Counsel review of the Terms, Privacy and Acceptable Use copy before charging money. When the copy changes, bump `TERMS_VERSION` in `crates/core/src/legal` and `apps/web/src/lib/legal` together, so every account is asked to accept it.
+7. **Legal review** (S). Counsel review of the Terms (acceptable use is section 5) and Privacy copy before charging money. When the copy changes, bump `TERMS_VERSION` in `crates/core/src/legal` and `apps/web/src/lib/legal` together, so every account is asked to accept it.
 
 10. **Membership tiers and pricing for managed services** (M, explore). Before anyone pays and before Stripe or plan gates land in code.
     - Start from the plan sketch in the [organizations and teams design](../design/organizations-and-teams.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).

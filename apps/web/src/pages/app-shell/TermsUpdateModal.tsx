@@ -40,9 +40,6 @@ export function TermsUpdateModal({ outdated, onSignOut }: Props): ReactElement |
           <Anchor href="/privacy" target="_blank" rel="noopener" size="sm">
             Privacy Policy
           </Anchor>
-          <Anchor href="/acceptable-use" target="_blank" rel="noopener" size="sm">
-            Acceptable Use Policy
-          </Anchor>
         </Group>
         <Text size="xs" c="dimmed">
           If you do not accept, sign out. You can still sign in later to export your data or delete your account.

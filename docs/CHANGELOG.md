@@ -31,6 +31,7 @@
 
 ### Changed
 
+- The Acceptable Use Policy is now section 5 of the Terms of Service, so there are two legal documents to read and accept instead of three. `/acceptable-use` redirects there. The terms version is now 2026-11-15, so every account is asked to accept the updated Terms once.
 - **API errors** all answer `{ code, message, details?, error }`; ban, quota and vault-move data moved into `details`. `error` still holds the message.
 - **API reads** send `ETag` and `Cache-Control`, so unchanged data comes back as `304`.
 - Account deletion checks for the last admin again when the purge runs. If every other admin left in the meantime, the account stays scheduled until another admin exists.
