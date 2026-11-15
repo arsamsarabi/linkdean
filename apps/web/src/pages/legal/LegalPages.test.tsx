@@ -18,18 +18,18 @@ describe('legal pages', () => {
       </MantineProvider>
     )
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeTruthy()
-    expect(screen.getByText(new RegExp(`Version ${TERMS_VERSION}`))).toBeTruthy()
+    expect(screen.getByText(new RegExp(`Version: ${TERMS_VERSION}`))).toBeTruthy()
   })
 
-  it('carries the acceptable use rules as section 5 of the Terms', () => {
+  it('carries the acceptable use rules as section 6 of the Terms', () => {
     const { container } = render(
       <MantineProvider>
         <TermsPage />
       </MantineProvider>
     )
     const section = container.querySelector('#acceptable-use')
-    expect(section?.querySelector('h2')?.textContent).toBe('5. Acceptable use')
-    expect(screen.getByRole('heading', { level: 3, name: '5.1 Be decent' })).toBeTruthy()
-    expect(screen.getByRole('heading', { level: 3, name: '5.4 Reporting' })).toBeTruthy()
+    expect(section?.querySelector('h2')?.textContent).toBe('6. Acceptable use')
+    expect(screen.getByRole('heading', { level: 3, name: '6.1 Illegal or harmful content' })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 3, name: '6.3 Enforcement' })).toBeTruthy()
   })
 })
