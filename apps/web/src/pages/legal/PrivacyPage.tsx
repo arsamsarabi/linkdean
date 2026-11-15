@@ -61,6 +61,11 @@ export function PrivacyPage(): ReactElement {
             <List.Item>Login sessions.</List.Item>
             <List.Item>API keys.</List.Item>
             <List.Item>Shares, comments and ratings you create.</List.Item>
+            <List.Item>
+              When you open a bookmark from Linkdean, a record that you opened it and when. We keep a count and the time
+              of your last open for each bookmark, which power dashboard sections such as Most opened and Recently
+              visited.
+            </List.Item>
             <List.Item>Other actions necessary to operate the service.</List.Item>
           </List>
         </LegalSubsection>
