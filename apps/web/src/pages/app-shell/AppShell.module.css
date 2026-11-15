@@ -41,23 +41,57 @@
   border-top: 1px solid var(--mantine-color-default-border);
 }
 
-/* Icon rail: hide labels/badges, center icons, no scrollbar clutter. */
+/* Icon rail: 40px square targets centred in the 64px navbar, an accent bar on the active one. */
 .rail :global(.mantine-ScrollArea-scrollbar) {
   display: none;
 }
 
-.railLink {
-  padding-inline: 0;
-  justify-content: center;
+.railItem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-dimmed);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
-.railLink :global(.mantine-NavLink-label),
-.railLink :global(.mantine-NavLink-section[data-position='right']) {
-  display: none;
+.railItem:hover {
+  background: var(--mantine-color-default-hover);
+  color: var(--mantine-color-text);
 }
 
-.railLink :global(.mantine-NavLink-section[data-position='left']) {
-  margin-inline-end: 0;
+.railItem[data-active] {
+  background: var(--mantine-color-violet-light);
+  color: var(--mantine-color-violet-light-color);
+}
+
+/* Bar on the navbar's left edge: (64 - 40) / 2 = 12px to the left of the item. */
+.railItem[data-active]::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--mantine-color-violet-filled);
+}
+
+.railItem:focus-visible {
+  outline: 2px solid var(--mantine-color-violet-filled);
+  outline-offset: 2px;
+}
+
+.railDivider {
+  width: 24px;
+  height: 1px;
+  margin-block: var(--mantine-spacing-xs);
+  background: var(--mantine-color-default-border);
 }
 
 .tabBar {

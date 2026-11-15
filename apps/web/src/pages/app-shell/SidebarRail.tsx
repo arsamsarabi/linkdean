@@ -1,5 +1,5 @@
 import { type ReactElement } from 'react'
-import { AppShell, Indicator, NavLink, ScrollArea, Stack, Tooltip } from '@mantine/core'
+import { AppShell, Indicator, ScrollArea, Stack, Tooltip } from '@mantine/core'
 import {
   IconBooks,
   IconFolder,
@@ -58,16 +58,19 @@ function RailLink({
     icon
   )
   return (
-    <Tooltip label={label} position="right" openDelay={200}>
-      <NavLink
-        className={classes.railLink}
-        renderRoot={(props) => <Link {...props} to={to} search={search} activeOptions={EXACT} />}
-        label={label}
-        leftSection={section}
-        active={active}
-        onClick={onClick}
+    <Tooltip label={label} position="right" openDelay={200} withArrow>
+      <Link
+        to={to}
+        search={search}
+        activeOptions={EXACT}
+        className={classes.railItem}
+        data-active={active || undefined}
+        aria-current={active ? 'page' : undefined}
         aria-label={label}
-      />
+        onClick={onClick}
+      >
+        {section}
+      </Link>
     </Tooltip>
   )
 }
@@ -93,7 +96,7 @@ export function SidebarRail({ pathname, search, vaultUnlocked, isAdmin }: Props)
   return (
     <>
       <AppShell.Section grow component={ScrollArea} py="md" className={classes.rail}>
-        <Stack gap={2} align="stretch">
+        <Stack gap={4} align="center">
           <RailLink
             label="Dashboard"
             to="/"
@@ -132,6 +135,7 @@ export function SidebarRail({ pathname, search, vaultUnlocked, isAdmin }: Props)
               onClick={closeNav}
             />
           ) : null}
+          {recent.length > 0 ? <div className={classes.railDivider} role="separator" /> : null}
           {recent.map((cat) => (
             <RailLink
               key={cat.id}
@@ -147,7 +151,7 @@ export function SidebarRail({ pathname, search, vaultUnlocked, isAdmin }: Props)
       </AppShell.Section>
 
       <AppShell.Section py="sm" className={`${classes.footer} ${classes.rail}`}>
-        <Stack gap={2}>
+        <Stack gap={4} align="center">
           <RailLink
             label="Deleted items"
             to="/trash"
