@@ -2898,7 +2898,7 @@
   "info": {
     "description": "The HTTP API behind the Linkdean web app, browser extension and integrations. Every error answers `{ code, message, details?, error }`: match on `code`, show `message`. Successful JSON reads carry an `ETag`; send it back in `If-None-Match` to get `304 Not Modified`. Every response has an `X-Request-Id` to quote in bug reports.",
     "title": "Linkdean API",
-    "version": "0.0.10"
+    "version": "0.0.11"
   },
   "openapi": "3.1.0",
   "paths": {

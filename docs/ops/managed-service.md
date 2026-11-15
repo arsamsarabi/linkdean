@@ -44,6 +44,7 @@ Yes — plan on it. A public `linkdean.app` is a different threat model from per
 - **Backups off-site.** Restic → dedicated Backblaze B2 bucket `linkdean-public` (Postgres dump + avatars/previews), scheduled on Nova three times a day, keeping the last 3 snapshots; guest env and restic keys from Infisical `/linkdean-public`. See [BACKUP.md](../../deploy/public-beta/BACKUP.md). A restore must be tested end to end before announce.
 - **Monitoring.** An external uptime check (the host's own dashboard cannot report that the host is down) and alerts to a phone.
 - **ISP terms.** Check the home broadband contract allows serving a public site.
+- **ICO data protection fee.** Pay it before the announcement, or before the first outside sign-up if that comes first: storing other people's accounts and content needs it even while the service is free. A sole trader with no staff is tier 1 (£52 a year, £47 by Direct Debit); confirm with the self-assessment at ico.org.uk/fee-checker, then register at ico.org.uk/fee as "Arsam Sarabi, trading as Linkdean". Give a PO Box or virtual-office address, because the public register of fee payers shows the address in full. Renew yearly.
 - **Product and launch readiness.** [roadmap.md](../product/roadmap.md) Now items 1–11 are shipped in product; this deploy's go-live checklist (below) is what remains before announce. Membership pricing explore (#12) follows announce readiness.
 
 ### When to move off the home server

@@ -2393,7 +2393,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-api"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "anyhow",
  "axum",
@@ -2434,7 +2434,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-core"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -2460,7 +2460,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-db"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "anyhow",
  "argon2 0.6.0",
@@ -2480,7 +2480,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-mail"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "anyhow",
  "html2text",
@@ -2498,7 +2498,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-search"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "anyhow",
  "linkdean-core",
@@ -2511,7 +2511,7 @@ dependencies = [
 
 [[package]]
 name = "linkdean-worker"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
