@@ -20,14 +20,10 @@ export function TermsAgreement({ checked, onChange, description }: Props): React
           I agree to the{' '}
           <Anchor href="/terms" target="_blank" rel="noopener noreferrer" inherit>
             Terms of Service
-          </Anchor>
-          ,{' '}
-          <Anchor href="/privacy" target="_blank" rel="noopener noreferrer" inherit>
-            Privacy Policy
           </Anchor>{' '}
           and{' '}
-          <Anchor href="/acceptable-use" target="_blank" rel="noopener noreferrer" inherit>
-            Acceptable Use Policy
+          <Anchor href="/privacy" target="_blank" rel="noopener noreferrer" inherit>
+            Privacy Policy
           </Anchor>
         </>
       }

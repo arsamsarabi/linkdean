@@ -11,9 +11,6 @@ export function LegalFooterLinks(): ReactElement {
       <Anchor href="/privacy" size="xs" c="dimmed">
         Privacy
       </Anchor>
-      <Anchor href="/acceptable-use" size="xs" c="dimmed">
-        Acceptable use
-      </Anchor>
     </Group>
   )
 }
