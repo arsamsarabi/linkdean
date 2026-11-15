@@ -60,31 +60,27 @@ if [ "${CHECK_APP:-false}" = true ]; then
   fi
 fi
 
-# The file the caddy container holds at /srv/<dir>/<path>, as served from its image.
-image_file() {
+# The file Caddy has at /srv/<dir>/<path>: deploy/public-beta/static/<dir>/<path> on the guest.
+srv_file() {
   "${COMPOSE[@]}" exec -T caddy cat "/srv/$1"
 }
 
 check_static() {
-  local host=$1 dir=$2 want got
-  want="$(image_file "$dir/index.html" | sha256sum | cut -d' ' -f1)" || fail "caddy has no /srv/$dir/index.html"
+  local host=$1 dir=$2 want got release
+  if [ -n "${RELEASE_TAG:-}" ]; then
+    release="$(srv_file "$dir/.release" | tr -d '[:space:]')" || fail "caddy has no /srv/$dir/.release"
+    [ "$release" = "$RELEASE_TAG" ] || fail "/srv/$dir holds $release, expected $RELEASE_TAG"
+  fi
+  want="$(srv_file "$dir/index.html" | sha256sum | cut -d' ' -f1)" || fail "caddy has no /srv/$dir/index.html"
   got="$(caddy_get "$host" / | sha256sum | cut -d' ' -f1)" || fail "$host unreachable through Caddy"
-  [ "$got" = "$want" ] || fail "$host serves an index.html that differs from the image's /srv/$dir"
-  echo "$host: serves the image's build"
+  [ "$got" = "$want" ] || fail "$host serves an index.html that differs from /srv/$dir"
+  echo "$host: serves the ${release:-installed} build"
 }
 
-if [ "${CHECK_DOCS:-false}" = true ] || [ "${CHECK_SITE:-false}" = true ]; then
-  if [ -n "${RELEASE_TAG:-}" ]; then
-    want="ghcr.io/arsamsarabi/linkdean-static:${RELEASE_TAG#v}"
-    got="$("${COMPOSE[@]}" ps --format '{{.Image}}' caddy)"
-    [ "$got" = "$want" ] || fail "caddy runs $got, expected $want"
-    echo "caddy: $got"
-  fi
-fi
 if [ "${CHECK_DOCS:-false}" = true ]; then
   check_static docs.linkdean.app docs
   # A docs page must come back as its own pre-rendered file, not the root shell.
-  want="$(image_file docs/docs/intro/index.html | sha256sum | cut -d' ' -f1)" || fail "caddy has no docs intro page"
+  want="$(srv_file docs/docs/intro/index.html | sha256sum | cut -d' ' -f1)" || fail "caddy has no docs intro page"
   got="$(caddy_get docs.linkdean.app /docs/intro/ | sha256sum | cut -d' ' -f1)" || fail "docs /docs/intro/ unreachable"
   [ "$got" = "$want" ] || fail "docs.linkdean.app/docs/intro/ does not serve /srv/docs/docs/intro/index.html"
   echo "docs.linkdean.app: serves pre-rendered pages"

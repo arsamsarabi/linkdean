@@ -60,7 +60,13 @@ docker compose --profile chrome up -d
 
 Smoke: `https://app.linkdean.app/api/health` and the app shell.
 
-Static sites: Caddy's image, `ghcr.io/arsamsarabi/linkdean-static`, has the docs site (`docs.linkdean.app`) and the marketing site (`linkdean.app`) built in from `deploy/docker/Dockerfile.static`. `LINKDEAN_STATIC_VERSION` in `.env` picks its tag (default `latest`). Only the Caddyfile is mounted from the checkout. To try a local build: `docker build -f deploy/docker/Dockerfile.static -t linkdean-static .` from the repo root.
+Static sites: stock Caddy (`caddy:2-alpine`) serves the docs site (`docs.linkdean.app`) from `static/docs/` and the marketing site (`linkdean.app`) from `static/site/`, mounted read-only at `/srv`. Neither is committed or built on the guest: the Release workflow builds them on GitHub and copies the files in with `scripts/install-static.sh`, which also writes the release tag to `static/<site>/.release`. To install a build by hand, from the repo root on your machine:
+
+```bash
+pnpm --dir apps/docs build && tar -C apps/docs/build -czf /tmp/docs.tgz .   # or apps/site, dist/
+# copy /tmp/docs.tgz to the guest, then inside /opt/linkdean:
+bash deploy/public-beta/scripts/install-static.sh docs /tmp/docs.tgz
+```
 
 **Do not seed accounts.** First admin is onboarding on an empty instance. Leave `BOOTSTRAP_TOKEN` for the operator if needed.
 
@@ -76,8 +82,8 @@ Static sites: Caddy's image, `ghcr.io/arsamsarabi/linkdean-static`, has the docs
 | App | Paths | Deploy |
 | --- | --- | --- |
 | app | `crates/`, `apps/web/`, `migrations/`, `deploy/docker/`, `Cargo.toml`, `Cargo.lock` | GHCR `:x.y.z`, `:x.y`, `:latest`; the guest's `LINKDEAN_VERSION` set to the tag, api pulled and restarted |
-| docs | `apps/docs/`, `docs/`, `deploy/docker/Dockerfile.static`, `deploy/public-beta/Caddyfile` | GHCR `linkdean-static:x.y.z` and `:latest`; the guest's `LINKDEAN_STATIC_VERSION` set to the tag, Caddy pulled and restarted |
-| site | `apps/site/`, `deploy/docker/Dockerfile.static` | same image as docs |
+| docs | `apps/docs/`, `docs/`, `deploy/public-beta/Caddyfile`, `deploy/public-beta/scripts/install-static.sh` | Built on GitHub (workflow artifact `static-docs`), copied into the guest's `static/docs/` by the Nova runner, Caddy restarted |
+| site | `apps/site/`, `deploy/public-beta/scripts/install-static.sh` | Same, as `static-site` into `static/site/` |
 
 An app release needs the tag to match the version in `Cargo.toml` and `apps/web/package.json`; a docs- or site-only release does not.
 

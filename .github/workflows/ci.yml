@@ -150,7 +150,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/docs/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      # The output is not committed: the Release workflow builds it into the static image.
+      # The output is not committed: the Release workflow builds it and copies it to the guest.
       - run: pnpm build
 
   site:

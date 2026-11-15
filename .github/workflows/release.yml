@@ -3,10 +3,11 @@ name: Release
 # Push a tag such as v0.2.0 on a commit in main. The workflow:
 #   1. works out which apps changed since the previous release tag (app, docs, site),
 #   2. runs CI,
-#   3. builds and pushes the app image only when the app changed, and the static image
-#      (Caddy with the docs and marketing sites, deploy/docker/Dockerfile.static) only when
-#      docs or site changed,
-#   4. rolls the public-beta guest forward to the tag, refreshing only the changed apps,
+#   3. builds and pushes the app image only when the app changed, and builds the docs and
+#      marketing sites (plain static files, uploaded as workflow artifacts) only when they
+#      changed,
+#   4. rolls the public-beta guest forward to the tag, refreshing only the changed apps: the
+#      api from its image, the sites by copying their files into the folder Caddy serves,
 #   5. checks on the guest and over the public URLs that each changed app is live,
 #   6. submits the browser extension to the Chrome Web Store and AMO when its build inputs
 #      changed and apps/extension/package.json has a higher version than at the previous tag,
@@ -79,8 +80,8 @@ jobs:
             has() { if grep -Eq "$1" <<<"$files"; then echo true; else echo false; fi; }
             # Keep these patterns in step with deploy/public-beta/scripts/pull-update.sh.
             out app  "$(has '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)')"
-            out docs "$(has '^(apps/docs/|deploy/docker/Dockerfile\.static|deploy/public-beta/Caddyfile$|docs/)')"
-            out site "$(has '^(apps/site/|deploy/docker/Dockerfile\.static)')"
+            out docs "$(has '^(apps/docs/|deploy/public-beta/Caddyfile$|deploy/public-beta/scripts/install-static\.sh$|docs/)')"
+            out site "$(has '^(apps/site/|deploy/public-beta/scripts/install-static\.sh$)')"
           fi
 
           # The extension goes to the stores only when its build inputs changed since the
@@ -161,64 +162,87 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  static-image:
-    name: Build and push the docs and site image
+  docs-build:
+    name: Build the docs site
     needs: [changes, ci]
-    if: needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true'
+    if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
+    defaults:
+      run:
+        working-directory: apps/docs
     steps:
       - uses: actions/checkout@v7
-
-      - name: Lowercase image name
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkdean-static" >> "$GITHUB_ENV"
-
-      - uses: docker/setup-buildx-action@v4
-
-      - uses: docker/login-action@v4
+      - uses: pnpm/action-setup@v6
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - id: meta
-        uses: docker/metadata-action@v6
+          package_json_file: apps/docs/package.json
+      - uses: actions/setup-node@v7
         with:
-          images: ${{ env.IMAGE }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-          labels: |
-            org.opencontainers.image.title=Linkdean static sites
-            org.opencontainers.image.description=Caddy serving docs.linkdean.app and linkdean.app
-
-      - uses: docker/build-push-action@v7
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/docs/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # The files at the tarball's root are what Caddy serves at /srv/docs.
+      - run: tar -C build -czf "$RUNNER_TEMP/docs.tgz" .
+      - uses: actions/upload-artifact@v7
         with:
-          context: .
-          file: deploy/docker/Dockerfile.static
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=static
-          cache-to: type=gha,mode=max,scope=static
+          name: static-docs
+          path: ${{ runner.temp }}/docs.tgz
+          retention-days: 7
+          if-no-files-found: error
+
+  site-build:
+    name: Build the marketing site
+    needs: [changes, ci]
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/site
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/site/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/site/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # The files at the tarball's root are what Caddy serves at /srv/site.
+      - run: tar -C dist -czf "$RUNNER_TEMP/site.tgz" .
+      - uses: actions/upload-artifact@v7
+        with:
+          name: static-site
+          path: ${{ runner.temp }}/site.tgz
+          retention-days: 7
+          if-no-files-found: error
 
   deploy:
     name: Deploy to the public-beta guest
-    needs: [changes, ci, image, static-image]
-    # Each image job is skipped when its apps did not change; deploy runs for whatever did.
+    needs: [changes, ci, image, docs-build, site-build]
+    # The image and site build jobs are skipped when their apps did not change; deploy runs for
+    # whatever did.
     if: >
       always() &&
       vars.NOVA_DEPLOY_ENABLED == 'true' &&
       needs.ci.result == 'success' &&
       (needs.image.result == 'success' || needs.image.result == 'skipped') &&
-      (needs.static-image.result == 'success' || needs.static-image.result == 'skipped') &&
+      (needs.docs-build.result == 'success' || needs.docs-build.result == 'skipped') &&
+      (needs.site-build.result == 'success' || needs.site-build.result == 'skipped') &&
       (needs.changes.outputs.app == 'true' || needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true')
     # Self-hosted on Nova (label linkdean-nova). Do not use this label on pull_request jobs.
     runs-on: [self-hosted, linkdean-nova]
     steps:
+      - uses: actions/download-artifact@v8
+        if: needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true'
+        with:
+          pattern: static-*
+          path: ${{ runner.temp }}/static
+          merge-multiple: true
+
       - name: Roll forward and verify on the guest
         env:
           LXC: linkdean-public
@@ -251,6 +275,17 @@ jobs:
           else
             echo "::warning::render-env-from-infisical.sh missing on guest; skipping Infisical render"
           fi
+
+          # Docs and site: copy each changed site's files into the guest and swap them into the
+          # folder Caddy serves (install-static.sh, from the tag checked out above).
+          for pair in "docs:$DOCS" "site:$SITE"; do
+            name="${pair%%:*}"
+            [ "${pair#*:}" = true ] || continue
+            tarball="$RUNNER_TEMP/static/$name.tgz"
+            [ -f "$tarball" ] || { echo "::error::$name changed but its build artifact is missing"; exit 1; }
+            lxc file push "$tarball" "$LXC/tmp/linkdean-$name.tgz"
+            lxc exec "$LXC" -- bash -c "cd /opt/linkdean && bash deploy/public-beta/scripts/install-static.sh $name /tmp/linkdean-$name.tgz $GITHUB_REF_NAME && rm -f /tmp/linkdean-$name.tgz"
+          done
 
           lxc exec "$LXC" -- bash -s <<EOF
           set -euo pipefail
@@ -331,7 +366,7 @@ jobs:
 
   github-release:
     name: Create GitHub release
-    needs: [changes, ci, image, static-image, deploy, extension]
+    needs: [changes, ci, image, docs-build, site-build, deploy, extension]
     # Publish once CI passed, the image (if any) pushed, the deploy (if enabled) succeeded and
     # the extension (if changed) went to the stores.
     if: >
@@ -339,7 +374,8 @@ jobs:
       github.event_name == 'push' &&
       needs.ci.result == 'success' &&
       (needs.image.result == 'success' || needs.image.result == 'skipped') &&
-      (needs.static-image.result == 'success' || needs.static-image.result == 'skipped') &&
+      (needs.docs-build.result == 'success' || needs.docs-build.result == 'skipped') &&
+      (needs.site-build.result == 'success' || needs.site-build.result == 'skipped') &&
       (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') &&
       (needs.extension.result == 'success' || needs.extension.result == 'skipped')
     runs-on: ubuntu-24.04

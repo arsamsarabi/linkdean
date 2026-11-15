@@ -99,13 +99,14 @@ services:
       retries: 12
       start_period: 40s
 
-  # Caddy with the docs and marketing sites built in (deploy/docker/Dockerfile.static).
-  # The Release workflow pins LINKDEAN_STATIC_VERSION in .env when either site changes.
+  # Stock Caddy serving the docs and marketing sites from ./static/{docs,site}. The Release
+  # workflow builds both on GitHub and swaps the files in (scripts/install-static.sh).
   caddy:
-    image: ghcr.io/arsamsarabi/linkdean-static:${LINKDEAN_STATIC_VERSION:-latest}
+    image: caddy:2-alpine
     restart: unless-stopped
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./static:/srv:ro
     networks: [edge]
     depends_on:
       api:

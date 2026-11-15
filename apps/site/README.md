@@ -10,7 +10,7 @@ pnpm install
 pnpm build
 ```
 
-The build writes `dist/`, which is not committed. The Release workflow builds the site and the docs into one Caddy image (`deploy/docker/Dockerfile.static`, pushed as `ghcr.io/arsamsarabi/linkdean-static`) that serves the apex host.
+The build writes `dist/`, which is not committed. The Release workflow builds it on GitHub and copies the files to the public-beta guest, where Caddy serves them as the apex host (see `deploy/public-beta/README.md`).
 
 `pnpm dev` runs a local preview on `http://localhost:4321`.
 
