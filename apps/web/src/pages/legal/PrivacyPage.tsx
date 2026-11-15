@@ -12,9 +12,7 @@ export function PrivacyPage(): ReactElement {
         </Text>
         <Text>For this instance, the data controller is:</Text>
         <Text fw={600}>
-          [Legal name of operator]
-          <br />
-          [Address, if applicable]
+          Arsam Sarabi (sole trader)
           <br />
           Contact: [privacy contact email address]
         </Text>

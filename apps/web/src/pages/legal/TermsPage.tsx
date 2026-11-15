@@ -9,11 +9,9 @@ export function TermsPage(): ReactElement {
         <Text>These Terms apply to your use of the Linkdean instance on which you create or use an account.</Text>
         <Text>The operator of this instance is:</Text>
         <Text fw={600}>
-          [Legal name of operator]
+          Arsam Sarabi (sole trader)
           <br />
           [Trading name, if different]
-          <br />
-          [Address, if applicable]
           <br />
           Contact: [contact email address]
         </Text>
