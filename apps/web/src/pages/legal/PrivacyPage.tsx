@@ -74,7 +74,7 @@ export function PrivacyPage(): ReactElement {
         <List>
           <List.Item>
             <code>linkdean_session</code>, which keeps you signed in. It is HttpOnly and is removed when you sign out or
-            when it expires.
+            when it expires. It lasts 30 days unless you sign out sooner.
           </List.Item>
           <List.Item>
             <code>linkdean_oidc</code> and <code>linkdean_oidc_link</code>, which are short-lived cookies used during
@@ -84,8 +84,10 @@ export function PrivacyPage(): ReactElement {
         <Text>We do not use advertising cookies.</Text>
         <Text>We do not use analytics or tracking cookies.</Text>
         <Text>
-          The beta notice may remember that you dismissed it using your browser&apos;s session storage. This information
-          remains in your browser and is not sent to us.
+          The app also keeps a few interface preferences in your browser&apos;s local and session storage, such as
+          whether the sidebar is collapsed, the folder you last saved to, which dashboard sections you collapsed, and
+          notices you dismissed. The marketing site remembers your light or dark theme the same way. This stays on your
+          device and is not sent to us.
         </Text>
         <Text>
           Because strictly necessary cookies are used to provide the service, consent may not be required for those
