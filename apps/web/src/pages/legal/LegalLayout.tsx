@@ -41,6 +41,15 @@ export function LegalLayout({ title, noticeSubject, children }: Props): ReactEle
   )
 }
 
+/** An email address in legal copy, as a mailto link. */
+export function MailLink({ address }: { address: string }): ReactElement {
+  return (
+    <Anchor href={`mailto:${address}`} inherit>
+      {address}
+    </Anchor>
+  )
+}
+
 type SectionProps = {
   heading: string
   /** Anchor for deep links, such as `/terms#acceptable-use`. */

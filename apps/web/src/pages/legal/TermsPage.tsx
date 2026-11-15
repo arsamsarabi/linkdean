@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { List, Text } from '@mantine/core'
-import { LegalLayout, LegalSection, LegalSubsection } from './LegalLayout'
+import { LegalLayout, LegalSection, LegalSubsection, MailLink } from './LegalLayout'
+import { OPERATOR } from './operator'
 
 export function TermsPage(): ReactElement {
   return (
@@ -9,11 +10,11 @@ export function TermsPage(): ReactElement {
         <Text>These Terms apply to your use of the Linkdean instance on which you create or use an account.</Text>
         <Text>The operator of this instance is:</Text>
         <Text fw={600}>
-          Arsam Sarabi (sole trader)
+          {OPERATOR.legalName} (sole trader)
           <br />
-          [Trading name, if different]
+          Trading as {OPERATOR.tradingName}
           <br />
-          Contact: [contact email address]
+          Contact: <MailLink address={OPERATOR.contactEmail} />
         </Text>
         <Text>
           In these Terms, &ldquo;we&rdquo;, &ldquo;us&rdquo; and &ldquo;our&rdquo; mean the operator of this Linkdean
@@ -147,7 +148,9 @@ export function TermsPage(): ReactElement {
           Where available, use the <strong>Report</strong> feature on public lists, profiles or comments.
         </Text>
         <Text>You may also contact us at:</Text>
-        <Text fw={600}>[Abuse contact email address]</Text>
+        <Text fw={600}>
+          <MailLink address={OPERATOR.abuseEmail} />
+        </Text>
         <Text>
           Reports may be reviewed by the administrators or operators of this Linkdean instance. We may process
           information provided in a report, including information about the reporter, the reported content and the
@@ -225,9 +228,13 @@ export function TermsPage(): ReactElement {
 
       <LegalSection heading="11. Contact">
         <Text>For general questions about Linkdean or these Terms, contact:</Text>
-        <Text fw={600}>[Contact email address]</Text>
+        <Text fw={600}>
+          <MailLink address={OPERATOR.contactEmail} />
+        </Text>
         <Text>For abuse reports, contact:</Text>
-        <Text fw={600}>[Abuse contact email address]</Text>
+        <Text fw={600}>
+          <MailLink address={OPERATOR.abuseEmail} />
+        </Text>
       </LegalSection>
 
       <LegalSection heading="12. Changes to these Terms">
@@ -245,12 +252,12 @@ export function TermsPage(): ReactElement {
 
       <LegalSection heading="13. Governing law">
         <Text>
-          These Terms are governed by the laws of <strong>[England and Wales / applicable jurisdiction]</strong>.
+          These Terms are governed by the laws of <strong>{OPERATOR.governingLaw}</strong>.
         </Text>
         <Text>
-          The courts of <strong>[England and Wales / applicable jurisdiction]</strong> will have jurisdiction over
-          disputes arising from these Terms, except where applicable consumer protection law gives you additional rights
-          or requires another jurisdiction.
+          The courts of <strong>{OPERATOR.governingLaw}</strong> will have jurisdiction over disputes arising from these
+          Terms, except where applicable consumer protection law gives you additional rights or requires another
+          jurisdiction.
         </Text>
       </LegalSection>
 

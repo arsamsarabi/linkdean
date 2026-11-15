@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { List, Text } from '@mantine/core'
-import { LegalLayout, LegalSection, LegalSubsection } from './LegalLayout'
+import { LegalLayout, LegalSection, LegalSubsection, MailLink } from './LegalLayout'
+import { OPERATOR } from './operator'
 
 export function PrivacyPage(): ReactElement {
   return (
@@ -12,9 +13,9 @@ export function PrivacyPage(): ReactElement {
         </Text>
         <Text>For this instance, the data controller is:</Text>
         <Text fw={600}>
-          Arsam Sarabi (sole trader)
+          {OPERATOR.legalName} (sole trader)
           <br />
-          Contact: [privacy contact email address]
+          Contact: <MailLink address={OPERATOR.privacyEmail} />
         </Text>
         <Text>
           In this Privacy Policy, &ldquo;we&rdquo;, &ldquo;us&rdquo; and &ldquo;our&rdquo; mean that operator.
@@ -341,9 +342,13 @@ export function PrivacyPage(): ReactElement {
 
       <LegalSection heading="13. Contact">
         <Text>For privacy questions or requests about your personal data, contact:</Text>
-        <Text fw={600}>[Privacy contact email address]</Text>
+        <Text fw={600}>
+          <MailLink address={OPERATOR.privacyEmail} />
+        </Text>
         <Text>For abuse reports, contact:</Text>
-        <Text fw={600}>[Abuse contact email address]</Text>
+        <Text fw={600}>
+          <MailLink address={OPERATOR.abuseEmail} />
+        </Text>
       </LegalSection>
 
       <LegalSection heading="14. Children">
