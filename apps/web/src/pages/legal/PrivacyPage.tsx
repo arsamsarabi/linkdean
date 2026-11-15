@@ -33,6 +33,12 @@ export function PrivacyPage(): ReactElement {
               A cryptographic hash of your password. We do not store your password in readable form.
             </List.Item>
             <List.Item>The version of the Terms you accepted and the time you accepted them.</List.Item>
+            <List.Item>
+              If you add passkeys, each passkey&apos;s public key, the name it is given (for example &ldquo;Chrome on
+              macOS&rdquo;), when you added it and when you last used it. The private key stays on your device or in
+              your password manager; we never receive it.
+            </List.Item>
+            <List.Item>Your profile details if you add them, such as a bio and your time zone.</List.Item>
           </List>
         </LegalSubsection>
         <LegalSubsection heading="Your content">
