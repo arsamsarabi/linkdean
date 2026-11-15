@@ -187,8 +187,8 @@ export function PrivacyPage(): ReactElement {
         <Text>Depending on the configuration of an instance, these may include the following.</Text>
         <LegalSubsection heading="Email delivery">
           <Text>
-            The SMTP provider configured for the instance receives the email address and message content necessary to
-            deliver emails we send, such as verification emails, password resets and invitations.
+            We send email through Apple&apos;s iCloud Mail, which receives the recipient address and the message content
+            needed to deliver the emails we send, such as verification emails, password resets and invitations.
           </Text>
         </LegalSubsection>
         <LegalSubsection heading="Cloudflare">
