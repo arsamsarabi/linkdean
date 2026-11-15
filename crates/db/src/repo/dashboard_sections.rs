@@ -127,7 +127,9 @@ pub const SELF_FILLING_SHARED_MESSAGE: &str =
     "sections that fill themselves are only for dashboards you have not shared";
 
 /// Records that `user_id` opened a bookmark they can read. Vault bookmarks are never
-/// recorded. Opens older than 30 days are pruned as new ones come in.
+/// recorded. That person's opens older than 30 days are pruned as new ones come in;
+/// [`purge_old_bookmark_opens`] prunes everyone's, so a person who stops opening
+/// bookmarks does not keep their open history.
 pub async fn record_bookmark_open(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) -> Result<()> {
     let raw = super::bookmarks::get_bookmark_raw(pool, user_id, bookmark_id).await?;
     if raw.is_vault || raw.deleted_at.is_some() {
@@ -161,6 +163,18 @@ pub async fn record_bookmark_open(pool: &PgPool, user_id: Uuid, bookmark_id: Uui
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))
+}
+
+/// Deletes every per-open record older than 30 days, the window "Most opened" counts over.
+/// The all-time count and last open per bookmark (`bookmark_open_stats`) stay until the
+/// bookmark or the account is deleted. Returns how many open records were deleted.
+pub async fn purge_old_bookmark_opens(pool: &PgPool) -> Result<u64> {
+    let done =
+        sqlx::query("DELETE FROM bookmark_opens WHERE opened_at < now() - interval '30 days'")
+            .execute(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(done.rows_affected())
 }
 
 /// Fills each item's open count and last open from the viewer's own opens. A section that

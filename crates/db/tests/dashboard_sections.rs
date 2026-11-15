@@ -791,3 +791,56 @@ async fn section_grid_places_outside_the_grid_are_refused() {
         );
     }
 }
+
+#[tokio::test]
+async fn old_bookmark_opens_are_purged_for_everyone_and_the_counts_stay() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    // `idle` stops opening bookmarks after an old open; `active` keeps a recent one.
+    let idle = user(&pool, "opens-idle").await;
+    let active = user(&pool, "opens-active").await;
+    let idle_bm = bookmark(&pool, &idle, at("https://opens-purge.example/idle")).await;
+    let active_bm = bookmark(&pool, &active, at("https://opens-purge.example/active")).await;
+    db::record_bookmark_open(&pool, idle.id, idle_bm)
+        .await
+        .expect("idle open");
+    db::record_bookmark_open(&pool, active.id, active_bm)
+        .await
+        .expect("active open");
+    sqlx::query(
+        "UPDATE bookmark_opens SET opened_at = now() - interval '31 days' WHERE user_id = $1",
+    )
+    .bind(idle.id)
+    .execute(&pool)
+    .await
+    .expect("age idle opens");
+
+    // Other tests share the database, so count only this test's rows.
+    let purged = db::purge_old_bookmark_opens(&pool).await.expect("purge");
+    assert!(
+        purged >= 1,
+        "at least the idle open is purged, got {purged}"
+    );
+    let opens = |user_id: Uuid| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM bookmark_opens WHERE user_id = $1")
+                .bind(user_id)
+                .fetch_one(&pool)
+                .await
+                .expect("count opens")
+        }
+    };
+    assert_eq!(opens(idle.id).await, 0, "the 31-day-old open is gone");
+    assert_eq!(opens(active.id).await, 1, "a recent open stays");
+    let idle_count: i64 = sqlx::query_scalar(
+        "SELECT open_count FROM bookmark_open_stats WHERE user_id = $1 AND bookmark_id = $2",
+    )
+    .bind(idle.id)
+    .bind(idle_bm)
+    .fetch_one(&pool)
+    .await
+    .expect("idle stats");
+    assert_eq!(idle_count, 1, "the all-time count is kept");
+}
