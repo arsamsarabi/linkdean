@@ -9,7 +9,7 @@ The steps are numbered in the order the phases need them. Each one names the pag
 ## Ground rules
 
 - **Never paste a secret into a chat or a file.** Each command below copies a secret straight from where it is shown (the clipboard, a downloaded file, Infisical or a command's output) into GitHub or Secret Manager. Nothing is printed to the screen.
-- **Values that are not secret** can be sent to Claude when a step asks: the Google Cloud project ID, the Cloudflare account ID and the AWS account ID.
+- **Values that are not secret** can be sent to Claude when a step asks: the Google Cloud project ID, the Cloudflare account ID and the SES DKIM records.
 - **Commands are for zsh** on your Mac, and also work in bash.
 - **More than one GitHub account?** If `gh` is signed in to more than one, put `GH_TOKEN=$(gh auth token --user arsamsarabi)` in front of each `gh` command.
 
@@ -18,11 +18,11 @@ The steps are numbered in the order the phases need them. Each one names the pag
 | 1 | Before Phase 1 | Cloudflare token for Pages deploys |
 | 2 | Phase 1b | Pages custom domains |
 | 3–6 | Before Phase 3 | Tools, Google Cloud project, billing, budget, pricing check |
-| 7–9 | Before Phase 3 | AWS account, MFA, budget, admin user and CLI |
+| 7–9 | Before Phase 3 | AWS account, MFA, budget and console user |
 | 10 | Before Phase 3 | Cloudflare token for OpenTofu |
-| 11–13 | Phase 3 | State bucket, running OpenTofu, SES production access |
-| 14–16 | Phase 4 | Database user, tunnel token, Meilisearch key |
-| 17–20 | Phase 6 | Secrets from Infisical, SES SMTP login, Access, Turnstile |
+| 11–14 | Phase 3 | State bucket, running OpenTofu, SES identity, SES production access |
+| 15–17 | Phase 4 | Database user, tunnel token, Meilisearch key |
+| 18–20 | Phase 6 | Secrets from Infisical, SES SMTP login, Access |
 | 21 | Phase 8 | Cutover day |
 | 22 | Phase 9 | Retire the homelab beta |
 
@@ -30,7 +30,7 @@ The steps are numbered in the order the phases need them. Each one names the pag
 
 ### 1. Cloudflare token for Pages deploys
 
-`linkdean-sites` uses this token to upload the two sites. It can only edit Pages projects.
+`linkdean-infra` uses this token to upload the two sites. It can only edit Pages projects.
 
 1. In the Cloudflare dashboard, choose your account, then **Manage account** → **Account API tokens** → **Create Token**.
 2. Next to **Create Custom Token**, select **Get started**.
@@ -39,16 +39,16 @@ The steps are numbered in the order the phases need them. Each one names the pag
    - **Permissions:** one row, Account · **Cloudflare Pages** · **Edit**.
    - **TTL:** an end date one year from today. Put a reminder in your calendar to renew it.
 4. Select **Continue to summary**, then **Create Token**. Cloudflare shows the token once. Copy it.
-5. Wait until Claude says `linkdean-sites` exists. Then, with the token still on the clipboard, run:
+5. Wait until Claude says `linkdean-infra` exists. Then, with the token still on the clipboard, run:
 
    ```sh
-   pbpaste | gh secret set CLOUDFLARE_API_TOKEN -R arsamsarabi/linkdean-sites && pbcopy < /dev/null
+   pbpaste | gh secret set CLOUDFLARE_API_TOKEN -R arsamsarabi/linkdean-infra && pbcopy < /dev/null
    ```
 
    `gh` reads the value from the pipe, so it does not wait for input. The last part clears the clipboard.
 6. Send Claude your Cloudflare account ID, which is not secret. It is the 32-character code in the dashboard address, right after `dash.cloudflare.com/`.
 
-**Success:** `gh secret list -R arsamsarabi/linkdean-sites` lists `CLOUDFLARE_API_TOKEN`.
+**Success:** `gh secret list -R arsamsarabi/linkdean-infra` lists `CLOUDFLARE_API_TOKEN`.
 
 ## Phase 1b
 
@@ -66,7 +66,7 @@ Do this when Claude says the `*.pages.dev` previews match the live sites.
    The site is unreachable for the few seconds in between.
 4. Repeat steps 1 to 3 for `www.linkdean.app` on **linkdean-site**, then for `docs.linkdean.app` on **linkdean-docs**.
 
-**Success:** each domain shows as active on its project's **Custom domains** tab. Each site also loads in a private window, and `curl -s https://linkdean.app/release.txt` and `curl -s https://docs.linkdean.app/release.txt` print the build Claude names.
+**Success:** each domain shows as active on its project's **Custom domains** tab. Each site also loads in a private window, and `curl -s https://docs.linkdean.app/release.txt` prints the release Claude names.
 
 Activation can take a few minutes.
 
@@ -77,7 +77,7 @@ Activation can take a few minutes.
 1. Check what is already installed:
 
    ```sh
-   command -v gcloud tofu aws
+   command -v gcloud tofu
    ```
 
    Skip any tool that prints a path.
@@ -86,7 +86,7 @@ Activation can take a few minutes.
    ```sh
    brew update
    brew install --cask gcloud-cli
-   brew install opentofu awscli
+   brew install opentofu
    ```
 
 3. Sign in to Google twice. Each command opens a browser, where you pick your Google account:
@@ -98,7 +98,7 @@ Activation can take a few minutes.
 
    The second login is the one OpenTofu uses.
 
-**Success:** `gcloud --version`, `tofu version` (1.7 or later, for state encryption) and `aws --version` (2.x) each print a version.
+**Success:** `gcloud --version` and `tofu version` each print a version.
 
 ### 4. Google Cloud project and billing
 
@@ -121,13 +121,12 @@ This is a new project, separate from the one you use for the extension stores.
    - **The list is empty:** in the console, go to **Navigation menu** → **Billing** → **Manage billing accounts** → **Create account**. If Google offers the free trial ($300 for 90 days), accept it.
 
      Then select **Activate full account** straight away. Otherwise the project stops when the trial ends, and the unused credit carries over anyway.
-3. Link the billing account and switch on the APIs OpenTofu needs to start:
+3. Link the billing account and switch on the APIs OpenTofu needs to start. OpenTofu switches on the rest itself.
 
    ```sh
    gcloud billing projects link linkdean-prod --billing-account=ACCOUNT_ID
    gcloud services enable cloudresourcemanager.googleapis.com serviceusage.googleapis.com \
-     storage.googleapis.com cloudkms.googleapis.com cloudbilling.googleapis.com \
-     billingbudgets.googleapis.com --project=linkdean-prod
+     storage.googleapis.com --project=linkdean-prod
    gcloud auth application-default set-quota-project linkdean-prod
    ```
 
@@ -137,14 +136,14 @@ This is a new project, separate from the one you use for the extension stores.
 
 ### 5. Google Cloud budget
 
-A budget only sends alerts. It does not cap spending. OpenTofu takes it over in Phase 4; set it by hand now so it protects you from day one.
+A budget only sends alerts. It does not cap spending. It stays a manual setting, outside OpenTofu.
 
 1. In the console, choose the `linkdean-prod` project in the top bar. Then go to **Navigation menu** → **Billing** → **Cost management** → **Budgets & alerts** → **Create budget**.
 2. If asked what kind of budget, choose **Alerts only**.
 3. Fill in the form:
    - **Name:** `linkdean-prod monthly`. Select **Next**.
    - **Time range:** Monthly. **Projects:** `linkdean-prod`. Select **Next**.
-   - **Budget type:** Specified amount. **Target amount:** 60 if the billing account is in dollars, or 50 if it is in pounds. Select **Next**.
+   - **Budget type:** Specified amount. **Target amount:** 80 if the billing account is in dollars, or 65 if it is in pounds. Select **Next**.
    - **Thresholds:** keep 50%, 90% and 100% on **Actual**. Select **Add threshold** and add 100% on **Forecasted**.
    - Keep **Email alerts to billing admins and users** ticked.
 4. Select **Finish**.
@@ -158,14 +157,13 @@ A budget only sends alerts. It does not cap spending. OpenTofu takes it over in 
 
    | Product | Settings |
    | --- | --- |
-   | Cloud Run | Instance-based billing, 1 vCPU, 1 GiB, 300 hours a month |
+   | Compute Engine | `e2-medium`, 730 hours, a 10 GB balanced boot disk, a 20 GB balanced data disk and 20 GB of snapshots |
    | Cloud SQL | PostgreSQL, Enterprise edition, `db-f1-micro`, 10 GB SSD, 10 GB of backups |
-   | Compute Engine | `e2-small`, 730 hours, a 10 GB balanced boot disk and a 10 GB balanced data disk |
    | Cloud NAT | One gateway, 5 GB of data a month |
 
 3. Send Claude the monthly total, or the calculator's share link.
 
-**Success:** Claude confirms the total against the plan's $45–80, or updates the plan.
+**Success:** Claude confirms the total against the plan's $55–80, or updates the plan.
 
 ## Before Phase 3: AWS (for email)
 
@@ -188,7 +186,7 @@ A budget only sends alerts. It does not cap spending. OpenTofu takes it over in 
 
 ### 8. Root MFA, region and budget
 
-1. In the console, open the region menu at the top right and choose **Europe (London) eu-west-2**. Steps 9 and 13 must happen in this region.
+1. In the console, open the region menu at the top right and choose **Europe (London) eu-west-2**. Steps 13, 14 and 19 must happen in this region.
 2. Add MFA to the root user:
    1. Open your account name at the top right, then **Security credentials**.
    2. Under **Multi-factor authentication (MFA)**, select **Assign MFA device**.
@@ -203,66 +201,33 @@ A budget only sends alerts. It does not cap spending. OpenTofu takes it over in 
 
 **Success:** the MFA device appears under **Security credentials**, and the budget appears on **Budgets**.
 
-### 9. Admin user and the AWS CLI
+### 9. Console user
 
-You use this user every day instead of the root user. The CLI then gets short-lived keys, so no long-lived access key ever sits on your Mac.
+You use this user instead of the root user whenever you open the AWS console. Nothing on your Mac needs AWS keys, because OpenTofu does not manage AWS.
 
-1. Check that the region menu still shows **Europe (London)**. IAM Identity Center can only run in one region, and moving it later means starting over.
-2. Search the console for **IAM Identity Center** and select **Enable**.
-   - On the **Enable IAM Identity Center with AWS Organizations** page, select **Enable**.
-   - This makes your account the management account of a new organization. That costs nothing, and on the Paid plan changes nothing else.
-3. Add your user:
-   1. Go to **Users** → **Add user**.
-   2. **Username:** `arsam`. Choose to send a password setup email, and fill in your email address and name.
-   3. Select **Next**, skip groups, select **Next** again, then **Add user**.
-4. Create the permission set:
-   1. Go to **Permission sets** → **Create permission set**.
-   2. Choose **Predefined permission set** → **AdministratorAccess** → **Next**.
-   3. Set **Session duration** to 4 hours, select **Next**, then **Create**.
-5. Give your user that permission set:
-   1. Go to **AWS accounts**, tick your account, then **Assign users or groups**.
-   2. On the **Users** tab, tick `arsam` → **Next**. Tick **AdministratorAccess** → **Next** → **Submit**.
-6. Accept the setup email:
-   1. Open the email titled "Invitation to join AWS IAM Identity Center" and select **Accept invitation**.
-   2. Set a password and register MFA when asked.
-7. Copy the **AWS access portal URL** from the IAM Identity Center **Dashboard**. It looks like `https://d-xxxxxxxxxx.awsapps.com/start`.
-8. Connect the CLI:
+1. Search the console for **IAM**, then go to **Users** → **Create user**.
+2. **User name:** `arsam`. Tick **Provide user access to the AWS Management Console**.
+   - If AWS asks whether you are providing console access to a person, choose **I want to create an IAM user**.
+   - **Console password:** Custom password, from your password manager. Untick **Users must create a new password at next sign-in**.
 
-   ```sh
-   aws configure sso
-   ```
+   Select **Next**.
+3. Choose **Attach policies directly**, tick **AdministratorAccess**, select **Next**, then **Create user**.
+4. Copy the **Console sign-in URL** shown. It looks like `https://123456789012.signin.aws.amazon.com/console`. Save it with the password.
+5. Sign out of the root user, and sign in through that URL as `arsam`.
+6. Add MFA: open your user name at the top right, then **Security credentials** → **Assign MFA device**, and follow the prompts as in step 8.
 
-   It asks these questions in turn. A browser opens partway through: select **Allow** there.
+Do not create access keys for this user.
 
-   | Prompt | Answer |
-   | --- | --- |
-   | SSO session name | `linkdean` |
-   | SSO start URL | the portal URL from step 7 |
-   | SSO region | `eu-west-2` |
-   | SSO registration scopes | press Enter for the default |
-   | Account and role | your account, `AdministratorAccess` (picked for you when there is only one) |
-   | Default client Region | `eu-west-2` |
-   | CLI default output format | `json` |
-   | Profile name | `linkdean` |
-
-9. From now on, sign in to the CLI with `aws sso login --profile linkdean` when a session has expired.
-10. Send Claude your AWS account ID, which is not secret:
-
-    ```sh
-    aws sts get-caller-identity --profile linkdean --query Account --output text
-    ```
-
-**Success:** `aws sts get-caller-identity --profile linkdean` prints your account and a role whose name starts with `AWSReservedSSO_AdministratorAccess`.
+**Success:** you are signed in as `arsam`, and **Security credentials** lists the MFA device.
 
 ### 10. Cloudflare token for OpenTofu
 
-OpenTofu uses this token to manage DNS, the tunnel and the Pages projects. It lives in Infisical, never on disk.
+OpenTofu uses this token to manage the tunnel and the DNS records it adds. It lives in Infisical, never on disk.
 
 1. In the Cloudflare dashboard, go to **Manage account** → **Account API tokens** → **Create Token**. Next to **Create Custom Token**, select **Get started**.
 2. Fill in the form:
    - **Token name:** `linkdean-opentofu`.
-   - **Permissions:** four rows:
-     - Account · **Cloudflare Pages** · **Edit**
+   - **Permissions:** three rows:
      - Account · **Cloudflare Tunnel** · **Edit**
      - Zone · **DNS** · **Edit**
      - Zone · **Zone** · **Read**
@@ -276,23 +241,18 @@ OpenTofu uses this token to manage DNS, the tunnel and the Pages projects. It li
 
 ## Phase 3
 
-### 11. State bucket and encryption key
+### 11. State bucket
 
-These hold OpenTofu's state. The bucket keeps old versions, so a bad apply can be undone.
+This holds OpenTofu's state. It keeps old versions, so a bad apply can be undone. The state holds no secrets, because every secret value goes straight into Secret Manager (steps 15 to 19), so a private bucket is all it needs.
 
 ```sh
 PROJECT_ID=linkdean-prod
 gcloud storage buckets create "gs://$PROJECT_ID-tfstate" --project="$PROJECT_ID" \
   --location=europe-west2 --uniform-bucket-level-access --public-access-prevention
 gcloud storage buckets update "gs://$PROJECT_ID-tfstate" --versioning
-gcloud kms keyrings create opentofu --location=europe-west2 --project="$PROJECT_ID"
-gcloud kms keys create state --keyring=opentofu --location=europe-west2 \
-  --purpose=encryption --project="$PROJECT_ID"
 ```
 
-Key rings and keys cannot be deleted in Google Cloud. Their names are permanent, but only the active key version costs money: about $0.06 a month.
-
-**Success:** `gcloud kms keys list --keyring=opentofu --location=europe-west2 --project="$PROJECT_ID"` lists `state`.
+**Success:** `gcloud storage buckets describe "gs://$PROJECT_ID-tfstate"` shows `versioning_enabled: true`.
 
 ### 12. Running OpenTofu
 
@@ -303,7 +263,6 @@ Each time Claude opens an OpenTofu pull request in `linkdean-infra`:
 
    ```sh
    cd ~/code/Sandbox/linkdean-infra/tofu
-   aws sso login --profile linkdean
    ./bin/tofu init
    ./bin/tofu plan -out=plan.tfplan
    ```
@@ -319,18 +278,31 @@ Each time Claude opens an OpenTofu pull request in `linkdean-infra`:
 
 **Success:** `Apply complete!`, with the same counts as the plan.
 
-### 13. SES production access
+### 13. SES identity for `linkdean.app`
 
-New SES accounts can only send to addresses you have verified. Ask AWS to lift that as soon as the first apply has created the `linkdean.app` identity.
-
-1. In the SES console, with the region set to **Europe (London)**, open **Identities** → `linkdean.app`. Wait until its status is **Verified** and DKIM shows **Successful**. That is usually minutes, and can take up to 72 hours.
-2. Go to **Account dashboard**. In the sandbox notice, follow the link to the setup page, then select **Request production access**.
+1. In the AWS console, signed in as `arsam`, check that the region menu shows **Europe (London)**. Then search for **Amazon Simple Email Service**.
+2. Go to **Configuration** → **Identities** → **Create identity**.
 3. Fill in the form:
+   - **Identity type:** Domain. **Domain:** `linkdean.app`.
+   - Tick **Use a custom MAIL FROM domain**. **MAIL FROM domain:** `bounce`. **Behavior on MX failure:** Use default MAIL FROM domain.
+   - **Verifying your domain:** Easy DKIM, with **RSA_2048_BIT**.
+4. Select **Create identity**.
+5. On the identity's page, find the **Publish DNS records** section. Send Claude the three DKIM CNAME rows, each with its name and value. They are not secret. Claude adds them, with the MAIL FROM records, in the next OpenTofu pull request, which you apply as in step 12.
+6. Go to **Configuration** → **Suppression list**. Check that the account-level suppression list is on for bounces and complaints. If it is not, select **Edit** and turn it on.
+
+**Success:** after the apply, the identity shows **Verified** and DKIM shows **Successful**. That is usually minutes, and can take up to 72 hours.
+
+### 14. SES production access
+
+New SES accounts can only send to addresses you have verified. Ask AWS to lift that as soon as step 13's identity shows **Verified**.
+
+1. In the SES console, with the region set to **Europe (London)**, go to **Account dashboard**. In the sandbox notice, follow the link to the setup page, then select **Request production access**.
+2. Fill in the form:
    - **Mail type:** Transactional.
    - **Website URL:** `https://linkdean.app`.
    - **Use case description:** paste the text below, with your current user count filled in.
    - **Preferred contact language:** English.
-4. Tick the agreement to the AWS Service Terms and Acceptable Use Policy, then select **Submit request**.
+3. Tick the agreement to the AWS Service Terms and Acceptable Use Policy, then select **Submit request**.
 
 ```text
 Linkdean (https://linkdean.app) is a bookmark manager in public beta. We send only
@@ -355,7 +327,7 @@ AWS replies by email, and may ask follow-up questions in the Support Center case
 
 ## Phase 4
 
-### Before steps 14 to 20
+### Before steps 15 to 19
 
 Paste these into your terminal once per session. They set the project and an Infisical shortcut, and define `put_secret`. It stores a command's output as a new secret version, and refuses empty output or a "not found" result, so a failed lookup never becomes a stored secret.
 
@@ -387,7 +359,7 @@ gcloud secrets versions list NAME --project="$PROJECT_ID"
 
 The command lists one enabled version.
 
-### 14. Database user and `DATABASE_URL`
+### 15. Database user and `DATABASE_URL`
 
 The password goes straight from a random generator into Google Cloud. It never appears on screen or in OpenTofu's state.
 
@@ -398,6 +370,8 @@ DB_HOST=$(./bin/tofu output -raw sql_private_ip)
 PW=$(openssl rand -hex 32)
 gcloud sql users create linkdean --instance="$INSTANCE" --password="$PW" --project="$PROJECT_ID" &&
   put_secret DATABASE_URL printf 'postgres://linkdean:%s@%s:5432/linkdean?sslmode=require' "$PW" "$DB_HOST"
+# gcloud may write command arguments to its local logs; remove any log file that holds the password.
+grep -rlF -- "$PW" ~/.config/gcloud/logs 2>/dev/null | xargs rm -f
 unset PW
 ```
 
@@ -405,7 +379,7 @@ If the user is created but the secret step fails, run the block again with `gclo
 
 **Success:** `copied: DATABASE_URL`.
 
-### 15. Tunnel token
+### 16. Tunnel token
 
 OpenTofu creates the `linkdean-gcp` tunnel but never reads its token. This command fetches the token with the OpenTofu Cloudflare token, and stores it directly:
 
@@ -419,7 +393,7 @@ put_secret TUNNEL_TOKEN infisical run "${INF_INFRA[@]}" -- sh -c \
 
 **Success:** `copied: TUNNEL_TOKEN`.
 
-### 16. Meilisearch key
+### 17. Meilisearch key
 
 The new search server gets a new key. The index is rebuilt by a reindex, so nothing needs the old one.
 
@@ -431,7 +405,7 @@ put_secret MEILI_MASTER_KEY openssl rand -hex 32
 
 ## Phase 6
 
-### 17. Secrets from Infisical
+### 18. Secrets from Infisical
 
 Claude lists the exact names in the Phase 6 pull request. It takes them from the key names in the guest's `.env`, without reading the values. The likely set is below; remove any you do not use:
 
@@ -445,7 +419,7 @@ done
 
 **Success:** one `copied:` line per name, and no `not copied` or `empty` lines.
 
-### 18. SES SMTP login
+### 19. SES SMTP login
 
 1. In the SES console (London), go to **SMTP settings**. Check that the endpoint shown is `email-smtp.eu-west-2.amazonaws.com`.
 2. Select **Create SMTP credentials**. Name the IAM user `linkdean-ses-smtp`, select **Create user**, then **Download .csv file**.
@@ -463,7 +437,7 @@ done
 
 **Success:** `copied: SMTP_USERNAME`, then `copied: SMTP_PASSWORD`, and the file is gone.
 
-### 19. Cloudflare Access for the rehearsal
+### 20. Cloudflare Access for the rehearsal
 
 This keeps `app-next.linkdean.app` to you alone while it holds a copy of real data.
 
@@ -478,15 +452,6 @@ This keeps `app-next.linkdean.app` to you alone while it holds a copy of real da
 **Success:** in a private window, `https://app-next.linkdean.app` shows Cloudflare's sign-in page, and your emailed code lets you through.
 
 Delete the application after the rehearsal: Claude reminds you in step 8 of the rehearsal.
-
-### 20. Turnstile hostname for the rehearsal
-
-1. In the Cloudflare dashboard, open **Turnstile** and select the widget the app uses.
-2. On the **Settings** tab, under **Hostname Management**, select **Add Hostnames**. Enter `app-next.linkdean.app`, then select **Add**.
-
-**Success:** the sign-up page on `app-next` shows the Turnstile check without an error.
-
-Remove the hostname after the rehearsal.
 
 ## Phase 8
 
@@ -507,4 +472,5 @@ Do this only after 14 quiet days on Google Cloud. Each part cannot be undone.
 - [ ] In Backblaze, delete the `linkdean-public` bucket and its application keys. Then remove the restic schedule on Nova.
 - [ ] In Infisical, delete the `/linkdean-public` folder. Keep `/linkdean-infra`.
 - [ ] In Uptime Kuma, remove the public beta's monitors.
-- [ ] In AWS IAM, keep the `linkdean-ses-smtp` user: Google Cloud still sends through it.
+- [ ] In the Cloudflare dashboard, under **Zero Trust** → **Networks**, delete the old public-beta tunnel. Its DNS records were switched or removed earlier.
+- [ ] In AWS IAM, keep the `linkdean-ses-smtp` user: the server still sends through it.
