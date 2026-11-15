@@ -4,9 +4,10 @@
 # The Release workflow runs this over SSH after checking out the release tag:
 #   RELEASE_TAG=v0.2.0 UPDATE_APP=true UPDATE_DOCS=false UPDATE_SITE=true bash pull-update.sh
 #
-# RELEASE_TAG (optional) pins the images: LINKDEAN_VERSION (api) and, when docs or site
-# change, LINKDEAN_STATIC_VERSION (caddy) in .env become the tag without its leading "v",
-# so a later manual `docker compose up` keeps the same images.
+# RELEASE_TAG (optional) pins the api image: LINKDEAN_VERSION in .env becomes the tag
+# without its leading "v", so a later manual `docker compose up` keeps the same image.
+# The docs and site files are not handled here: the Release workflow installs them with
+# install-static.sh before this runs. This only recreates Caddy for them.
 # UPDATE_APP / UPDATE_DOCS / UPDATE_SITE pick what to refresh. If none is set, they are
 # worked out from the files changed between REF_BEFORE (or ORIG_HEAD) and HEAD.
 set -euo pipefail
@@ -32,8 +33,8 @@ UPDATE_SITE="${UPDATE_SITE:-}"
 if [ -z "$UPDATE_APP$UPDATE_DOCS$UPDATE_SITE" ]; then
   UPDATE_APP=false UPDATE_DOCS=false UPDATE_SITE=false
   if changed '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)'; then UPDATE_APP=true; fi
-  if changed '^(apps/docs/|deploy/docker/Dockerfile\.static|deploy/public-beta/Caddyfile$|docs/)'; then UPDATE_DOCS=true; fi
-  if changed '^(apps/site/|deploy/docker/Dockerfile\.static)'; then UPDATE_SITE=true; fi
+  if changed '^(apps/docs/|deploy/public-beta/Caddyfile$|deploy/public-beta/scripts/install-static\.sh$|docs/)'; then UPDATE_DOCS=true; fi
+  if changed '^(apps/site/|deploy/public-beta/scripts/install-static\.sh$)'; then UPDATE_SITE=true; fi
 fi
 
 # Screenshots are on when .env points the api at the chrome service.
@@ -79,11 +80,12 @@ if [ "$UPDATE_APP" = true ]; then
   fi
 fi
 
-# Docs and site are built into the caddy image (deploy/docker/Dockerfile.static). Pull the
-# release's image and recreate Caddy; restart it too, so a changed Caddyfile is read even
-# when the image did not change.
+# Docs and site: Caddy serves the files install-static.sh just swapped in, so they are live
+# already. Recreate Caddy when its compose settings changed (`up -d`), and restart it so a
+# changed Caddyfile is read. A guest still on the old linkdean-static image loses its
+# LINKDEAN_STATIC_VERSION pin, which nothing reads any more.
 if [ "$UPDATE_DOCS" = true ] || [ "$UPDATE_SITE" = true ]; then
-  if [ -n "${RELEASE_TAG:-}" ]; then pin LINKDEAN_STATIC_VERSION "${RELEASE_TAG#v}"; fi
+  if grep -q '^LINKDEAN_STATIC_VERSION=' "$STACK/.env"; then sed -i.bak '/^LINKDEAN_STATIC_VERSION=/d' "$STACK/.env"; fi
   "${COMPOSE[@]}" pull caddy
   "${COMPOSE[@]}" up -d caddy
   "${COMPOSE[@]}" restart caddy
