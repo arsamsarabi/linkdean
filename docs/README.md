@@ -16,6 +16,7 @@ Canonical markdown for operators, contributors, and the public docs site.
 | [product/roadmap.md](./product/roadmap.md) | Planned work | No (GitHub) |
 | [product/ideas.md](./product/ideas.md) | Unprioritised scratch ideas | No |
 | [ops/managed-service.md](./ops/managed-service.md) | Homelab public beta + hosted notes | No |
+| [ops/gcp-migration/](./ops/gcp-migration/README.md) | Plan and manual setup guide for moving the public beta to Google Cloud | No |
 | [design/organizations-and-teams.md](./design/organizations-and-teams.md) | Active product design | No |
 | [design/agent-skills.md](./design/agent-skills.md) | Agent Skills: what it is and how it works | No |
 | [CHANGELOG.md](./CHANGELOG.md) | Release notes | No |

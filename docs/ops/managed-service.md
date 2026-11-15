@@ -1,6 +1,6 @@
 # Managed service
 
-Status: the near-term path is a **free public beta on the homelab**. A cheap VPS and a full GCP deployment are Far out in [roadmap.md](../product/roadmap.md). This document is the plan for all three.
+Status: the near-term path is a **free public beta on the homelab**. A cheap VPS and a full GCP deployment are Far out in [roadmap.md](../product/roadmap.md). This document is the plan for all three. The move of the public beta to Google Cloud is now planned in [gcp-migration/](gcp-migration/README.md).
 
 Linkdean stays self-hosted first: the same image runs both, and everything SaaS-only (billing, plan gates) is off unless configured. The homelab beta needs no code changes for scaling: one server avoids every multi-instance problem listed under Moving to GCP.
 
