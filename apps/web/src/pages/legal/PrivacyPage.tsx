@@ -191,14 +191,19 @@ export function PrivacyPage(): ReactElement {
             deliver emails we send, such as verification emails, password resets and invitations.
           </Text>
         </LegalSubsection>
-        <LegalSubsection heading="Cloudflare Turnstile">
+        <LegalSubsection heading="Cloudflare">
           <Text>
-            If Cloudflare Turnstile is enabled, the relevant page may load Turnstile to help distinguish people from
-            automated traffic.
+            All traffic to linkdean.app, app.linkdean.app and docs.linkdean.app passes through Cloudflare. It provides
+            our DNS, encrypted connections (HTTPS), caching and protection against attacks. Cloudflare therefore
+            processes your IP address, information about your browser and the requests you make, including their
+            content, as they pass through its network.
           </Text>
           <Text>
-            Cloudflare may process technical information, including information about your browser and IP address, in
-            accordance with its own privacy documentation.
+            The sign-up page also loads Cloudflare Turnstile to help distinguish people from automated traffic.
+          </Text>
+          <Text>
+            Cloudflare may set strictly necessary security cookies, such as <code>__cf_bm</code>, when it checks for
+            automated traffic. It processes this information in accordance with its own privacy documentation.
           </Text>
         </LegalSubsection>
         <LegalSubsection heading="Single sign-on providers">
