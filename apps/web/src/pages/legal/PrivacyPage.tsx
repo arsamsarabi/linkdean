@@ -321,14 +321,22 @@ export function PrivacyPage(): ReactElement {
         <Text>The retention period depends on the type of information and how it is used.</Text>
         <Text>For example:</Text>
         <List>
-          <List.Item>Account and content data is generally kept while your account remains active.</List.Item>
+          <List.Item>Account and content data is kept while your account is active.</List.Item>
           <List.Item>
-            Deleted accounts and content may remain available for a short grace period and may remain temporarily in
-            backups or technical systems before being permanently removed.
+            When you delete your account, it is permanently removed 7 days later, unless you cancel before then.
           </List.Item>
           <List.Item>
-            Security, abuse and legal records may be retained for longer where reasonably necessary.
+            Items in Deleted items are permanently removed after 30 days, or after the period you set in your settings
+            (1 day to 10 years).
           </List.Item>
+          <List.Item>Sign-in sessions expire after 30 days.</List.Item>
+          <List.Item>
+            Records of individual bookmark opens are kept for 30 days. The count and last open for each bookmark stay
+            until you delete the bookmark or your account.
+          </List.Item>
+          <List.Item>Copies of the emails we send are kept for 7 days, or 30 days if delivery failed.</List.Item>
+          <List.Item>Deleted data may remain in backups for a limited period before it is overwritten.</List.Item>
+          <List.Item>Security, abuse and legal records may be kept longer where reasonably necessary.</List.Item>
           <List.Item>Information may be retained where required by law.</List.Item>
         </List>
         <Text>

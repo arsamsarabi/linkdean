@@ -161,10 +161,10 @@ export function TermsPage(): ReactElement {
       <LegalSection heading="8. Ending your account">
         <Text>You may delete your account through the settings provided by the service.</Text>
         <Text>
-          Account deletion may include a short grace period during which you can cancel the deletion. After the
-          applicable deletion process is complete, we will delete or anonymize your account and content in accordance
-          with our Privacy Policy, except where we need to retain information for legitimate technical, security or
-          legal reasons.
+          Account deletion includes a 7-day grace period during which you can cancel the deletion. After the applicable
+          deletion process is complete, we will delete or anonymize your account and content in accordance with our
+          Privacy Policy, except where we need to retain information for legitimate technical, security or legal
+          reasons.
         </Text>
         <Text>
           We may suspend or terminate your account if you materially breach these Terms or where reasonably necessary to
