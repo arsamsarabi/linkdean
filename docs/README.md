@@ -15,12 +15,10 @@ Canonical markdown for operators, contributors, and the public docs site.
 | [product/architecture.md](./product/architecture.md) | Stack and domain model | Yes |
 | [product/roadmap.md](./product/roadmap.md) | Planned work | No (GitHub) |
 | [product/ideas.md](./product/ideas.md) | Unprioritised scratch ideas | No |
-| [ops/managed-service.md](./ops/managed-service.md) | Homelab public beta + hosted notes | No |
-| [ops/gcp-migration/](./ops/gcp-migration/README.md) | Plan and manual setup guide for moving the public beta to Google Cloud | No |
 | [design/organizations-and-teams.md](./design/organizations-and-teams.md) | Active product design | No |
 | [design/agent-skills.md](./design/agent-skills.md) | Agent Skills: what it is and how it works | No |
 | [CHANGELOG.md](./CHANGELOG.md) | Release notes | No |
 
-The Docusaurus app in `apps/docs` copies the published pages via `pnpm sync`. Edit sources here, not under `apps/docs/docs/`.
+The docs site at [docs.linkdean.app](https://docs.linkdean.app) copies the published pages from here at each release, so edit them here. `api/openapi.json` is the API description it publishes, and `media/` holds the README's images.
 
-Live ops for the public beta guest live under [`deploy/public-beta/`](../deploy/public-beta/) (see especially [BACKUP.md](../deploy/public-beta/BACKUP.md)).
+Running linkdean.app (the public beta's hosting, deploys, backups and the docs and marketing sites' source) is kept in a separate private repository.

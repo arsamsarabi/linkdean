@@ -4,11 +4,9 @@ What is still planned. Shipped capabilities live in [features.md](./features.md)
 
 Items are ranked by importance and by the value they add to the app, highest first, within each stage. Effort is a rough guess: **S** is days, **M** is one to two weeks, **L** is several weeks.
 
-The public [roadmap page](../../apps/docs/docs/roadmap.md) on the docs site is a plain-language copy of this list, without the internal steps. Update it in the same commit when an item is added, moved or shipped.
+The public [roadmap page](https://docs.linkdean.app/docs/roadmap) on the docs site is a plain-language copy of this list, without the internal steps. Update it when an item is added, moved or shipped.
 
 Open defects are not listed here. They are `Known issue:` comments at the code they concern: `grep -rn "Known issue:" crates apps/web/src deploy`.
-
-The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `docs.linkdean.app` and the marketing site at `linkdean.app`, with off-site backups and a passed restore drill ([BACKUP.md](../../deploy/public-beta/BACKUP.md)). A cheap VPS and a full GCP deployment stay Far out; see [managed-service.md](../ops/managed-service.md).
 
 ---
 
@@ -24,7 +22,7 @@ The public beta is live on the homelab: the app at `app.linkdean.app`, docs at `
 
 ## Next: high value after the beta settles
 
-Archiving and AI assistance come first: they are the biggest gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](../../apps/docs/docs/compare.md).
+Archiving and AI assistance come first: they are the biggest gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](https://docs.linkdean.app/docs/compare).
 
 12. **Archive & downloads** (L, in phases). Link rot is the main reason people keep bookmarks on their own server, and Linkwarden, Karakeep and Raindrop.io (Pro) all keep a copy of each page. Linkdean stores previews only.
     - Phase 1, snapshots: when a bookmark is saved, the worker's existing headless Chrome also captures a single-file HTML copy and a PDF. Opt-in per account; stored on a separate archive volume and counted against the storage quota.
@@ -42,7 +40,7 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Workflows, in order: tag and folder suggestions when saving and in **File one by one** (extends the same-site suggestions); a short summary per bookmark (from the archived page text when there is one); semantic search ("that article about...") through Meilisearch hybrid search with embeddings; related-bookmark and near-duplicate hints.
     - Suggestions, not silent changes: nothing is applied without a click, unless the person turns on auto-tagging.
     - Vault contents never leave the server for a model. The settings page shows what is sent.
-    - Hosted service: a limited free allowance, more with your own key (ties into item 10).
+    - Hosted service: a limited free allowance, more with your own key.
     - Depends on: phase 2 of item 12 for summaries and semantic search over page contents; tag suggestions do not.
     - Later: AI-assisted dashboards. Suggest sections and their sources (folders, tags, websites) from what the person saves and opens, built on the sections that fill themselves.
 
@@ -52,11 +50,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - Skills from a saved library search, once saved searches exist.
 
 7. **Legal review** (S). Counsel review of the Terms (acceptable use is section 5) and Privacy copy before charging money. When the copy changes, bump `TERMS_VERSION` in `crates/core/src/legal` and `apps/web/src/lib/legal` together, so every account is asked to accept it.
-
-10. **Membership tiers and pricing for managed services** (M, explore). Before anyone pays and before Stripe or plan gates land in code.
-    - Start from the plan sketch in the [organizations and teams design](../design/organizations-and-teams.md) (Free, Pro, Team, Business, Enterprise; self-hosted ungated).
-    - Decide: free beta only for now, or published prices with charging deferred; one paid personal plan or several; what each plan's limits are (bookmarks, storage, screenshots, seats). Limits plug into the existing quota resolver.
-    - Write the model into [managed-service.md](../ops/managed-service.md) and add a pricing section to the marketing site. Implementing Stripe and plan checks stays with a later paid launch, not the free homelab beta.
 
 ---
 
@@ -86,9 +79,6 @@ Revisit once the stages above are done.
   - The managed service uses the same hooks with its own backend.
   - Document exactly what is collected.
 - **Client-held vault key** (L). True end-to-end encryption, where the server never sees the key. Makes vault search much harder.
-- **Cheap VPS** (S–M). Move the same Compose stack off the homelab when outages, upload bandwidth, CPU, or abuse on the home connection start to matter, or when charging begins. Same [quick-start.md](../self-hosting/quick-start.md); no multi-instance code changes. Triggers and notes: [managed-service.md](../ops/managed-service.md#when-to-move-off-the-home-server).
-- **GCP deployment** (L). Multi-instance managed hosting when one server is no longer enough: Cloud Run, Cloud SQL, object storage, shared rate limits, worker split, Terraform, Stripe and plan gates. Full plan: [managed-service.md](../ops/managed-service.md#moving-to-gcp).
-  - Legal copy in the same release (`apps/web/src/pages/legal/PrivacyPage.tsx`): add Google Cloud as a processor (section 7), name the region where data is stored (section 8), and give the backup and log retention periods (section 11). Keep the Cloudflare section only if Cloudflare stays in front of Cloud Run. Cloud Run request logs record IP addresses, which the homelab's logs do not: say so in section 6 and give their retention in section 11. Then bump `TERMS_VERSION` in `crates/core/src/legal/mod.rs` and `apps/web/src/lib/legal/terms.ts`.
 - **Native mobile apps** (L). iOS and Android, separate from the responsive web app and PWA.
 - **Desktop app** (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
 - **Gamification** (M). Points and badges on top of likes and ratings.

@@ -8,20 +8,9 @@
 .DS_Store
 .idea
 .vscode
-brand/.venv/
-brand/**/node_modules/
-brand/node_render/node_modules/
 graphify-out/
 .claude/settings.json
 # pnpm store created by the dev compose web container
 apps/web/.pnpm-store/
 
-# taste-skill deal history (local)
-apps/site/.taste-skill/
-# Older checkouts served built docs and site from here; the edge image holds them now.
-deploy/public-beta/static/
-
 .pnpm-store/
-
-# Remotion promo project (local render source; outputs live in videos/ + screenshots/)
-brand/graphics/launch/promo-source/

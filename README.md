@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="brand/graphics/the-link-dean.png" alt="The Link Dean, Linkdean mascot" width="280" />
+  <img src="docs/media/the-link-dean.png" alt="The Link Dean, Linkdean mascot" width="280" />
 </p>
 
 <h1 align="center">Linkdean</h1>
@@ -231,7 +231,7 @@ Vulnerability reports: prefer a private report to the maintainers before a publi
 
 ## Docs
 
-Published site: [docs.linkdean.app](https://docs.linkdean.app) (built from the files below via `apps/docs`).
+Published site: [docs.linkdean.app](https://docs.linkdean.app), built from the files below at each release.
 
 | Doc | Contents |
 | --- | --- |
@@ -243,7 +243,6 @@ Published site: [docs.linkdean.app](https://docs.linkdean.app) (built from the f
 | [Fast capture](docs/guides/fast-capture.md) | Extension, bookmarklet, share, Shortcuts |
 | [Architecture](docs/product/architecture.md) | Stack, domain model, auth, vault vs hidden |
 | [Roadmap](docs/product/roadmap.md) | Planned milestones / backlog |
-| [Managed service](docs/ops/managed-service.md) | Homelab public beta and hosted notes |
 | [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---
@@ -256,15 +255,15 @@ From a demo library of public sites. Each image follows your GitHub theme, light
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/library-grid-dark.webp" />
-        <img src="apps/docs/static/img/screenshots/library-grid-light.webp" alt="Library: Grid view with page previews, folders, tags and pins" />
+        <source media="(prefers-color-scheme: dark)" srcset="docs/media/screenshots/library-grid-dark.webp" />
+        <img src="docs/media/screenshots/library-grid-light.webp" alt="Library: Grid view with page previews, folders, tags and pins" />
       </picture>
       <p><strong>Library</strong><br /><sub>Grid view with page previews, folders, tags and pins</sub></p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/explorer-dark.webp" />
-        <img src="apps/docs/static/img/screenshots/explorer-light.webp" alt="Explorer: Folder tiles with live counts, and folders shared with you" />
+        <source media="(prefers-color-scheme: dark)" srcset="docs/media/screenshots/explorer-dark.webp" />
+        <img src="docs/media/screenshots/explorer-light.webp" alt="Explorer: Folder tiles with live counts, and folders shared with you" />
       </picture>
       <p><strong>Explorer</strong><br /><sub>Folder tiles with live counts, and folders shared with you</sub></p>
     </td>
@@ -272,15 +271,15 @@ From a demo library of public sites. Each image follows your GitHub theme, light
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/filing-dark.webp" />
-        <img src="apps/docs/static/img/screenshots/filing-light.webp" alt="File one by one: Folders and tags suggested from the same site" />
+        <source media="(prefers-color-scheme: dark)" srcset="docs/media/screenshots/filing-dark.webp" />
+        <img src="docs/media/screenshots/filing-light.webp" alt="File one by one: Folders and tags suggested from the same site" />
       </picture>
       <p><strong>File one by one</strong><br /><sub>Folders and tags suggested from the same site</sub></p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/search-dark.webp" />
-        <img src="apps/docs/static/img/screenshots/search-light.webp" alt="Search: Titles, addresses, notes and tags as you type" />
+        <source media="(prefers-color-scheme: dark)" srcset="docs/media/screenshots/search-dark.webp" />
+        <img src="docs/media/screenshots/search-light.webp" alt="Search: Titles, addresses, notes and tags as you type" />
       </picture>
       <p><strong>Search</strong><br /><sub>Titles, addresses, notes and tags as you type</sub></p>
     </td>
@@ -288,15 +287,15 @@ From a demo library of public sites. Each image follows your GitHub theme, light
   <tr>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/dashboard-dark.webp" />
-        <img src="apps/docs/static/img/screenshots/dashboard-light.webp" alt="Dashboard: Sections of the bookmarks you open most" />
+        <source media="(prefers-color-scheme: dark)" srcset="docs/media/screenshots/dashboard-dark.webp" />
+        <img src="docs/media/screenshots/dashboard-light.webp" alt="Dashboard: Sections of the bookmarks you open most" />
       </picture>
       <p><strong>Dashboard</strong><br /><sub>Sections of the bookmarks you open most</sub></p>
     </td>
     <td width="50%" valign="top">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="apps/docs/static/img/screenshots/vault-dark.webp" />
-        <img src="apps/docs/static/img/screenshots/vault-light.webp" alt="Vaults: Encrypted folders with their own passphrase" />
+        <source media="(prefers-color-scheme: dark)" srcset="docs/media/screenshots/vault-dark.webp" />
+        <img src="docs/media/screenshots/vault-light.webp" alt="Vaults: Encrypted folders with their own passphrase" />
       </picture>
       <p><strong>Vaults</strong><br /><sub>Encrypted folders with their own passphrase</sub></p>
     </td>
