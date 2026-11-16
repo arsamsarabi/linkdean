@@ -18,8 +18,8 @@ trap cleanup EXIT
 pnpm -s build >/dev/null
 cp -R .output/chrome-mv3 "$work/ext"
 cp store/render/stub.js "$work/ext/stub.js"
-cp store/render/frame.html store/render/tile.html store/render/marquee.html "$work/"
-cp ../../brand/final/linkdean-horizontal-white.svg "$work/"
+cp store/render/frame.html store/render/tile.html store/render/marquee.html \
+  store/render/linkdean-horizontal-white.svg "$work/"
 cp public/icon/32.png "$work/icon32.png"
 # Load the stub before the popup, and serve the popup's files from /ext.
 sed -i.bak 's|<script type="module"|<script src="/ext/stub.js"></script><script type="module"|; s|src="/chunks|src="/ext/chunks|; s|href="/assets|href="/ext/assets|' "$work/ext/popup.html"
