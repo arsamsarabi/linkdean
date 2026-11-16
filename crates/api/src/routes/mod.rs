@@ -145,9 +145,9 @@ mod openapi_tests {
         serde_json::to_value(openapi()).unwrap()
     }
 
-    /// The copy published on the docs site.
+    /// The committed copy, which the docs site publishes.
     fn committed_path() -> std::path::PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../apps/docs/static/openapi.json")
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/api/openapi.json")
     }
 
     #[test]
@@ -160,7 +160,7 @@ mod openapi_tests {
         let committed = std::fs::read_to_string(committed_path()).unwrap_or_default();
         assert!(
             committed == fresh,
-            "apps/docs/static/openapi.json is stale: run `UPDATE_OPENAPI=1 cargo test -p linkdean-api committed_spec_is_current`"
+            "docs/api/openapi.json is stale: run `UPDATE_OPENAPI=1 cargo test -p linkdean-api committed_spec_is_current`"
         );
     }
 

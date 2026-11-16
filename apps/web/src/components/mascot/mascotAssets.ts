@@ -1,4 +1,4 @@
-/** Committed WebP under `public/mascot/` (2× display). Sources stay in untracked brand/graphics. */
+/** Committed WebP under `public/mascot/` (2× display). Sources are the brand working files, kept outside this repo. */
 
 export const MASCOT = {
   standing: '/mascot/dean-standing.webp',

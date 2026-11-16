@@ -87,7 +87,7 @@ links.example.com {
 }
 ```
 
-A request from any other peer keeps its TCP address, so a forged `Cf-Connecting-Ip` header has no effect. `deploy/public-beta/Caddyfile` uses this setup.
+A request from any other peer keeps its TCP address, so a forged `Cf-Connecting-Ip` header has no effect. The hosted public beta at `app.linkdean.app` uses this setup.
 
 ### Container runtime
 
@@ -275,8 +275,6 @@ curl -fsS http://localhost:8080/api/ready
 ```
 
 ## Backup
-
-The managed public beta on Nova uses **restic** to a dedicated Backblaze B2 bucket, with Infisical as the env SoT — see [deploy/public-beta/BACKUP.md](https://github.com/arsamsarabi/linkdean/blob/main/deploy/public-beta/BACKUP.md).
 
 For a self-hosted Compose install, stop writes briefly (or accept a short inconsistency window), then dump Postgres + Meili + volumes:
 

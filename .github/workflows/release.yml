@@ -1,34 +1,22 @@
 name: Release
 
 # Push a tag such as v0.2.0 on a commit in main. The workflow:
-#   1. works out which apps changed since the previous release tag (app, docs, site),
+#   1. checks the tag is on main, and whether the browser extension changed since the previous
+#      release tag,
 #   2. runs CI,
-#   3. builds and pushes the app image only when the app changed, and builds the docs and
-#      marketing sites (plain static files, uploaded as workflow artifacts) only when they
-#      changed,
-#   4. rolls the public-beta guest forward to the tag, refreshing only the changed apps: the
-#      api from its image, the sites by copying their files into the folder Caddy serves,
-#   5. checks on the guest and over the public URLs that each changed app is live,
-#   6. submits the browser extension to the Chrome Web Store and AMO when its build inputs
+#   3. builds and pushes the app image for the tag,
+#   4. submits the browser extension to the Chrome Web Store and AMO when its build inputs
 #      changed and apps/extension/package.json has a higher version than at the previous tag,
-#   7. creates the GitHub release.
+#   5. creates the GitHub release.
 #
-# Deploy needs the repository variable NOVA_DEPLOY_ENABLED=true and a self-hosted runner
-# labelled linkdean-nova on the Nova host (it runs `lxc exec linkdean-public` locally).
-# Without the variable the release still builds and publishes, and deploy/verify are skipped.
-#
-# Run it by hand (Actions → Release → Run workflow, on a tag) to redeploy a release; tick
-# "Deploy every app" to refresh all three regardless of what changed.
+# Every release builds the image, so every tag must match the version in Cargo.toml and
+# apps/web/package.json. Run it by hand (Actions → Release → Run workflow, on a tag) to build
+# the image again.
 
 on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
-    inputs:
-      all:
-        description: Deploy every app, not only the ones changed since the previous tag
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -39,12 +27,9 @@ concurrency:
 
 jobs:
   changes:
-    name: Changed apps since the previous release
+    name: Tag and extension checks
     runs-on: ubuntu-24.04
     outputs:
-      app: ${{ steps.diff.outputs.app }}
-      docs: ${{ steps.diff.outputs.docs }}
-      site: ${{ steps.diff.outputs.site }}
       extension: ${{ steps.diff.outputs.extension }}
       extension_version: ${{ steps.diff.outputs.extension_version }}
       previous: ${{ steps.diff.outputs.previous }}
@@ -65,29 +50,17 @@ jobs:
           fi
 
       - id: diff
-        env:
-          ALL: ${{ inputs.all }}
         run: |
           out() { echo "$1=$2" >> "$GITHUB_OUTPUT"; echo "$1=$2"; }
           previous=$(git describe --tags --abbrev=0 --match 'v*.*.*' "$GITHUB_SHA^" 2>/dev/null || true)
           out previous "$previous"
           version=$(jq -r .version apps/extension/package.json)
           out extension_version "$version"
-          if [ -z "$previous" ] || [ "$ALL" = true ]; then
-            out app true; out docs true; out site true
-          else
-            files=$(git diff --name-only "$previous" "$GITHUB_SHA")
-            has() { if grep -Eq "$1" <<<"$files"; then echo true; else echo false; fi; }
-            # Keep these patterns in step with deploy/public-beta/scripts/pull-update.sh.
-            out app  "$(has '^(crates/|apps/web/|migrations/|deploy/docker/|Cargo\.(toml|lock)$)')"
-            out docs "$(has '^(apps/docs/|deploy/public-beta/Caddyfile$|deploy/public-beta/scripts/install-static\.sh$|docs/)')"
-            out site "$(has '^(apps/site/|deploy/public-beta/scripts/install-static\.sh$)')"
-          fi
 
           # The extension goes to the stores only when its build inputs changed since the
           # previous tag (not tests, the store kit or the README) and its version went up,
-          # since both stores refuse a version they already have. "Deploy every app" does
-          # not resubmit it. A build change without a version bump is skipped with a warning.
+          # since both stores refuse a version they already have. A build change without a
+          # version bump is skipped with a warning.
           extension=false
           if [ -n "$previous" ]; then
             ext_files=$(git diff --name-only "$previous" "$GITHUB_SHA" -- apps/extension |
@@ -109,7 +82,6 @@ jobs:
   image:
     name: Build and push app image
     needs: [changes, ci]
-    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -162,167 +134,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  docs-build:
-    name: Build the docs site
-    needs: [changes, ci]
-    if: needs.changes.outputs.docs == 'true'
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: apps/docs
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: apps/docs/package.json
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: apps/docs/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      # The files at the tarball's root are what Caddy serves at /srv/docs.
-      - run: tar -C build -czf "$RUNNER_TEMP/docs.tgz" .
-      - uses: actions/upload-artifact@v7
-        with:
-          name: static-docs
-          path: ${{ runner.temp }}/docs.tgz
-          retention-days: 7
-          if-no-files-found: error
-
-  site-build:
-    name: Build the marketing site
-    needs: [changes, ci]
-    if: needs.changes.outputs.site == 'true'
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: apps/site
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: apps/site/package.json
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: apps/site/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      # The files at the tarball's root are what Caddy serves at /srv/site.
-      - run: tar -C dist -czf "$RUNNER_TEMP/site.tgz" .
-      - uses: actions/upload-artifact@v7
-        with:
-          name: static-site
-          path: ${{ runner.temp }}/site.tgz
-          retention-days: 7
-          if-no-files-found: error
-
-  deploy:
-    name: Deploy to the public-beta guest
-    needs: [changes, ci, image, docs-build, site-build]
-    # The image and site build jobs are skipped when their apps did not change; deploy runs for
-    # whatever did.
-    if: >
-      always() &&
-      vars.NOVA_DEPLOY_ENABLED == 'true' &&
-      needs.ci.result == 'success' &&
-      (needs.image.result == 'success' || needs.image.result == 'skipped') &&
-      (needs.docs-build.result == 'success' || needs.docs-build.result == 'skipped') &&
-      (needs.site-build.result == 'success' || needs.site-build.result == 'skipped') &&
-      (needs.changes.outputs.app == 'true' || needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true')
-    # Self-hosted on Nova (label linkdean-nova). Do not use this label on pull_request jobs.
-    runs-on: [self-hosted, linkdean-nova]
-    steps:
-      - uses: actions/download-artifact@v8
-        if: needs.changes.outputs.docs == 'true' || needs.changes.outputs.site == 'true'
-        with:
-          pattern: static-*
-          path: ${{ runner.temp }}/static
-          merge-multiple: true
-
-      - name: Roll forward and verify on the guest
-        env:
-          LXC: linkdean-public
-          APP: ${{ needs.changes.outputs.app }}
-          DOCS: ${{ needs.changes.outputs.docs }}
-          SITE: ${{ needs.changes.outputs.site }}
-        run: |
-          set -euo pipefail
-          if ! command -v lxc >/dev/null; then
-            echo "::error::lxc not found on the self-hosted runner"
-            exit 1
-          fi
-          # The repo lives at /opt/linkdean inside the public-beta LXD guest.
-          lxc exec "$LXC" -- bash -s <<EOF
-          set -euo pipefail
-          cd /opt/linkdean
-          git fetch --tags --force origin
-          git checkout --detach "$GITHUB_REF_NAME"
-          EOF
-
-          # Infisical → guest Compose .env (restic keys filtered). Run on the Nova host
-          # so the Infisical CLI / machine identity stay off the public VM; script comes
-          # from the tag just checked out on the guest.
-          RENDER=/opt/linkdean/deploy/public-beta/scripts/render-env-from-infisical.sh
-          if lxc exec "$LXC" -- test -f "$RENDER"; then
-            lxc file pull "$LXC$RENDER" /tmp/render-env-from-infisical.sh
-            chmod +x /tmp/render-env-from-infisical.sh
-            LXC="$LXC" bash /tmp/render-env-from-infisical.sh
-            rm -f /tmp/render-env-from-infisical.sh
-          else
-            echo "::warning::render-env-from-infisical.sh missing on guest; skipping Infisical render"
-          fi
-
-          # Docs and site: copy each changed site's files into the guest and swap them into the
-          # folder Caddy serves (install-static.sh, from the tag checked out above).
-          for pair in "docs:$DOCS" "site:$SITE"; do
-            name="${pair%%:*}"
-            [ "${pair#*:}" = true ] || continue
-            tarball="$RUNNER_TEMP/static/$name.tgz"
-            [ -f "$tarball" ] || { echo "::error::$name changed but its build artifact is missing"; exit 1; }
-            lxc file push "$tarball" "$LXC/tmp/linkdean-$name.tgz"
-            lxc exec "$LXC" -- bash -c "cd /opt/linkdean && bash deploy/public-beta/scripts/install-static.sh $name /tmp/linkdean-$name.tgz $GITHUB_REF_NAME && rm -f /tmp/linkdean-$name.tgz"
-          done
-
-          lxc exec "$LXC" -- bash -s <<EOF
-          set -euo pipefail
-          cd /opt/linkdean
-          RELEASE_TAG="$GITHUB_REF_NAME" UPDATE_APP=$APP UPDATE_DOCS=$DOCS UPDATE_SITE=$SITE \\
-            bash deploy/public-beta/scripts/pull-update.sh
-          RELEASE_TAG="$GITHUB_REF_NAME" CHECK_APP=$APP CHECK_DOCS=$DOCS CHECK_SITE=$SITE \\
-            bash deploy/public-beta/scripts/verify.sh
-          EOF
-
-  verify-public:
-    name: Verify the public URLs
-    needs: [changes, deploy]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Changed apps answer through Cloudflare
-        env:
-          APP: ${{ needs.changes.outputs.app }}
-          DOCS: ${{ needs.changes.outputs.docs }}
-          SITE: ${{ needs.changes.outputs.site }}
-        run: |
-          get() { curl -fsS --retry 10 --retry-delay 6 --retry-all-errors -A linkdean-release-check "$1"; }
-          if [ "$APP" = true ]; then
-            want="${GITHUB_REF_NAME#v}"
-            got=$(get "https://app.linkdean.app/api/health?release=$GITHUB_SHA" | jq -r .version)
-            echo "app.linkdean.app reports $got"
-            [ "$got" = "$want" ] || { echo "::error::app.linkdean.app reports $got, expected $want"; exit 1; }
-          fi
-          if [ "$DOCS" = true ]; then
-            get "https://docs.linkdean.app/?release=$GITHUB_SHA" >/dev/null
-            # A page must arrive pre-rendered (an <article>), not as the empty root shell.
-            get "https://docs.linkdean.app/docs/intro/?release=$GITHUB_SHA" | grep -q '<article' ||
-              { echo "::error::docs.linkdean.app/docs/intro/ is not pre-rendered"; exit 1; }
-            echo "docs.linkdean.app ok"
-          fi
-          if [ "$SITE" = true ]; then get "https://linkdean.app/?release=$GITHUB_SHA" >/dev/null && echo "linkdean.app ok"; fi
-
   extension:
     name: Submit the extension to the stores
     needs: [changes, ci]
@@ -366,17 +177,13 @@ jobs:
 
   github-release:
     name: Create GitHub release
-    needs: [changes, ci, image, docs-build, site-build, deploy, extension]
-    # Publish once CI passed, the image (if any) pushed, the deploy (if enabled) succeeded and
-    # the extension (if changed) went to the stores.
+    needs: [changes, ci, image, extension]
+    # Publish once CI passed, the image pushed and the extension (if changed) went to the stores.
     if: >
       always() &&
       github.event_name == 'push' &&
       needs.ci.result == 'success' &&
-      (needs.image.result == 'success' || needs.image.result == 'skipped') &&
-      (needs.docs-build.result == 'success' || needs.docs-build.result == 'skipped') &&
-      (needs.site-build.result == 'success' || needs.site-build.result == 'skipped') &&
-      (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') &&
+      needs.image.result == 'success' &&
       (needs.extension.result == 'success' || needs.extension.result == 'skipped')
     runs-on: ubuntu-24.04
     permissions:
@@ -386,25 +193,14 @@ jobs:
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-          APP: ${{ needs.changes.outputs.app }}
-          DOCS: ${{ needs.changes.outputs.docs }}
-          SITE: ${{ needs.changes.outputs.site }}
           EXTENSION: ${{ needs.changes.outputs.extension }}
           EXTENSION_VERSION: ${{ needs.changes.outputs.extension_version }}
-          PREVIOUS: ${{ needs.changes.outputs.previous }}
         run: |
           prerelease=""
           case "$GITHUB_REF_NAME" in v0.*) prerelease="--prerelease" ;; esac
-          apps=""
-          [ "$APP" = true ] && apps="$apps app"
-          [ "$DOCS" = true ] && apps="$apps docs"
-          [ "$SITE" = true ] && apps="$apps site"
-          notes="Changed since ${PREVIOUS:-the first commit}:${apps:- nothing deployable}."
+          notes="Image: \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkdean:${GITHUB_REF_NAME#v}\`."
           if [ "$EXTENSION" = true ]; then
             notes="$notes Browser extension $EXTENSION_VERSION submitted to the Chrome Web Store and AMO for review."
-          fi
-          if [ "$APP" = true ]; then
-            notes="$notes Image: \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/linkdean:${GITHUB_REF_NAME#v}\`."
           fi
           notes="$notes Docs: [docs.linkdean.app](https://docs.linkdean.app)."
           # A moved tag leaves its old release behind (as a draft once the tag is deleted).
