@@ -243,7 +243,6 @@ Published site: [docs.linkdean.app](https://docs.linkdean.app), built from the f
 | [Fast capture](docs/guides/fast-capture.md) | Extension, bookmarklet, share, Shortcuts |
 | [Architecture](docs/product/architecture.md) | Stack, domain model, auth, vault vs hidden |
 | [Roadmap](docs/product/roadmap.md) | Planned milestones / backlog |
-| [Brand guidelines](brand/GUIDELINES.md) | Logo, colour, clear space |
 
 ---
 
@@ -335,7 +334,7 @@ Non-commercial use, modification, and redistribution (including forks) are allow
 Prior MIT-tagged releases remain MIT for those trees; current `main` is PolyForm Noncommercial.
 
 <p align="center">
-  <img src="brand/exports/png/linkdean-symbol-color-256.png" alt="Linkdean symbol" width="64" />
+  <img src="docs/media/linkdean-symbol-color-256.png" alt="Linkdean symbol" width="64" />
   <br />
   <sub>Your corner of the internet, organised.</sub>
 </p>
