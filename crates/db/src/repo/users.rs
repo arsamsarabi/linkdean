@@ -494,6 +494,15 @@ pub async fn update_user_settings(
     if let Some(v) = patch.show_keyboard_hints {
         s.show_keyboard_hints = v;
     }
+    if let Some(v) = patch.archive_new {
+        s.archive_new = v;
+    }
+    if let Some(ref v) = patch.archive_formats {
+        s.archive_formats = linkdean_core::clean_archive_formats(v)?
+            .iter()
+            .map(|f| f.as_str().to_string())
+            .collect();
+    }
     sqlx::query_as::<_, UserSettings>(
         r#"
         UPDATE user_settings SET
@@ -508,6 +517,8 @@ pub async fn update_user_settings(
             show_vault_in_library = $10,
             vault_delete_mode = $11,
             show_keyboard_hints = $12,
+            archive_new = $13,
+            archive_formats = $14,
             updated_at = now()
         WHERE user_id = $1
         RETURNING *
@@ -525,6 +536,8 @@ pub async fn update_user_settings(
     .bind(s.show_vault_in_library)
     .bind(&s.vault_delete_mode)
     .bind(s.show_keyboard_hints)
+    .bind(s.archive_new)
+    .bind(&s.archive_formats)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))

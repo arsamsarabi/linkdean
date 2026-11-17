@@ -227,6 +227,42 @@ pub fn decrypt_payload(
     serde_json::from_slice(&plain).map_err(|e| Error::msg(e.to_string()))
 }
 
+fn archive_aad(vault_id: Uuid, bookmark_id: Uuid, format: crate::ArchiveFormat) -> [u8; 37] {
+    let mut aad = [0u8; 37];
+    aad[..4].copy_from_slice(b"LDa1");
+    aad[4..20].copy_from_slice(vault_id.as_bytes());
+    aad[20..36].copy_from_slice(bookmark_id.as_bytes());
+    aad[36] = format.aad_tag();
+    aad
+}
+
+/// Encrypts an archived copy of a vault bookmark. Returns `(ciphertext, nonce)`.
+pub fn encrypt_archive(
+    data_key: &[u8; KEY_LEN],
+    vault_id: Uuid,
+    bookmark_id: Uuid,
+    format: crate::ArchiveFormat,
+    bytes: &[u8],
+) -> Result<(Vec<u8>, Vec<u8>)> {
+    encrypt(data_key, bytes, &archive_aad(vault_id, bookmark_id, format))
+}
+
+pub fn decrypt_archive(
+    data_key: &[u8; KEY_LEN],
+    vault_id: Uuid,
+    bookmark_id: Uuid,
+    format: crate::ArchiveFormat,
+    ciphertext: &[u8],
+    nonce: &[u8],
+) -> Result<Vec<u8>> {
+    decrypt(
+        data_key,
+        ciphertext,
+        nonce,
+        &archive_aad(vault_id, bookmark_id, format),
+    )
+}
+
 /// Derives a wrapping key with the cost recorded in `salt` (see `KDF_SALT_TAG`).
 fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
     let (argon, salt) = match salt.strip_prefix(KDF_SALT_TAG.as_slice()) {
@@ -286,6 +322,21 @@ fn decrypt(key_bytes: &[u8], ciphertext: &[u8], nonce_bytes: &[u8], aad: &[u8]) 
 mod tests {
     use super::*;
     use crate::VaultPayload;
+
+    #[test]
+    fn archive_copies_open_only_for_their_vault_bookmark_and_format() {
+        use crate::ArchiveFormat::{Html, Pdf};
+        let key = [7u8; KEY_LEN];
+        let (vault, bookmark) = (Uuid::new_v4(), Uuid::new_v4());
+        let (ct, nonce) = encrypt_archive(&key, vault, bookmark, Html, b"<p>hi</p>").unwrap();
+        assert_eq!(
+            decrypt_archive(&key, vault, bookmark, Html, &ct, &nonce).unwrap(),
+            b"<p>hi</p>"
+        );
+        assert!(decrypt_archive(&key, vault, bookmark, Pdf, &ct, &nonce).is_err());
+        assert!(decrypt_archive(&key, vault, Uuid::new_v4(), Html, &ct, &nonce).is_err());
+        assert!(decrypt_archive(&key, Uuid::new_v4(), bookmark, Html, &ct, &nonce).is_err());
+    }
 
     #[test]
     fn password_hash_round_trip() {

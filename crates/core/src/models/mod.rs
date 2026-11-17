@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 mod abuse;
 pub use abuse::*;
+mod archive;
+pub use archive::*;
 mod moderation;
 pub use moderation::*;
 
@@ -127,6 +129,10 @@ pub struct UserSettings {
     pub show_vault_in_library: bool,
     pub vault_delete_mode: String,
     pub show_keyboard_hints: bool,
+    /// Archive bookmarks as they are saved, in `archive_formats`.
+    pub archive_new: bool,
+    /// `html` and/or `pdf`: preselected in the archive dialog and used by `archive_new`.
+    pub archive_formats: Vec<String>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -191,6 +197,11 @@ pub struct UpdateSettings {
     /// Hide key numbers, key hint lines and shortcut keycaps. Missing means unchanged.
     #[serde(default)]
     pub show_keyboard_hints: Option<bool>,
+    #[serde(default)]
+    pub archive_new: Option<bool>,
+    /// At least one of `html` and `pdf`.
+    #[serde(default)]
+    pub archive_formats: Option<Vec<ArchiveFormat>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
@@ -216,6 +227,12 @@ pub struct PlatformSettings {
     pub screenshot_auto_retry_days: i32,
     /// When an admin last retried failed screenshots by hand.
     pub screenshot_retry_last_run_at: Option<DateTime<Utc>>,
+    /// Whether people may archive bookmarks.
+    pub archives_enabled: bool,
+    /// Archive storage per account. `None` = unlimited.
+    pub max_archive_bytes: Option<i64>,
+    /// Largest single archived copy, 1 MiB to 1 GiB.
+    pub max_archive_item_bytes: i64,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -227,6 +244,8 @@ pub struct ResolvedLimits {
     pub max_enrich_actions_per_day: Option<i64>,
     pub max_import_bytes: Option<i64>,
     pub max_upload_image_bytes: Option<i64>,
+    #[serde(default)]
+    pub max_archive_bytes: Option<i64>,
 }
 
 impl From<&PlatformSettings> for ResolvedLimits {
@@ -237,6 +256,7 @@ impl From<&PlatformSettings> for ResolvedLimits {
             max_enrich_actions_per_day: p.max_enrich_actions_per_day,
             max_import_bytes: p.max_import_bytes,
             max_upload_image_bytes: p.max_upload_image_bytes,
+            max_archive_bytes: p.max_archive_bytes,
         }
     }
 }
@@ -249,6 +269,9 @@ pub struct QuotaUsageView {
     pub stored_image_bytes: i64,
     pub enrich_actions_today: i64,
     pub enrich_period_start: String,
+    /// Archived copies on the bookmarks the person owns.
+    #[serde(default)]
+    pub archive_bytes: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -274,6 +297,14 @@ pub struct UpdatePlatformSettings {
     pub screenshot_retry_cooldown_hours: Option<i32>,
     /// 1 to 90.
     pub screenshot_auto_retry_days: Option<i32>,
+    #[serde(default)]
+    pub archives_enabled: Option<bool>,
+    /// `Some(None)` = unlimited; `Some(Some(bytes))` sets; omit = no change.
+    #[serde(default, deserialize_with = "deserialize_option_option_i64")]
+    pub max_archive_bytes: Option<Option<i64>>,
+    /// 1 MiB to 1 GiB.
+    #[serde(default)]
+    pub max_archive_item_bytes: Option<i64>,
 }
 
 fn deserialize_option_option_string<'de, D>(
@@ -926,6 +957,9 @@ pub struct BookmarkView {
     pub link_check_error: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link_checked_at: Option<DateTime<Utc>>,
+    /// Archived copies, when any exist or are on their way.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archive: Option<ArchiveSummary>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

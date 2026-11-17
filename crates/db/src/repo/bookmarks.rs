@@ -327,6 +327,7 @@ struct ViewBatch {
     /// Every category of each owner with a linked bookmark in the set.
     owner_categories: HashMap<Uuid, HashMap<Uuid, Category>>,
     owner_names: HashMap<Uuid, Option<String>>,
+    archives: HashMap<Uuid, linkdean_core::ArchiveSummary>,
 }
 
 impl ViewBatch {
@@ -400,6 +401,8 @@ impl ViewBatch {
             }
         }
 
+        let archives = super::archives::archive_summaries(pool, &ids).await?;
+
         Ok(Self {
             tags,
             flags,
@@ -407,6 +410,7 @@ impl ViewBatch {
             shared_with,
             owner_categories,
             owner_names,
+            archives,
         })
     }
 }
@@ -686,6 +690,7 @@ async fn view_from_batch(
             link_check_status_code: None,
             link_check_error: None,
             link_checked_at: None,
+            archive: batch.archives.get(&b.id).cloned(),
             created_at: b.created_at,
             updated_at: b.updated_at,
         }));
@@ -721,6 +726,7 @@ async fn view_from_batch(
         link_check_status_code,
         link_check_error,
         link_checked_at,
+        archive: batch.archives.get(&b.id).cloned(),
         created_at: b.created_at,
         updated_at: b.updated_at,
     }))
