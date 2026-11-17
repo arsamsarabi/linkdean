@@ -6,14 +6,13 @@ import type { LibraryPageFilter } from './useLibraryBookmarksInfinite'
 import { useLibrarySelection } from './useLibrarySelection'
 
 vi.mock('@/api', () => ({ api: { bookmarkIds: vi.fn() } }))
-vi.mock('@/hooks/bookmarks', () => {
-  const idle = { isPending: false, mutateAsync: vi.fn() }
-  return {
-    useBulkAddCategories: () => idle,
-    useBulkDeleteBookmarks: () => idle,
-    useBulkTagBookmarks: () => idle,
-  }
-})
+const idle = vi.hoisted(() => ({ isPending: false, mutateAsync: vi.fn() }))
+vi.mock('@/hooks/bookmarks', () => ({
+  useBulkAddCategories: () => idle,
+  useBulkDeleteBookmarks: () => idle,
+  useBulkTagBookmarks: () => idle,
+}))
+vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 
 function item(id: string, is_vault = false): Bookmark {
   return { id, is_vault, access: 'owner' } as unknown as Bookmark
@@ -94,5 +93,22 @@ describe('library selection', () => {
     expect([...result.current.selectedIds]).toEqual(['a', 'b'])
     await act(() => result.current.toggleSelectAll())
     expect(result.current.selectedCount).toBe(0)
+  })
+
+  it('keeps only the failed bookmarks selected after a partial failure', async () => {
+    idle.mutateAsync.mockResolvedValueOnce({ ok: 1, failed: 1, failedIds: ['b'], errors: ['Forbidden'] })
+    const list = [item('a'), item('b')]
+    const { result } = renderHook(() => useLibrarySelection({ list }))
+    act(() => {
+      result.current.toggleSelect('a')
+      result.current.toggleSelect('b')
+    })
+    await act(() => result.current.applyBulkTag(['x'], 'add'))
+    expect(result.current.selectMode).toBe(true)
+    expect([...result.current.selectedIds]).toEqual(['b'])
+
+    idle.mutateAsync.mockResolvedValueOnce({ ok: 1, failed: 0, failedIds: [], errors: [] })
+    await act(() => result.current.applyBulkTag(['x'], 'add'))
+    expect(result.current.selectMode).toBe(false)
   })
 })

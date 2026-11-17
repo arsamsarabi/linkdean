@@ -21,21 +21,25 @@ export type BulkDeleteVars = {
 export type BulkResult = {
   ok: number
   failed: number
+  /** The bookmarks that failed, in order, with each one's reason in `errors`. */
+  failedIds: string[]
   errors: string[]
 }
 
 async function runAll(ids: string[], fn: (id: string) => Promise<unknown>): Promise<BulkResult> {
   let ok = 0
+  const failedIds: string[] = []
   const errors: string[] = []
   for (const id of ids) {
     try {
       await fn(id)
       ok += 1
     } catch (e) {
-      errors.push(`${id}: ${String(e)}`)
+      failedIds.push(id)
+      errors.push(e instanceof Error ? e.message : String(e))
     }
   }
-  return { ok, failed: errors.length, errors }
+  return { ok, failed: failedIds.length, failedIds, errors }
 }
 
 function invalidate(qc: ReturnType<typeof useQueryClient>): void {

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { notifications } from '@mantine/notifications'
 import { api } from '@/api'
 import type { BulkEditMode } from '@/components'
-import { useBulkAddCategories, useBulkDeleteBookmarks, useBulkTagBookmarks } from '@/hooks/bookmarks'
+import { useBulkAddCategories, useBulkDeleteBookmarks, useBulkTagBookmarks, type BulkResult } from '@/hooks/bookmarks'
 import { useSyncDuringRender } from '@/hooks/render'
 import { toggleId, writableIds, type LibraryListItem } from '@/services'
 import type { LibraryPageFilter } from './useLibraryBookmarksInfinite'
@@ -13,16 +13,15 @@ type Input = {
   matchFilter?: LibraryPageFilter | null
 }
 
-// Known issue: Bulk failures carry no detail, and the selection clears even on partial failure.
-// Fix: keep the failed ids selected, with the reason.
-function notifyBulk(label: string, result: { ok: number; failed: number }): void {
+function notifyBulk(label: string, result: BulkResult): void {
   if (result.failed === 0) {
     notifications.show({ message: `${label}: ${result.ok} bookmark${result.ok === 1 ? '' : 's'}` })
     return
   }
   notifications.show({
     color: 'yellow',
-    message: `${label}: ${result.ok} ok, ${result.failed} failed`,
+    title: `${label}: ${result.ok} done, ${result.failed} failed`,
+    message: `${result.errors[0]}${result.failed > 1 ? ' (and others)' : ''}. The ones that failed are still selected.`,
   })
 }
 
@@ -128,31 +127,35 @@ export function useLibrarySelection({ list, matchFilter = null }: Input) {
     setSelectedIds((prev) => toggleId(prev, id))
   }
 
+  /** Report the outcome; on any failure keep just the failed bookmarks selected, to retry or drop. */
+  function finishBulk(label: string, result: BulkResult): void {
+    notifyBulk(label, result)
+    setBulkMode(null)
+    setBulkDeleteOpen(false)
+    if (result.failed === 0) {
+      exitSelectMode()
+      return
+    }
+    setMatched(null)
+    setSelectedIds(new Set(result.failedIds))
+  }
+
   async function applyBulkCategories(categoryIds: string[]): Promise<void> {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const result = await bulkCategories.mutateAsync({ ids, category_ids: categoryIds })
-    notifyBulk('Categories added', result)
-    setBulkMode(null)
-    exitSelectMode()
+    finishBulk('Categories added', await bulkCategories.mutateAsync({ ids, category_ids: categoryIds }))
   }
 
   async function applyBulkTag(tags: string[], tagMode: 'add' | 'replace'): Promise<void> {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const result = await bulkTag.mutateAsync({ ids, tags, mode: tagMode })
-    notifyBulk(tagMode === 'add' ? 'Tagged' : 'Tags replaced', result)
-    setBulkMode(null)
-    exitSelectMode()
+    finishBulk(tagMode === 'add' ? 'Tagged' : 'Tags replaced', await bulkTag.mutateAsync({ ids, tags, mode: tagMode }))
   }
 
   async function confirmBulkDelete(): Promise<void> {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    const result = await bulkDelete.mutateAsync({ ids })
-    notifyBulk('Deleted', result)
-    setBulkDeleteOpen(false)
-    exitSelectMode()
+    finishBulk('Deleted', await bulkDelete.mutateAsync({ ids }))
   }
 
   return {
