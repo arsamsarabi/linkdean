@@ -5,8 +5,8 @@
 
 use linkdean_core::import_export::{build_linkdean_export, parse_linkdean_json};
 use linkdean_core::{
-    CreateBookmark, CreateCategory, CreateDashboard, PutDashboardLayout, PutDashboardSection, User,
-    VaultKeyring,
+    CreateBookmark, CreateCategory, CreateDashboard, DashboardSectionKind, DashboardSectionSettings,
+    DashboardSectionSource, PutDashboardLayout, PutDashboardSection, User, VaultKeyring,
 };
 use linkdean_db::{self as db};
 use sqlx::PgPool;
@@ -93,11 +93,25 @@ async fn json_export_restores_folders_flags_times_and_dashboards() {
         board.id,
         PutDashboardLayout {
             title: None,
-            sections: vec![PutDashboardSection {
-                settings: Default::default(),
-                title: "Top".into(),
-                bookmark_ids: vec![bookmark],
-            }],
+            sections: vec![
+                PutDashboardSection {
+                    settings: Default::default(),
+                    title: "Top".into(),
+                    bookmark_ids: vec![bookmark],
+                },
+                PutDashboardSection {
+                    settings: DashboardSectionSettings {
+                        kind: DashboardSectionKind::Latest,
+                        source: DashboardSectionSource {
+                            category_id: Some(sub),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    title: "Latest in Sub".into(),
+                    bookmark_ids: vec![],
+                },
+            ],
         },
         &VaultKeyring::default(),
     )
@@ -150,6 +164,20 @@ async fn json_export_restores_folders_flags_times_and_dashboards() {
     .await
     .expect("pins");
     assert_eq!(pinned, vec![id]);
+
+    let source: Option<String> = sqlx::query_scalar(
+        r#"
+        SELECT c.name FROM dashboard_sections s
+        JOIN dashboards d ON d.id = s.dashboard_id
+        JOIN categories c ON c.id = s.source_category_id AND c.owner_user_id = $1
+        WHERE d.owner_user_id = $1 AND s.title = 'Latest in Sub'
+        "#,
+    )
+    .bind(to.id)
+    .fetch_optional(&pool)
+    .await
+    .expect("source");
+    assert_eq!(source.as_deref(), Some("Sub"));
 }
 
 async fn folder_tree(pool: &PgPool, owner: &User) -> Vec<(String, Option<String>)> {

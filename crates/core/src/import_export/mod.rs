@@ -23,6 +23,8 @@ pub struct ParsedImport {
     pub bookmarks: Vec<ParsedBookmark>,
     /// Dashboards from a Linkdean export. Pins name `ParsedBookmark::source_id` values.
     pub dashboards: Vec<DashboardExport>,
+    /// Folder id in a Linkdean export -> index into `categories`, for dashboard folder sources.
+    pub category_sources: std::collections::HashMap<Uuid, usize>,
 }
 
 #[derive(Debug, Default)]
@@ -320,6 +322,12 @@ pub fn parse_linkdean_json(raw: &str) -> Result<ParsedImport> {
             queue.push_back((child, Some(index)));
         }
     }
+
+    parsed.category_sources = cats
+        .iter()
+        .enumerate()
+        .filter_map(|(i, c)| new_index.get(&i).map(|&n| (c.id, n)))
+        .collect();
 
     for b in export.bookmarks.into_iter().filter(|b| !b.is_vault) {
         let categories = b
