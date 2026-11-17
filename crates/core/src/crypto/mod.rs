@@ -309,6 +309,7 @@ mod tests {
             description: Some("desc".into()),
             notes: None,
             tags: vec!["a".into()],
+            is_private: true,
         };
         let (vault, row) = (Uuid::new_v4(), Uuid::new_v4());
         let (ct, nonce) = encrypt_payload(&data_key, vault, row, &payload).unwrap();

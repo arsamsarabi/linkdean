@@ -19,7 +19,7 @@ export const recoveryKeySchema = z.object({ recovery_key: z.string() })
 export const globalPassphraseSchema = z.object({ enabled: z.boolean() })
 
 export const vaultMoveBlockerSchema = z.object({
-  kind: z.enum(['shared', 'public_link', 'other_category', 'dashboard']),
+  kind: z.enum(['shared', 'public_link', 'other_category', 'dashboard', 'other_owner']),
   subject_id: z.string(),
   related_id: z.string().nullish(),
   message: z.string(),
