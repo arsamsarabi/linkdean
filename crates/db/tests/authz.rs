@@ -838,3 +838,66 @@ async fn public_list_owner_without_a_name_shows_no_email() {
     assert_eq!(list.owner_display_name, "Owner");
     assert!(!list.owner_display_name.contains("leaky"));
 }
+
+#[tokio::test]
+async fn a_nested_share_lists_the_nearest_grant() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let mut users = Vec::new();
+    for prefix in ["nest-owner", "nest-invitee"] {
+        let u = db::create_user(&pool, &unique_email(prefix), Some("password-long"), None, None, None)
+            .await
+            .expect("user");
+        db::mark_email_verified(&pool, u.id).await.expect("verify");
+        users.push(u);
+    }
+    let (owner, invitee) = (&users[0], &users[1]);
+    let mut parent = None;
+    let mut ids = Vec::new();
+    for name in ["outer", "inner", "child"] {
+        let cat = db::create_category(
+            &pool,
+            owner.id,
+            CreateCategory {
+                name: format!("{name}-{}", Uuid::new_v4()),
+                parent_id: parent,
+                is_hidden: false,
+                vault_id: None,
+                icon: None,
+            },
+        )
+        .await
+        .expect("folder");
+        parent = Some(cat.id);
+        ids.push(cat.id);
+    }
+    // Write on the outer folder, read on the folder inside it: the inner grant wins below it.
+    for (folder, access) in [(ids[0], ShareAccess::Write), (ids[1], ShareAccess::Read)] {
+        db::create_share(
+            &pool,
+            owner.id,
+            folder,
+            CreateCategoryShare {
+                email: invitee.email.clone(),
+                access,
+            },
+        )
+        .await
+        .expect("share");
+    }
+    accept_invites(&pool, invitee.id).await;
+
+    let listed = db::list_shared_categories(&pool, invitee.id, true)
+        .await
+        .expect("shared");
+    let listed_access = |id: Uuid| listed.iter().find(|(c, _)| c.id == id).map(|(_, a)| *a);
+    let expected = [CategoryAccess::Write, CategoryAccess::Read, CategoryAccess::Read];
+    for (id, want) in ids.iter().zip(expected) {
+        assert_eq!(listed_access(*id), Some(want));
+        assert_eq!(
+            db::category_access(&pool, invitee.id, *id).await.expect("access"),
+            want
+        );
+    }
+}

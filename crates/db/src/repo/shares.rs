@@ -40,8 +40,6 @@ fn to_view(row: ShareRow) -> Result<CategoryShareView> {
 /// Resolve effective access for `user_id` on `category_id`.
 /// Owner wins. Else nearest ancestor share (walking parent chain). Vault → NotFound for non-owners.
 /// Trash is the owner's: a non-owner gets NotFound when the folder or any ancestor is trashed.
-// Known issue: With nested shares, the UI can show write access where the nearest grant only gives
-// read. The API enforces read. Fix: compute and show the nearest grant.
 pub async fn category_access(
     pool: &PgPool,
     user_id: Uuid,
@@ -128,7 +126,8 @@ async fn find_direct_share(
     .map_err(|e| Error::msg(e.to_string()))
 }
 
-/// Categories visible via shares (shared root + non-vault descendants), with grant access.
+/// Categories visible via shares (shared root + non-vault descendants), each with the access of
+/// its nearest grant, as `category_access` resolves it.
 pub async fn list_shared_categories(
     pool: &PgPool,
     invitee_user_id: Uuid,
@@ -140,7 +139,7 @@ pub async fn list_shared_categories(
             SELECT
                 c.id, c.owner_user_id, c.parent_id, c.name, c.is_hidden, c.is_vault,
                 c.icon, c.position, c.deleted_at, c.created_at, c.updated_at,
-                cs.access AS share_access
+                cs.access AS share_access, 0 AS depth
             FROM category_shares cs
             JOIN categories c ON c.id = cs.category_id
             WHERE cs.invitee_user_id = $1
@@ -161,7 +160,7 @@ pub async fn list_shared_categories(
             SELECT
                 child.id, child.owner_user_id, child.parent_id, child.name, child.is_hidden,
                 child.is_vault, child.icon, child.position, child.deleted_at, child.created_at,
-                child.updated_at, tree.share_access
+                child.updated_at, tree.share_access, tree.depth + 1
             FROM categories child
             JOIN tree ON child.parent_id = tree.id
             WHERE child.is_vault = FALSE
@@ -172,7 +171,7 @@ pub async fn list_shared_categories(
             id, owner_user_id, parent_id, name, is_hidden, is_vault, icon, position,
             deleted_at, created_at, updated_at, share_access
         FROM tree
-        ORDER BY id, CASE share_access WHEN 'write' THEN 0 ELSE 1 END
+        ORDER BY id, depth
         "#,
     )
     .bind(invitee_user_id)
