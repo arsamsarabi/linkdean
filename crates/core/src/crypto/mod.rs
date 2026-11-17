@@ -326,7 +326,7 @@ mod tests {
     #[test]
     fn archive_copies_open_only_for_their_vault_bookmark_and_format() {
         use crate::ArchiveFormat::{Html, Pdf};
-        let key = [7u8; KEY_LEN];
+        let key = new_data_key();
         let (vault, bookmark) = (Uuid::new_v4(), Uuid::new_v4());
         let (ct, nonce) = encrypt_archive(&key, vault, bookmark, Html, b"<p>hi</p>").unwrap();
         assert_eq!(
@@ -399,7 +399,7 @@ mod key_wrap_tests {
 
     #[test]
     fn a_secret_wrap_round_trips() {
-        let key = [7u8; KEY_LEN];
+        let key = new_data_key();
         let wrapped = wrap_data_key("correct horse", &key).unwrap();
         let got = unlock_vault(
             "correct horse",
