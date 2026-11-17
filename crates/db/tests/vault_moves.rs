@@ -657,3 +657,43 @@ async fn an_edit_saved_during_a_move_is_moved_not_lost() {
         .expect("visible");
     assert_eq!(view.title, "Edited mid-move");
 }
+
+#[tokio::test]
+async fn moving_a_folder_out_leaves_its_trashed_bookmarks_out_of_search() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let folder = category(&s, "Moving", None).await;
+    let live = bookmark(&s, "https://live.example/", vec![folder], vec![]).await;
+    let trashed = bookmark(&s, "https://trashed.example/", vec![folder], vec![]).await;
+    sqlx::query("UPDATE bookmarks SET deleted_at = now() WHERE id = $1")
+        .bind(trashed)
+        .execute(&s.pool)
+        .await
+        .expect("trash");
+    db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![folder], vec![], Some(s.vault)),
+        &s.keyring,
+    )
+    .await
+    .expect("move in");
+
+    let outcome = db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![folder], vec![], None),
+        &s.keyring,
+    )
+    .await
+    .expect("move out");
+    let VaultMoveOutcome::Moved { joined_search, .. } = outcome else {
+        panic!("expected a move");
+    };
+    assert_eq!(joined_search, vec![live]);
+    let raw = db::get_bookmark_raw(&s.pool, s.owner.id, trashed)
+        .await
+        .expect("raw");
+    assert!(!raw.is_vault && raw.url == "https://trashed.example/");
+}

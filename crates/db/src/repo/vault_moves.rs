@@ -43,9 +43,8 @@ async fn expand_categories(pool: &PgPool, user_id: Uuid, ids: &[Uuid]) -> Result
     Ok(rows)
 }
 
-/// Requested bookmarks plus everything in the moved categories, trashed included.
-// Known issue: Trashed bookmarks are collected too, so moving a folder out of a vault re-indexes
-// its trashed rows in search. Fix: filter `deleted_at`.
+/// Requested bookmarks plus everything in the moved categories, trashed included, so a trashed
+/// row never stays plaintext in a vault folder.
 async fn collect_bookmarks(
     pool: &PgPool,
     user_id: Uuid,
@@ -578,10 +577,11 @@ async fn try_move_to_vault(
     } else {
         Vec::new()
     };
+    // Trashed rows are indexed again when restored, not here.
     let joined_search = if destination.is_none() {
         loaded
             .iter()
-            .filter(|(b, _)| !was_plain(b))
+            .filter(|(b, _)| !was_plain(b) && b.deleted_at.is_none())
             .map(|(b, _)| b.id)
             .collect()
     } else {
