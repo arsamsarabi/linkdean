@@ -47,7 +47,17 @@
 
 ### Fixed
 
+- Library and dashboards:
+  - Bookmarks with no saved site icon show a globe, instead of asking Google for one: the request was blocked anyway, logged an error per tile, and would have sent each bookmarked site to Google.
+  - When a bulk tag, folder or delete fails for some bookmarks, the notice gives the reason and those bookmarks stay selected to retry.
+  - Bulk **Move to vault** leaves out bookmarks shared with you, which can't go in a vault, instead of failing the whole move.
+  - A tag can't contain a comma any more (it splits into two tags, as the tag inputs already did), so every tag can be filtered.
+  - Picking the same image again after cancelling a preview crop opens the crop again.
+  - After switching accounts in the same browser, the sidebar no longer shows the previous account's avatar.
+  - A dashboard edit can no longer be saved onto a different dashboard after losing access to the one being edited.
+  - Importing a Linkdean export keeps a dashboard section's folder (such as "Latest in Work"), instead of drawing on the whole library.
 - Sharing and privacy:
+  - Sharing with someone who blocked you looks like any other invite, so you can't tell. It never reaches them.
   - A dashboard in its owner's Trash can no longer be opened or edited by the people it is shared with. Restoring it brings their access back.
   - Tags that a write invitee sets on a shared bookmark now go into the owner's tags, instead of disappearing from the owner's tag list and filters.
   - With a read share inside a write share, the inner folder and everything below it show read access, as the server enforces, instead of offering edits that then fail.
@@ -58,6 +68,9 @@
   - Vault bookmarks are tied to their row and vault, so a copied ciphertext no longer opens on another bookmark. Existing ones gain this the next time they are saved.
   - The global passphrase's public key is checked whenever the master key opens, and put back if it was changed.
   - Unlocked vault keys are wiped from server memory when dropped and never appear in debug logs.
+  - Moving a folder into a vault names a bookmark someone else added to it (while it was shared) as something to move or delete first, instead of failing with "not found".
+  - A bookmark set to Only me keeps that setting after moving into a vault and back out.
+  - Moving a folder out of a vault no longer brings its deleted bookmarks back into search.
 - Records of individual bookmark opens are now deleted after 30 days for everyone. Before, they were only pruned when the same person opened another bookmark.
 - The collapsed sidebar rail centers its icons in square buttons, marks the current page with a highlight and an edge bar, and separates recent folders from the main pages.
 - Docs: the **Intro** and **Getting started** pages show their screenshots again, instead of a stray `import Shot …` line.

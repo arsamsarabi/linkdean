@@ -457,16 +457,15 @@ async fn get_avatar(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> ApiResult<impl IntoResponse> {
-    avatar_response(&state, user.id, user.has_avatar).await
+    // `me` names a different user after switching accounts, so the browser must not cache it.
+    avatar_response(&state, user.id, user.has_avatar, "private, no-store").await
 }
 
-// Known issue: `/users/me/avatar` is cached for up to an hour, so after switching accounts the
-// previous user's avatar can show. Fix: serve `/users/{id}/avatar` to the web app, or send `no-
-// store` for `me`.
 async fn avatar_response(
     state: &AppState,
     user_id: Uuid,
     has_avatar: bool,
+    cache_control: &'static str,
 ) -> ApiResult<impl IntoResponse> {
     if !has_avatar {
         return Err(Error::NotFound.into());
@@ -477,7 +476,7 @@ async fn avatar_response(
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/webp"));
     headers.insert(
         header::CACHE_CONTROL,
-        HeaderValue::from_static("private, max-age=3600"),
+        HeaderValue::from_static(cache_control),
     );
     Ok((StatusCode::OK, headers, bytes))
 }
@@ -875,5 +874,11 @@ async fn user_avatar(
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
     let target = db::require_viewable_profile(&state.pool, user.id, id).await?;
-    avatar_response(&state, target.id, target.has_avatar).await
+    avatar_response(
+        &state,
+        target.id,
+        target.has_avatar,
+        "private, max-age=3600",
+    )
+    .await
 }

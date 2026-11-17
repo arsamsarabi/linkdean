@@ -962,6 +962,7 @@ pub async fn create_bookmark(
             description: req.description.clone(),
             notes: req.notes.clone(),
             tags: req.tags.clone(),
+            is_private: false,
         };
         sealed = Some(
             super::blocking::run_blocking(move || {

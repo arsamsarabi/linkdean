@@ -43,9 +43,8 @@ async fn expand_categories(pool: &PgPool, user_id: Uuid, ids: &[Uuid]) -> Result
     Ok(rows)
 }
 
-/// Requested bookmarks plus everything in the moved categories, trashed included.
-// Known issue: Trashed bookmarks are collected too, so moving a folder out of a vault re-indexes
-// its trashed rows in search. Fix: filter `deleted_at`.
+/// Requested bookmarks plus everything in the moved categories, trashed included, so a trashed
+/// row never stays plaintext in a vault folder.
 async fn collect_bookmarks(
     pool: &PgPool,
     user_id: Uuid,
@@ -65,8 +64,11 @@ async fn collect_bookmarks(
     .await
     .map_err(db_err)?;
     let found: HashSet<Uuid> = rows.iter().map(|b| b.id).collect();
+    // Someone else's bookmark found through a folder is a blocker; asked for by id, it is not found.
     if requested.iter().any(|id| !found.contains(id))
-        || rows.iter().any(|b| b.owner_user_id != user_id)
+        || rows
+            .iter()
+            .any(|b| b.owner_user_id != user_id && requested.contains(&b.id))
     {
         return Err(Error::NotFound);
     }
@@ -74,9 +76,6 @@ async fn collect_bookmarks(
 }
 
 /// A bookmark's readable content, whichever side of a vault it is on.
-// Known issue: A bookmark an invitee created in a moved folder fails the move with a bare 404
-// rather than a blocker, and `is_private` is lost when a bookmark moves into a vault and back out.
-// Fix: add a blocker kind, and carry `is_private` in the payload.
 async fn read_payload(
     pool: &PgPool,
     bookmark: &Bookmark,
@@ -89,6 +88,7 @@ async fn read_payload(
             description: bookmark.description.clone(),
             notes: bookmark.notes.clone(),
             tags: bookmark_tag_names(pool, bookmark.id).await?,
+            is_private: bookmark.is_private,
         });
     };
     let key = *keyring.get(vault_id).ok_or(Error::VaultLocked)?;
@@ -366,7 +366,8 @@ async fn write_plain(
         r#"
         UPDATE bookmarks
         SET is_vault = FALSE, vault_id = NULL, vault_ciphertext = NULL, vault_nonce = NULL,
-            url = $1, title = $2, description = $3, notes = $4, updated_at = now()
+            url = $1, title = $2, description = $3, notes = $4, is_private = $6,
+            updated_at = now()
         WHERE id = $5
         "#,
     )
@@ -375,6 +376,7 @@ async fn write_plain(
     .bind(&payload.description)
     .bind(&payload.notes)
     .bind(id)
+    .bind(payload.is_private)
     .execute(&mut **tx)
     .await
     .map_err(db_err)?;
@@ -427,10 +429,10 @@ async fn try_move_to_vault(
     }
 
     // Items already at the destination stay put.
-    let bookmarks: Vec<Bookmark> = bookmarks
+    let (bookmarks, foreign): (Vec<Bookmark>, Vec<Bookmark>) = bookmarks
         .into_iter()
         .filter(|b| b.vault_id != destination)
-        .collect();
+        .partition(|b| b.owner_user_id == user_id);
 
     let mut loaded = Vec::with_capacity(bookmarks.len());
     for bookmark in bookmarks {
@@ -438,7 +440,17 @@ async fn try_move_to_vault(
         loaded.push((bookmark, payload));
     }
 
-    let blockers = find_blockers(pool, &categories, &loaded, destination.is_some()).await?;
+    let mut blockers = find_blockers(pool, &categories, &loaded, destination.is_some()).await?;
+    // Left from when a folder was shared: its owner can move or delete these, but not encrypt them.
+    blockers.extend(foreign.iter().map(|b| VaultMoveBlocker {
+        kind: VaultMoveBlockerKind::OtherOwner,
+        subject_id: b.id,
+        related_id: None,
+        message: format!(
+            "Move or delete “{}”: someone else added it to this folder",
+            b.title
+        ),
+    }));
     if !blockers.is_empty() {
         return Ok(Some(VaultMoveOutcome::Blocked(blockers)));
     }
@@ -578,10 +590,11 @@ async fn try_move_to_vault(
     } else {
         Vec::new()
     };
+    // Trashed rows are indexed again when restored, not here.
     let joined_search = if destination.is_none() {
         loaded
             .iter()
-            .filter(|(b, _)| !was_plain(b))
+            .filter(|(b, _)| !was_plain(b) && b.deleted_at.is_none())
             .map(|(b, _)| b.id)
             .collect()
     } else {

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSyncDuringRender } from '../render'
 
-// Known issue: For `me`, the browser can serve the previous account's avatar from HTTP cache for up
-// to an hour. See `avatar_response` in the API.
 export function useAvatarImage(hasAvatar: boolean, bust?: number | string, userId = 'me'): string | undefined {
   const [src, setSrc] = useState<string | undefined>()
 

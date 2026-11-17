@@ -29,11 +29,16 @@ type Input = {
 
 /** Edit-draft state + section mutators for the dashboard layout editor. */
 export function useDashboardEdit({ activeId, dashboard, save }: Input) {
-  const [editDraft, setEditDraft] = useState<DashboardDraft | null>(null)
+  const [draft, setEditDraft] = useState<DashboardDraft | null>(null)
+  const [draftFor, setDraftFor] = useState<string | undefined>()
+  // A draft belongs to the dashboard it was started on. Once another one shows (switched, or
+  // access to this one lost), there is no draft, so it can never be saved onto the wrong board.
+  const editDraft = draftFor === activeId ? draft : null
   const editing = editDraft !== null
 
   function startEdit(): void {
     try {
+      setDraftFor(activeId)
       setEditDraft(buildEditDraft(dashboard))
     } catch (e) {
       notifications.show({ color: 'red', message: `Could not start edit: ${String(e)}` })

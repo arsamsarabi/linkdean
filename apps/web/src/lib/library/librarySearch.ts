@@ -55,8 +55,6 @@ export function withWebScheme(text: string): string {
   return `https://${t.replace(/^\/+/, '')}`
 }
 
-// Known issue: A tag containing a comma cannot be filtered, since lists are comma-joined in
-// the URL. Fix: repeat the param instead.
 export function asStringList(v: unknown): string[] {
   if (v == null || v === '') return []
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string' && x.length > 0)

@@ -657,3 +657,116 @@ async fn an_edit_saved_during_a_move_is_moved_not_lost() {
         .expect("visible");
     assert_eq!(view.title, "Edited mid-move");
 }
+
+#[tokio::test]
+async fn moving_a_folder_out_leaves_its_trashed_bookmarks_out_of_search() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let folder = category(&s, "Moving", None).await;
+    let live = bookmark(&s, "https://live.example/", vec![folder], vec![]).await;
+    let trashed = bookmark(&s, "https://trashed.example/", vec![folder], vec![]).await;
+    sqlx::query("UPDATE bookmarks SET deleted_at = now() WHERE id = $1")
+        .bind(trashed)
+        .execute(&s.pool)
+        .await
+        .expect("trash");
+    db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![folder], vec![], Some(s.vault)),
+        &s.keyring,
+    )
+    .await
+    .expect("move in");
+
+    let outcome = db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![folder], vec![], None),
+        &s.keyring,
+    )
+    .await
+    .expect("move out");
+    let VaultMoveOutcome::Moved { joined_search, .. } = outcome else {
+        panic!("expected a move");
+    };
+    assert_eq!(joined_search, vec![live]);
+    let raw = db::get_bookmark_raw(&s.pool, s.owner.id, trashed)
+        .await
+        .expect("raw");
+    assert!(!raw.is_vault && raw.url == "https://trashed.example/");
+}
+
+#[tokio::test]
+async fn someone_elses_bookmark_in_the_folder_is_a_blocker() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let folder = category(&s, "Was shared", None).await;
+    let guest = person(&s.pool, "guest").await;
+    let theirs = db::create_bookmark(
+        &s.pool,
+        guest.id,
+        CreateBookmark {
+            url: "https://guest.example/".into(),
+            title: Some("Guest link".into()),
+            ..Default::default()
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("guest bookmark")
+    .id;
+    // As if added while the folder was shared, which has since ended.
+    sqlx::query("INSERT INTO bookmark_categories (bookmark_id, category_id) VALUES ($1, $2)")
+        .bind(theirs)
+        .bind(folder)
+        .execute(&s.pool)
+        .await
+        .expect("file");
+
+    let found = match db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![folder], vec![], Some(s.vault)),
+        &s.keyring,
+    )
+    .await
+    .expect("move")
+    {
+        VaultMoveOutcome::Blocked(found) => found,
+        VaultMoveOutcome::Moved { .. } => panic!("expected blockers"),
+    };
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].kind, VaultMoveBlockerKind::OtherOwner);
+    assert_eq!(found[0].subject_id, theirs);
+    assert!(found[0].message.contains("Guest link"));
+}
+
+#[tokio::test]
+async fn only_me_survives_a_trip_through_a_vault() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let id = bookmark(&s, "https://only-me.example/", vec![], vec![]).await;
+    sqlx::query("UPDATE bookmarks SET is_private = TRUE WHERE id = $1")
+        .bind(id)
+        .execute(&s.pool)
+        .await
+        .expect("private");
+    for to in [Some(s.vault), None] {
+        db::move_to_vault(
+            &s.pool,
+            s.owner.id,
+            request(vec![], vec![id], to),
+            &s.keyring,
+        )
+        .await
+        .expect("move");
+    }
+    let raw = db::get_bookmark_raw(&s.pool, s.owner.id, id)
+        .await
+        .expect("raw");
+    assert!(!raw.is_vault && raw.is_private);
+}

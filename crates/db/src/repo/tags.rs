@@ -12,7 +12,11 @@ pub async fn list_tags(pool: &PgPool, user_id: Uuid) -> Result<Vec<Tag>> {
 
 pub async fn ensure_tags(pool: &PgPool, user_id: Uuid, names: &[String]) -> Result<Vec<Tag>> {
     let mut out = Vec::new();
-    for name in names {
+    // A comma separates tags everywhere (tag inputs, imports, the `tag=` filter), so it is never
+    // part of one.
+    // shortcut: a tag saved with a comma before 0.0.13 keeps it until edited off its bookmarks;
+    // split them in a migration if any turn up.
+    for name in names.iter().flat_map(|n| n.split(',')) {
         let name = name.trim();
         if name.is_empty() {
             continue;

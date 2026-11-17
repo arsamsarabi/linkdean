@@ -3,7 +3,6 @@ import { Tooltip, UnstyledButton } from '@mantine/core'
 import { IconWorld } from '@tabler/icons-react'
 import { PeekButton } from '@/components/peek'
 import { useRecordBookmarkOpen } from '@/hooks'
-import { googleFavicon } from '@/services'
 import { ApiImage } from './ApiImage'
 import type { GlanceTileItem } from './GlanceTile'
 import styles from './IconTile.module.css'
@@ -23,7 +22,7 @@ export function IconTile({ bookmark: b, meta, rank, fresh = false }: Props): Rea
   const title = b.title.trim() || 'Untitled'
   const [iconFailed, setIconFailed] = useState(false)
   const recordOpen = useRecordBookmarkOpen()
-  const iconSrc = !iconFailed ? b.favicon_url || (b.is_vault ? undefined : googleFavicon(b.url)) : undefined
+  const iconSrc = !iconFailed ? b.favicon_url || undefined : undefined
 
   return (
     <Tooltip label={meta ? `${title} · ${meta}` : title} openDelay={150}>

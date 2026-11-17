@@ -1,16 +1,21 @@
 import { type ReactElement } from 'react'
 import { Button, Group, Text } from '@mantine/core'
 import { IconFolders, IconLock, IconTags, IconTrash } from '@tabler/icons-react'
+import { useMe } from '@/hooks'
 import styles from './LibraryPage.module.css'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
-// Known issue: Move to vault is offered for shared bookmarks the API refuses, and one refusal fails
-// the whole batch. Fix: send owned ids only, or disable the action with a reason.
 export function LibraryBulkBar(): ReactElement | null {
   const lib = useLibraryPageModel()
+  const me = useMe()
   if (!lib.selectMode) return null
 
   const { selectedCount, allSelected } = lib
+  // Only your own bookmarks can go in a vault; ones shared with you stay where they are.
+  // shortcut: rows beyond the loaded pages (Select all) are not screened, since `/bookmarks/ids`
+  // carries no owner, and one of those fails the whole move. Return owners there if that bites.
+  const notMine = new Set(lib.selectedItems.filter((b) => b.owner_user_id !== me.data?.user.id).map((b) => b.id))
+  const vaultIds = [...lib.selectedIds].filter((id) => !notMine.has(id))
 
   return (
     <Group justify="space-between" wrap="wrap" gap="sm" p="sm" className={`${styles.filterPanel} ${styles.bulkBar}`}>
@@ -51,10 +56,11 @@ export function LibraryBulkBar(): ReactElement | null {
           size="compact-sm"
           variant="light"
           leftSection={<IconLock size={14} stroke={1.5} />}
-          disabled={selectedCount === 0}
-          onClick={() => lib.setMoveTarget({ categoryIds: [], bookmarkIds: [...lib.selectedIds] })}
+          disabled={vaultIds.length === 0}
+          title={notMine.size > 0 ? 'Bookmarks shared with you cannot go in a vault' : undefined}
+          onClick={() => lib.setMoveTarget({ categoryIds: [], bookmarkIds: vaultIds })}
         >
-          Move to vault
+          {notMine.size > 0 && vaultIds.length > 0 ? `Move ${vaultIds.length} to vault` : 'Move to vault'}
         </Button>
         <Button
           size="compact-sm"

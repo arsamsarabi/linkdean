@@ -967,6 +967,9 @@ pub struct VaultPayload {
     pub description: Option<String>,
     pub notes: Option<String>,
     pub tags: Vec<String>,
+    /// Kept so a bookmark moved out of a vault gets its "only me" setting back.
+    #[serde(default)]
+    pub is_private: bool,
 }
 
 /// Keys of the vaults a user has unlocked right now. Clones share one copy of the keys, each
@@ -1087,6 +1090,7 @@ pub enum VaultMoveBlockerKind {
     PublicLink,
     OtherCategory,
     Dashboard,
+    OtherOwner,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

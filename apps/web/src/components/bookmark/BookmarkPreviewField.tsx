@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement } from 'react'
+import { useMemo, useRef, useState, type ReactElement } from 'react'
 import { Button, FileButton, Group, Stack, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconPhoto, IconTrash } from '@tabler/icons-react'
@@ -35,8 +35,6 @@ type Props = {
   disabled?: boolean
 }
 
-// Known issue: After cancelling a crop, picking the same file again does nothing, because the file
-// input's value did not change. Fix: reset the FileButton with `resetRef`.
 export function BookmarkPreviewField({
   bookmarkId,
   hasPreview,
@@ -53,6 +51,7 @@ export function BookmarkPreviewField({
   const [cropOpen, setCropOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [pendingUrl, setPendingUrl] = useState<string | null>(null)
+  const resetPicker = useRef<() => void>(null)
 
   const previewSrc = useMemo(() => {
     if (pendingUrl) return pendingUrl
@@ -67,6 +66,8 @@ export function BookmarkPreviewField({
 
   function onPick(file: File | null): void {
     if (!file) return
+    // Clear the input, so picking the same file again after a cancelled crop still fires.
+    resetPicker.current?.()
     setCropFile(file)
     setCropOpen(true)
   }
@@ -132,7 +133,7 @@ export function BookmarkPreviewField({
         </Text>
         {previewSrc ? <ApiImage src={previewSrc} alt="" radius="sm" mah={140} fit="cover" /> : null}
         <Group gap="sm">
-          <FileButton onChange={onPick} accept="image/*" disabled={disabled || busy}>
+          <FileButton resetRef={resetPicker} onChange={onPick} accept="image/*" disabled={disabled || busy}>
             {(props) => (
               <Button {...props} variant="light" leftSection={<IconPhoto {...iconSm} />} loading={busy}>
                 {previewSrc ? 'Change image' : 'Upload image'}

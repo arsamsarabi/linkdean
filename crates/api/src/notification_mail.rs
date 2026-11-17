@@ -401,6 +401,10 @@ async fn email_pending_invite(
     over_limit: bool,
 ) -> linkdean_core::Result<InviteEmail> {
     if let Some(account) = db::find_user_by_email(&state.pool, &invite.invitee_email).await? {
+        // Reads like their invite emails being off, so a block does not show.
+        if db::is_blocked(&state.pool, account.id, owner.id).await? {
+            return Ok(InviteEmail::default());
+        }
         let prefs = db::get_notification_email_prefs(&state.pool, account.id).await?;
         let wants = prefs
             .iter()

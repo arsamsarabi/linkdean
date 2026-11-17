@@ -193,13 +193,15 @@ pub async fn apply_parsed_import_counted(
             .into_iter()
             .map(|sec| PutDashboardSection {
                 title: sec.title,
-                // Known issue: a folder source cannot be matched to the imported folders yet
-                // (they are resolved by position, not id), so it is dropped and an imported
-                // "Latest in Work" section draws on the whole library. Suggested fix: carry the
-                // exported category id through `resolve_folders` and map it here.
                 settings: linkdean_core::DashboardSectionSettings {
                     source: linkdean_core::DashboardSectionSource {
-                        category_id: None,
+                        // The exported folder, as imported here; none if it was not in the file.
+                        category_id: sec
+                            .settings
+                            .source
+                            .category_id
+                            .and_then(|id| parsed.category_sources.get(&id))
+                            .and_then(|&i| folder_ids.get(i).copied()),
                         ..sec.settings.source
                     },
                     ..sec.settings

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApiImage } from './useApiImage'
 
 const fetchMock = vi.fn()
+// The load is a few promise hops; a busy full run can starve them past waitFor's 1 s default.
+const slow = { timeout: 5000 }
 
 describe('useApiImage', () => {
   beforeEach(() => {
@@ -23,14 +25,12 @@ describe('useApiImage', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  // Known issue: This failed once under a loaded full run and passed on rerun. Likely a timing
-  // dependency; check before relying on it.
   it('loads API images with the session cookie', async () => {
     fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['x'])) })
     const { result } = renderHook(() => useApiImage('/api/bookmarks/1/preview'))
 
     expect(result.current.src).toBeUndefined()
-    await waitFor(() => expect(result.current.src).toBe('blob:image'))
+    await waitFor(() => expect(result.current.src).toBe('blob:image'), slow)
     expect(fetchMock.mock.calls[0]?.[1]).toEqual({ credentials: 'include' })
   })
 
@@ -38,7 +38,7 @@ describe('useApiImage', () => {
     fetchMock.mockResolvedValue({ ok: false })
     const { result } = renderHook(() => useApiImage('/api/bookmarks/1/preview'))
 
-    await waitFor(() => expect(result.current.failed).toBe(true))
+    await waitFor(() => expect(result.current.failed).toBe(true), slow)
     expect(result.current.src).toBeUndefined()
   })
 })

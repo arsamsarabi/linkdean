@@ -106,7 +106,7 @@ pub async fn upsert_pending_share_invite(
         }
     }
     if let Some(invitee) = find_user_by_email(pool, &email).await? {
-        super::blocks::assert_not_blocked(pool, owner_user_id, invitee.id).await?;
+        super::blocks::share_blocked(pool, owner_user_id, invitee.id).await?;
     }
 
     if let Some(existing) =
@@ -521,10 +521,15 @@ async fn find_invitee_row(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Pend
 pub async fn list_share_invites(pool: &PgPool, user_id: Uuid) -> Result<Vec<ShareInviteInboxItem>> {
     let rows = sqlx::query_as::<_, PendingShareInvite>(
         r#"
-        SELECT * FROM pending_share_invites
+        SELECT * FROM pending_share_invites i
         WHERE invitee_user_id = $1
           AND claimed_at IS NULL
           AND revoked_at IS NULL
+          -- Invites from someone they blocked never show (see `share_blocked`).
+          AND NOT EXISTS (
+              SELECT 1 FROM user_blocks b
+              WHERE b.blocker_id = $1 AND b.blocked_id = i.invited_by_user_id
+          )
         ORDER BY created_at DESC
         "#,
     )

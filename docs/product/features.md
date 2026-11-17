@@ -6,7 +6,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 ## Library
 
-- Nested categories (folders) and tags
+- Nested categories (folders) and tags. A comma separates tags, so it is never part of one
 - Optional category icons (large curated Tabler set; picker has search + scroll + pagination; the chosen icon is filled and named beside the label)
 - Edit category drawer (name, parent, icon, hidden) from folder menu
 - Bookmarks with title, URL, description, notes
@@ -28,7 +28,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Library filters: category, tag, created-within (7d/30d/90d/year), vault-only
 - Hidden categories (declutter without encrypting)
 - Soft-delete with trash: restore, purge, retention days, optional show-deleted-in-library
-- Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens. Select all asks the server for every id the current filter matches (not only loaded rows)
+- Bulk select: move, tag, delete. Tick a bookmark's box (shown on hover or focus) to start selecting without pressing Select; shift-tick selects the range between; the bulk bar stays under the header while you scroll. Select stays for touch screens. Select all asks the server for every id the current filter matches (not only loaded rows). When some bookmarks fail, the notice says why and they stay selected; Move to vault takes only your own bookmarks
 - Duplicate detection and merge page (`/duplicates`, sidebar → Library health → Duplicates)
 - Broken links page (`/broken-links`, sidebar → Library health), where each link can be opened, rechecked or removed (Remove bookmark moves it to Deleted items); red badges on confirmed dead / unreachable cards
 - Duplicate / fork a category (copy folder + bookmarks)
@@ -54,7 +54,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 ## Vault & privacy
 
 - Multiple named vaults, each with its own passphrase and key (Argon2id + AES-GCM)
-- Vaults hold categories and loose bookmarks; move items in, out and between vaults, with a checklist when something blocks the move
+- Vaults hold categories and loose bookmarks; move items in, out and between vaults, with a checklist when something blocks the move (including a bookmark someone else added to the folder). Only me survives the trip
 - Recovery key per vault, shown once; replacing it asks for the vault passphrase. A lost passphrase and recovery key means the contents are gone
 - Optional global passphrase that unlocks chosen vaults in one step, alongside each vault's own passphrase; turning it off asks for it
 - Vault search skips bookmarks in Deleted items
@@ -127,7 +127,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - One-click unsubscribe: every notification email links an unsubscribe for its kind (the digest's turns off every digest kind) and carries `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps show their own Unsubscribe button. The link works signed out and opens a page that asks first, so link scanners change nothing. Links are signed with `SESSION_SECRET`; changing it voids them
 - Likes, comments, and 1–5 ratings on **shared** bookmarks, lists, and dashboards
 - Follow / unfollow users (⋮ on shared bookmarks; lists on Profile; notifies the followee). Follower counts show only to people who can see the profile
-- Block / unblock users (⋮ on shared bookmarks; list on Profile): removes follows and shares both ways without telling them, and hides each other's social activity and notifications
+- Block / unblock users (⋮ on shared bookmarks; list on Profile): removes follows and shares both ways without telling them, and hides each other's social activity and notifications. An invite from someone you blocked reads as sent to them but never reaches you
 - Profiles (`/u/{id}`): avatar, name, bio, follower and following lists, follow button, and the bookmarks the owner chose to show. Your own profile adds email and an edit drawer
 - Visibility: a profile is Hidden, Followers or Members; a category is Only me, Followers or Members; a bookmark can be Only me. Everything starts private. Members means anyone signed in, and Public links stay the only access without an account
 - Mute / unmute users (⋮ on shared bookmarks; list on Profile): one-way quiet, hides their social activity and notifications from you
@@ -205,7 +205,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - **Agent Skills** (experimental, off unless the server sets `EXPERIMENTAL_AGENT_SKILLS=true`; [guide](../guides/agent-skills.md)) for coding and research agents (Claude Code, Codex, Cursor and others): a folder (with its subfolders) or a tag becomes an [Agent Skill](https://agentskills.io), a `SKILL.md` whose description tells the agent when to use it, with the links grouped by subfolder, their descriptions, tags and your notes. Download it from **Config options → Import / Export → Agent Skill** or a folder's **⋯ → Agent Skill (.zip)**, or fetch it with an API key from `GET /api/agent-skill?folder=<id>` or `?tag=<name>` (`&format=md` for the `SKILL.md` alone) so a script can keep it current
     - Over 100 links move to `references/LINKS.md`, which the agent reads only when needed; a skill holds up to 2,000 bookmarks and says how many it left out
     - Never includes vault folders or bookmarks, deleted bookmarks, someone else's "Only me" bookmarks or their notes. Shared folders work with read access; a tag covers your own bookmarks
-- Linkdean JSON (version 2) keeps every folder of a bookmark, its favorite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own
+- Linkdean JSON (version 2) keeps every folder of a bookmark, its favorite, unread, pinned and private flags, its created and updated times, and your dashboards. Importing adds the dashboards beside your own, with each section's folder pointing at the imported folder
 - Netscape HTML lists a bookmark under each folder it is in, and reads `<DD>` descriptions on import
 - Duplicates on import: before anything is written, Settings → Import checks the file against your bookmarks outside vaults by exact URL. When some are already in the library, a review lists each one beside the existing bookmark with **Skip** (the default), **Replace** (update the existing bookmark in place with the file's title, description, tags and folders, only those the file has, keeping its shares, pins and activity), **Merge** (keep the existing title and description, fill only empty ones from the file, and add the file's tags and folders to the bookmark's own) or **Import anyway**, per row or for all. The API takes the same choices: `POST /api/import/preview`, then `duplicates` on `POST /api/import`; without them every bookmark is created
 - Folders in an imported file whose full path already exists (exact names, outside vaults) are reused instead of created again, so importing the same file twice does not duplicate them

@@ -16,7 +16,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { ActionIcon, Avatar, Button, Group, Text } from '@mantine/core'
 import { IconGripVertical, IconPlus, IconX } from '@tabler/icons-react'
 import type { Bookmark } from '@/schemas'
-import { googleFavicon, type DashboardDraftSection } from '@/services'
+import { type DashboardDraftSection } from '@/services'
 import editor from './DashboardBoardEditor.module.css'
 import { listKeyboardCoordinates } from './listKeyboardCoordinates'
 
@@ -87,12 +87,7 @@ function SortablePin({ bookmark, onRemove }: { bookmark: Bookmark; onRemove: () 
         >
           <IconGripVertical size={14} stroke={1.6} />
         </ActionIcon>
-        <Avatar
-          src={bookmark.favicon_url || (bookmark.is_vault ? undefined : googleFavicon(bookmark.url))}
-          size={20}
-          radius="sm"
-          alt=""
-        >
+        <Avatar src={bookmark.favicon_url || undefined} size={20} radius="sm" alt="">
           {title.charAt(0).toUpperCase()}
         </Avatar>
         <span className={editor.pinTitle} title={title}>
