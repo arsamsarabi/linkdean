@@ -100,7 +100,9 @@ async fn read_payload(
         .vault_nonce
         .clone()
         .ok_or(Error::msg("vault nonce missing"))?;
-    super::blocking::run_blocking(move || crypto::decrypt_payload(&key, &ct, &nonce)).await
+    let id = bookmark.id;
+    super::blocking::run_blocking(move || crypto::decrypt_payload(&key, vault_id, id, &ct, &nonce))
+        .await
 }
 
 async fn find_blockers(
@@ -447,9 +449,11 @@ async fn try_move_to_vault(
         let key = *keyring.get(id).ok_or(Error::VaultLocked)?;
         for (bookmark, payload) in &loaded {
             let payload = payload.clone();
-            let (ct, nonce) =
-                super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload))
-                    .await?;
+            let row = bookmark.id;
+            let (ct, nonce) = super::blocking::run_blocking(move || {
+                crypto::encrypt_payload(&key, id, row, &payload)
+            })
+            .await?;
             encrypted.push((bookmark.id, ct, nonce));
         }
     }

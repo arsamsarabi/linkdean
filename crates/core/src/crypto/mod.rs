@@ -1,9 +1,10 @@
-use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use argon2::{Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use crypto_box::aead::OsRng;
 use crypto_box::{PublicKey, SecretKey};
 use rand::Rng;
+use uuid::Uuid;
 
 use crate::{Error, Result, VaultPayload};
 
@@ -98,8 +99,8 @@ pub fn unlock_vault(
     wrapped_nonce: &[u8],
 ) -> Result<[u8; KEY_LEN]> {
     let wrapping_key = derive_key(passphrase, kdf_salt)?;
-    let plain =
-        decrypt(&wrapping_key, wrapped_key, wrapped_nonce).map_err(|_| Error::VaultUnlockFailed)?;
+    let plain = decrypt(&wrapping_key, wrapped_key, wrapped_nonce, b"")
+        .map_err(|_| Error::VaultUnlockFailed)?;
     if plain.len() != KEY_LEN {
         return Err(Error::VaultUnlockFailed);
     }
@@ -130,7 +131,7 @@ pub fn wrap_data_key(secret: &str, data_key: &[u8; KEY_LEN]) -> Result<WrappedKe
     }
     kdf_salt.extend_from_slice(&random_bytes(SALT_LEN));
     let wrapping_key = derive_key(secret, &kdf_salt)?;
-    let (wrapped_key, wrapped_nonce) = encrypt(&wrapping_key, data_key)?;
+    let (wrapped_key, wrapped_nonce) = encrypt(&wrapping_key, data_key, b"")?;
     Ok(WrappedKey {
         kdf_salt,
         wrapped_key,
@@ -186,20 +187,38 @@ pub fn normalize_recovery_key(input: &str) -> String {
         .collect()
 }
 
+/// Associated data that ties a bookmark's payload to its vault and its row, so a ciphertext
+/// copied onto another bookmark, or into another vault's rows, does not open.
+fn payload_aad(vault_id: Uuid, bookmark_id: Uuid) -> [u8; 36] {
+    let mut aad = [0u8; 36];
+    aad[..4].copy_from_slice(b"LDp1");
+    aad[4..20].copy_from_slice(vault_id.as_bytes());
+    aad[20..].copy_from_slice(bookmark_id.as_bytes());
+    aad
+}
+
 pub fn encrypt_payload(
     data_key: &[u8; KEY_LEN],
+    vault_id: Uuid,
+    bookmark_id: Uuid,
     payload: &VaultPayload,
 ) -> Result<(Vec<u8>, Vec<u8>)> {
     let bytes = serde_json::to_vec(payload).map_err(|e| Error::msg(e.to_string()))?;
-    encrypt(data_key, &bytes)
+    encrypt(data_key, &bytes, &payload_aad(vault_id, bookmark_id))
 }
 
 pub fn decrypt_payload(
     data_key: &[u8; KEY_LEN],
+    vault_id: Uuid,
+    bookmark_id: Uuid,
     ciphertext: &[u8],
     nonce: &[u8],
 ) -> Result<VaultPayload> {
-    let plain = decrypt(data_key, ciphertext, nonce)?;
+    // shortcut: payloads written before 0.0.13 have no associated data, so they still open
+    // without it and can be moved between rows until next saved. Re-encrypt a vault's rows when
+    // it unlocks if that ever matters.
+    let plain = decrypt(data_key, ciphertext, nonce, &payload_aad(vault_id, bookmark_id))
+        .or_else(|_| decrypt(data_key, ciphertext, nonce, b""))?;
     serde_json::from_slice(&plain).map_err(|e| Error::msg(e.to_string()))
 }
 
@@ -222,10 +241,8 @@ fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; KEY_LEN]> {
     Ok(key)
 }
 
-// Known issue: Ciphertext has no associated data, so a row's ciphertext could be swapped onto
-// another row, and sealed keys trust `public_key` unauthenticated. Both need database write access.
-// Fix: AAD of the vault and bookmark ids, and verify the key on open.
-fn encrypt(key_bytes: &[u8], plaintext: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
+/// AES-256-GCM. Empty `aad` gives the same ciphertext as none, so older rows still open.
+fn encrypt(key_bytes: &[u8], plaintext: &[u8], aad: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
     let cipher = Aes256Gcm::new_from_slice(key_bytes).map_err(|e| Error::msg(e.to_string()))?;
     let nonce_bytes = random_bytes(NONCE_LEN);
     let nonce: [u8; NONCE_LEN] = nonce_bytes
@@ -233,18 +250,24 @@ fn encrypt(key_bytes: &[u8], plaintext: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
         .try_into()
         .map_err(|_| Error::msg("invalid nonce length"))?;
     let ciphertext = cipher
-        .encrypt(&Nonce::from(nonce), plaintext)
+        .encrypt(&Nonce::from(nonce), Payload { msg: plaintext, aad })
         .map_err(|e| Error::msg(e.to_string()))?;
     Ok((ciphertext, nonce_bytes))
 }
 
-fn decrypt(key_bytes: &[u8], ciphertext: &[u8], nonce_bytes: &[u8]) -> Result<Vec<u8>> {
+fn decrypt(key_bytes: &[u8], ciphertext: &[u8], nonce_bytes: &[u8], aad: &[u8]) -> Result<Vec<u8>> {
     let cipher = Aes256Gcm::new_from_slice(key_bytes).map_err(|_| Error::VaultUnlockFailed)?;
     let nonce: [u8; NONCE_LEN] = nonce_bytes
         .try_into()
         .map_err(|_| Error::VaultUnlockFailed)?;
     cipher
-        .decrypt(&Nonce::from(nonce), ciphertext)
+        .decrypt(
+            &Nonce::from(nonce),
+            Payload {
+                msg: ciphertext,
+                aad,
+            },
+        )
         .map_err(|_| Error::VaultUnlockFailed)
 }
 
@@ -276,18 +299,33 @@ mod tests {
             notes: None,
             tags: vec!["a".into()],
         };
-        let (ct, nonce) = encrypt_payload(&data_key, &payload).unwrap();
-        let back = decrypt_payload(&data_key, &ct, &nonce).unwrap();
+        let (vault, row) = (Uuid::new_v4(), Uuid::new_v4());
+        let (ct, nonce) = encrypt_payload(&data_key, vault, row, &payload).unwrap();
+        let back = decrypt_payload(&data_key, vault, row, &ct, &nonce).unwrap();
         assert_eq!(back.url, payload.url);
         assert_eq!(back.title, payload.title);
         assert_eq!(back.tags, payload.tags);
+
+        // Copied onto another row, or into another vault under the same key, it does not open.
+        let other = Uuid::new_v4();
+        assert!(decrypt_payload(&data_key, vault, other, &ct, &nonce).is_err());
+        assert!(decrypt_payload(&data_key, other, row, &ct, &nonce).is_err());
+    }
+
+    #[test]
+    fn a_payload_written_without_associated_data_still_opens() {
+        let data_key = new_data_key();
+        let bytes = br#"{"url":"https://old.example","title":"Old","description":null,"notes":null,"tags":[]}"#;
+        let (ct, nonce) = super::encrypt(&data_key, bytes, b"").unwrap();
+        let back = decrypt_payload(&data_key, Uuid::new_v4(), Uuid::new_v4(), &ct, &nonce).unwrap();
+        assert_eq!(back.url, "https://old.example");
     }
 
     #[test]
     fn decrypt_rejects_bad_key_or_nonce_length() {
-        let bad_nonce = super::decrypt(&[0u8; super::KEY_LEN], b"x", &[0u8; 4]);
+        let bad_nonce = super::decrypt(&[0u8; super::KEY_LEN], b"x", &[0u8; 4], b"");
         assert!(matches!(bad_nonce, Err(crate::Error::VaultUnlockFailed)));
-        let bad_key = super::decrypt(&[0u8; 4], b"x", &[0u8; super::NONCE_LEN]);
+        let bad_key = super::decrypt(&[0u8; 4], b"x", &[0u8; super::NONCE_LEN], b"");
         assert!(matches!(bad_key, Err(crate::Error::VaultUnlockFailed)));
     }
 }
@@ -323,7 +361,7 @@ mod key_wrap_tests {
         Argon2::default()
             .hash_password_into(b"old-passphrase", &salt, &mut legacy_key)
             .unwrap();
-        let (ct, nonce) = encrypt(&legacy_key, &data_key).unwrap();
+        let (ct, nonce) = encrypt(&legacy_key, &data_key, b"").unwrap();
         assert_eq!(
             unlock_vault("old-passphrase", &salt, &ct, &nonce).unwrap(),
             data_key
@@ -404,7 +442,7 @@ mod known_answers {
     fn aes_gcm_decrypts_a_stored_ciphertext() {
         let ciphertext =
             unhex("148b33c7d1941395033f825faa35061d9b2978588fdff1b2af711acf2b6f63f7777cb6e65a");
-        let plain = decrypt(&[0x42; KEY_LEN], &ciphertext, &NONCE).expect("decrypts");
+        let plain = decrypt(&[0x42; KEY_LEN], &ciphertext, &NONCE, b"").expect("decrypts");
         assert_eq!(plain, b"linkdean known answer");
     }
 

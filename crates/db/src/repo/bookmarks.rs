@@ -642,7 +642,7 @@ async fn view_from_batch(
     let flags = batch.flags.get(&b.id).copied().unwrap_or_default();
 
     if b.is_vault {
-        let Some(key) = b.vault_id.and_then(|id| keyring.get(id)) else {
+        let Some((vault_id, key)) = b.vault_id.and_then(|id| Some((id, keyring.get(id)?))) else {
             return Ok(None);
         };
         let ct = b
@@ -653,10 +653,11 @@ async fn view_from_batch(
             .vault_nonce
             .clone()
             .ok_or(Error::msg("vault nonce missing"))?;
-        let key = *key;
-        let payload =
-            super::blocking::run_blocking(move || crypto::decrypt_payload(&key, &ct, &nonce))
-                .await?;
+        let (key, id) = (*key, b.id);
+        let payload = super::blocking::run_blocking(move || {
+            crypto::decrypt_payload(&key, vault_id, id, &ct, &nonce)
+        })
+        .await?;
         return Ok(Some(BookmarkView {
             id: b.id,
             owner_user_id: b.owner_user_id,
@@ -950,6 +951,8 @@ pub async fn create_bookmark(
 
     // Everything that can fail on its own runs before the transaction: checks above,
     // vault encryption and tag creation here.
+    // A vault payload is tied to its row's id, so the id is chosen before the insert.
+    let new_id = Uuid::new_v4();
     let mut sealed = None;
     if let Some(vault_id) = vault_id {
         let key = *keyring.get(vault_id).ok_or(Error::VaultLocked)?;
@@ -961,7 +964,10 @@ pub async fn create_bookmark(
             tags: req.tags.clone(),
         };
         sealed = Some(
-            super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload)).await?,
+            super::blocking::run_blocking(move || {
+                crypto::encrypt_payload(&key, vault_id, new_id, &payload)
+            })
+            .await?,
         );
     }
     let tag_ids: Vec<Uuid> = if vault_id.is_none() {
@@ -979,9 +985,9 @@ pub async fn create_bookmark(
         sqlx::query_as::<_, Bookmark>(
             r#"
             INSERT INTO bookmarks (
-                owner_user_id, category_id, url, title, description, notes,
+                id, owner_user_id, category_id, url, title, description, notes,
                 is_vault, vault_id, vault_ciphertext, vault_nonce
-            ) VALUES ($1,$2,'','','',NULL,TRUE,$3,$4,$5)
+            ) VALUES ($6,$1,$2,'','','',NULL,TRUE,$3,$4,$5)
             RETURNING *
             "#,
         )
@@ -990,6 +996,7 @@ pub async fn create_bookmark(
         .bind(vault_id)
         .bind(ct)
         .bind(nonce)
+        .bind(new_id)
         .fetch_one(&mut *tx)
         .await
         .map_err(db_err)?
@@ -1291,10 +1298,8 @@ pub async fn update_bookmark(
                 .map_err(db_err)?;
 
         if locked.is_vault {
-            let key = *locked
-                .vault_id
-                .and_then(|id| keyring.get(id))
-                .ok_or(Error::VaultLocked)?;
+            let vault_id = locked.vault_id.ok_or(Error::VaultLocked)?;
+            let key = *keyring.get(vault_id).ok_or(Error::VaultLocked)?;
             let ct0 = locked
                 .vault_ciphertext
                 .clone()
@@ -1303,9 +1308,10 @@ pub async fn update_bookmark(
                 .vault_nonce
                 .clone()
                 .ok_or(Error::msg("missing nonce"))?;
-            let mut payload =
-                super::blocking::run_blocking(move || crypto::decrypt_payload(&key, &ct0, &nonce0))
-                    .await?;
+            let mut payload = super::blocking::run_blocking(move || {
+                crypto::decrypt_payload(&key, vault_id, id, &ct0, &nonce0)
+            })
+            .await?;
             changes_out = Some(bookmark_content_changes(&req, None));
             if let Some(url) = req.url.clone() {
                 payload.url = url;
@@ -1328,9 +1334,10 @@ pub async fn update_bookmark(
                     payload.tags.push(tag.to_string());
                 }
             }
-            let (ct, nonce) =
-                super::blocking::run_blocking(move || crypto::encrypt_payload(&key, &payload))
-                    .await?;
+            let (ct, nonce) = super::blocking::run_blocking(move || {
+                crypto::encrypt_payload(&key, vault_id, id, &payload)
+            })
+            .await?;
             sqlx::query(
                 r#"
                 UPDATE bookmarks
