@@ -259,7 +259,10 @@ fn copy_headers(
         header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
     );
-    h.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("SAMEORIGIN"));
+    h.insert(
+        header::X_FRAME_OPTIONS,
+        HeaderValue::from_static("SAMEORIGIN"),
+    );
     let inline = match format {
         ArchiveFormat::Html => Some("text/html; charset=utf-8"),
         _ => linkdean_worker::archive::inline_type(content_type, bytes),
@@ -269,7 +272,10 @@ fn copy_headers(
     } else {
         INERT_CSP
     };
-    h.insert(header::CONTENT_SECURITY_POLICY, HeaderValue::from_static(csp));
+    h.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static(csp),
+    );
     h.insert(
         header::CONTENT_TYPE,
         HeaderValue::from_static(inline.unwrap_or("application/octet-stream")),
@@ -295,7 +301,11 @@ fn download_name(
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || *c == '.' || *c == '-')
         .collect();
-    let host = if host.is_empty() { "archive".into() } else { host };
+    let host = if host.is_empty() {
+        "archive".into()
+    } else {
+        host
+    };
     let date = captured_at.unwrap_or_else(Utc::now).format("%Y-%m-%d");
     let mime = content_type.split(';').next().unwrap_or("").trim();
     let ext = match format {
@@ -368,7 +378,14 @@ mod tests {
                 .unwrap()
                 .starts_with("attachment;"));
         }
-        let pdf = copy_headers(ArchiveFormat::File, "application/pdf", b"%PDF-1.7", false, None, day());
+        let pdf = copy_headers(
+            ArchiveFormat::File,
+            "application/pdf",
+            b"%PDF-1.7",
+            false,
+            None,
+            day(),
+        );
         assert_eq!(pdf[header::CONTENT_TYPE], "application/pdf");
         assert!(!pdf.contains_key(header::CONTENT_DISPOSITION));
     }
@@ -388,7 +405,12 @@ mod tests {
             "attachment; filename=\"docs.rs-2026-11-03.pdf\""
         );
         assert_eq!(
-            download_name(ArchiveFormat::File, "image/png", Some("a\"b\r\n.com"), day()),
+            download_name(
+                ArchiveFormat::File,
+                "image/png",
+                Some("a\"b\r\n.com"),
+                day()
+            ),
             "ab.com-2026-11-03.png"
         );
         assert_eq!(

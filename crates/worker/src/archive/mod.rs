@@ -86,8 +86,7 @@ fn probe_type(content_type: &str) -> Probe {
 
 /// Download a file of at most `max` bytes. Returns the bytes and the served type.
 pub async fn fetch_file(url: &str, max: usize) -> Result<(Vec<u8>, String), CaptureError> {
-    let client =
-        net_guard::public_client(Duration::from_secs(120), USER_AGENT).map_err(failed)?;
+    let client = net_guard::public_client(Duration::from_secs(120), USER_AGENT).map_err(failed)?;
     let resp = client.get(url).send().await.map_err(failed)?;
     let status = resp.status().as_u16();
     if status == 404 || status == 410 {
@@ -124,7 +123,12 @@ pub fn inline_type(content_type: &str, bytes: &[u8]) -> Option<&'static str> {
     if let Some(image) = crate::sniff_image_ct(bytes).filter(|t| *t != "image/svg+xml") {
         return Some(image);
     }
-    let mime = content_type.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+    let mime = content_type
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
     [
         "audio/mpeg",
         "audio/ogg",
@@ -265,11 +269,10 @@ async fn visit(
             .result
             .data;
         let limits = *limits;
-        let converted = tokio::task::spawn_blocking(move || {
-            mhtml::to_single_html(mhtml.as_bytes(), &limits)
-        })
-        .await
-        .map_err(failed)?;
+        let converted =
+            tokio::task::spawn_blocking(move || mhtml::to_single_html(mhtml.as_bytes(), &limits))
+                .await
+                .map_err(failed)?;
         out.html = Some(match converted {
             Ok(html) => html,
             Err(mhtml::ConvertError::TooBig(_)) => return Err(CaptureError::TooBig),
@@ -308,7 +311,10 @@ mod tests {
 
     #[test]
     fn only_inert_types_are_shown_inline() {
-        assert_eq!(inline_type("application/pdf", b"%PDF-1.7"), Some("application/pdf"));
+        assert_eq!(
+            inline_type("application/pdf", b"%PDF-1.7"),
+            Some("application/pdf")
+        );
         assert_eq!(
             inline_type("application/octet-stream", b"\x89PNG\r\n\x1a\n"),
             Some("image/png")
@@ -324,8 +330,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "needs Chrome"]
     async fn captures_a_real_page() {
-        let chrome =
-            std::env::var("CHROME_URL").unwrap_or_else(|_| "http://127.0.0.1:9222".into());
+        let chrome = std::env::var("CHROME_URL").unwrap_or_else(|_| "http://127.0.0.1:9222".into());
         let limits = mhtml::Limits {
             max_resource: 5 * 1024 * 1024,
             max_total: 25 * 1024 * 1024,

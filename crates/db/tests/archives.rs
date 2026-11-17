@@ -81,7 +81,10 @@ async fn share(pool: &PgPool, owner: &User, category: Uuid, invitee: &User, acce
     )
     .await
     .expect("share");
-    for invite in db::list_share_invites(pool, invitee.id).await.expect("inbox") {
+    for invite in db::list_share_invites(pool, invitee.id)
+        .await
+        .expect("inbox")
+    {
         db::accept_share_invite(pool, invitee.id, invite.id)
             .await
             .expect("accept");
@@ -136,7 +139,9 @@ async fn owner_and_write_invitees_archive_and_readers_cannot() {
         .await
         .expect("owner");
     assert_eq!(views.len(), 2);
-    assert!(views.iter().all(|v| v.status == ArchiveStatus::Queued && !v.available));
+    assert!(views
+        .iter()
+        .all(|v| v.status == ArchiveStatus::Queued && !v.available));
 
     db::request_archive(&pool, writer.id, id, &[Html], &none)
         .await
@@ -172,11 +177,18 @@ async fn the_queue_keeps_old_copies_until_a_new_one_lands() {
         .await
         .expect("request");
     assert_eq!(claim(&pool, id).await, vec![Html, Pdf]);
-    let unused = db::finish_archive(&pool, id, &[copy(Html, "html-1", 100), copy(Pdf, "pdf-1", 50)])
-        .await
-        .expect("finish");
+    let unused = db::finish_archive(
+        &pool,
+        id,
+        &[copy(Html, "html-1", 100), copy(Pdf, "pdf-1", 50)],
+    )
+    .await
+    .expect("finish");
     assert!(unused.is_empty());
-    assert_eq!(db::archive_bytes_for_owner(&pool, owner.id).await.unwrap(), 150);
+    assert_eq!(
+        db::archive_bytes_for_owner(&pool, owner.id).await.unwrap(),
+        150
+    );
 
     // Archive again: the capture fails, so both earlier copies stay, with the reason.
     db::request_archive(&pool, owner.id, id, &[Html, Pdf], &none)
@@ -187,7 +199,9 @@ async fn the_queue_keeps_old_copies_until_a_new_one_lands() {
         .await
         .expect("fail");
     let views = db::list_archives(&pool, id).await.expect("list");
-    assert!(views.iter().all(|v| v.status == ArchiveStatus::Done && v.available));
+    assert!(views
+        .iter()
+        .all(|v| v.status == ArchiveStatus::Done && v.available));
     assert!(views
         .iter()
         .all(|v| v.error.as_deref() == Some("The page is gone (HTTP 404)")));
@@ -322,7 +336,9 @@ async fn quota_switch_and_automatic_archives() {
     .await
     .unwrap();
     let fresh = bookmark(&pool, &owner, None).await;
-    assert!(!db::archive_new_bookmark(&pool, owner.id, fresh).await.unwrap());
+    assert!(!db::archive_new_bookmark(&pool, owner.id, fresh)
+        .await
+        .unwrap());
     let views = db::list_archives(&pool, fresh).await.unwrap();
     assert_eq!(views.len(), 1);
     assert_eq!(views[0].format, Pdf);
@@ -333,7 +349,9 @@ async fn quota_switch_and_automatic_archives() {
         .await
         .unwrap();
     let roomy = bookmark(&pool, &owner, None).await;
-    assert!(db::archive_new_bookmark(&pool, owner.id, roomy).await.unwrap());
+    assert!(db::archive_new_bookmark(&pool, owner.id, roomy)
+        .await
+        .unwrap());
 
     db::set_archive_settings(&pool, Some(false), None, None)
         .await
@@ -347,7 +365,9 @@ async fn quota_switch_and_automatic_archives() {
         .await
         .is_err());
     claim(&pool, roomy).await;
-    db::fail_archive(&pool, roomy, &[Pdf], "cleanup").await.unwrap();
+    db::fail_archive(&pool, roomy, &[Pdf], "cleanup")
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -393,14 +413,36 @@ async fn vault_copies_need_the_vault_and_follow_moves() {
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].1, Some(vault.id));
 
-    assert!(!db::set_archive_key(&pool, id, Html, "other", "sealed", Some(vault.id), Some(vec![1]))
+    assert!(!db::set_archive_key(
+        &pool,
+        id,
+        Html,
+        "other",
+        "sealed",
+        Some(vault.id),
+        Some(vec![1])
+    )
+    .await
+    .unwrap());
+    assert!(db::set_archive_key(
+        &pool,
+        id,
+        Html,
+        "plain",
+        "sealed",
+        Some(vault.id),
+        Some(vec![1])
+    )
+    .await
+    .unwrap());
+    assert!(db::archives_needing_rekey(&pool, owner.id)
         .await
-        .unwrap());
-    assert!(db::set_archive_key(&pool, id, Html, "plain", "sealed", Some(vault.id), Some(vec![1]))
-        .await
-        .unwrap());
-    assert!(db::archives_needing_rekey(&pool, owner.id).await.unwrap().is_empty());
+        .unwrap()
+        .is_empty());
     let row = db::archive_row(&pool, id, Html).await.unwrap().unwrap();
     assert_eq!(row.file_name.as_deref(), Some("sealed"));
-    assert!(row.final_url.is_none(), "a vault copy keeps no plain address");
+    assert!(
+        row.final_url.is_none(),
+        "a vault copy keeps no plain address"
+    );
 }

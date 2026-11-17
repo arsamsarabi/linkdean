@@ -46,8 +46,9 @@ pub async fn run(state: AppState) {
             }
             Ok(None) => {
                 drop(permit);
-                let _ = tokio::time::timeout(Duration::from_secs(30), state.archive_wake.notified())
-                    .await;
+                let _ =
+                    tokio::time::timeout(Duration::from_secs(30), state.archive_wake.notified())
+                        .await;
             }
             Err(e) => {
                 drop(permit);
@@ -211,10 +212,15 @@ async fn capture(state: &AppState, id: Uuid, formats: &[ArchiveFormat]) -> Resul
     let missing: Vec<ArchiveFormat> = formats
         .iter()
         .copied()
-        .filter(|f| !stored.iter().any(|c| c.format == *f || c.format == ArchiveFormat::File))
+        .filter(|f| {
+            !stored
+                .iter()
+                .any(|c| c.format == *f || c.format == ArchiveFormat::File)
+        })
         .collect();
     if !missing.is_empty() {
-        let _ = db::fail_archive(&state.pool, id, &missing, "The page could not be archived.").await;
+        let _ =
+            db::fail_archive(&state.pool, id, &missing, "The page could not be archived.").await;
     }
     Ok(())
 }
@@ -328,7 +334,11 @@ async fn sweep(state: &AppState) -> anyhow::Result<usize> {
     let mut removed = 0;
     let mut dirs = tokio::fs::read_dir(&root).await?;
     while let Some(dir) = dirs.next_entry().await? {
-        let Some(id) = dir.file_name().to_str().and_then(|s| Uuid::parse_str(s).ok()) else {
+        let Some(id) = dir
+            .file_name()
+            .to_str()
+            .and_then(|s| Uuid::parse_str(s).ok())
+        else {
             continue;
         };
         let keep = known.get(&id);

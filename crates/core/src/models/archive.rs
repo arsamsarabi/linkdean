@@ -9,7 +9,17 @@ use uuid::Uuid;
 pub const MAX_BULK_ARCHIVE_IDS: usize = 500;
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, utoipa::ToSchema,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    utoipa::ToSchema,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum ArchiveFormat {
@@ -155,7 +165,10 @@ mod tests {
     #[test]
     fn formats_are_cleaned() {
         use ArchiveFormat::*;
-        assert_eq!(clean_archive_formats(&[Pdf, Html, Pdf]).unwrap(), vec![Html, Pdf]);
+        assert_eq!(
+            clean_archive_formats(&[Pdf, Html, Pdf]).unwrap(),
+            vec![Html, Pdf]
+        );
         assert!(clean_archive_formats(&[]).is_err());
         assert!(clean_archive_formats(&[File]).is_err());
     }

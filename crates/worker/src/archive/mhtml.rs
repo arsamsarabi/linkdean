@@ -60,9 +60,7 @@ impl Resources {
             None => Url::parse(raw).ok()?,
         };
         url.set_fragment(None);
-        self.parts
-            .get(url.as_str())
-            .or_else(|| self.parts.get(raw))
+        self.parts.get(url.as_str()).or_else(|| self.parts.get(raw))
     }
 
     fn data_uri(&self, base: Option<&Url>, raw: &str) -> Option<String> {
@@ -81,7 +79,12 @@ fn data_uri(content_type: &str, body: &[u8]) -> String {
 
 /// The bare type of a `Content-Type` value, or `application/octet-stream` when it looks odd.
 fn clean_mime(ct: &str) -> String {
-    let mime = ct.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+    let mime = ct
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
     let ok = mime.contains('/')
         && mime
             .bytes()
@@ -113,7 +116,12 @@ pub fn to_single_html(mhtml: &[u8], limits: &Limits) -> Result<Vec<u8>, ConvertE
         let Some(part) = parse_part(raw) else {
             continue;
         };
-        if document.is_none() && part.content_type.to_ascii_lowercase().starts_with("text/html") {
+        if document.is_none()
+            && part
+                .content_type
+                .to_ascii_lowercase()
+                .starts_with("text/html")
+        {
             document = Some(part);
             continue;
         }
@@ -172,7 +180,10 @@ fn rewrite(html: &str, base: Option<&Url>, res: &Resources) -> Result<String, St
             Ok(())
         }))
         .append_element_content_handler(element!("link", |el| {
-            let rel = el.get_attribute("rel").unwrap_or_default().to_ascii_lowercase();
+            let rel = el
+                .get_attribute("rel")
+                .unwrap_or_default()
+                .to_ascii_lowercase();
             let href = el.get_attribute("href").unwrap_or_default();
             let rels: Vec<&str> = rel.split_ascii_whitespace().collect();
             if rels.contains(&"stylesheet") {
@@ -239,14 +250,16 @@ fn rewrite(html: &str, base: Option<&Url>, res: &Resources) -> Result<String, St
                     // The <img> beside it shows the picture Chrome loaded.
                     None => el.remove(),
                 }
-            } else if let Some(uri) = el.get_attribute("src").and_then(|s| res.data_uri(base, &s))
-            {
+            } else if let Some(uri) = el.get_attribute("src").and_then(|s| res.data_uri(base, &s)) {
                 el.set_attribute("src", &uri)?;
             }
             Ok(())
         }))
         .append_element_content_handler(element!("video[poster]", |el| {
-            if let Some(uri) = el.get_attribute("poster").and_then(|s| res.data_uri(base, &s)) {
+            if let Some(uri) = el
+                .get_attribute("poster")
+                .and_then(|s| res.data_uri(base, &s))
+            {
                 el.set_attribute("poster", &uri)?;
             }
             Ok(())
@@ -308,7 +321,9 @@ fn first_candidate(srcset: &str, base: Option<&Url>, res: &Resources) -> Option<
 }
 
 fn html_attr(s: &str) -> String {
-    s.replace('&', "&amp;").replace('"', "&quot;").replace('<', "&lt;")
+    s.replace('&', "&amp;")
+        .replace('"', "&quot;")
+        .replace('<', "&lt;")
 }
 
 /// Keeps inlined CSS from closing its `<style>` element early.
@@ -382,19 +397,20 @@ fn inline_imports(css: &str, base: Option<&Url>, res: &Resources, depth: u8) -> 
             return out;
         };
         let rule = after[..end].trim();
-        let (target, media) = if let Some(r) = rule.strip_prefix("url(").or(rule.strip_prefix("URL(")) {
-            match css_url_arg(r) {
-                Some((u, used)) => (u, r[used..].trim()),
-                None => ("", ""),
-            }
-        } else if let Some(q) = rule.chars().next().filter(|c| *c == '"' || *c == '\'') {
-            match rule[1..].find(q) {
-                Some(e) => (&rule[1..e + 1], rule[e + 2..].trim()),
-                None => ("", ""),
-            }
-        } else {
-            ("", "")
-        };
+        let (target, media) =
+            if let Some(r) = rule.strip_prefix("url(").or(rule.strip_prefix("URL(")) {
+                match css_url_arg(r) {
+                    Some((u, used)) => (u, r[used..].trim()),
+                    None => ("", ""),
+                }
+            } else if let Some(q) = rule.chars().next().filter(|c| *c == '"' || *c == '\'') {
+                match rule[1..].find(q) {
+                    Some(e) => (&rule[1..e + 1], rule[e + 2..].trim()),
+                    None => ("", ""),
+                }
+            } else {
+                ("", "")
+            };
         match res.get(base, target) {
             Some(part) if part.body.len() <= res.max_resource => {
                 let own = part.location.as_deref().and_then(|u| Url::parse(u).ok());
@@ -610,7 +626,10 @@ mod tests {
             "<html><head></head><body><img src=3D\"pic.png\" srcset=3D\"big.png 2x\"></body></html>",
             &[("https://site.example/a/pic.png", "image/png", PNG)],
         );
-        assert!(out.contains(r#"src="data:image/png;base64,iVBORw0KGgpmYWtl""#), "{out}");
+        assert!(
+            out.contains(r#"src="data:image/png;base64,iVBORw0KGgpmYWtl""#),
+            "{out}"
+        );
         assert!(!out.contains("srcset"));
         assert!(out.contains(r#"<head><meta charset="utf-8"><base target="_blank">"#));
     }
@@ -641,7 +660,18 @@ mod tests {
              <style>p{}</StYle><script>bad()</script></body></html>",
             &[],
         );
-        for gone in ["<script", "alert", "onload", "onclick", "<iframe", "<object", "<noscript", "evil", "refresh", "bad()"] {
+        for gone in [
+            "<script",
+            "alert",
+            "onload",
+            "onclick",
+            "<iframe",
+            "<object",
+            "<noscript",
+            "evil",
+            "refresh",
+            "bad()",
+        ] {
             assert!(!out.contains(gone), "{gone} left in {out}");
         }
         assert!(out.contains("<a>x</a>"), "{out}");
@@ -673,7 +703,10 @@ mod tests {
             "<html><head></head><body><a href=3D\"../b?q=3D1\">b</a><a href=3D\"#top\">t</a></body></html>",
             &[],
         );
-        assert!(out.contains(r#"href="https://site.example/b?q=1""#), "{out}");
+        assert!(
+            out.contains(r#"href="https://site.example/b?q=1""#),
+            "{out}"
+        );
         assert!(out.contains(r##"href="#top""##), "{out}");
     }
 

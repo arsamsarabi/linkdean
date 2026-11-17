@@ -160,7 +160,10 @@ mod tests {
     #[test]
     fn apply_keeps_a_routes_own_frame_policy() {
         let mut headers = HeaderMap::new();
-        headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("SAMEORIGIN"));
+        headers.insert(
+            header::X_FRAME_OPTIONS,
+            HeaderValue::from_static("SAMEORIGIN"),
+        );
         apply_security_headers(&mut headers, None, &content_security_policy(None));
         assert_eq!(headers[header::X_FRAME_OPTIONS], "SAMEORIGIN");
     }

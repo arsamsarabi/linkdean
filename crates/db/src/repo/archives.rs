@@ -267,7 +267,10 @@ pub async fn claim_next_archive(pool: &PgPool) -> Result<Option<(Uuid, Vec<Archi
 
 /// The bookmark a claimed archive belongs to, without an access check: the runner works for
 /// whoever queued it.
-pub async fn archive_target(pool: &PgPool, bookmark_id: Uuid) -> Result<Option<linkdean_core::Bookmark>> {
+pub async fn archive_target(
+    pool: &PgPool,
+    bookmark_id: Uuid,
+) -> Result<Option<linkdean_core::Bookmark>> {
     sqlx::query_as::<_, linkdean_core::Bookmark>("SELECT * FROM bookmarks WHERE id = $1")
         .bind(bookmark_id)
         .fetch_optional(pool)
@@ -409,17 +412,22 @@ pub async fn requeue_running_archives(pool: &PgPool) -> Result<u64> {
 }
 
 /// Delete every copy of a bookmark the user may write. Returns the files to remove.
-pub async fn delete_archives(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) -> Result<Vec<String>> {
+pub async fn delete_archives(
+    pool: &PgPool,
+    user_id: Uuid,
+    bookmark_id: Uuid,
+) -> Result<Vec<String>> {
     super::bookmarks::get_bookmark_raw(pool, user_id, bookmark_id).await?;
     if !super::shares::bookmark_can_write(pool, user_id, bookmark_id).await? {
         return Err(Error::Forbidden);
     }
-    let names: Vec<Option<String>> =
-        sqlx::query_scalar("DELETE FROM bookmark_archives WHERE bookmark_id = $1 RETURNING file_name")
-            .bind(bookmark_id)
-            .fetch_all(pool)
-            .await
-            .map_err(db_err)?;
+    let names: Vec<Option<String>> = sqlx::query_scalar(
+        "DELETE FROM bookmark_archives WHERE bookmark_id = $1 RETURNING file_name",
+    )
+    .bind(bookmark_id)
+    .fetch_all(pool)
+    .await
+    .map_err(db_err)?;
     Ok(names.into_iter().flatten().collect())
 }
 
@@ -468,7 +476,10 @@ pub async fn archives_needing_rekey(
     .fetch_all(pool)
     .await
     .map_err(db_err)?;
-    Ok(rows.into_iter().map(|r| (r.row, r.target_vault_id)).collect())
+    Ok(rows
+        .into_iter()
+        .map(|r| (r.row, r.target_vault_id))
+        .collect())
 }
 
 /// Point a copy at its re-encrypted file, if it still holds `old_file`. Returns whether it did;
