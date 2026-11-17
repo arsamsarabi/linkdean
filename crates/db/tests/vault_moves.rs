@@ -331,15 +331,24 @@ async fn another_users_pin_does_not_block_and_is_removed() {
         .await
         .expect("pin");
 
-    let outcome = db::move_to_vault(&s.pool, s.owner.id, request(vec![], vec![id], Some(s.vault)), &s.keyring)
-        .await
-        .expect("move");
-    assert!(matches!(outcome, VaultMoveOutcome::Moved { .. }), "{outcome:?}");
-    let (pins,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM dashboard_items WHERE bookmark_id = $1")
-        .bind(id)
-        .fetch_one(&s.pool)
-        .await
-        .expect("count");
+    let outcome = db::move_to_vault(
+        &s.pool,
+        s.owner.id,
+        request(vec![], vec![id], Some(s.vault)),
+        &s.keyring,
+    )
+    .await
+    .expect("move");
+    assert!(
+        matches!(outcome, VaultMoveOutcome::Moved { .. }),
+        "{outcome:?}"
+    );
+    let (pins,): (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM dashboard_items WHERE bookmark_id = $1")
+            .bind(id)
+            .fetch_one(&s.pool)
+            .await
+            .expect("count");
     assert_eq!(pins, 0);
 }
 

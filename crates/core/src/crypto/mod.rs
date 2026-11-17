@@ -217,8 +217,13 @@ pub fn decrypt_payload(
     // shortcut: payloads written before 0.0.13 have no associated data, so they still open
     // without it and can be moved between rows until next saved. Re-encrypt a vault's rows when
     // it unlocks if that ever matters.
-    let plain = decrypt(data_key, ciphertext, nonce, &payload_aad(vault_id, bookmark_id))
-        .or_else(|_| decrypt(data_key, ciphertext, nonce, b""))?;
+    let plain = decrypt(
+        data_key,
+        ciphertext,
+        nonce,
+        &payload_aad(vault_id, bookmark_id),
+    )
+    .or_else(|_| decrypt(data_key, ciphertext, nonce, b""))?;
     serde_json::from_slice(&plain).map_err(|e| Error::msg(e.to_string()))
 }
 
@@ -250,7 +255,13 @@ fn encrypt(key_bytes: &[u8], plaintext: &[u8], aad: &[u8]) -> Result<(Vec<u8>, V
         .try_into()
         .map_err(|_| Error::msg("invalid nonce length"))?;
     let ciphertext = cipher
-        .encrypt(&Nonce::from(nonce), Payload { msg: plaintext, aad })
+        .encrypt(
+            &Nonce::from(nonce),
+            Payload {
+                msg: plaintext,
+                aad,
+            },
+        )
         .map_err(|e| Error::msg(e.to_string()))?;
     Ok((ciphertext, nonce_bytes))
 }

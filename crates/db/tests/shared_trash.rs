@@ -230,9 +230,18 @@ async fn an_invitees_tag_edit_stays_in_the_owners_tags() {
             .expect("invitee edits tags");
     }
 
-    let names = |tags: Vec<linkdean_core::Tag>| tags.into_iter().map(|t| t.name).collect::<Vec<_>>();
+    let names =
+        |tags: Vec<linkdean_core::Tag>| tags.into_iter().map(|t| t.name).collect::<Vec<_>>();
     let owners = names(db::list_tags(&pool, owner.id).await.expect("owner tags"));
     assert!(owners.contains(&"set-by-invitee".to_string()), "{owners:?}");
-    assert!(owners.contains(&"added-by-invitee".to_string()), "{owners:?}");
-    assert!(names(db::list_tags(&pool, invitee.id).await.expect("invitee tags")).is_empty());
+    assert!(
+        owners.contains(&"added-by-invitee".to_string()),
+        "{owners:?}"
+    );
+    assert!(names(
+        db::list_tags(&pool, invitee.id)
+            .await
+            .expect("invitee tags")
+    )
+    .is_empty());
 }

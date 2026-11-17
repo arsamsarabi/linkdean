@@ -846,9 +846,16 @@ async fn a_nested_share_lists_the_nearest_grant() {
     };
     let mut users = Vec::new();
     for prefix in ["nest-owner", "nest-invitee"] {
-        let u = db::create_user(&pool, &unique_email(prefix), Some("password-long"), None, None, None)
-            .await
-            .expect("user");
+        let u = db::create_user(
+            &pool,
+            &unique_email(prefix),
+            Some("password-long"),
+            None,
+            None,
+            None,
+        )
+        .await
+        .expect("user");
         db::mark_email_verified(&pool, u.id).await.expect("verify");
         users.push(u);
     }
@@ -892,11 +899,17 @@ async fn a_nested_share_lists_the_nearest_grant() {
         .await
         .expect("shared");
     let listed_access = |id: Uuid| listed.iter().find(|(c, _)| c.id == id).map(|(_, a)| *a);
-    let expected = [CategoryAccess::Write, CategoryAccess::Read, CategoryAccess::Read];
+    let expected = [
+        CategoryAccess::Write,
+        CategoryAccess::Read,
+        CategoryAccess::Read,
+    ];
     for (id, want) in ids.iter().zip(expected) {
         assert_eq!(listed_access(*id), Some(want));
         assert_eq!(
-            db::category_access(&pool, invitee.id, *id).await.expect("access"),
+            db::category_access(&pool, invitee.id, *id)
+                .await
+                .expect("access"),
             want
         );
     }

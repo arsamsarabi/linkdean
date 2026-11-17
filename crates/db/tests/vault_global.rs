@@ -71,11 +71,13 @@ async fn opening_the_master_puts_back_a_swapped_public_key() {
         .await
         .expect("enable");
     let public_key = || async {
-        sqlx::query_scalar::<_, Vec<u8>>("SELECT public_key FROM vault_master_keys WHERE user_id = $1")
-            .bind(owner.id)
-            .fetch_one(&pool)
-            .await
-            .expect("public key")
+        sqlx::query_scalar::<_, Vec<u8>>(
+            "SELECT public_key FROM vault_master_keys WHERE user_id = $1",
+        )
+        .bind(owner.id)
+        .fetch_one(&pool)
+        .await
+        .expect("public key")
     };
     let real = public_key().await;
     sqlx::query("UPDATE vault_master_keys SET public_key = $1 WHERE user_id = $2")
