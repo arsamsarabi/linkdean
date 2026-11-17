@@ -39,12 +39,19 @@ pub async fn follow_counts(pool: &PgPool, user_id: Uuid) -> Result<(i64, i64)> {
     Ok((followers.0, following.0))
 }
 
+/// Whether the viewer follows the target, and the target's counts. The counts are part of the
+/// profile, so they read 0 to anyone who cannot see it, as they do for an unknown user.
 pub async fn follow_relation(
     pool: &PgPool,
     viewer_id: Uuid,
     target_id: Uuid,
 ) -> Result<FollowRelation> {
-    let (followers, following_count) = follow_counts(pool, target_id).await?;
+    let (followers, following_count) =
+        match super::profiles::require_viewable_profile(pool, viewer_id, target_id).await {
+            Ok(_) => follow_counts(pool, target_id).await?,
+            Err(Error::NotFound) => (0, 0),
+            Err(e) => return Err(e),
+        };
     let following = if viewer_id == target_id {
         false
     } else {
@@ -68,7 +75,10 @@ pub async fn follow_user(
     let _target = find_user_by_id(pool, following_id)
         .await?
         .ok_or(Error::NotFound)?;
-    super::blocks::assert_not_blocked(pool, follower_id, following_id).await?;
+    // A block answers like an unknown user, so it cannot be told apart.
+    if super::blocks::is_blocked_either_way(pool, follower_id, following_id).await? {
+        return Err(Error::NotFound);
+    }
 
     let inserted = sqlx::query(
         r#"

@@ -212,11 +212,11 @@ async fn block_rejects_new_links_either_way_until_unblocked() {
 
     assert!(matches!(
         db::follow_user(&pool, b.id, a.id).await,
-        Err(Error::Forbidden)
+        Err(Error::NotFound)
     ));
     assert!(matches!(
         db::follow_user(&pool, a.id, b.id).await,
-        Err(Error::Forbidden)
+        Err(Error::NotFound)
     ));
     assert!(matches!(
         share(&pool, &b, b_cat.id, &a.email).await,

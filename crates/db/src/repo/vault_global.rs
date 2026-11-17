@@ -23,10 +23,13 @@ async fn master_row(pool: &PgPool, user_id: Uuid) -> Result<Option<MasterKeyRow>
     .map_err(|e| Error::msg(e.to_string()))
 }
 
+/// Opens the master key, and puts back its public key if the stored one differs: that key is
+/// not authenticated, and joins seal vault keys to it while the master is locked.
 async fn open_master(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Result<[u8; 32]> {
     let row = master_row(pool, user_id).await?.ok_or(Error::NotFound)?;
+    let stored_public_key = row.public_key.clone();
     let passphrase = passphrase.to_string();
-    super::blocking::run_kdf(move || {
+    let master = super::blocking::run_kdf(move || {
         crypto::unlock_vault(
             &passphrase,
             &row.kdf_salt,
@@ -34,7 +37,20 @@ async fn open_master(pool: &PgPool, user_id: Uuid, passphrase: &str) -> Result<[
             &row.wrapped_nonce,
         )
     })
-    .await
+    .await?;
+    let public_key = crypto::master_public_key(&master);
+    if public_key != stored_public_key {
+        tracing::warn!(%user_id, "vault master public key did not match the master key; restored it");
+        sqlx::query(
+            "UPDATE vault_master_keys SET public_key = $1, updated_at = now() WHERE user_id = $2",
+        )
+        .bind(&public_key)
+        .bind(user_id)
+        .execute(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    }
+    Ok(master)
 }
 
 pub async fn has_global_passphrase(pool: &PgPool, user_id: Uuid) -> Result<bool> {

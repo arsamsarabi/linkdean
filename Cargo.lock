@@ -2456,6 +2456,7 @@ dependencies = [
  "utoipa",
  "uuid",
  "webp",
+ "zeroize",
 ]
 
 [[package]]

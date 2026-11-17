@@ -63,9 +63,7 @@ async fn find_direct_dashboard_share(
     .map_err(|e| Error::msg(e.to_string()))
 }
 
-/// Owner wins. Else direct share. Else NotFound.
-// Known issue: Invitees keep access to a dashboard in Trash and can view and edit it. Fix: NotFound
-// for non-owners when `deleted_at` is set.
+/// Owner wins. Else direct share, unless the owner put the dashboard in Trash. Else NotFound.
 pub async fn dashboard_access(
     pool: &PgPool,
     user_id: Uuid,
@@ -74,6 +72,9 @@ pub async fn dashboard_access(
     let dash = get_dashboard_row(pool, dashboard_id).await?;
     if dash.owner_user_id == user_id {
         return Ok(CategoryAccess::Owner);
+    }
+    if dash.deleted_at.is_some() {
+        return Err(Error::NotFound);
     }
     if let Some(share) = find_direct_dashboard_share(pool, dashboard_id, user_id).await? {
         let access = ShareAccess::parse(&share.access).map_err(Error::BadRequest)?;
