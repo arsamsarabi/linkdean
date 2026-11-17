@@ -18,6 +18,7 @@ Canonical markdown for operators, contributors, and the public docs site.
 | [design/organizations-and-teams.md](./design/organizations-and-teams.md) | Active product design | No |
 | [design/agent-skills.md](./design/agent-skills.md) | Agent Skills: what it is and how it works | No |
 | [design/archive.md](./design/archive.md) | Archive and downloads: first slice design | No |
+| [design/archive-plan.md](./design/archive-plan.md) | Archive and downloads: implementation plan | No |
 | [CHANGELOG.md](./CHANGELOG.md) | Release notes | No |
 
 The docs site at [docs.linkdean.app](https://docs.linkdean.app) copies the published pages from here at each release, so edit them here. `api/openapi.json` is the API description it publishes, and `media/` holds the README's images.

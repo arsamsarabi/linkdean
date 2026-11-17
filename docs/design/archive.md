@@ -1,6 +1,6 @@
 # Archive and downloads
 
-Requirements agreed with the product owner on 2026-11-17, in an interview. This covers the first slice of roadmap item 12. Later slices are listed at the end.
+Requirements agreed with the product owner on 2026-11-17, in an interview. This covers the first slice of roadmap item 12. Later slices are listed at the end. The build steps are in the [implementation plan](./archive-plan.md).
 
 ## Why
 
