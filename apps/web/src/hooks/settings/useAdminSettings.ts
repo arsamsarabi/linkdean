@@ -41,6 +41,9 @@ export type PlatformSettingsPatch = {
   abuse_contact_email?: string | null
   screenshot_retry_cooldown_hours?: number
   screenshot_auto_retry_days?: number
+  archives_enabled?: boolean
+  max_archive_bytes?: number | null
+  max_archive_item_bytes?: number
 }
 
 export function useUpdatePlatformSettings(): UseMutationResult<PlatformEnvelope, Error, PlatformSettingsPatch> {

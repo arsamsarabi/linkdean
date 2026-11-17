@@ -1,7 +1,16 @@
 import { type ReactElement } from 'react'
 import { Badge, Group, Tooltip } from '@mantine/core'
-import { IconBookmarkFilled, IconLinkOff, IconLock, IconPinFilled, IconStarFilled } from '@tabler/icons-react'
+import {
+  IconArchive,
+  IconBookmarkFilled,
+  IconLinkOff,
+  IconLock,
+  IconPinFilled,
+  IconStarFilled,
+} from '@tabler/icons-react'
+import { Link } from '@tanstack/react-router'
 import { ShareBadge } from '@/components/share-badge'
+import { formatArchiveDate, hasArchive } from '@/lib'
 import type { BookmarkCardItem } from './bookmarkCardTypes'
 
 type Props = {
@@ -11,9 +20,12 @@ type Props = {
   pendingDelete: boolean
 }
 
-/** Status badges: shared, pending delete, broken link, favorite, unread, pinned, vault. Tags have their own toggle. */
+/** Status badges: shared, pending delete, broken link, archived, favorite, unread, pinned, vault. Tags have their own toggle. */
 export function BookmarkCardBadges({ bookmark: b, share, showOutgoing, pendingDelete }: Props): ReactElement | null {
+  const archived = hasArchive(b.archive)
+  const archiveLink = { to: `/archive/${b.id}` }
   const any =
+    archived ||
     !!share ||
     showOutgoing ||
     pendingDelete ||
@@ -41,8 +53,37 @@ export function BookmarkCardBadges({ bookmark: b, share, showOutgoing, pendingDe
               : b.link_check_error || b.link_check_status
           }
         >
-          <Badge size="sm" variant="light" color="red" leftSection={<IconLinkOff size={10} stroke={1.5} />}>
-            {b.link_check_status}
+          {archived ? (
+            <Badge
+              component={Link}
+              {...archiveLink}
+              size="sm"
+              variant="light"
+              color="red"
+              leftSection={<IconLinkOff size={10} stroke={1.5} />}
+              style={{ cursor: 'pointer' }}
+            >
+              {b.link_check_status}
+            </Badge>
+          ) : (
+            <Badge size="sm" variant="light" color="red" leftSection={<IconLinkOff size={10} stroke={1.5} />}>
+              {b.link_check_status}
+            </Badge>
+          )}
+        </Tooltip>
+      ) : null}
+      {archived ? (
+        <Tooltip label={`Archived ${formatArchiveDate(b.archive?.captured_at)}. Open the copy.`}>
+          <Badge
+            component={Link}
+            {...archiveLink}
+            size="sm"
+            variant="light"
+            color="teal"
+            leftSection={<IconArchive size={10} stroke={1.5} />}
+            style={{ cursor: 'pointer' }}
+          >
+            archived
           </Badge>
         </Tooltip>
       ) : null}

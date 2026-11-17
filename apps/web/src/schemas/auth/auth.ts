@@ -38,6 +38,10 @@ export const userSettingsSchema = z.object({
   show_vault_in_library: z.boolean().default(true),
   vault_delete_mode: z.enum(['trash', 'permanent']).default('trash'),
   show_keyboard_hints: z.boolean().default(true),
+  /** Archive bookmarks as they are saved. */
+  archive_new: z.boolean().default(false),
+  /** Preselected in the archive dialog and used by `archive_new`. */
+  archive_formats: z.array(z.enum(['html', 'pdf'])).default(['html']),
   updated_at: z.string(),
 })
 
@@ -99,6 +103,14 @@ export const platformSettingsSchema = z.object({
   screenshot_retry_cooldown_hours: z.number().int().default(24),
   screenshot_auto_retry_days: z.number().int().default(7),
   screenshot_retry_last_run_at: z.string().nullish(),
+  archives_enabled: z.boolean().default(true),
+  /** Archive storage per account; null is unlimited. */
+  max_archive_bytes: z.number().int().nonnegative().nullish(),
+  /** Largest single archived copy. */
+  max_archive_item_bytes: z
+    .number()
+    .int()
+    .default(25 * 1024 * 1024),
   updated_at: z.string(),
 })
 
@@ -114,6 +126,7 @@ export const resolvedLimitsSchema = z.object({
   max_enrich_actions_per_day: z.number().int().positive().nullish(),
   max_import_bytes: z.number().int().positive().nullish(),
   max_upload_image_bytes: z.number().int().positive().nullish(),
+  max_archive_bytes: z.number().int().nonnegative().nullish(),
 })
 
 export const quotaUsageSchema = z.object({
@@ -122,6 +135,8 @@ export const quotaUsageSchema = z.object({
   stored_image_bytes: z.number().int(),
   enrich_actions_today: z.number().int(),
   enrich_period_start: z.string(),
+  /** Archived copies on the bookmarks the person owns. */
+  archive_bytes: z.number().int().default(0),
 })
 
 export const apiKeySchema = z.object({

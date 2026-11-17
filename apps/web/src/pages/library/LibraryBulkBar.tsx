@@ -1,13 +1,18 @@
-import { type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { Button, Group, Text } from '@mantine/core'
-import { IconFolders, IconLock, IconTags, IconTrash } from '@tabler/icons-react'
+import { IconArchive, IconFolders, IconLock, IconTags, IconTrash } from '@tabler/icons-react'
+import { ArchiveDialog } from '@/components'
 import { useMe } from '@/hooks'
 import styles from './LibraryPage.module.css'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
+/** The API's cap on one bulk archive request. */
+const MAX_BULK_ARCHIVE = 500
+
 export function LibraryBulkBar(): ReactElement | null {
   const lib = useLibraryPageModel()
   const me = useMe()
+  const [archiveOpen, setArchiveOpen] = useState(false)
   if (!lib.selectMode) return null
 
   const { selectedCount, allSelected } = lib
@@ -64,6 +69,16 @@ export function LibraryBulkBar(): ReactElement | null {
         </Button>
         <Button
           size="compact-sm"
+          variant="light"
+          leftSection={<IconArchive size={14} stroke={1.5} />}
+          disabled={selectedCount === 0 || selectedCount > MAX_BULK_ARCHIVE}
+          title={selectedCount > MAX_BULK_ARCHIVE ? `Archive at most ${MAX_BULK_ARCHIVE} at a time` : undefined}
+          onClick={() => setArchiveOpen(true)}
+        >
+          Archive
+        </Button>
+        <Button
+          size="compact-sm"
           color="red"
           variant="light"
           leftSection={<IconTrash size={14} stroke={1.5} />}
@@ -73,6 +88,7 @@ export function LibraryBulkBar(): ReactElement | null {
           Delete
         </Button>
       </Group>
+      <ArchiveDialog opened={archiveOpen} onClose={() => setArchiveOpen(false)} ids={[...lib.selectedIds]} />
     </Group>
   )
 }

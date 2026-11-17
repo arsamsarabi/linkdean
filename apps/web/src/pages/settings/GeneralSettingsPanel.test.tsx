@@ -47,6 +47,8 @@ const settings: UserSettings = {
   show_vault_in_library: true,
   vault_delete_mode: 'trash',
   show_keyboard_hints: true,
+  archive_new: false,
+  archive_formats: ['html'],
   updated_at: '2026-01-01T00:00:00Z',
 }
 

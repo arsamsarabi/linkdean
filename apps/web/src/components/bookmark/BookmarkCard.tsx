@@ -3,10 +3,11 @@ import { Card, Checkbox, Group, Highlight, Pill, Spoiler, Stack, Text, Tooltip, 
 import { notifications } from '@mantine/notifications'
 import { IconExternalLink } from '@tabler/icons-react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { ArchiveDialog } from '@/components/archive'
 import { useOpenPeek } from '@/components/peek'
 import { SocialDrawer } from '@/components/social'
 import { useOwnerActions, useRecordBookmarkOpen, useSaveBookmarkCopy } from '@/hooks'
-import { inviteeShareAccess } from '@/lib'
+import { hasArchive, inviteeShareAccess } from '@/lib'
 import { FOLDER_UNCATEGORIZED, hostname, previewSrcCandidates } from '@/services'
 import { canPeekBookmark } from '@/stores'
 import { BlockOwnerModal } from './BlockOwnerModal'
@@ -67,6 +68,8 @@ export function BookmarkCard({
   const navigate = useNavigate()
   const [socialOpen, setSocialOpen] = useState(false)
   const [blockOpen, setBlockOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const archived = hasArchive(b.archive)
   const candidates = useMemo(() => previewSrcCandidates(b), [b])
 
   async function onSaveCopy(): Promise<void> {
@@ -169,6 +172,8 @@ export function BookmarkCard({
         onMoveToVault && b.owner_user_id === viewerUserId && !b.deleted_at ? () => onMoveToVault(b.id) : undefined
       }
       onPeek={canPeekBookmark(b) ? () => openPeek(b) : undefined}
+      onArchive={canWrite && !b.deleted_at ? () => setArchiveOpen(true) : undefined}
+      onOpenArchive={archived ? () => void navigate({ to: '/archive/$id', params: { id: b.id } }) : undefined}
     />
   )
 
@@ -286,6 +291,14 @@ export function BookmarkCard({
           subjectType="bookmark"
           subjectId={b.id}
           title={title}
+        />
+      ) : null}
+      {canWrite ? (
+        <ArchiveDialog
+          opened={archiveOpen}
+          onClose={() => setArchiveOpen(false)}
+          ids={[b.id]}
+          replaces={archived ? b.archive?.captured_at : null}
         />
       ) : null}
       {canFollowOwner ? (

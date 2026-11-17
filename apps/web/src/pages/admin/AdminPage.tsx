@@ -19,7 +19,12 @@ import { useMe } from '@/hooks'
 import classes from '@/pages/settings/SettingsPage.module.css'
 import { AdminEmailPanel } from './AdminEmailPanel'
 import { AdminInvitesPanel } from './AdminInvitesPanel'
-import { AdminPlatformSettings, AdminQuotasPanel, AdminSearchIndexPanel } from './AdminPlatformSettings'
+import {
+  AdminArchivePanel,
+  AdminPlatformSettings,
+  AdminQuotasPanel,
+  AdminSearchIndexPanel,
+} from './AdminPlatformSettings'
 import { AdminReportsPanel } from './AdminReportsPanel'
 import { AdminScreenshotRetryPanel } from './AdminScreenshotRetryPanel'
 import { AdminUsersPanel } from './AdminUsersPanel'
@@ -128,6 +133,7 @@ export function AdminPage(): ReactElement | null {
         <Tabs.Panel value="quotas">
           <Stack gap="lg" maw={1100}>
             <AdminQuotasPanel />
+            <AdminArchivePanel />
           </Stack>
         </Tabs.Panel>
         <Tabs.Panel value="email">

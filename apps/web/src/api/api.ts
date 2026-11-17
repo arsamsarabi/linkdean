@@ -15,11 +15,13 @@ import {
   authTokenResponseSchema,
   bansEnvelopeSchema,
   blockEnvelopeSchema,
+  bookmarkArchiveSchema,
   bookmarkIdsSchema,
   bookmarkListPageSchema,
   bookmarkLookupSchema,
   bookmarkSchema,
   bootstrapStatusSchema,
+  bulkArchiveResultSchema,
   categoriesSchema,
   categoryPublicLinkSchema,
   categorySchema,
@@ -100,14 +102,17 @@ import {
   type AdminResetLink,
   type AdminUserSummary,
   type ApiKey,
+  type ArchiveFormat,
   type AuthConfig,
   type AuthTokenResponse,
   type BanDurationBody,
   type BanView,
   type BlockRelation,
   type Bookmark,
+  type BookmarkArchive,
   type BookmarkListPage,
   type BootstrapStatus,
+  type BulkArchiveResult,
   type Category,
   type CategoryPublicLink,
   type CategoryShare,
@@ -760,6 +765,22 @@ export const api = {
 
   deleteBookmarkPreview: (id: string): Promise<Bookmark> =>
     req(`/bookmarks/${id}/preview`, { method: 'DELETE' }, bookmarkSchema),
+
+  listArchives: (id: string): Promise<BookmarkArchive[]> =>
+    req(`/bookmarks/${id}/archive`, {}, z.array(bookmarkArchiveSchema)),
+
+  requestArchive: (id: string, formats: ArchiveFormat[]): Promise<BookmarkArchive[]> =>
+    req(
+      `/bookmarks/${id}/archive`,
+      { method: 'POST', body: JSON.stringify({ formats }) },
+      z.array(bookmarkArchiveSchema)
+    ),
+
+  bulkArchive: (ids: string[], formats: ArchiveFormat[]): Promise<BulkArchiveResult> =>
+    req('/bookmarks/archive', { method: 'POST', body: JSON.stringify({ ids, formats }) }, bulkArchiveResultSchema),
+
+  deleteArchives: (id: string): Promise<{ ok: boolean }> =>
+    req(`/bookmarks/${id}/archive`, { method: 'DELETE' }, z.object({ ok: z.boolean() })),
 
   search: (q: string) => req(`/search?q=${encodeURIComponent(q)}`, {}, searchResponseSchema),
 

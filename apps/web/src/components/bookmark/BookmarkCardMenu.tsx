@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react'
 import { ActionIcon, CopyButton, Menu, Tooltip } from '@mantine/core'
 import {
+  IconArchive,
   IconBan,
   IconBookmark,
   IconBookmarkFilled,
@@ -9,6 +10,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconEye,
+  IconFileText,
   IconHeart,
   IconLock,
   IconMessageCircle,
@@ -52,6 +54,10 @@ type Props = {
   onMoveToVault?: () => void
   /** Hidden for vault / non-https. */
   onPeek?: () => void
+  /** Owner or write access: keep a copy of the page. */
+  onArchive?: () => void
+  /** A copy is stored: open it in the archive viewer. */
+  onOpenArchive?: () => void
 }
 
 export function BookmarkCardMenu({
@@ -77,6 +83,8 @@ export function BookmarkCardMenu({
   onDelete,
   onMoveToVault,
   onPeek,
+  onArchive,
+  onOpenArchive,
 }: Props): ReactElement {
   const ownerSuffix = ownerLabel ? ` ${ownerLabel}` : ''
   return (
@@ -92,6 +100,11 @@ export function BookmarkCardMenu({
         {onPeek ? (
           <Menu.Item leftSection={<IconEye size={14} stroke={1.5} />} onClick={onPeek}>
             Peek
+          </Menu.Item>
+        ) : null}
+        {onOpenArchive ? (
+          <Menu.Item leftSection={<IconFileText size={14} stroke={1.5} />} onClick={onOpenArchive}>
+            Open archive
           </Menu.Item>
         ) : null}
         <CopyButton value={url} timeout={1500}>
@@ -127,6 +140,11 @@ export function BookmarkCardMenu({
               {isPinned ? 'Unpin' : 'Pin to top'}
             </Menu.Item>
           </>
+        ) : null}
+        {onArchive ? (
+          <Menu.Item leftSection={<IconArchive size={14} stroke={1.5} />} onClick={onArchive}>
+            Archive…
+          </Menu.Item>
         ) : null}
         {onMoveToVault ? (
           <Menu.Item leftSection={<IconLock size={14} stroke={1.5} />} onClick={onMoveToVault}>
