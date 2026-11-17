@@ -217,6 +217,45 @@ async fn blocked_users_get_not_found_in_both_directions() {
 }
 
 #[tokio::test]
+async fn follow_counts_and_blocks_read_like_an_unknown_user() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let target = user(&pool, "target").await;
+    let fan = user(&pool, "fan").await;
+    let stranger = user(&pool, "stranger").await;
+    set_profile(&pool, &target, "hidden").await;
+    db::follow_user(&pool, fan.id, target.id)
+        .await
+        .expect("a hidden profile can still be followed");
+
+    let seen = db::follow_relation(&pool, stranger.id, target.id)
+        .await
+        .expect("relation");
+    assert_eq!((seen.following, seen.followers), (false, 0));
+    let unknown = db::follow_relation(&pool, stranger.id, Uuid::new_v4())
+        .await
+        .expect("unknown relation");
+    assert_eq!((unknown.followers, unknown.following_count), (0, 0));
+    let own = db::follow_relation(&pool, target.id, target.id)
+        .await
+        .expect("own relation");
+    assert_eq!(own.followers, 1);
+
+    db::block_user(&pool, target.id, stranger.id)
+        .await
+        .expect("block");
+    assert!(matches!(
+        db::follow_user(&pool, stranger.id, target.id).await,
+        Err(Error::NotFound)
+    ));
+    assert!(matches!(
+        db::follow_user(&pool, stranger.id, Uuid::new_v4()).await,
+        Err(Error::NotFound)
+    ));
+}
+
+#[tokio::test]
 async fn unknown_user_is_not_found() {
     let Some(pool) = pool_or_skip().await else {
         return;

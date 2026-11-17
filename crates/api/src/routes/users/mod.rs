@@ -522,9 +522,6 @@ async fn my_following(
     Ok(Json(json!({ "users": users })))
 }
 
-// Known issue: Hidden profiles and blocks can be detected through follower counts and differing
-// status codes here, in profile routes and in share routes. Fix: gate them through
-// `require_viewable_profile` and return uniform responses.
 #[utoipa::path(
     post,
     operation_id = "users_follow_user",
