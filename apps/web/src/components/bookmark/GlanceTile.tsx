@@ -5,7 +5,7 @@ import { PeekButton } from '@/components/peek'
 import { ShareBadge } from '@/components/share-badge'
 import { useRecordBookmarkOpen } from '@/hooks'
 import { inviteeShareAccess } from '@/lib'
-import { googleFavicon, hostname } from '@/services'
+import { hostname } from '@/services'
 import { ApiImage } from './ApiImage'
 import styles from './GlanceTile.module.css'
 
@@ -35,7 +35,7 @@ export function GlanceTile({ bookmark: b, viewerUserId, meta, fresh = false }: P
   const title = b.title.trim() || 'Untitled'
   const [iconFailed, setIconFailed] = useState(false)
   const recordOpen = useRecordBookmarkOpen()
-  const iconSrc = !iconFailed ? b.favicon_url || (b.is_vault ? undefined : googleFavicon(b.url)) : undefined
+  const iconSrc = !iconFailed ? b.favicon_url || undefined : undefined
   const share = inviteeShareAccess(b.owner_user_id, b.can_write, viewerUserId)
   const showOutgoing = !share && !!b.shared_out
 

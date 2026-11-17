@@ -17,21 +17,12 @@ function images(ui: React.ReactElement): string[] {
 const url = 'https://secret.example/path'
 const noop = (): void => {}
 
-describe('third-party favicon lookups', () => {
+describe('favicons', () => {
   afterEach(cleanup)
 
-  it('never send a vault hostname to Google', () => {
-    const card = <BookmarkCardPreview url={url} title="t" previewSrc={undefined} isVault onPreviewError={noop} />
-    expect(images(card).join()).not.toContain('google')
-  })
-
-  it('still run for ordinary bookmarks', () => {
+  it('never send a hostname to a third party', () => {
     const card = <BookmarkCardPreview url={url} title="t" previewSrc={undefined} onPreviewError={noop} />
-    expect(images(card).join()).toContain('google.com/s2/favicons')
-  })
-
-  it('never run for a vault tile', () => {
-    const tile = <GlanceTile bookmark={{ id: '1', url, title: 't', is_vault: true }} />
-    expect(images(tile).join()).not.toContain('google')
+    const tile = <GlanceTile bookmark={{ id: '1', url, title: 't', is_vault: false }} />
+    expect([...images(card), ...images(tile)]).toEqual([])
   })
 })

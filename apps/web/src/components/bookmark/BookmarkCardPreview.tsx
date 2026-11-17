@@ -1,19 +1,13 @@
 import { useState, type ReactElement } from 'react'
 import { AspectRatio, Group, Text, UnstyledButton } from '@mantine/core'
 import { IconWorld } from '@tabler/icons-react'
-import { googleFavicon, hostname } from '@/services'
+import { hostname } from '@/services'
 import { ApiImage } from './ApiImage'
 import styles from './BookmarkCard.module.css'
 
-type FallbackProps = {
-  url: string
-  faviconUrl?: string | null
-  isVault?: boolean
-}
-
-function PreviewFallback({ url, faviconUrl, isVault = false }: FallbackProps): ReactElement {
+function PreviewFallback({ url, faviconUrl }: { url: string; faviconUrl?: string | null }): ReactElement {
   const [iconFailed, setIconFailed] = useState(false)
-  const iconSrc = !iconFailed ? faviconUrl || (isVault ? undefined : googleFavicon(url)) : undefined
+  const iconSrc = !iconFailed ? faviconUrl || undefined : undefined
 
   return (
     <Group justify="center" align="center" h="100%" gap="sm" className={styles.previewFallback}>
@@ -29,15 +23,16 @@ function PreviewFallback({ url, faviconUrl, isVault = false }: FallbackProps): R
   )
 }
 
-/** A site icon for compact rows: the cached favicon, else Google's (never for vault items). */
+/** A site icon for compact rows: the cached favicon, else a globe. */
 export function BookmarkFavicon({
-  url,
   faviconUrl,
-  isVault = false,
   size = 20,
-}: FallbackProps & { size?: number }): ReactElement {
+}: {
+  faviconUrl?: string | null
+  size?: number
+}): ReactElement {
   const [iconFailed, setIconFailed] = useState(false)
-  const iconSrc = !iconFailed ? faviconUrl || (isVault ? undefined : googleFavicon(url)) : undefined
+  const iconSrc = !iconFailed ? faviconUrl || undefined : undefined
   return iconSrc ? (
     <ApiImage src={iconSrc} alt="" w={size} h={size} fit="contain" onError={() => setIconFailed(true)} />
   ) : (
@@ -50,18 +45,10 @@ type Props = {
   title: string
   previewSrc: string | undefined
   faviconUrl?: string | null
-  isVault?: boolean
   onPreviewError: () => void
 }
 
-export function BookmarkCardPreview({
-  url,
-  title,
-  previewSrc,
-  faviconUrl,
-  isVault = false,
-  onPreviewError,
-}: Props): ReactElement {
+export function BookmarkCardPreview({ url, title, previewSrc, faviconUrl, onPreviewError }: Props): ReactElement {
   return (
     <UnstyledButton
       component="a"
@@ -75,7 +62,7 @@ export function BookmarkCardPreview({
         {previewSrc ? (
           <ApiImage src={previewSrc} alt="" h="100%" fit="cover" onError={onPreviewError} />
         ) : (
-          <PreviewFallback url={url} faviconUrl={faviconUrl} isVault={isVault} />
+          <PreviewFallback url={url} faviconUrl={faviconUrl} />
         )}
       </AspectRatio>
     </UnstyledButton>

@@ -216,7 +216,7 @@ export function BookmarkCard({
       <Group gap="xs" wrap="nowrap" className={styles.rowLead}>
         {selectBox}
         <span className={styles.rowIcon}>
-          <BookmarkFavicon url={b.url} faviconUrl={b.favicon_url} isVault={b.is_vault} />
+          <BookmarkFavicon faviconUrl={b.favicon_url} />
         </span>
       </Group>
       <Stack gap={0} className={styles.rowMain}>
@@ -248,7 +248,6 @@ export function BookmarkCard({
               title={title}
               previewSrc={previewSrc}
               faviconUrl={b.favicon_url}
-              isVault={b.is_vault}
               onPreviewError={() => setSrcIndex((i) => i + 1)}
             />
           </Card.Section>

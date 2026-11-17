@@ -56,14 +56,14 @@ export function DashboardCard({ bookmark: b, kind, meta, viewerUserId, size }: P
             <ApiImage src={previewSrc} alt="" h="100%" fit="cover" onError={() => setSrcIndex((i) => i + 1)} />
           ) : (
             <div className={styles.previewFallback}>
-              <BookmarkFavicon url={b.url} faviconUrl={b.favicon_url} isVault={b.is_vault} size={28} />
+              <BookmarkFavicon faviconUrl={b.favicon_url} size={28} />
             </div>
           )}
         </AspectRatio>
 
         <div className={styles.body}>
           <div className={styles.site}>
-            <BookmarkFavicon url={b.url} faviconUrl={b.favicon_url} isVault={b.is_vault} size={14} />
+            <BookmarkFavicon faviconUrl={b.favicon_url} size={14} />
             <span className={styles.host}>{hostname(b.url)}</span>
             {b.is_vault ? (
               <Tooltip label="Stored in vault">

@@ -243,7 +243,7 @@ function DuplicateRow({
     <div className={classes.row} data-action={action} role="group" aria-label={duplicate.url}>
       <div className={classes.rowHeader}>
         <span className={classes.favicon}>
-          <BookmarkFavicon url={duplicate.url} size={16} />
+          <BookmarkFavicon size={16} />
         </span>
         <div className={classes.urlBlock}>
           <Text size="sm" fw={600} truncate="end">
