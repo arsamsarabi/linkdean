@@ -218,10 +218,12 @@ async fn block_rejects_new_links_either_way_until_unblocked() {
         db::follow_user(&pool, a.id, b.id).await,
         Err(Error::NotFound)
     ));
-    assert!(matches!(
-        share(&pool, &b, b_cat.id, &a.email).await,
-        Err(Error::Forbidden)
-    ));
+    // The blocked user's invite reads as sent; it never reaches the blocker (see below).
+    share(&pool, &b, b_cat.id, &a.email)
+        .await
+        .expect("blocked sharer's invite");
+    assert!(!shared_category_ids(&pool, &a).await.contains(&b_cat.id));
+    // The blocker knows already, and is told.
     assert!(matches!(
         share(&pool, &a, a_cat.id, &b.email).await,
         Err(Error::Forbidden)
@@ -609,4 +611,58 @@ async fn lists_show_only_my_targets_newest_first_with_labels() {
         .await
         .expect("muted")
         .is_empty());
+}
+
+#[tokio::test]
+async fn an_invite_from_someone_blocked_reads_as_sent_and_goes_nowhere() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let blocker = user(&pool, "blocker", Some("Bea")).await;
+    let sharer = user(&pool, "sharer", Some("Sam")).await;
+    let cat = category(&pool, &sharer).await;
+    db::block_user(&pool, blocker.id, sharer.id)
+        .await
+        .expect("block");
+
+    let outcome = db::create_share(
+        &pool,
+        sharer.id,
+        cat.id,
+        CreateCategoryShare {
+            email: blocker.email.clone(),
+            access: ShareAccess::Read,
+        },
+    )
+    .await
+    .expect("answers like any invite");
+    let CreateCategoryShareOutcome::Pending { invite } = outcome else {
+        panic!("expected a pending invite");
+    };
+    let listed = db::list_pending_for_subject(
+        &pool,
+        sharer.id,
+        linkdean_core::PendingShareSubjectType::Category,
+        cat.id,
+    )
+    .await
+    .expect("sharer's list");
+    assert!(listed.iter().any(|i| i.id == invite.id));
+
+    assert!(db::list_share_invites(&pool, blocker.id)
+        .await
+        .expect("inbox")
+        .is_empty());
+    let (notes,): (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM notifications WHERE recipient_user_id = $1 AND actor_user_id = $2",
+    )
+    .bind(blocker.id)
+    .bind(sharer.id)
+    .fetch_one(&pool)
+    .await
+    .expect("notifications");
+    assert_eq!(notes, 0);
+    assert!(db::accept_share_invite(&pool, blocker.id, invite.id)
+        .await
+        .is_err());
 }

@@ -329,11 +329,12 @@ pub async fn create_dashboard_share(
     if invitee.id == owner_user_id {
         return Err(Error::BadRequest("cannot share with yourself".into()));
     }
-    super::blocks::assert_not_blocked(pool, owner_user_id, invitee.id).await?;
+    let hidden = super::blocks::share_blocked(pool, owner_user_id, invitee.id).await?;
 
-    let existed = find_direct_dashboard_share(pool, dashboard_id, invitee.id)
-        .await?
-        .is_some();
+    let existed = !hidden
+        && find_direct_dashboard_share(pool, dashboard_id, invitee.id)
+            .await?
+            .is_some();
     if !existed {
         // Until the account proves it controls the address, the invite waits for the address
         // like one to an unknown address, and attaches when the account verifies.
@@ -348,7 +349,7 @@ pub async fn create_dashboard_share(
             invitee_user_id,
         )
         .await?;
-        if created && invitee_user_id.is_some() {
+        if created && invitee_user_id.is_some() && !hidden {
             super::notifications::notify_dashboard_share_invite(
                 pool,
                 owner_user_id,

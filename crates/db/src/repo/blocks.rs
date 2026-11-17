@@ -45,6 +45,17 @@ pub async fn assert_not_blocked(pool: &PgPool, a: Uuid, b: Uuid) -> Result<()> {
     Ok(())
 }
 
+/// Whether a share invite from `sharer` to `invitee` must go nowhere. When the invitee blocked
+/// the sharer, the invite is recorded like any other but sends nothing, stays out of their inbox,
+/// and cannot be accepted, so the sharer cannot tell they are blocked. A sharer who blocked the
+/// invitee knows it already and is refused.
+pub async fn share_blocked(pool: &PgPool, sharer: Uuid, invitee: Uuid) -> Result<bool> {
+    if is_blocked(pool, sharer, invitee).await? {
+        return Err(Error::Forbidden);
+    }
+    is_blocked(pool, invitee, sharer).await
+}
+
 pub async fn is_muted(pool: &PgPool, muter_id: Uuid, muted_id: Uuid) -> Result<bool> {
     let row: Option<(i32,)> = sqlx::query_as(
         r#"
