@@ -64,7 +64,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Vault content never indexed in Meilisearch
 - Export includes vault bookmarks as plaintext only while the vault is unlocked for that session; locked vaults stay out of the file
 - Unlocking a vault opens it for that login session only. Other devices, other sessions and API keys stay locked
-- Optional auto-lock after inactivity (Settings). The server enforces it too: unlocked keys it has not used for that long are dropped. Logging out, a password change or reset, or a ban locks them
+- Optional auto-lock after inactivity (Settings). The server enforces it too: unlocked keys it has not used for that long are dropped. Logging out, a password change or reset, or a ban locks them. If the browser's lock request fails, the vaults stay shown as unlocked and it tries again every 30 seconds.
 
 ---
 
@@ -106,6 +106,9 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Share dashboards: read / write; invitees see shared boards in the switcher
 - RW invitees can rearrange shared dashboards per ACL
 - Pin a shared dashboard as your default; losing access returns you to your own default
+- A dashboard in its owner's Trash is hidden from the people it is shared with until the owner restores it
+- Nested shares: each folder takes its nearest grant, so a read share inside a write share is read from there down
+- Tags a write invitee sets on a shared bookmark go into the owner's tags
 - Share badges on cards, glance tiles, folders, and dashboard chrome (invitee + outgoing)
 - Meili visibility respects readable shared categories
 - Read-only library gates for invitees
@@ -123,7 +126,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Daily digest: kinds set to **Daily digest** arrive together in one email a day, after 8:00 in your profile's time zone (UTC when none is set), grouped by kind with up to 50 items and a count of the rest. Switching a kind back to **Each one** sends what was waiting; **Off** drops it
 - One-click unsubscribe: every notification email links an unsubscribe for its kind (the digest's turns off every digest kind) and carries `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so mail apps show their own Unsubscribe button. The link works signed out and opens a page that asks first, so link scanners change nothing. Links are signed with `SESSION_SECRET`; changing it voids them
 - Likes, comments, and 1–5 ratings on **shared** bookmarks, lists, and dashboards
-- Follow / unfollow users (⋮ on shared bookmarks; lists on Profile; notifies the followee)
+- Follow / unfollow users (⋮ on shared bookmarks; lists on Profile; notifies the followee). Follower counts show only to people who can see the profile
 - Block / unblock users (⋮ on shared bookmarks; list on Profile): removes follows and shares both ways without telling them, and hides each other's social activity and notifications
 - Profiles (`/u/{id}`): avatar, name, bio, follower and following lists, follow button, and the bookmarks the owner chose to show. Your own profile adds email and an edit drawer
 - Visibility: a profile is Hidden, Followers or Members; a category is Only me, Followers or Members; a bookmark can be Only me. Everything starts private. Members means anyone signed in, and Public links stay the only access without an account

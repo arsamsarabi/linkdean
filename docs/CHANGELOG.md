@@ -47,6 +47,17 @@
 
 ### Fixed
 
+- Sharing and privacy:
+  - A dashboard in its owner's Trash can no longer be opened or edited by the people it is shared with. Restoring it brings their access back.
+  - Tags that a write invitee sets on a shared bookmark now go into the owner's tags, instead of disappearing from the owner's tag list and filters.
+  - With a read share inside a write share, the inner folder and everything below it show read access, as the server enforces, instead of offering edits that then fail.
+  - A stale pin of a bookmark on someone else's dashboard no longer blocks moving it into a vault, and the blocker no longer shows that dashboard's title. The move removes such pins.
+  - Follower and following counts show only to people who can see the profile, and following someone across a block answers like an unknown user.
+- Vaults:
+  - When the idle auto-lock request fails, vaults stay shown as unlocked, as they still are on the server, and the lock is retried every 30 seconds.
+  - Vault bookmarks are tied to their row and vault, so a copied ciphertext no longer opens on another bookmark. Existing ones gain this the next time they are saved.
+  - The global passphrase's public key is checked whenever the master key opens, and put back if it was changed.
+  - Unlocked vault keys are wiped from server memory when dropped and never appear in debug logs.
 - Records of individual bookmark opens are now deleted after 30 days for everyone. Before, they were only pruned when the same person opened another bookmark.
 - The collapsed sidebar rail centers its icons in square buttons, marks the current page with a highlight and an edge bar, and separates recent folders from the main pages.
 - Docs: the **Intro** and **Getting started** pages show their screenshots again, instead of a stray `import Shot …` line.
