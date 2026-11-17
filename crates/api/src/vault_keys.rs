@@ -106,6 +106,16 @@ impl VaultKeyStore {
         }
     }
 
+    /// The key of `vault_id` from any of the user's sessions that has it unlocked, without
+    /// counting as use. Background work started by the user (an archive capture) runs with it.
+    pub fn user_key(&self, user_id: Uuid, vault_id: Uuid) -> Option<[u8; 32]> {
+        let now = Instant::now();
+        self.lock()
+            .values()
+            .filter(|u| u.user_id == user_id && !u.expired(now))
+            .find_map(|u| u.ring.get(vault_id).copied())
+    }
+
     /// Unlock `vault_id` for this session. API keys may not.
     pub fn insert(
         &self,
@@ -224,6 +234,20 @@ mod tests {
         );
         assert!(store.keyring(&session("phone"), user).is_empty());
         assert!(store.keyring(&session("laptop"), Uuid::new_v4()).is_empty());
+    }
+
+    #[test]
+    fn background_work_finds_the_users_key_in_any_session() {
+        let store = VaultKeyStore::default();
+        let (user, vault) = (Uuid::new_v4(), Uuid::new_v4());
+        store
+            .insert(&session("laptop"), user, vault, KEY, None)
+            .unwrap();
+        assert_eq!(store.user_key(user, vault), Some(KEY));
+        assert_eq!(store.user_key(Uuid::new_v4(), vault), None);
+        assert_eq!(store.user_key(user, Uuid::new_v4()), None);
+        store.remove_vault(user, vault);
+        assert_eq!(store.user_key(user, vault), None);
     }
 
     #[test]

@@ -265,6 +265,31 @@ pub async fn claim_next_archive(pool: &PgPool) -> Result<Option<(Uuid, Vec<Archi
     Ok(Some((bookmark_id, formats)))
 }
 
+/// The bookmark a claimed archive belongs to, without an access check: the runner works for
+/// whoever queued it.
+pub async fn archive_target(pool: &PgPool, bookmark_id: Uuid) -> Result<Option<linkdean_core::Bookmark>> {
+    sqlx::query_as::<_, linkdean_core::Bookmark>("SELECT * FROM bookmarks WHERE id = $1")
+        .bind(bookmark_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(db_err)
+}
+
+/// Every stored file name per bookmark, for the sweep that removes files nothing points at.
+pub async fn archive_file_names(pool: &PgPool) -> Result<HashMap<Uuid, Vec<String>>> {
+    let rows: Vec<(Uuid, String)> = sqlx::query_as(
+        "SELECT bookmark_id, file_name FROM bookmark_archives WHERE file_name IS NOT NULL",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(db_err)?;
+    let mut out: HashMap<Uuid, Vec<String>> = HashMap::new();
+    for (id, name) in rows {
+        out.entry(id).or_default().push(name);
+    }
+    Ok(out)
+}
+
 /// A copy written to disk, ready to record.
 #[derive(Debug, Clone)]
 pub struct StoredCopy {
@@ -414,11 +439,12 @@ pub async fn archive_bytes_for_owner(pool: &PgPool, user_id: Uuid) -> Result<i64
     .map_err(db_err)
 }
 
-/// Copies encrypted for another vault than their bookmark is in now (or for none), after a move
-/// in, out of or between vaults. Pairs each row with the vault it should be encrypted for.
+/// The owner's copies encrypted for another vault than their bookmark is in now (or for none),
+/// after a move in, out of or between vaults. Pairs each row with the vault it should be
+/// encrypted for.
 pub async fn archives_needing_rekey(
     pool: &PgPool,
-    bookmark_ids: &[Uuid],
+    owner_id: Uuid,
 ) -> Result<Vec<(ArchiveRow, Option<Uuid>)>> {
     #[derive(sqlx::FromRow)]
     struct Row {
@@ -433,12 +459,12 @@ pub async fn archives_needing_rekey(
                b.vault_id AS target_vault_id
         FROM bookmark_archives a
         JOIN bookmarks b ON b.id = a.bookmark_id
-        WHERE a.bookmark_id = ANY($1)
+        WHERE b.owner_user_id = $1
           AND a.file_name IS NOT NULL
           AND a.key_vault_id IS DISTINCT FROM b.vault_id
         "#,
     )
-    .bind(bookmark_ids)
+    .bind(owner_id)
     .fetch_all(pool)
     .await
     .map_err(db_err)?;

@@ -389,7 +389,7 @@ async fn vault_copies_need_the_vault_and_follow_moves() {
     db::finish_archive(&pool, id, &[copy(Html, "plain", 10)])
         .await
         .unwrap();
-    let pending = db::archives_needing_rekey(&pool, &[id]).await.unwrap();
+    let pending = db::archives_needing_rekey(&pool, owner.id).await.unwrap();
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].1, Some(vault.id));
 
@@ -399,7 +399,7 @@ async fn vault_copies_need_the_vault_and_follow_moves() {
     assert!(db::set_archive_key(&pool, id, Html, "plain", "sealed", Some(vault.id), Some(vec![1]))
         .await
         .unwrap());
-    assert!(db::archives_needing_rekey(&pool, &[id]).await.unwrap().is_empty());
+    assert!(db::archives_needing_rekey(&pool, owner.id).await.unwrap().is_empty());
     let row = db::archive_row(&pool, id, Html).await.unwrap().unwrap();
     assert_eq!(row.file_name.as_deref(), Some("sealed"));
     assert!(row.final_url.is_none(), "a vault copy keeps no plain address");

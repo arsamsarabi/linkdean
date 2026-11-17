@@ -12,7 +12,7 @@ use axum::Router;
 pub const CONTENT_SECURITY_POLICY: &str = "\
 default-src 'self'; \
 script-src 'self' https://challenges.cloudflare.com; \
-frame-src https://challenges.cloudflare.com https:; \
+frame-src 'self' https://challenges.cloudflare.com https:; \
 style-src 'self' 'unsafe-inline'; \
 img-src 'self' data: blob:; \
 font-src 'self' data:; \
@@ -67,7 +67,8 @@ pub fn security_headers(hsts_max_age: Option<u64>, csp: &HeaderValue) -> HeaderM
     headers
 }
 
-/// Apply baseline headers to a response. Does not replace an existing CSP (asset sandbox).
+/// Apply baseline headers to a response. Keeps a CSP or frame policy the route set itself (asset
+/// sandbox, archived copies framed by the app).
 pub fn apply_security_headers(
     headers: &mut HeaderMap,
     hsts_max_age: Option<u64>,
@@ -75,7 +76,8 @@ pub fn apply_security_headers(
 ) {
     let baseline = security_headers(hsts_max_age, csp);
     for (name, value) in baseline.iter() {
-        if name == header::CONTENT_SECURITY_POLICY && headers.contains_key(name) {
+        let own = name == header::CONTENT_SECURITY_POLICY || name == header::X_FRAME_OPTIONS;
+        if own && headers.contains_key(name) {
             continue;
         }
         headers.insert(name.clone(), value.clone());
@@ -152,13 +154,21 @@ mod tests {
     fn csp_allows_the_turnstile_widget() {
         let csp = CONTENT_SECURITY_POLICY;
         assert!(csp.contains("script-src 'self' https://challenges.cloudflare.com;"));
-        assert!(csp.contains("frame-src https://challenges.cloudflare.com https:;"));
+        assert!(csp.contains("frame-src 'self' https://challenges.cloudflare.com https:;"));
+    }
+
+    #[test]
+    fn apply_keeps_a_routes_own_frame_policy() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("SAMEORIGIN"));
+        apply_security_headers(&mut headers, None, &content_security_policy(None));
+        assert_eq!(headers[header::X_FRAME_OPTIONS], "SAMEORIGIN");
     }
 
     #[test]
     fn csp_allows_https_frames_for_peek() {
         let csp = CONTENT_SECURITY_POLICY;
-        assert!(csp.contains("frame-src https://challenges.cloudflare.com https:;"));
+        assert!(csp.contains("frame-src 'self' https://challenges.cloudflare.com https:;"));
     }
 
     #[test]
