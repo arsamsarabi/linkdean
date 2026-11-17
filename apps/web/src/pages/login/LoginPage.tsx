@@ -29,7 +29,15 @@ import {
   TermsAgreement,
 } from '@/components'
 import { useBootstrap, useDropSignedOutCache, useLogin, usePasskeyLogin, usePendingOidcLink } from '@/hooks'
-import { isPasskeyCancel, oidcStartUrl, passkeysSupported, resolveDefaultLanding, ssoButtons } from '@/lib'
+import {
+  isPasskeyCancel,
+  oidcStartUrl,
+  passkeysSupported,
+  resolveDefaultLanding,
+  ssoButtons,
+  termsSatisfied,
+} from '@/lib'
+import type { LegalLinks } from '@/schemas'
 import motion from '@/styles/motion.module.css'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -114,6 +122,8 @@ export function LoginPage(): ReactElement {
   const sso = ssoButtons(bootstrap.data?.oidc_enabled ?? false, bootstrap.data?.sso_providers)
   const registrationOpen = bootstrap.data?.registration_open ?? true
   const mailEnabled = bootstrap.data?.mail_enabled ?? false
+  const legal: LegalLinks = bootstrap.data ?? {}
+  const ssoAllowed = termsSatisfied(legal.terms_version, termsAccepted)
 
   return (
     <Group align="flex-start" justify="center" gap={48} mt={80} px="md" pb={48} wrap="nowrap" className={motion.fadeIn}>
@@ -194,6 +204,7 @@ export function LoginPage(): ReactElement {
               <>
                 <Divider label="or" labelPosition="center" />
                 <TermsAgreement
+                  legal={legal}
                   checked={termsAccepted}
                   onChange={setTermsAccepted}
                   description="Needed to create an account with single sign-on."
@@ -203,8 +214,8 @@ export function LoginPage(): ReactElement {
                     key={p.id}
                     component="a"
                     // No href until accepted: the link is neither clickable nor focusable.
-                    href={termsAccepted ? oidcStartUrl(p.id) : undefined}
-                    disabled={!termsAccepted}
+                    href={ssoAllowed ? oidcStartUrl(legal.terms_version, p.id) : undefined}
+                    disabled={!ssoAllowed}
                     variant="light"
                     leftSection={<SsoProviderIcon id={p.id} />}
                   >
@@ -223,7 +234,7 @@ export function LoginPage(): ReactElement {
             ) : null}
           </Stack>
         </Paper>
-        <LegalFooterLinks />
+        <LegalFooterLinks legal={legal} />
       </Stack>
       <Center visibleFrom="md" mih={420} style={{ flexShrink: 0 }}>
         <MascotFigure src={MASCOT.standingLg} width={MASCOT_LOGIN_DISPLAY_PX} flip />

@@ -36,9 +36,10 @@ pub struct User {
 }
 
 impl User {
-    /// Whether the account accepted the current Terms of Service.
-    pub fn terms_current(&self) -> bool {
-        self.terms_version.as_deref() == Some(crate::legal::TERMS_VERSION)
+    /// Whether the account accepted `current`, the server's terms version. Always true on a
+    /// server without terms.
+    pub fn terms_current(&self, current: Option<&str>) -> bool {
+        current.is_none_or(|v| self.terms_version.as_deref() == Some(v))
     }
 
     /// The issuer host of the attached single sign-on identity, if any.
@@ -89,7 +90,7 @@ pub struct PasskeySummary {
 /// Body of `POST /users/me/terms`.
 #[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
 pub struct AcceptTerms {
-    /// Must equal `legal::TERMS_VERSION`.
+    /// Must equal the server's `TERMS_VERSION`.
     pub terms_version: String,
 }
 
@@ -1192,7 +1193,7 @@ pub struct RegisterRequest {
     /// Cloudflare Turnstile widget token; required when the server has Turnstile keys.
     #[serde(default)]
     pub turnstile_token: Option<String>,
-    /// Terms of Service version the user accepted; must equal `legal::TERMS_VERSION`.
+    /// Terms of Service version the user accepted: the server's `TERMS_VERSION`, when it has one.
     #[serde(default)]
     pub terms_version: String,
 }

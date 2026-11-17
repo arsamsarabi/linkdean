@@ -159,7 +159,7 @@ pub async fn reset(
         tracing::warn!(error = %e, "password changed email failed");
     }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(session_response(
         AuthResponse {
             user: public,

@@ -41,7 +41,7 @@ Everything the Chrome Web Store and addons.mozilla.org (AMO) ask for on the firs
 >
 > Privacy: the extension sends the address, title and selected text of the pages you choose to save to the Linkdean you signed in to, and nothing to anyone else. It doesn't read or send the pages you visit otherwise.
 
-**Privacy policy URL:** `https://app.linkdean.app/privacy`
+**Privacy policy URL:** `https://linkdean.app/privacy`
 
 **Homepage / website:** `https://linkdean.app`
 
@@ -97,7 +97,7 @@ Upload `linkdean-extension-<version>-chrome.zip` at the [developer dashboard](ht
 
   Then tick all three certifications (not sold, not used for unrelated purposes, not used for creditworthiness).
 
-- Privacy policy URL: `https://app.linkdean.app/privacy`.
+- Privacy policy URL: `https://linkdean.app/privacy`.
 
 **Distribution**
 
@@ -122,7 +122,7 @@ Submit at [addons.mozilla.org/developers](https://addons.mozilla.org/developers/
    - Categories: **Bookmarks**. Optional second: Other.
    - Support email or site, homepage: as above.
    - License: **All Rights Reserved**. PolyForm Noncommercial is not in AMO's list, and it is not an open source license either.
-   - Privacy policy: Yes, link `https://app.linkdean.app/privacy` or paste its "Browser extension" section.
+   - Privacy policy: Yes, link `https://linkdean.app/privacy` or paste its "Browser extension" section.
    - Screenshots: the four images above. AMO has no promo tile.
 4. **Data collection:** the manifest declares `browsingActivity` and `websiteContent` as required. If the form asks again, confirm those two and nothing else.
 5. **Notes to reviewer:**

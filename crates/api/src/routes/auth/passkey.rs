@@ -369,7 +369,7 @@ pub(super) async fn login_finish(
     let result = verify_login(&state, body).await;
     let user = state.limiter.settle(&limits, result)?;
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     let body = AuthResponse {
         user: public,
         token: token.clone(),

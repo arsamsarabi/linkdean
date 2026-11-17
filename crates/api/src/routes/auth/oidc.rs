@@ -27,7 +27,7 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::Json;
 use chrono::{DateTime, Utc};
 use linkdean_core::crypto::constant_time_eq;
-use linkdean_core::legal::{require_current_terms, TERMS_VERSION};
+use linkdean_core::legal::require_current_terms;
 use linkdean_core::{issuer_host, Error, User};
 use linkdean_db::{self as db};
 use openidconnect::core::{
@@ -144,9 +144,9 @@ pub(super) struct StartQuery {
 }
 
 /// `?mode=connect` attaches the provider identity to the signed-in account instead of signing
-/// in; it needs a session. Sign-in may create an account, so it needs `?terms_version=` equal to
-/// the current terms version; the flow cookie carries it to the callback, which records it on a
-/// new account. Existing accounts sign in unchanged. Connect mode never creates an account.
+/// in; it needs a session. Sign-in may create an account, so on a server with terms it needs
+/// `?terms_version=` equal to `TERMS_VERSION`; the flow cookie carries it to the callback, which
+/// records it on a new account. Existing accounts sign in unchanged. Connect mode never creates an account.
 #[utoipa::path(
     get,
     operation_id = "auth_oidc_start",
@@ -194,8 +194,8 @@ pub(super) async fn start(
     };
     let terms = match mode {
         FlowMode::SignIn => {
-            require_current_terms(q.terms_version.as_deref())?;
-            Some(TERMS_VERSION.to_string())
+            require_current_terms(state.cfg.terms_version(), q.terms_version.as_deref())?;
+            state.cfg.terms_version().map(str::to_string)
         }
         FlowMode::Connect(_) | FlowMode::Reauth(..) => None,
     };
@@ -547,7 +547,7 @@ async fn sign_in(
         return Ok(SignInOutcome::PendingLink(token));
     }
     // Only a new account needs the terms, which the sign-in start must have presented.
-    require_current_terms(terms.as_deref())?;
+    require_current_terms(state.cfg.terms_version(), terms.as_deref())?;
     // A provider sign-in cannot carry the bootstrap token, so with one set the first account
     // must register with a password.
     let created = db::create_user_gated(
@@ -561,7 +561,7 @@ async fn sign_in(
             enforce: true,
             invite_code: None,
             bootstrap_token_ok: state.cfg.bootstrap_token_ok(None),
-            terms_version: Some(TERMS_VERSION),
+            terms_version: state.cfg.terms_version(),
         },
     )
     .await?;
@@ -732,7 +732,7 @@ pub(super) async fn disconnect(
     let user = db::find_user_by_id(&state.pool, user.id)
         .await?
         .ok_or(Error::NotFound)?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(Json(json!({ "ok": true, "user": public })))
 }
 
@@ -895,9 +895,9 @@ mod tests {
             verifier: "v".into(),
             provider: ProviderId::Oidc,
             mode: FlowMode::SignIn,
-            terms: Some(TERMS_VERSION.into()),
+            terms: Some("2026-11-15".into()),
         };
-        assert_eq!(flow.encode(), format!("s.n.v.oidc.terms.{TERMS_VERSION}"));
+        assert_eq!(flow.encode(), "s.n.v.oidc.terms.2026-11-15");
         assert_eq!(FlowCookie::decode(&flow.encode()), Some(flow));
         assert_eq!(FlowCookie::decode("s.n.v.oidc.terms."), None);
         assert_eq!(FlowCookie::decode("s.n.v.oidc.terms.x.y"), None);

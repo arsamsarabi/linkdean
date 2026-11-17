@@ -12,7 +12,7 @@ import {
   useRegister,
   useUploadAvatar,
 } from '@/hooks'
-import { isSignedIn, resolveDefaultLanding, TERMS_VERSION } from '@/lib'
+import { isSignedIn, resolveDefaultLanding } from '@/lib'
 import { MIN_SECRET_LENGTH, validatePasswordPair } from '@/services'
 import motion from '@/styles/motion.module.css'
 import styles from './OnboardingPage.module.css'
@@ -115,7 +115,7 @@ export function OnboardingPage(): ReactElement {
         display_name: displayName || undefined,
         bootstrap_token: bootstrapToken.trim() || undefined,
         turnstile_token: turnstileToken ?? undefined,
-        terms_version: TERMS_VERSION,
+        terms_version: bootstrap.data?.terms_version ?? '',
       })
       if (pendingAvatar) {
         try {
@@ -221,6 +221,7 @@ export function OnboardingPage(): ReactElement {
           password={password}
           password2={password2}
           pendingAvatar={pendingAvatar}
+          legal={bootstrap.data ?? {}}
           termsAccepted={termsAccepted}
           onTermsAccepted={setTermsAccepted}
           turnstileSiteKey={turnstileSiteKey}

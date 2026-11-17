@@ -148,7 +148,7 @@ async fn update_me(
     Json(body): Json<UpdateProfile>,
 ) -> ApiResult<Json<Value>> {
     let user = db::update_profile(&state.pool, user.id, &body).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(Json(json!({ "user": public })))
 }
 
@@ -207,11 +207,17 @@ async fn accept_terms(
     AuthUser(user): AuthUser,
     Json(body): Json<AcceptTerms>,
 ) -> ApiResult<Json<Value>> {
-    db::accept_terms(&state.pool, user.id, &body.terms_version).await?;
+    db::accept_terms(
+        &state.pool,
+        user.id,
+        state.cfg.terms_version(),
+        &body.terms_version,
+    )
+    .await?;
     let user = db::find_user_by_id(&state.pool, user.id)
         .await?
         .ok_or(Error::NotFound)?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(Json(json!({ "user": public })))
 }
 
@@ -404,7 +410,7 @@ async fn upload_avatar(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
     let user = db::set_has_avatar(&state.pool, user.id, true).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(Json(json!({ "user": public })))
 }
 
@@ -431,7 +437,7 @@ async fn delete_avatar(
         }
     }
     let user = db::set_has_avatar(&state.pool, user.id, false).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(Json(json!({ "user": public })))
 }
 

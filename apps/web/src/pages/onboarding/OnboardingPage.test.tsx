@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '@/api'
-import { markSignedIn, TERMS_VERSION } from '@/lib'
+import { markSignedIn } from '@/lib'
 import type { MeResponse } from '@/schemas'
 import { OnboardingPage } from './OnboardingPage'
 
@@ -67,6 +67,9 @@ describe('OnboardingPage', () => {
     vi.resetAllMocks()
     markSignedIn(false)
     mocked.bootstrap.mockResolvedValue({
+      terms_version: '2026-11-15',
+      terms_url: 'https://example.com/terms',
+      privacy_url: 'https://example.com/privacy',
       needs_bootstrap: true,
       bootstrap_token_required: false,
       oidc_enabled: false,
@@ -94,6 +97,9 @@ describe('OnboardingPage', () => {
 
   it('asks for the setup token when the server has one', async (): Promise<void> => {
     mocked.bootstrap.mockResolvedValue({
+      terms_version: '2026-11-15',
+      terms_url: 'https://example.com/terms',
+      privacy_url: 'https://example.com/privacy',
       needs_bootstrap: true,
       bootstrap_token_required: true,
       oidc_enabled: false,
@@ -110,7 +116,7 @@ describe('OnboardingPage', () => {
 
     await vi.waitFor(() =>
       expect(mocked.register).toHaveBeenCalledWith(
-        expect.objectContaining({ bootstrap_token: 's3cret', terms_version: TERMS_VERSION })
+        expect.objectContaining({ bootstrap_token: 's3cret', terms_version: '2026-11-15' })
       )
     )
   })
@@ -126,6 +132,9 @@ describe('OnboardingPage', () => {
   it('shows members only the optional steps', async (): Promise<void> => {
     markSignedIn(true)
     mocked.bootstrap.mockResolvedValue({
+      terms_version: '2026-11-15',
+      terms_url: 'https://example.com/terms',
+      privacy_url: 'https://example.com/privacy',
       needs_bootstrap: false,
       bootstrap_token_required: false,
       oidc_enabled: false,

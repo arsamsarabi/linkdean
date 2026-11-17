@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { Alert, Anchor } from '@mantine/core'
+import { useBootstrap } from '@/hooks'
 
 export const BETA_BANNER_KEY = 'linkdean.betaBanner.dismissed'
 
@@ -12,10 +13,14 @@ function wasDismissed(): boolean {
   }
 }
 
-/** Public-beta notice above every page. Dismissal lasts for the browser session. */
+/**
+ * Public-beta notice above every page, on a server with its own terms (the hosted service).
+ * Dismissal lasts for the browser session.
+ */
 export function BetaBanner(): ReactElement | null {
   const [hidden, setHidden] = useState<boolean>(wasDismissed)
-  if (hidden) return null
+  const legal = useBootstrap().data
+  if (hidden || !legal?.terms_url) return null
   return (
     <Alert
       color="yellow"
@@ -33,13 +38,18 @@ export function BetaBanner(): ReactElement | null {
       }}
     >
       Linkdean is in public beta: no uptime promise, so export your data regularly. See the{' '}
-      <Anchor href="/terms" inherit>
+      <Anchor href={legal.terms_url} inherit>
         Terms
-      </Anchor>{' '}
-      and{' '}
-      <Anchor href="/privacy" inherit>
-        Privacy Policy
       </Anchor>
+      {legal.privacy_url ? (
+        <>
+          {' '}
+          and{' '}
+          <Anchor href={legal.privacy_url} inherit>
+            Privacy Policy
+          </Anchor>
+        </>
+      ) : null}
       .
     </Alert>
   )

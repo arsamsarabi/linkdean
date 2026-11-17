@@ -31,6 +31,7 @@
 
 ### Changed
 
+- **Your own legal pages**: the app no longer ships linkdean.app's Terms of Service and Privacy Policy. Set `TERMS_VERSION`, `TERMS_URL` and `PRIVACY_URL` to ask for acceptance at sign-up and link your own pages. Without them, sign-up asks for no terms and the app shows no legal links or beta notice. `/terms`, `/privacy` and `/acceptable-use` redirect to those pages.
 - Rewritten Terms of Service and Privacy Policy. The Terms add operator details, a content license, intellectual property, a liability cap, governing law and general clauses, and acceptable use moves to section 6. The Privacy Policy adds the data controller, legal bases, international transfers, retention, your rights and children. The operator is Arsam Sarabi (sole trader, trading as Linkdean), with contact@, privacy@ and abuse@linkdean.app, under the law of England and Wales. The Privacy Policy now matches the deployment: Cloudflare in front of every host, Turnstile on sign-up, self-hosted page view counts, iCloud Mail, passkeys and concrete retention periods.
 - The Acceptable Use Policy is now section 5 of the Terms of Service, so there are two legal documents to read and accept instead of three. `/acceptable-use` redirects there. The terms version is now 2026-11-15, so every account is asked to accept the updated Terms once.
 - **API errors** all answer `{ code, message, details?, error }`; ban, quota and vault-move data moved into `details`. `error` still holds the message.

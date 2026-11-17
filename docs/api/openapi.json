@@ -22,7 +22,7 @@
         "description": "Body of `POST /users/me/terms`.",
         "properties": {
           "terms_version": {
-            "description": "Must equal `legal::TERMS_VERSION`.",
+            "description": "Must equal the server's `TERMS_VERSION`.",
             "type": "string"
           }
         },
@@ -2201,7 +2201,7 @@
             ]
           },
           "terms_version": {
-            "description": "Terms of Service version the user accepted; must equal `legal::TERMS_VERSION`.",
+            "description": "Terms of Service version the user accepted: the server's `TERMS_VERSION`, when it has one.",
             "type": "string"
           },
           "turnstile_token": {
@@ -5262,7 +5262,7 @@
             "session_cookie": []
           }
         ],
-        "summary": "`?mode=connect` attaches the provider identity to the signed-in account instead of signing\nin; it needs a session. Sign-in may create an account, so it needs `?terms_version=` equal to\nthe current terms version; the flow cookie carries it to the callback, which records it on a\nnew account. Existing accounts sign in unchanged. Connect mode never creates an account.",
+        "summary": "`?mode=connect` attaches the provider identity to the signed-in account instead of signing\nin; it needs a session. Sign-in may create an account, so on a server with terms it needs\n`?terms_version=` equal to `TERMS_VERSION`; the flow cookie carries it to the callback, which\nrecords it on a new account. Existing accounts sign in unchanged. Connect mode never creates an account.",
         "tags": [
           "auth"
         ]

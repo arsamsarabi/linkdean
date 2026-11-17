@@ -1,10 +1,15 @@
-/** Terms of Service version shown at sign-up. Must equal `linkdean_core::legal::TERMS_VERSION`. */
-export const TERMS_VERSION = '2026-11-15'
+/** Whether sign-up may go ahead: the box is ticked, or the server has no terms to accept. */
+export function termsSatisfied(termsVersion: string | null | undefined, accepted: boolean): boolean {
+  return !termsVersion || accepted
+}
 
 /** The API's single sign-on start URL. Sign-in may create an account, so it carries the accepted version. */
-export function oidcStartUrl(provider?: string): string {
-  const base = `/api/auth/oidc/start?terms_version=${encodeURIComponent(TERMS_VERSION)}`
-  return provider ? `${base}&provider=${encodeURIComponent(provider)}` : base
+export function oidcStartUrl(termsVersion: string | null | undefined, provider?: string): string {
+  const query = new URLSearchParams()
+  if (termsVersion) query.set('terms_version', termsVersion)
+  if (provider) query.set('provider', provider)
+  const qs = query.toString()
+  return qs ? `/api/auth/oidc/start?${qs}` : '/api/auth/oidc/start'
 }
 
 /** Where Connect sends the browser: the provider, then back to the profile page. */

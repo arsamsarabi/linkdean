@@ -119,13 +119,13 @@ async fn a_new_account_is_unverified_and_a_link_verifies_it_once() {
     };
     let u = unverified(&pool, "new").await;
     assert!(u.email_verified_at.is_none());
-    assert!(!db::to_public(&pool, &u).await.unwrap().email_verified);
+    assert!(!db::to_public(&pool, &u, None).await.unwrap().email_verified);
 
     let token = verify_token(&pool, u.id).await;
     assert_eq!(db::verify_email_token(&pool, &token).await.unwrap(), u.id);
     let u = reload(&pool, u.id).await;
     assert!(u.email_verified_at.is_some());
-    assert!(db::to_public(&pool, &u).await.unwrap().email_verified);
+    assert!(db::to_public(&pool, &u, None).await.unwrap().email_verified);
 
     assert!(is_bad_request(&db::verify_email_token(&pool, &token).await));
     assert!(is_bad_request(

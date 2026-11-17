@@ -19,7 +19,7 @@ use axum::extract::{ConnectInfo, State};
 use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use linkdean_core::legal::{require_current_terms, TERMS_VERSION};
+use linkdean_core::legal::require_current_terms;
 use linkdean_core::{AuthResponse, Error, LoginRequest, RegisterRequest};
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
@@ -85,6 +85,9 @@ async fn bootstrap_status(State(state): State<AppState>) -> ApiResult<Json<Value
         "registration_open": platform.registration_open,
         "mail_enabled": state.mail.is_some(),
         "turnstile_site_key": state.cfg.turnstile_site_key,
+        "terms_version": state.cfg.legal.terms_version,
+        "terms_url": state.cfg.legal.terms_url,
+        "privacy_url": state.cfg.legal.privacy_url,
     })))
 }
 
@@ -139,7 +142,7 @@ async fn register(
     if req.email.trim().is_empty() || req.password.len() < min {
         return Err(Error::BadRequest(format!("email required; password min {min} chars")).into());
     }
-    require_current_terms(Some(&req.terms_version))?;
+    require_current_terms(state.cfg.terms_version(), Some(&req.terms_version))?;
     disposable_email::refuse_if_disposable(&req.email, state.cfg.block_disposable_emails)?;
     let ip = client_ip(&headers, peer.ip(), state.cfg.trust_forwarded_for);
     if state.cfg.turnstile_enabled() {
@@ -176,7 +179,7 @@ async fn register(
             enforce: true,
             invite_code,
             bootstrap_token_ok: state.cfg.bootstrap_token_ok(req.bootstrap_token.as_deref()),
-            terms_version: Some(TERMS_VERSION),
+            terms_version: state.cfg.terms_version(),
         },
     )
     .await?;
@@ -201,7 +204,7 @@ async fn register(
         }
     }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(session_response(
         AuthResponse {
             user: public,
@@ -256,7 +259,7 @@ async fn login(
         }
     }
     let token = db::create_session(&state.pool, user.id, state.cfg.session_days).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     let mut body = serde_json::to_value(AuthResponse {
         user: public,
         token: token.clone(),
@@ -327,7 +330,7 @@ async fn me(
     AuthUser(user): AuthUser,
     vault_session: VaultSession,
 ) -> ApiResult<Json<Value>> {
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     let settings = db::get_user_settings(&state.pool, user.id).await?;
     let vault_unlocked = !state
         .vault_keyring(&vault_session, user.id)
@@ -363,7 +366,7 @@ async fn complete_onboarding(
     AuthUser(user): AuthUser,
 ) -> ApiResult<Json<Value>> {
     let user = db::complete_onboarding(&state.pool, user.id).await?;
-    let public = db::to_public(&state.pool, &user).await?;
+    let public = db::to_public(&state.pool, &user, state.cfg.terms_version()).await?;
     Ok(Json(json!({ "user": public })))
 }
 

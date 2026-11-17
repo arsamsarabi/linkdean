@@ -166,10 +166,10 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Session auth; multi-device via server account
 - Delete account (Settings → General): confirm email, plus the password when the account has one or a fresh single sign-on otherwise (**Sign in again** sends an SSO-only account to its provider with `prompt=login`, and the step-up lasts 10 minutes in that session only); 7-day grace with cancel, then hard purge of owned data including shared folders. The last admin cannot schedule, and the purge checks again: when the instance would be left with no active admin, that account stays scheduled until another admin exists
 - Admin bans with a reason, for N days, until a date or permanently; a banned user sees why on `/banned`, and API keys stop working while the ban lasts
-- Legal pages (draft, not counsel-reviewed): Terms of Service, with the acceptable use rules as its section 5, and Privacy Policy (necessary cookies only, no consent banner) at `/terms` and `/privacy`, linked from sign-in and sign-up. `/acceptable-use` redirects to `/terms#acceptable-use`
-- Terms at sign-up: password sign-up and first-admin setup need a terms checkbox and the API refuses a missing or stale `terms_version`; SSO sign-in needs the checkbox too (`/auth/oidc/start?terms_version=`), and a new SSO account records it. The version and time are stored on the user (`users.terms_version`, `terms_accepted_at`)
+- Legal pages: the operator's own Terms of Service and Privacy Policy (`TERMS_URL`, `PRIVACY_URL`), linked from sign-in, sign-up and the accept prompt. `/terms`, `/privacy` and `/acceptable-use` (to `#acceptable-use`) on the app redirect to them. Unset, the app shows no legal links. linkdean.app's own are at [linkdean.app/terms](https://linkdean.app/terms) and [linkdean.app/privacy](https://linkdean.app/privacy)
+- Terms at sign-up, on a server with `TERMS_VERSION`: password sign-up and first-admin setup need a terms checkbox and the API refuses a missing or stale `terms_version`; SSO sign-in needs the checkbox too (`/auth/oidc/start?terms_version=`), and a new SSO account records it. The version and time are stored on the user (`users.terms_version`, `terms_accepted_at`)
 - Updated terms: when `TERMS_VERSION` changes, every account on an older version (or none) sees a **Our terms changed** dialog in the app, with links to the Terms and the Privacy Policy, **Accept and continue** or **Sign out**. Accepting records the new version (`POST /api/users/me/terms`). API keys are not blocked
-- Beta banner on every page (no uptime promise, export regularly), dismissible for the browser session
+- Beta banner on every page of a server with `TERMS_URL` (no uptime promise, export regularly), dismissible for the browser session
 - Report abuse (signed-in users): a **Report** control on public lists (`/l/…`, sign-in link when signed out), other people's profiles and other people's comments, with a reason (spam, harassment, illegal, impersonation, other) and optional details. Reporting your own content is refused; a second report of the same target while yours is open returns the first; 10 reports per 15 minutes per user
 - Admin report queue (Admin → Abuse reports): open reports with reporter, reason and details. **Dismiss** closes it; **Hide content** revokes the public link, hides the profile or deletes the comment (recorded in the user's moderation history); **Warn** records a note and emails the user when mail is on; **Ban** bans the user with the note (or the report reason) and still resolves the report if they are already banned
 - Abuse contact: admins set an email in the same panel (`platform_settings.abuse_contact_email`); the report form shows it. Terms and Privacy tell people to use Report or that address. Marketing site footer also lists `contact@linkdean.app`
@@ -256,7 +256,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 | `/settings` | Preferences, categories, import, vault, API keys, admin |
 | `/vaults` | Open vaults, with Library filters and views |
 | `/banned` | Reason and end date for a banned account |
-| `/terms`, `/privacy` | Legal pages (public); `/acceptable-use` redirects to `/terms#acceptable-use` |
+| `/terms`, `/privacy`, `/acceptable-use` | Redirect to `TERMS_URL` and `PRIVACY_URL` (`/acceptable-use` to the terms' `#acceptable-use`); the not-found page when unset |
 | `/trash` | Soft-deleted items |
 | `/profile` | Account profile |
 | Command palette | Quick add / search / navigate |

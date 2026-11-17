@@ -2,7 +2,6 @@ import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TERMS_VERSION } from '@/lib'
 import type { BootstrapStatus } from '@/schemas'
 import { LoginPage } from './LoginPage'
 
@@ -30,6 +29,9 @@ const state: {
     sso_providers: [],
     registration_open: true,
     mail_enabled: false,
+    terms_version: '2026-11-15',
+    terms_url: 'https://example.com/terms',
+    privacy_url: 'https://example.com/privacy',
   },
 }
 
@@ -169,7 +171,19 @@ describe('LoginPage terms for single sign-on', () => {
     const button = screen.getByText('Sign in with single sign-on').closest('a')!
     expect(button.getAttribute('href')).toBeNull()
     await userEvent.click(screen.getByRole('checkbox'))
-    expect(button.getAttribute('href')).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}&provider=oidc`)
+    expect(button.getAttribute('href')).toBe('/api/auth/oidc/start?terms_version=2026-11-15&provider=oidc')
+  })
+
+  it('asks for no terms on a server without them', () => {
+    const withTerms = state.bootstrap
+    state.bootstrap = { ...state.bootstrap, terms_version: null, terms_url: null, privacy_url: null }
+    renderPage()
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(screen.getByText('Sign in with single sign-on').closest('a')!.getAttribute('href')).toBe(
+      '/api/auth/oidc/start?provider=oidc'
+    )
+    expect(screen.queryByRole('link', { name: 'Terms' })).toBeNull()
+    state.bootstrap = withTerms
   })
 
   it('shows one button per provider the server offers', async () => {

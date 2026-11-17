@@ -69,6 +69,11 @@ export const bootstrapStatusSchema = z.object({
   mail_enabled: z.boolean().default(false),
   /** Cloudflare Turnstile site key; null when captcha is off. */
   turnstile_site_key: z.string().nullish(),
+  /** The Terms of Service version sign-up must accept (`TERMS_VERSION`). Unset: nothing to accept. */
+  terms_version: z.string().nullish(),
+  /** The operator's Terms of Service and Privacy Policy pages. Unset: no link. */
+  terms_url: z.string().nullish(),
+  privacy_url: z.string().nullish(),
 })
 
 /** Experimental features the server has switched on (`EXPERIMENTAL_*` env vars). Off when missing. */
@@ -277,6 +282,8 @@ export type UserSettings = z.infer<typeof userSettingsSchema>
 export type ScheduleDeletionResponse = z.infer<typeof scheduleDeletionResponseSchema>
 export type MeResponse = z.infer<typeof meResponseSchema>
 export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>
+/** The server's legal settings, from `GET /auth/bootstrap-status`. */
+export type LegalLinks = Pick<BootstrapStatus, 'terms_version' | 'terms_url' | 'privacy_url'>
 export type SsoProvider = z.infer<typeof ssoProviderSchema>
 export type ExperimentalFlags = z.infer<typeof experimentalFlagsSchema>
 export type AuthConfig = z.infer<typeof authConfigSchema>

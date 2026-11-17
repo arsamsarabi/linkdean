@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { oidcStartUrl, ssoButtons, ssoConnectUrl, TERMS_VERSION } from './terms'
+import { oidcStartUrl, ssoButtons, ssoConnectUrl, termsSatisfied } from './terms'
 
 describe('terms', () => {
   it('sends the current version when starting OIDC sign-in', () => {
-    expect(oidcStartUrl()).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}`)
-    expect(oidcStartUrl('github')).toBe(`/api/auth/oidc/start?terms_version=${TERMS_VERSION}&provider=github`)
+    expect(oidcStartUrl('2026-11-15')).toBe('/api/auth/oidc/start?terms_version=2026-11-15')
+    expect(oidcStartUrl('2026-11-15', 'github')).toBe('/api/auth/oidc/start?terms_version=2026-11-15&provider=github')
+    expect(oidcStartUrl(null, 'github')).toBe('/api/auth/oidc/start?provider=github')
+    expect(oidcStartUrl(undefined)).toBe('/api/auth/oidc/start')
+  })
+
+  it('needs the box ticked only on a server with terms', () => {
+    expect(termsSatisfied('2026-11-15', false)).toBe(false)
+    expect(termsSatisfied('2026-11-15', true)).toBe(true)
+    expect(termsSatisfied(null, false)).toBe(true)
   })
 
   it('names the provider to connect', () => {

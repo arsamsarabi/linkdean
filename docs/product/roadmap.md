@@ -49,8 +49,6 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
     - With item 12, include the archived reader-mode text so the agent can read a page without fetching it.
     - Skills from a saved library search, once saved searches exist.
 
-7. **Legal review** (S). Counsel review of the Terms (acceptable use is section 5) and Privacy copy before charging money. When the copy changes, bump `TERMS_VERSION` in `crates/core/src/legal` and `apps/web/src/lib/legal` together, so every account is asked to accept it.
-
 ---
 
 ## Later
