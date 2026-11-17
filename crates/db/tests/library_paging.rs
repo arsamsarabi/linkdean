@@ -587,3 +587,16 @@ async fn folder_counts_cover_your_folders_shared_folders_and_unsorted() {
     assert!(!counts.folders.contains_key(&closed));
     assert_eq!(counts.uncategorized, 2);
 }
+
+#[tokio::test]
+async fn a_comma_splits_tags_so_each_one_can_be_filtered() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = person(&pool).await;
+    let tags = db::ensure_tags(&pool, owner.id, &["rust, web".into(), "go,".into()])
+        .await
+        .expect("tags");
+    let names: Vec<&str> = tags.iter().map(|t| t.name.as_str()).collect();
+    assert_eq!(names, ["rust", "web", "go"]);
+}
