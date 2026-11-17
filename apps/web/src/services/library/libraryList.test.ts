@@ -226,6 +226,7 @@ describe('mergeSearchWithLocalCatchUp', () => {
         has_preview: false,
         tags: [] as string[],
         category_id: null,
+        categories: [],
         is_vault: false,
         can_write: true,
       },

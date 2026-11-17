@@ -19,7 +19,9 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - **Quick peek**: open a bookmark inside Linkdean from a card, row or dashboard tile (Peek in the menu, or the eye control on tiles). The panel maximizes, minimizes, detaches, opens in a new tab, or closes (Esc); size is remembered per browser. Primary click still opens a new tab. Vault bookmarks and non-https addresses stay out. Pages that refuse to embed fall back to the preview, title, description and **Open in new tab**. Peeking counts as an open
 - Custom bookmark preview image (upload + 16:9 crop; replaces screenshot/OG on the card; removable)
 - Multi-category filing (a bookmark can live in more than one folder)
-- Create a category from the bookmark form: typing a name that matches no category offers **Create "name"**, which creates it at the top level or under a writable parent picked inline, and selects it. A subcategory follows its parent's vault. Not offered on read-only shared bookmarks
+- Create a category from the bookmark form: typing a name that matches no category offers **Create "name"**, which creates it at the top level, selects it and toasts **Category created**. Nest under a parent from the Categories page. Not offered on read-only shared bookmarks
+- Bookmark URL field: blur checks for a valid web address and blocks Add until it passes; the API also refuses empty hosts and hosts with spaces
+- **Move to vault** with no vault yet shows **You haven't set up a vault yet** and a **Set up vault** link to `/vaults`
 - Grid, compact list and explorer library views (preference persisted). The list shows each bookmark on one row: site icon, title, site and description, folders, badges and the same menu
 - Library list is keyset-paginated (infinite scroll); folder, tag, flag, created-within, vault-only, sort and paging all run in one database query per page, so scrolling costs the same in a large library, with a total match count
 - Explorer folder tiles show how many bookmarks are directly in each folder and in Unsorted, counted on the server
@@ -41,7 +43,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 ## Search & enrichment
 
-- Meilisearch full-text search for **non-vault** bookmarks
+- Meilisearch full-text search for **non-vault** bookmarks; category chips and tags on hits come from Postgres, with a catch-up reindex when Meili's copy lags
 - Shared-folder visibility in search (owned + readable shared categories)
 - Favicon and OG image cached on disk (`PREVIEW_DIR`); `/favicon` and `/og` serve cached bytes
 - Optional headless Chrome screenshots for previews (a removed preview is not retaken until the URL changes; a failed screenshot is retried automatically once it is older than the admin's retry window, 7 days by default, by a check that runs at start and every 6 hours)

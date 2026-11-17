@@ -97,10 +97,13 @@ export function BookmarkDrawer({
   const pageDetails = usePageDetails()
   // The result of the last Import from URL: a note for an empty page, or why it failed.
   const [fetchNote, setFetchNote] = useState<{ error: boolean; text: string } | null>(null)
+  // Shown under the URL field after blur when the value is not a web address.
+  const [urlError, setUrlError] = useState<string | null>(null)
   const pending =
     createBookmark.isPending || updateBookmark.isPending || uploadPreview.isPending || deletePreview.isPending
   const fetchUrl = withWebScheme(draft.url)
   const canFetch = isFetchableUrl(fetchUrl)
+  const urlOk = !draft.url.trim() || isFetchableUrl(fetchUrl)
   // Vault URLs never leave the instance, so the button is not offered for them.
   const showFetch = !draftHeadsToVault(draft, categories, vaultRequired) && draft.can_write !== false
   const fetching = pageDetails.isPending
@@ -113,6 +116,7 @@ export function BookmarkDrawer({
     setPendingPreview(null)
     setTab('details')
     setFetchNote(null)
+    setUrlError(null)
   })
 
   /**
@@ -159,7 +163,19 @@ export function BookmarkDrawer({
     if (autoImport) runAutoImport()
   }, [opened, autoImport])
 
+  function checkUrl(): string | null {
+    const raw = draft.url.trim()
+    if (!raw) return 'Enter a URL'
+    if (!isFetchableUrl(withWebScheme(raw))) return 'Enter a valid web address (http:// or https://)'
+    return null
+  }
+
   async function save(unsorted = false): Promise<void> {
+    const badUrl = checkUrl()
+    if (badUrl) {
+      setUrlError(badUrl)
+      return
+    }
     const tags = draft.tags.map((t) => t.trim()).filter(Boolean)
     const body = {
       url: withWebScheme(draft.url),
@@ -237,10 +253,18 @@ export function BookmarkDrawer({
           required
           placeholder="https://"
           value={draft.url}
+          error={urlError}
           onChange={(e) => {
             const url = e.currentTarget.value
             setDraft((d) => ({ ...d, url }))
             setFetchNote(null)
+            if (urlError && (!url.trim() || isFetchableUrl(withWebScheme(url)))) {
+              setUrlError(null)
+            }
+          }}
+          onBlur={() => {
+            // Empty stays the required-field case on submit; blur only flags a typed non-URL.
+            setUrlError(draft.url.trim() ? checkUrl() : null)
           }}
         />
         {showFetch ? (
@@ -366,11 +390,11 @@ export function BookmarkDrawer({
           }}
         />
         <Group mt="sm" grow>
-          <Button onClick={() => void save()} disabled={!draft.url.trim() || vaultMissing} loading={pending}>
+          <Button onClick={() => void save()} disabled={!draft.url.trim() || !urlOk || vaultMissing} loading={pending}>
             {editing ? 'Save changes' : 'Add bookmark'}
           </Button>
           {quickSave && !editing && !vaultRequired ? (
-            <Button variant="default" onClick={() => void save(true)} disabled={!draft.url.trim() || pending}>
+            <Button variant="default" onClick={() => void save(true)} disabled={!draft.url.trim() || !urlOk || pending}>
               Save to Unsorted
             </Button>
           ) : null}
