@@ -969,19 +969,28 @@ pub struct VaultPayload {
     pub tags: Vec<String>,
 }
 
-/// Keys of the vaults a user has unlocked right now.
-#[derive(Debug, Clone, Default)]
-// Known issue: Keys are not zeroized when dropped, and this derives `Debug` over raw keys. Fix:
-// `Zeroizing` keys, a redacted `Debug`, and an `Arc` around the ring.
-pub struct VaultKeyring(std::collections::HashMap<Uuid, [u8; 32]>);
+/// Keys of the vaults a user has unlocked right now. Clones share one copy of the keys, each
+/// key is wiped from memory when the last copy drops, and `Debug` shows vault ids only.
+#[derive(Clone, Default)]
+pub struct VaultKeyring(
+    std::sync::Arc<std::collections::HashMap<Uuid, zeroize::Zeroizing<[u8; 32]>>>,
+);
+
+impl std::fmt::Debug for VaultKeyring {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VaultKeyring")
+            .field("vault_ids", &self.vault_ids())
+            .finish()
+    }
+}
 
 impl VaultKeyring {
     pub fn insert(&mut self, vault_id: Uuid, key: [u8; 32]) {
-        self.0.insert(vault_id, key);
+        std::sync::Arc::make_mut(&mut self.0).insert(vault_id, zeroize::Zeroizing::new(key));
     }
 
     pub fn get(&self, vault_id: Uuid) -> Option<&[u8; 32]> {
-        self.0.get(&vault_id)
+        self.0.get(&vault_id).map(|key| &**key)
     }
 
     pub fn contains(&self, vault_id: Uuid) -> bool {
@@ -994,6 +1003,27 @@ impl VaultKeyring {
 
     pub fn vault_ids(&self) -> Vec<Uuid> {
         self.0.keys().copied().collect()
+    }
+}
+
+#[cfg(test)]
+mod vault_keyring_tests {
+    use super::*;
+
+    #[test]
+    fn debug_shows_no_key_and_clones_keep_their_own_keys() {
+        let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
+        let mut ring = VaultKeyring::default();
+        ring.insert(a, [0xAB; 32]);
+        let shown = format!("{ring:?}");
+        assert!(shown.contains(&a.to_string()), "{shown}");
+        assert!(!shown.contains("171"), "{shown}");
+
+        let copy = ring.clone();
+        ring.insert(b, [1; 32]);
+        assert_eq!(copy.get(a), Some(&[0xAB; 32]));
+        assert!(!copy.contains(b));
+        assert!(ring.contains(b));
     }
 }
 

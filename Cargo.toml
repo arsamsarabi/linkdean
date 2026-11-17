@@ -62,6 +62,7 @@ csv = "1"
 chromiumoxide = { version = "0.8", default-features = false, features = ["tokio-runtime"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 webp = "0.3"
+zeroize = "1.9"
 linkdean-core = { path = "crates/core" }
 linkdean-db = { path = "crates/db" }
 linkdean-search = { path = "crates/search" }
