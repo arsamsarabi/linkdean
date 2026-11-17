@@ -71,6 +71,57 @@
         ],
         "type": "object"
       },
+      "ArchiveFormat": {
+        "enum": [
+          "html",
+          "pdf",
+          "file"
+        ],
+        "type": "string"
+      },
+      "ArchiveStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "done",
+          "failed"
+        ],
+        "type": "string"
+      },
+      "ArchiveSummary": {
+        "description": "What a bookmark card needs to know about its copies.",
+        "properties": {
+          "captured_at": {
+            "description": "When the newest stored copy was taken.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "failed": {
+            "description": "The latest attempt of some format failed.",
+            "type": "boolean"
+          },
+          "formats": {
+            "description": "Formats with a stored copy.",
+            "items": {
+              "$ref": "#/components/schemas/ArchiveFormat"
+            },
+            "type": "array"
+          },
+          "pending": {
+            "description": "Some format is queued or being captured.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "formats",
+          "pending",
+          "failed"
+        ],
+        "type": "object"
+      },
       "AuthorizeRequest": {
         "properties": {
           "code_challenge": {
@@ -96,6 +147,54 @@
         "required": [
           "extension_origin",
           "code_challenge"
+        ],
+        "type": "object"
+      },
+      "BookmarkArchiveView": {
+        "description": "One copy of a bookmark, stored or on its way.",
+        "properties": {
+          "available": {
+            "description": "Whether a copy can be opened now.",
+            "type": "boolean"
+          },
+          "bytes": {
+            "description": "Size of the stored copy; 0 when there is none.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "captured_at": {
+            "description": "When the stored copy was taken.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "content_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "description": "Why the latest attempt failed. Set with `available` when an earlier copy is kept.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "format": {
+            "$ref": "#/components/schemas/ArchiveFormat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArchiveStatus"
+          }
+        },
+        "required": [
+          "format",
+          "status",
+          "bytes",
+          "available"
         ],
         "type": "object"
       },
@@ -141,6 +240,17 @@
       },
       "BookmarkView": {
         "properties": {
+          "archive": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ArchiveSummary",
+                "description": "Archived copies, when any exist or are on their way."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "can_write": {
             "description": "Whether the requesting user may mutate this bookmark.",
             "type": "boolean"
@@ -307,6 +417,64 @@
           "can_write",
           "created_at",
           "updated_at"
+        ],
+        "type": "object"
+      },
+      "BulkArchive": {
+        "properties": {
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/ArchiveFormat"
+            },
+            "type": "array"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids",
+          "formats"
+        ],
+        "type": "object"
+      },
+      "BulkArchiveFailure": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "error"
+        ],
+        "type": "object"
+      },
+      "BulkArchiveResult": {
+        "properties": {
+          "failed": {
+            "items": {
+              "$ref": "#/components/schemas/BulkArchiveFailure"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "description": "Bookmarks queued.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "failed"
         ],
         "type": "object"
       },
@@ -2252,6 +2420,21 @@
         ],
         "type": "object"
       },
+      "RequestArchive": {
+        "properties": {
+          "formats": {
+            "description": "`html`, `pdf` or both. A URL that serves a file is kept as that file instead.",
+            "items": {
+              "$ref": "#/components/schemas/ArchiveFormat"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "formats"
+        ],
+        "type": "object"
+      },
       "ResetRequest": {
         "properties": {
           "password": {
@@ -2671,6 +2854,28 @@
               "null"
             ]
           },
+          "archives_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "max_archive_bytes": {
+            "description": "`Some(None)` = unlimited; `Some(Some(bytes))` sets; omit = no change.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "max_archive_item_bytes": {
+            "description": "1 MiB to 1 GiB.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "max_bookmarks": {
             "description": "`Some(None)` clears; `Some(Some(n))` sets; omit = no change.",
             "format": "int64",
@@ -2780,6 +2985,22 @@
       },
       "UpdateSettings": {
         "properties": {
+          "archive_formats": {
+            "description": "At least one of `html` and `pdf`.",
+            "items": {
+              "$ref": "#/components/schemas/ArchiveFormat"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "archive_new": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "default_landing": {
             "type": [
               "string",
@@ -5734,6 +5955,64 @@
         ]
       }
     },
+    "/bookmarks/archive": {
+      "post": {
+        "operationId": "bookmarks_request_archive_bulk",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkArchive"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkArchiveResult"
+                }
+              }
+            },
+            "description": "Queued, with the bookmarks that could not be"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "archives"
+        ]
+      }
+    },
     "/bookmarks/broken": {
       "get": {
         "operationId": "bookmarks_broken",
@@ -6363,6 +6642,262 @@
         ],
         "tags": [
           "bookmarks"
+        ]
+      }
+    },
+    "/bookmarks/{id}/archive": {
+      "delete": {
+        "operationId": "bookmarks_delete_archives",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Every copy deleted"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "archives"
+        ]
+      },
+      "get": {
+        "operationId": "bookmarks_list_archives",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookmarkArchiveView"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Every copy of the bookmark, stored or on its way"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "archives"
+        ]
+      },
+      "post": {
+        "operationId": "bookmarks_request_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestArchive"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookmarkArchiveView"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Queued; every copy of the bookmark"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "archives"
+        ]
+      }
+    },
+    "/bookmarks/{id}/archive/{format}": {
+      "get": {
+        "operationId": "bookmarks_get_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ArchiveFormat"
+            }
+          },
+          {
+            "description": "`1` serves the copy as a download.",
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The copy: sandboxed HTML, a PDF, or the original file"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "archives"
         ]
       }
     },

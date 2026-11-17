@@ -1,5 +1,6 @@
 export * from './abuse'
 export * from './api-keys'
+export * from './archive'
 export * from './auth'
 export * from './avatar'
 export * from './bookmark'

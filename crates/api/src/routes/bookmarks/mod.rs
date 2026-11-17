@@ -229,6 +229,11 @@ async fn create(
 ) -> ApiResult<Json<BookmarkView>> {
     let keyring = state.vault_keyring(&vault_session, user.id).await;
     let view = db::create_bookmark(&state.pool, user.id, req, &keyring).await?;
+    match db::archive_new_bookmark(&state.pool, user.id, view.id).await {
+        Ok(true) => state.archive_wake.notify_one(),
+        Ok(false) => {}
+        Err(e) => tracing::warn!(bookmark_id = %view.id, error = %e, "automatic archive failed"),
+    }
     if !view.is_vault {
         if let Err(e) = state.search.upsert_bookmark(&view).await {
             tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");

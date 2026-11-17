@@ -2,11 +2,20 @@ import { useCallback, type ReactElement } from 'react'
 import { Group, Stack, Tabs, Text, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconArrowsExchange, IconBell, IconBolt, IconKey, IconLock, IconSettings } from '@tabler/icons-react'
+import {
+  IconArchive,
+  IconArrowsExchange,
+  IconBell,
+  IconBolt,
+  IconKey,
+  IconLock,
+  IconSettings,
+} from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { ApiKeysPanel, ImportExportPanel, QueryErrorAlert, VaultPanel, VaultPreferencesCard } from '@/components'
 import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
+import { ArchiveSettingsPanel } from './ArchiveSettingsPanel'
 import { DeleteAccountCard } from './DeleteAccountCard'
 import { FastCapturePanel } from './FastCapturePanel'
 import { GeneralSettingsPanel } from './GeneralSettingsPanel'
@@ -15,7 +24,7 @@ import classes from './SettingsPage.module.css'
 import { SettingsSkeleton } from './SettingsSkeleton'
 import { VaultAutoLockSettings } from './VaultAutoLockSettings'
 
-const SETTINGS_TABS = ['general', 'notifications', 'capture', 'import', 'vault', 'api-keys'] as const
+const SETTINGS_TABS = ['general', 'notifications', 'capture', 'archive', 'import', 'vault', 'api-keys'] as const
 type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function isSettingsTab(v: unknown): v is SettingsTab {
@@ -82,6 +91,9 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="capture" leftSection={<IconBolt size={16} stroke={1.5} />}>
             Fast capture
           </Tabs.Tab>
+          <Tabs.Tab value="archive" leftSection={<IconArchive size={16} stroke={1.5} />}>
+            Archive
+          </Tabs.Tab>
           <Tabs.Tab value="import" leftSection={<IconArrowsExchange size={16} stroke={1.5} />}>
             Import / Export
           </Tabs.Tab>
@@ -111,6 +123,14 @@ export function SettingsPage(): ReactElement {
 
         <Tabs.Panel value="capture">
           <FastCapturePanel />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="archive">
+          {settings ? (
+            <ArchiveSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
+          ) : (
+            <SettingsSkeleton />
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="import">

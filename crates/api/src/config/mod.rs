@@ -11,6 +11,10 @@ pub struct Config {
     pub session_days: i64,
     pub avatar_dir: String,
     pub preview_dir: String,
+    /// Archived copies of bookmarks (`ARCHIVE_DIR`).
+    pub archive_dir: String,
+    /// Archive captures at once, 1 to 8 (`ARCHIVE_CONCURRENCY`). They share Chrome with previews.
+    pub archive_concurrency: usize,
     pub browser_ws_url: Option<String>,
     /// Where to serve the forward proxy Chrome uses for all its traffic. Off when unset.
     pub browser_proxy_bind: Option<std::net::SocketAddr>,
@@ -184,6 +188,8 @@ impl Config {
                 .unwrap_or(30),
             avatar_dir: std::env::var("AVATAR_DIR").unwrap_or_else(|_| "./data/avatars".into()),
             preview_dir: std::env::var("PREVIEW_DIR").unwrap_or_else(|_| "./data/previews".into()),
+            archive_dir: std::env::var("ARCHIVE_DIR").unwrap_or_else(|_| "./data/archives".into()),
+            archive_concurrency: env_usize("ARCHIVE_CONCURRENCY", 2).clamp(1, 8),
             browser_ws_url: std::env::var("BROWSER_WS_URL")
                 .ok()
                 .filter(|s| !s.is_empty()),

@@ -20,6 +20,8 @@ pub struct AppState {
     /// Share invite emails per owner, over an hour rather than `limiter`'s 15 minutes.
     pub invite_limiter: Arc<Limiter>,
     pub mail: Option<Arc<crate::mail::Mail>>,
+    /// Wakes the archive runner when something is queued.
+    pub archive_wake: Arc<tokio::sync::Notify>,
 }
 
 impl AppState {
@@ -28,6 +30,7 @@ impl AppState {
         db::migrate(&pool).await?;
         std::fs::create_dir_all(&cfg.avatar_dir)?;
         std::fs::create_dir_all(&cfg.preview_dir)?;
+        std::fs::create_dir_all(&cfg.archive_dir)?;
         let search = SearchClient::new(&cfg.meili_url, &cfg.meili_key)?;
         if let Err(e) = search.ensure_index().await {
             tracing::warn!("meilisearch index setup: {e}");
@@ -53,7 +56,13 @@ impl AppState {
             limiter: Arc::new(Limiter::new(WINDOW)),
             invite_limiter: Arc::new(Limiter::new(INVITE_EMAIL_WINDOW)),
             mail,
+            archive_wake: Arc::new(tokio::sync::Notify::new()),
         })
+    }
+
+    /// Where a bookmark's archived copies live.
+    pub fn archive_dir(&self, bookmark_id: Uuid) -> std::path::PathBuf {
+        std::path::Path::new(&self.cfg.archive_dir).join(bookmark_id.to_string())
     }
 
     pub fn avatar_path(&self, user_id: Uuid) -> std::path::PathBuf {

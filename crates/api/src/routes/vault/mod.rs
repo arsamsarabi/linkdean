@@ -540,6 +540,11 @@ async fn move_items(
             linkdean_worker::enrich_bookmark(&pool, &search, uid, id, &opts).await;
         });
     }
+    tokio::spawn(crate::archive_runner::rekey_after_vault_move(
+        state.clone(),
+        keyring,
+        user.id,
+    ));
     Ok(Json(json!({ "ok": true })).into_response())
 }
 

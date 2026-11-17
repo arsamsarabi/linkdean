@@ -1,5 +1,7 @@
 import { useCallback } from 'react'
 import { useRecordBookmarkOpen } from '@/hooks'
+import { hasArchive } from '@/lib'
+import type { ArchiveSummary } from '@/schemas'
 import { bookmarkPreviewSrc } from '@/services'
 import { canPeekBookmark, usePeekUi } from '@/stores'
 
@@ -13,6 +15,7 @@ export type PeekableBookmark = {
   preview_url?: string | null
   preview_image_url?: string | null
   updated_at?: string | null
+  archive?: ArchiveSummary | null
 }
 
 /** Opens the peek panel and records an open. No-op for vault / non-https. */
@@ -30,6 +33,7 @@ export function useOpenPeek(): (b: PeekableBookmark) => void {
         title: b.title,
         description: b.description,
         previewUrl: bookmarkPreviewSrc(b) ?? null,
+        archived: hasArchive(b.archive),
       })
     },
     [open, recordOpen]

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
-import { ActionIcon, Button, Loader, Text, Tooltip } from '@mantine/core'
+import { ActionIcon, Button, Group, Loader, Text, Tooltip } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import {
+  IconArchive,
   IconArrowsMaximize,
   IconArrowsMinimize,
   IconExternalLink,
@@ -10,6 +11,7 @@ import {
   IconWindowMaximize,
   IconX,
 } from '@tabler/icons-react'
+import { Link } from '@tanstack/react-router'
 import { usePeekUi, type PeekMode, type PeekTarget } from '@/stores'
 import styles from './PeekPanel.module.css'
 
@@ -177,15 +179,27 @@ function PeekPanelChrome({ target, mode }: ChromeProps): ReactElement {
                   This site cannot be shown inside Linkdean.
                 </Text>
               )}
-              <Button
-                component="a"
-                href={target.url}
-                target="_blank"
-                rel="noreferrer"
-                leftSection={<IconExternalLink size={14} stroke={1.5} />}
-              >
-                Open in new tab
-              </Button>
+              <Group gap="xs" justify="center">
+                {target.archived ? (
+                  <Button
+                    component={Link}
+                    to={`/archive/${target.bookmarkId}`}
+                    leftSection={<IconArchive size={14} stroke={1.5} />}
+                  >
+                    Open archived copy
+                  </Button>
+                ) : null}
+                <Button
+                  component="a"
+                  href={target.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  variant={target.archived ? 'default' : 'filled'}
+                  leftSection={<IconExternalLink size={14} stroke={1.5} />}
+                >
+                  Open in new tab
+                </Button>
+              </Group>
             </div>
           ) : (
             <>

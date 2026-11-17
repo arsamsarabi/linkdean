@@ -10,6 +10,7 @@ pub const METER_STORED_IMAGES: &str = "stored_images";
 pub const METER_ENRICH: &str = "enrich";
 pub const METER_IMPORT: &str = "import";
 pub const METER_UPLOAD: &str = "upload";
+pub const METER_ARCHIVE: &str = "archive";
 
 /// Today UTC as the enrich period start (membership can change this later).
 pub fn enrich_period_start_utc() -> NaiveDate {

@@ -8,6 +8,7 @@ const PLATFORM_COLS: &str = r#"
     max_bookmarks, max_stored_image_bytes, max_enrich_actions_per_day,
     max_import_bytes, max_upload_image_bytes, abuse_contact_email,
     screenshot_retry_cooldown_hours, screenshot_auto_retry_days, screenshot_retry_last_run_at,
+    archives_enabled, max_archive_bytes, max_archive_item_bytes,
     updated_at
 "#;
 
@@ -153,6 +154,35 @@ pub async fn set_screenshot_retry_settings(
     )))
     .bind(cooldown_hours)
     .bind(auto_retry_days)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or_else(|| Error::msg("platform_settings row missing"))
+}
+
+/// Change the archive switch, per-account archive storage (`Some(None)` = unlimited) or the
+/// largest copy. `None` leaves a value alone; the table's checks refuse values out of range.
+pub async fn set_archive_settings(
+    pool: &PgPool,
+    enabled: Option<bool>,
+    max_bytes: Option<Option<i64>>,
+    max_item_bytes: Option<i64>,
+) -> Result<PlatformSettings> {
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
+        r#"
+        UPDATE platform_settings
+        SET archives_enabled = COALESCE($1, archives_enabled),
+            max_archive_bytes = CASE WHEN $2::bool THEN $3 ELSE max_archive_bytes END,
+            max_archive_item_bytes = COALESCE($4, max_archive_item_bytes),
+            updated_at = now()
+        WHERE id = TRUE
+        RETURNING {PLATFORM_COLS}
+        "#
+    )))
+    .bind(enabled)
+    .bind(max_bytes.is_some())
+    .bind(max_bytes.flatten())
+    .bind(max_item_bytes)
     .fetch_optional(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?

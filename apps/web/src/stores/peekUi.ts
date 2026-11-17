@@ -10,6 +10,8 @@ export type PeekTarget = {
   title: string
   description?: string | null
   previewUrl?: string | null
+  /** A copy is archived: the fallback offers it when the site refuses the frame. */
+  archived?: boolean
 }
 
 function readMode(): PeekMode {

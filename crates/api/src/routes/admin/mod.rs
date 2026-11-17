@@ -146,6 +146,33 @@ async fn patch_platform_settings(
         )
         .await?;
     }
+    if req.archives_enabled.is_some()
+        || req.max_archive_bytes.is_some()
+        || req.max_archive_item_bytes.is_some()
+    {
+        if req.max_archive_bytes.flatten().is_some_and(|n| n < 0) {
+            return Err(linkdean_core::Error::BadRequest(
+                "archive storage cannot be negative".into(),
+            )
+            .into());
+        }
+        if req
+            .max_archive_item_bytes
+            .is_some_and(|n| !(1_048_576..=1_073_741_824).contains(&n))
+        {
+            return Err(linkdean_core::Error::BadRequest(
+                "the largest archived copy must be between 1 MB and 1 GB".into(),
+            )
+            .into());
+        }
+        settings = db::set_archive_settings(
+            &state.pool,
+            req.archives_enabled,
+            req.max_archive_bytes,
+            req.max_archive_item_bytes,
+        )
+        .await?;
+    }
     if let Some(email) = req.abuse_contact_email {
         let email = linkdean_core::clean_abuse_contact_email(email.as_deref())?;
         settings = db::set_abuse_contact_email(&state.pool, email.as_deref()).await?;

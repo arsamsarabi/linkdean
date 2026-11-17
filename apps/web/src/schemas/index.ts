@@ -1,5 +1,6 @@
 export * from './abuse'
 export * from './activity'
+export * from './archive'
 export * from './auth'
 export * from './blocks'
 export * from './bookmarks'

@@ -240,6 +240,64 @@ export function AdminQuotasPanel(): ReactElement {
   )
 }
 
+const MIB = 1024 * 1024
+
+/** Whether people may archive bookmarks, how much each account may keep, and the largest copy. */
+export function AdminArchivePanel(): ReactElement {
+  const platform = usePlatformSettings(true)
+  const save = useUpdatePlatformSettings()
+
+  if (platform.isError) {
+    return (
+      <QueryErrorAlert
+        error={platform.error}
+        onRetry={() => void platform.refetch()}
+        title="Platform settings failed"
+      />
+    )
+  }
+  if (!platform.data) {
+    return <SettingsSkeleton />
+  }
+  const s = platform.data.settings
+  const saveWith = (patch: Parameters<typeof save.mutate>[0]): void =>
+    save.mutate(patch, {
+      onSuccess: () => notifications.show({ message: 'Platform settings saved' }),
+      onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+    })
+
+  return (
+    <Paper p="xl" withBorder>
+      <Stack gap="md">
+        <Text fw={500}>Archives</Text>
+        <Switch
+          label="Archiving"
+          description="People can keep copies of their bookmarks as web pages, PDFs or the original files."
+          checked={s.archives_enabled}
+          disabled={save.isPending}
+          onChange={(e) => saveWith({ archives_enabled: e.currentTarget.checked })}
+        />
+        <QuotaNumberInput
+          label="Archive storage per account (MB)"
+          description="Copies on the bookmarks a person owns, Trash included. Blank is unlimited."
+          value={s.max_archive_bytes == null ? null : Math.round(s.max_archive_bytes / MIB)}
+          disabled={save.isPending}
+          onSave={(mb) => saveWith({ max_archive_bytes: mb == null ? null : mb * MIB })}
+        />
+        <QuotaNumberInput
+          label="Largest archived copy (MB)"
+          description="1 to 1024. A bigger page or file is not archived."
+          value={Math.round(s.max_archive_item_bytes / MIB)}
+          disabled={save.isPending}
+          onSave={(mb) => {
+            if (mb != null) saveWith({ max_archive_item_bytes: mb * MIB })
+          }}
+        />
+      </Stack>
+    </Paper>
+  )
+}
+
 export function AdminSearchIndexPanel(): ReactElement {
   const reindex = useReindexSearch()
   return (

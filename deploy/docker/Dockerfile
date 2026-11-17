@@ -26,7 +26,7 @@ COPY --from=web /web/dist /app/static
 ENV STATIC_DIR=/app/static
 # Named volumes take this ownership when they are first created.
 RUN useradd --system --uid 10001 --no-create-home linkdean \
-    && mkdir -p /app/data/avatars /app/data/previews \
+    && mkdir -p /app/data/avatars /app/data/previews /app/data/archives \
     && chown -R linkdean:linkdean /app/data
 USER linkdean
 EXPOSE 8080

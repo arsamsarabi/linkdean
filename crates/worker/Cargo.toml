@@ -19,6 +19,7 @@ serde_json.workspace = true
 linkdean-core.workspace = true
 linkdean-db.workspace = true
 linkdean-search.workspace = true
+lol_html.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
 tracing.workspace = true

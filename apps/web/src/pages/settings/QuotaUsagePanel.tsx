@@ -26,7 +26,8 @@ export function QuotaUsagePanel(): ReactElement | null {
     limits.max_stored_image_bytes != null ||
     limits.max_enrich_actions_per_day != null ||
     limits.max_import_bytes != null ||
-    limits.max_upload_image_bytes != null
+    limits.max_upload_image_bytes != null ||
+    limits.max_archive_bytes != null
   if (!anyLimit) return null
 
   return (
@@ -41,6 +42,9 @@ export function QuotaUsagePanel(): ReactElement | null {
         ) : null}
         {limits.max_stored_image_bytes != null ? (
           <Text size="sm">{line('Stored images', data.stored_image_bytes, limits.max_stored_image_bytes, ' B')}</Text>
+        ) : null}
+        {limits.max_archive_bytes != null ? (
+          <Text size="sm">{line('Archived copies', data.archive_bytes, limits.max_archive_bytes, ' B')}</Text>
         ) : null}
         {limits.max_enrich_actions_per_day != null ? (
           <Text size="sm">

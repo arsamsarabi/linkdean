@@ -2,6 +2,7 @@ mod activity;
 mod admin;
 mod agent_skills;
 mod api_keys;
+mod archives;
 mod assets;
 pub(crate) mod auth;
 mod bookmarks;
@@ -102,6 +103,7 @@ fn documented(agent_skills: bool) -> OpenApiRouter<AppState> {
         .merge(users::router())
         .merge(categories::router())
         .merge(bookmarks::router())
+        .merge(archives::router())
         .merge(dashboards::router())
         .merge(social::router())
         .merge(tags::router())

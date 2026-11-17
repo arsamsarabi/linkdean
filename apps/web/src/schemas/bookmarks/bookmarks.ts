@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { archiveSummarySchema } from '../archive'
 
 export const categoryRefSchema = z.object({
   id: z.string(),
@@ -36,6 +37,7 @@ export const bookmarkSchema = z.object({
   link_check_status_code: z.number().int().nullish(),
   link_check_error: z.string().nullish(),
   link_checked_at: z.string().nullish(),
+  archive: archiveSummarySchema.nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 })

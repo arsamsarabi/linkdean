@@ -20,16 +20,14 @@ Nothing open right now. The next item comes from **Next** below.
 
 Archiving and AI assistance come first: they are the biggest gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](https://docs.linkdean.app/docs/compare).
 
-12. **Archive & downloads** (L, in phases). Link rot is the main reason people keep bookmarks on their own server, and Linkwarden, Karakeep and Raindrop.io (Pro) all keep a copy of each page. Linkdean stores previews only.
-    - Phase 1, snapshots: when a bookmark is saved, the worker's existing headless Chrome also captures a single-file HTML copy and a PDF. Opt-in per account; stored on a separate archive volume and counted against the storage quota.
-    - Phase 2, page text: reader-mode text taken from the snapshot and indexed in Meilisearch, so search covers page contents, not only titles and notes.
-    - Downloads: per bookmark, download the copy as HTML, PDF or reader-mode Markdown. The full export gains an option to include archives (zip).
-    - Dead links: when the broken-link check finds a page gone, the bookmark offers its archived copy. Re-archive on demand.
-    - Quick peek fallback: when a site refuses to embed, show the archived copy or its reader-mode text instead of only the preview image.
-    - Vaults: archived copies of vault bookmarks are encrypted with the vault key and never indexed.
-    - Media (images, audio, video) last, behind a size cap per item and per account.
-    - Deploy: archive volume and mount convention, a worker concurrency limit, the archive volume in the restic backup, self-host settings to turn it off or cap it.
-    - Open questions: on by default for new accounts or opt-in; retention for deleted bookmarks; quota on the hosted beta.
+12. **Archive & downloads** (L, in phases). The first slice shipped: snapshots as HTML, PDF or the file itself, the viewer, downloads, vault encryption, the dead-link and Quick peek fallbacks, and admin limits (see [features](./features.md#archive) and the [archive design](../design/archive.md)). Still to come:
+    - Page text: reader-mode text taken from the snapshot and indexed in Meilisearch, so search covers page contents, not only titles and notes. Vault copies are never indexed.
+    - Downloads: reader-mode Markdown per bookmark, and an option in the full export to include archives (zip).
+    - Media: explore downloading embedded `<video>` and `<audio>` files that are plain links, not streams, behind the per-item and per-account caps.
+    - Version history: keep more than one copy per format.
+    - Tiers: per-tier archive storage limits for the hosted service.
+    - Archive imported bookmarks when **Archive new bookmarks** is on, throttled.
+    - Hide the archive actions when an admin has turned archiving off (today the server refuses with a message).
 
 16. **AI assistance** (M–L). Karakeep is built around AI tagging, Linkwarden offers it with local models, and Raindrop.io has it on Pro. Linkdean has none. Add it without giving up the privacy stance.
     - Off by default. Each account opts in; the operator chooses the provider: bring-your-own-key (any OpenAI-compatible API, or Anthropic) or a local model (Ollama) on a self-hosted instance.

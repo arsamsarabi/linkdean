@@ -30,6 +30,8 @@ fn retention(days: i32) -> UpdateSettings {
         show_vault_in_library: None,
         vault_delete_mode: None,
         show_keyboard_hints: None,
+        archive_new: None,
+        archive_formats: None,
     }
 }
 
@@ -195,6 +197,8 @@ async fn keyboard_hints_are_on_by_default_and_can_be_turned_off() {
     );
     let off = UpdateSettings {
         show_keyboard_hints: Some(false),
+        archive_new: None,
+        archive_formats: None,
         trash_retention_days: None,
         ..retention(30)
     };

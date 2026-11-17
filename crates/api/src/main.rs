@@ -1,3 +1,4 @@
+mod archive_runner;
 mod auth;
 mod config;
 mod disposable_email;
@@ -38,6 +39,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::spawn(maintenance::run(state.clone()));
     tokio::spawn(mail::run_sender(state.clone()));
+    tokio::spawn(archive_runner::run(state.clone()));
 
     // Chrome has no route out of its network; this proxy is its only way to the web.
     if let (Some(addr), Some(_)) = (cfg.browser_proxy_bind, &cfg.browser_ws_url) {

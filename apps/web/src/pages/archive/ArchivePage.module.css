@@ -1,0 +1,32 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  /* Fill the window below the header; AppShell.Main already pads the page. */
+  height: calc(100dvh - var(--app-shell-header-offset, 60px) - 2 * var(--app-shell-padding, 16px));
+  min-height: 420px;
+}
+
+.bar {
+  flex: none;
+}
+
+.heading {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.frame {
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: #fff;
+}
+
+.media {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  align-self: center;
+}

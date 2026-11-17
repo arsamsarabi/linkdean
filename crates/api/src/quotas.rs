@@ -82,11 +82,13 @@ pub async fn usage_view(state: &AppState, user_id: Uuid) -> Result<QuotaUsageVie
     let bookmarks = db::count_owned_bookmarks(&state.pool, user_id).await?;
     let stored_image_bytes = stored_image_bytes(state, user_id).await?;
     let enrich_actions_today = db::enrich_usage_today(&state.pool, user_id).await?;
+    let archive_bytes = db::archive_bytes_for_owner(&state.pool, user_id).await?;
     Ok(QuotaUsageView {
         limits,
         bookmarks,
         stored_image_bytes,
         enrich_actions_today,
         enrich_period_start: db::enrich_period_start_utc().to_string(),
+        archive_bytes,
     })
 }

@@ -18,6 +18,7 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconWorldDownload } from '@tabler/icons-react'
+import { ArchiveSection } from '@/components/archive'
 import { SocialThread } from '@/components/social'
 import {
   useCreateBookmark,
@@ -315,6 +316,7 @@ export function BookmarkDrawer({
             disabled={pending}
           />
         ) : null}
+        {editing && draft.id ? <ArchiveSection bookmarkId={draft.id} canWrite={draft.can_write !== false} /> : null}
         <BookmarkCategoriesField
           categories={categories}
           value={draft.category_ids}

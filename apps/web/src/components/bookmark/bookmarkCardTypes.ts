@@ -1,4 +1,4 @@
-import type { CategoryRef } from '@/schemas'
+import type { ArchiveSummary, CategoryRef } from '@/schemas'
 
 export type BookmarkCardItem = {
   id: string
@@ -30,4 +30,6 @@ export type BookmarkCardItem = {
   link_check_status?: 'ok' | 'broken' | 'unreachable' | 'unverifiable' | null
   link_check_status_code?: number | null
   link_check_error?: string | null
+  /** Archived copies; absent when there are none and on public lists. */
+  archive?: ArchiveSummary | null
 }

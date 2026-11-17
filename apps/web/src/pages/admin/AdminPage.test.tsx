@@ -17,6 +17,7 @@ vi.mock('@/hooks', () => ({
 vi.mock('./AdminPlatformSettings', () => ({
   AdminPlatformSettings: () => <p>general panel</p>,
   AdminQuotasPanel: () => <p>quotas panel</p>,
+  AdminArchivePanel: () => <p>archive panel</p>,
   AdminSearchIndexPanel: () => <p>search panel</p>,
 }))
 vi.mock('./AdminEmailPanel', () => ({ AdminEmailPanel: () => <p>email panel</p> }))

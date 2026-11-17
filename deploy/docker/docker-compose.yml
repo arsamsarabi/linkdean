@@ -87,6 +87,7 @@ services:
       STATIC_DIR: /app/static
       AVATAR_DIR: /app/data/avatars
       PREVIEW_DIR: /app/data/previews
+      ARCHIVE_DIR: /app/data/archives
       BROWSER_WS_URL: http://chrome:9222
       # Chrome's only way out: a proxy in the API that refuses private addresses.
       BROWSER_PROXY_BIND: 0.0.0.0:3128
@@ -127,6 +128,8 @@ services:
       - avatars:/app/data/avatars
       # screenshots ({id}.jpg) + favicon/OG ({id}.favicon[.ct], {id}.og[.ct])
       - previews:/app/data/previews
+      # archived copies: {bookmark id}/{format}-{uuid}
+      - archives:/app/data/archives
     depends_on:
       db:
         condition: service_healthy
@@ -152,3 +155,4 @@ volumes:
   meili:
   avatars:
   previews:
+  archives:
