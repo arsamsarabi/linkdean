@@ -48,3 +48,19 @@ describe('useDashboardEdit drag moves', () => {
     expect(result.current.editDraft!.sections.at(-1)!.key).toBe(key)
   })
 })
+
+describe('useDashboardEdit draft ownership', () => {
+  it('drops the draft when another dashboard shows, so it cannot be saved there', async () => {
+    const save = { mutateAsync: vi.fn() }
+    const { result, rerender } = renderHook(({ id }) => useDashboardEdit({ activeId: id, dashboard, save }), {
+      initialProps: { id: 'd1' },
+    })
+    act(() => result.current.startEdit())
+    expect(result.current.editing).toBe(true)
+
+    rerender({ id: 'd2' })
+    expect(result.current.editing).toBe(false)
+    await act(() => result.current.onSave())
+    expect(save.mutateAsync).not.toHaveBeenCalled()
+  })
+})
