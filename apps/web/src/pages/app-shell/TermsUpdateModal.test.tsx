@@ -2,12 +2,20 @@ import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { TERMS_VERSION } from '@/lib'
 import { TermsUpdateModal } from './TermsUpdateModal'
 
 const accept = { isPending: false, isError: false, error: null, mutate: vi.fn() }
 
-vi.mock('@/hooks', () => ({ useAcceptTerms: () => accept }))
+vi.mock('@/hooks', () => ({
+  useAcceptTerms: () => accept,
+  useBootstrap: () => ({
+    data: {
+      terms_version: '2026-11-15',
+      terms_url: 'https://example.com/terms',
+      privacy_url: 'https://example.com/privacy',
+    },
+  }),
+}))
 
 function renderModal(outdated: boolean, onSignOut = vi.fn()): void {
   render(
@@ -32,10 +40,14 @@ describe('TermsUpdateModal', () => {
     renderModal(true)
     expect(screen.getByText('Our terms changed')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /close/i })).toBeNull()
-    expect(screen.getByRole('link', { name: 'Terms of Service' }).getAttribute('href')).toBe('/terms')
-    expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe('/privacy')
+    expect(screen.getByRole('link', { name: 'Terms of Service' }).getAttribute('href')).toBe(
+      'https://example.com/terms'
+    )
+    expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe(
+      'https://example.com/privacy'
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Accept and continue' }))
-    expect(accept.mutate).toHaveBeenCalledWith(TERMS_VERSION)
+    expect(accept.mutate).toHaveBeenCalledWith('2026-11-15')
   })
 
   it('offers to sign out instead', async () => {

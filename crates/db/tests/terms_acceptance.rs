@@ -2,11 +2,12 @@
 //!
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
-use linkdean_core::legal::TERMS_VERSION;
 use linkdean_core::Error;
 use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
+
+const TERMS_VERSION: Option<&str> = Some("2026-11-15");
 
 async fn pool_or_skip() -> Option<PgPool> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
@@ -36,28 +37,33 @@ async fn an_account_on_old_terms_accepts_the_current_version() {
         .await
         .expect("find")
         .expect("user");
-    assert!(!user.terms_current());
+    assert!(!user.terms_current(TERMS_VERSION));
     assert!(
-        !db::to_public(&pool, &user)
+        !db::to_public(&pool, &user, TERMS_VERSION)
             .await
             .expect("public")
             .terms_current
     );
+    // A server without terms asks for none, and records nothing.
+    assert!(user.terms_current(None));
+    db::accept_terms(&pool, user.id, None, "1999-01-01")
+        .await
+        .expect("no terms");
 
     // A stale version from an old tab is refused.
-    let err = db::accept_terms(&pool, user.id, "1999-01-01")
+    let err = db::accept_terms(&pool, user.id, TERMS_VERSION, "1999-01-01")
         .await
         .unwrap_err();
     assert!(matches!(err, Error::BadRequest(_)), "{err}");
 
-    db::accept_terms(&pool, user.id, TERMS_VERSION)
+    db::accept_terms(&pool, user.id, TERMS_VERSION, "2026-11-15")
         .await
         .expect("accept");
     let user = db::find_user_by_id(&pool, user.id)
         .await
         .expect("find")
         .expect("user");
-    assert!(user.terms_current());
+    assert!(user.terms_current(TERMS_VERSION));
     let accepted_at: Option<chrono::DateTime<chrono::Utc>> =
         sqlx::query_scalar("SELECT terms_accepted_at FROM users WHERE id = $1")
             .bind(user.id)

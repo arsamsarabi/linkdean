@@ -47,6 +47,8 @@ pub struct Config {
     /// Origin of a GoatCounter instance (`https://stats.example.com`) that counts page views
     /// in the web app. Unset keeps analytics off. Only route names are sent, never ids or queries.
     pub goatcounter_url: Option<String>,
+    /// The operator's Terms of Service and Privacy Policy.
+    pub legal: Legal,
     /// When true and mail is on, require verified email even if the platform setting is off.
     pub require_verified_email: bool,
     /// When true, refuse registration / email-change to known disposable domains.
@@ -56,6 +58,42 @@ pub struct Config {
     /// Experimental: `GET /api/agent-skill` and its UI. Off unless `EXPERIMENTAL_AGENT_SKILLS`.
     pub experimental_agent_skills: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
+}
+
+/// The operator's legal documents, from `TERMS_VERSION`, `TERMS_URL` and `PRIVACY_URL`. Without
+/// a terms version, sign-up asks for no acceptance. The app links only the URLs that are set.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Legal {
+    pub terms_version: Option<String>,
+    pub terms_url: Option<String>,
+    pub privacy_url: Option<String>,
+}
+
+impl Legal {
+    /// Reads the three settings through `var`. A URL must be http(s), since the app links to it
+    /// and `/terms` redirects to it, and a terms version needs `TERMS_URL` to show the terms.
+    pub fn from_vars(var: impl Fn(&str) -> Option<String>) -> anyhow::Result<Self> {
+        let get = |k: &str| {
+            var(k)
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+        };
+        let url = |k: &str| match get(k) {
+            Some(u) if !(u.starts_with("https://") || u.starts_with("http://")) => {
+                anyhow::bail!("{k} must start with https:// or http://")
+            }
+            u => Ok(u),
+        };
+        let legal = Self {
+            terms_version: get("TERMS_VERSION"),
+            terms_url: url("TERMS_URL")?,
+            privacy_url: url("PRIVACY_URL")?,
+        };
+        if legal.terms_version.is_some() && legal.terms_url.is_none() {
+            anyhow::bail!("TERMS_VERSION is set but TERMS_URL is missing");
+        }
+        Ok(legal)
+    }
 }
 
 /// `GOATCOUNTER_URL` must be a bare origin: https, or http on this machine, with no path,
@@ -198,6 +236,7 @@ impl Config {
                 .filter(|s| !s.is_empty())
                 .map(|s| parse_goatcounter_url(&s))
                 .transpose()?,
+            legal: Legal::from_vars(|k| std::env::var(k).ok())?,
             require_verified_email: env_bool("REQUIRE_VERIFIED_EMAIL", false),
             block_disposable_emails: env_bool("BLOCK_DISPOSABLE_EMAILS", false),
             dev_routes: env_bool("ALLOW_DEFAULT_SECRETS", false),
@@ -235,6 +274,11 @@ impl Config {
             || self.google_sso.is_some()
             || self.microsoft_sso.is_some()
             || self.github_sso.is_some()
+    }
+
+    /// The Terms of Service version sign-up must accept, if the server has terms.
+    pub fn terms_version(&self) -> Option<&str> {
+        self.legal.terms_version.as_deref()
     }
 
     pub fn turnstile_enabled(&self) -> bool {
@@ -357,6 +401,38 @@ mod tests {
     use super::*;
 
     const URL: &str = "postgres://linkdean:a1b2c3@db:5432/linkdean";
+
+    fn legal(vars: &[(&str, &str)]) -> anyhow::Result<Legal> {
+        Legal::from_vars(|k| {
+            vars.iter()
+                .find(|(name, _)| *name == k)
+                .map(|(_, v)| v.to_string())
+        })
+    }
+
+    #[test]
+    fn legal_settings_are_optional_and_checked() {
+        assert_eq!(legal(&[]).unwrap(), Legal::default());
+        let set = legal(&[
+            ("TERMS_VERSION", "2026-11-15"),
+            ("TERMS_URL", "https://example.com/terms"),
+            ("PRIVACY_URL", " https://example.com/privacy "),
+        ])
+        .unwrap();
+        assert_eq!(set.terms_version.as_deref(), Some("2026-11-15"));
+        assert_eq!(
+            set.privacy_url.as_deref(),
+            Some("https://example.com/privacy")
+        );
+        // A privacy policy alone asks for no acceptance.
+        assert!(legal(&[("PRIVACY_URL", "https://example.com/privacy")])
+            .unwrap()
+            .terms_version
+            .is_none());
+        assert!(legal(&[("TERMS_VERSION", "2026-11-15")]).is_err());
+        assert!(legal(&[("TERMS_URL", "javascript:alert(1)")]).is_err());
+        assert!(legal(&[("PRIVACY_URL", "example.com/privacy")]).is_err());
+    }
 
     #[test]
     fn goatcounter_url_must_be_a_bare_origin() {

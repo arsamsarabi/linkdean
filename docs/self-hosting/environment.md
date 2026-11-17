@@ -57,6 +57,18 @@ Off by default. Public beta hosts usually set all three with SMTP.
 
 The API refuses to start when only one Turnstile key is set.
 
+### Legal pages
+
+Unset by default: sign-up asks for no terms, and the app shows no legal links.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `TERMS_VERSION` | unset | Version of your Terms of Service, such as `2026-11-15`. Sign-up and SSO sign-in then need the terms checkbox, the API refuses a missing or stale version, and accounts that accepted an older version (or none) are asked to accept this one. Change it when the terms change. Needs `TERMS_URL` |
+| `TERMS_URL` | unset | Your Terms of Service page, linked from sign-in, sign-up and the accept prompt. `/terms` on the app redirects to it, and `/acceptable-use` to its `#acceptable-use` section. Every page also shows a dismissible public-beta notice that links it |
+| `PRIVACY_URL` | unset | Your Privacy Policy page, linked next to the terms. `/privacy` on the app redirects to it |
+
+The API refuses to start when `TERMS_VERSION` is set without `TERMS_URL`, or when a URL does not start with `https://` or `http://`.
+
 ### Single sign-on
 
 Each provider is on when its variables are all set, and gets its own button on the sign-in page, in this order. Details and how SSO meets existing password accounts: [Single sign-on](./operations.md#single-sign-on).

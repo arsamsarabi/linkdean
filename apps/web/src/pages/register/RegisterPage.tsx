@@ -5,7 +5,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { api } from '@/api'
 import { AvatarCropModal, QueryErrorAlert } from '@/components'
 import { useBootstrap, useRegister, useSessionCheck, useSyncDuringRender, useUploadAvatar } from '@/hooks'
-import { resolveDefaultLanding, TERMS_VERSION } from '@/lib'
+import { resolveDefaultLanding } from '@/lib'
 import { validatePasswordPair } from '@/services'
 import { RegisterForm } from './RegisterForm'
 import { RegisterInviteGate } from './RegisterInviteGate'
@@ -61,7 +61,7 @@ export function RegisterPage(): ReactElement {
         invite_code: inviteCode.trim() || undefined,
         share_token: search.share,
         turnstile_token: turnstileToken ?? undefined,
-        terms_version: TERMS_VERSION,
+        terms_version: bootstrap.data?.terms_version ?? '',
       })
       if (pendingAvatar) {
         try {
@@ -137,6 +137,7 @@ export function RegisterPage(): ReactElement {
         password2={password2}
         pendingAvatar={pendingAvatar}
         registerPending={register.isPending}
+        legal={bootstrap.data ?? {}}
         termsAccepted={termsAccepted}
         turnstileSiteKey={turnstileSiteKey}
         turnstileResetKey={turnstileResetKey}

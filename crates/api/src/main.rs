@@ -3,6 +3,7 @@ mod config;
 mod disposable_email;
 mod error;
 mod http_cache;
+mod legal;
 mod logging;
 mod mail;
 mod maintenance;
@@ -84,6 +85,7 @@ async fn main() -> anyhow::Result<()> {
     let csp = security::content_security_policy(cfg.goatcounter_url.as_deref());
     let app = Router::new()
         .merge(security::security_txt_router())
+        .merge(legal::redirect_router(&cfg.legal))
         .nest("/api", api)
         // Client routes such as /library are the app shell, with 200 like any page.
         .fallback_service(ServeDir::new(&static_dir).fallback(ServeFile::new(index)))

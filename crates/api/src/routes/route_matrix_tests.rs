@@ -160,12 +160,11 @@ async fn user(pool: &sqlx::PgPool, admin: bool) -> (String, String) {
     .await
     .unwrap();
     sqlx::query(
-        "UPDATE users SET is_admin = $2, onboarding_completed = true, email_verified_at = now(), \
-         terms_version = $3, terms_accepted_at = now() WHERE id = $1",
+        "UPDATE users SET is_admin = $2, onboarding_completed = true, email_verified_at = now() \
+         WHERE id = $1",
     )
     .bind(u.id)
     .bind(admin)
-    .bind(linkdean_core::legal::TERMS_VERSION)
     .execute(pool)
     .await
     .unwrap();

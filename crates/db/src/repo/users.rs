@@ -215,7 +215,12 @@ pub async fn user_has_vault(pool: &PgPool, user_id: Uuid) -> Result<bool> {
     Ok(n.0 > 0)
 }
 
-pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
+/// The account as the API returns it. `terms_version` is the server's, for `terms_current`.
+pub async fn to_public(
+    pool: &PgPool,
+    user: &User,
+    terms_version: Option<&str>,
+) -> Result<UserPublic> {
     Ok(UserPublic {
         id: user.id,
         email: user.email.clone(),
@@ -233,13 +238,22 @@ pub async fn to_public(pool: &PgPool, user: &User) -> Result<UserPublic> {
         sso_connected: user.oidc_subject.is_some(),
         sso_provider: user.sso_provider(),
         deletion_scheduled_at: user.deletion_scheduled_at,
-        terms_current: user.terms_current(),
+        terms_current: user.terms_current(terms_version),
     })
 }
 
-/// Records that the account accepted Terms of Service `version`, which must be the current one.
-pub async fn accept_terms(pool: &PgPool, user_id: Uuid, version: &str) -> Result<()> {
-    linkdean_core::legal::require_current_terms(Some(version))?;
+/// Records that the account accepted Terms of Service `version`, which must equal `current`, the
+/// server's terms version. A server without terms has nothing to record.
+pub async fn accept_terms(
+    pool: &PgPool,
+    user_id: Uuid,
+    current: Option<&str>,
+    version: &str,
+) -> Result<()> {
+    linkdean_core::legal::require_current_terms(current, Some(version))?;
+    let Some(current) = current else {
+        return Ok(());
+    };
     let done = sqlx::query(
         r#"
         UPDATE users
@@ -248,7 +262,7 @@ pub async fn accept_terms(pool: &PgPool, user_id: Uuid, version: &str) -> Result
         "#,
     )
     .bind(user_id)
-    .bind(linkdean_core::legal::TERMS_VERSION)
+    .bind(current)
     .execute(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;

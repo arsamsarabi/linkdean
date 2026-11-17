@@ -2,6 +2,8 @@ import { type ReactElement, type RefObject } from 'react'
 import { Anchor, Button, FileButton, Group, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { IconLogin, IconPhoto, IconTrash, IconUserPlus } from '@tabler/icons-react'
 import { LegalFooterLinks, TermsAgreement, TurnstileWidget } from '@/components'
+import { termsSatisfied } from '@/lib'
+import type { LegalLinks } from '@/schemas'
 import { MIN_SECRET_LENGTH } from '@/services'
 import motion from '@/styles/motion.module.css'
 
@@ -18,6 +20,7 @@ type Props = {
   password2: string
   pendingAvatar: Blob | null
   registerPending: boolean
+  legal: LegalLinks
   termsAccepted: boolean
   turnstileSiteKey: string | null
   turnstileResetKey: number
@@ -46,6 +49,7 @@ export function RegisterForm({
   password2,
   pendingAvatar,
   registerPending,
+  legal,
   termsAccepted,
   turnstileSiteKey,
   turnstileResetKey,
@@ -115,7 +119,7 @@ export function RegisterForm({
               </Button>
             ) : null}
           </Group>
-          <TermsAgreement checked={termsAccepted} onChange={onTermsAccepted} />
+          <TermsAgreement legal={legal} checked={termsAccepted} onChange={onTermsAccepted} />
           {turnstileSiteKey ? (
             <TurnstileWidget key={turnstileResetKey} siteKey={turnstileSiteKey} onToken={onTurnstileToken} />
           ) : null}
@@ -123,7 +127,12 @@ export function RegisterForm({
             leftSection={<IconUserPlus {...iconSm} />}
             loading={registerPending}
             onClick={onSubmit}
-            disabled={!email || !password || !termsAccepted || (closed && !inviteCode.trim())}
+            disabled={
+              !email ||
+              !password ||
+              !termsSatisfied(legal.terms_version, termsAccepted) ||
+              (closed && !inviteCode.trim())
+            }
           >
             Sign up
           </Button>
@@ -135,7 +144,7 @@ export function RegisterForm({
           </Anchor>
         </Stack>
       </Paper>
-      <LegalFooterLinks />
+      <LegalFooterLinks legal={legal} />
     </Stack>
   )
 }
