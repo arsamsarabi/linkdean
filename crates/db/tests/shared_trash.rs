@@ -204,3 +204,35 @@ async fn a_live_share_under_a_trashed_parent_is_hidden() {
         Err(Error::NotFound)
     ));
 }
+
+#[tokio::test]
+async fn an_invitees_tag_edit_stays_in_the_owners_tags() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "owner").await;
+    let invitee = user(&pool, "invitee").await;
+    let f = folder(&pool, &owner, None).await;
+    share(&pool, &owner, f, &invitee).await;
+    let b = bookmark(&pool, &owner, f).await;
+    for req in [
+        UpdateBookmark {
+            tags: Some(vec!["set-by-invitee".into()]),
+            ..Default::default()
+        },
+        UpdateBookmark {
+            add_tags: Some(vec!["added-by-invitee".into()]),
+            ..Default::default()
+        },
+    ] {
+        db::update_bookmark(&pool, invitee.id, b, req, &VaultKeyring::default())
+            .await
+            .expect("invitee edits tags");
+    }
+
+    let names = |tags: Vec<linkdean_core::Tag>| tags.into_iter().map(|t| t.name).collect::<Vec<_>>();
+    let owners = names(db::list_tags(&pool, owner.id).await.expect("owner tags"));
+    assert!(owners.contains(&"set-by-invitee".to_string()), "{owners:?}");
+    assert!(owners.contains(&"added-by-invitee".to_string()), "{owners:?}");
+    assert!(names(db::list_tags(&pool, invitee.id).await.expect("invitee tags")).is_empty());
+}

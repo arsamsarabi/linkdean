@@ -1249,12 +1249,11 @@ pub async fn update_bookmark(
         Some(ids) if content => Some(plan_bookmark_categories(pool, user_id, id, &ids).await?),
         _ => None,
     };
-    // Tags stay in the actor's tag namespace. Vault tags live inside the ciphertext.
-    // Known issue: A write invitee's tag edit therefore moves the owner's bookmark's tags into
-    // the invitee's namespace. Fix: use the bookmark owner's namespace.
+    // Tags live in the bookmark owner's namespace, also when a write invitee edits them. Vault
+    // tags live inside the ciphertext.
     let tag_ids: Option<Vec<Uuid>> = match &req.tags {
         Some(tags) if !existing.is_vault => Some(
-            ensure_tags(pool, user_id, tags)
+            ensure_tags(pool, existing.owner_user_id, tags)
                 .await?
                 .into_iter()
                 .map(|t| t.id)
@@ -1264,7 +1263,7 @@ pub async fn update_bookmark(
     };
     let add_tag_ids: Option<Vec<Uuid>> = match &req.add_tags {
         Some(tags) if !existing.is_vault => Some(
-            ensure_tags(pool, user_id, tags)
+            ensure_tags(pool, existing.owner_user_id, tags)
                 .await?
                 .into_iter()
                 .map(|t| t.id)
