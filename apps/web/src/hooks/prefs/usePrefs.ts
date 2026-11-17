@@ -21,8 +21,6 @@ export function usePrefsHydration(enabled: boolean): UseQueryResult<MeResponse> 
   const appliedTheme = useRef<string | null>(null)
   const me = useMe(enabled)
   const vaultLock = useLockAllVaults()
-  // Known issue: If the idle auto-lock request fails, the UI reports locked while decrypted data
-  // stays on screen. Fix: keep the unlocked state and retry, and always drop cached vault data.
   const lockRef = useRef(vaultLock.mutateAsync)
 
   useEffect(() => {
@@ -68,12 +66,19 @@ export function applyTheme(theme: UserSettings['theme'], setColorScheme: (v: 'li
   else setColorScheme(theme)
 }
 
-function useVaultAutoLock(
+/** How long to wait before trying a failed idle lock again. */
+export const AUTO_LOCK_RETRY_MS = 30_000
+
+/**
+ * Locks the vaults after the set idle minutes. The lock mutation marks them locked and drops
+ * decrypted data when it succeeds; when it fails they are still unlocked on the server, so the
+ * UI keeps saying so and tries again.
+ */
+export function useVaultAutoLock(
   settings: UserSettings | undefined,
   vaultUnlocked: boolean,
   lockRef: MutableRefObject<() => Promise<unknown>>
 ): void {
-  const setVaultUnlocked = useUi((s) => s.setVaultUnlocked)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const minutes = settings?.vault_auto_lock_minutes ?? 0
 
@@ -83,18 +88,15 @@ function useVaultAutoLock(
       return
     }
 
+    const lock = (): void => {
+      lockRef.current().catch((e: unknown) => {
+        console.error('Vault auto-lock failed, trying again', e)
+        timer.current = setTimeout(lock, AUTO_LOCK_RETRY_MS)
+      })
+    }
     const reset = (): void => {
       if (timer.current) clearTimeout(timer.current)
-      timer.current = setTimeout(() => {
-        void lockRef
-          .current()
-          .catch((e: unknown) => {
-            console.error('Vault auto-lock failed', e)
-          })
-          .finally(() => {
-            setVaultUnlocked(false)
-          })
-      }, minutes * 60_000)
+      timer.current = setTimeout(lock, minutes * 60_000)
     }
 
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'] as const
@@ -104,5 +106,5 @@ function useVaultAutoLock(
       events.forEach((e) => window.removeEventListener(e, reset))
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [vaultUnlocked, minutes, setVaultUnlocked, lockRef])
+  }, [vaultUnlocked, minutes, lockRef])
 }
