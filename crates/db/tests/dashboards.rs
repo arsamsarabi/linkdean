@@ -453,6 +453,35 @@ async fn dashboard_share_read_write_and_revoke() {
         .iter()
         .any(|d| d.id == home.id && d.access == CategoryAccess::Write));
 
+    // In the owner's Trash, the invitee can neither see nor edit it; a restore brings access back.
+    db::delete_dashboard(&pool, user_a.id, home.id)
+        .await
+        .expect("trash");
+    assert!(matches!(
+        db::get_dashboard(&pool, user_b.id, home.id, &VaultKeyring::default()).await,
+        Err(Error::NotFound)
+    ));
+    assert!(matches!(
+        db::put_dashboard(
+            &pool,
+            user_b.id,
+            home.id,
+            PutDashboardLayout {
+                title: Some("Edited in Trash".into()),
+                sections: vec![],
+            },
+            &VaultKeyring::default(),
+        )
+        .await,
+        Err(Error::NotFound)
+    ));
+    db::restore_dashboard(&pool, user_a.id, home.id)
+        .await
+        .expect("restore");
+    db::get_dashboard(&pool, user_b.id, home.id, &VaultKeyring::default())
+        .await
+        .expect("b reads again after restore");
+
     db::delete_dashboard_share(&pool, user_a.id, home.id, user_b.id)
         .await
         .expect("revoke");
