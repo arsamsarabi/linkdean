@@ -300,6 +300,50 @@ async fn every_blocker_is_listed_and_nothing_moves() {
 }
 
 #[tokio::test]
+async fn another_users_pin_does_not_block_and_is_removed() {
+    let Some(s) = setup().await else {
+        return;
+    };
+    let friend = person(&s.pool, "friend").await;
+    let id = bookmark(&s, "https://pinned.example/", vec![], vec![]).await;
+    // A pin left on someone else's dashboard, for example from a share since revoked.
+    let board = db::create_dashboard(
+        &s.pool,
+        friend.id,
+        CreateDashboard {
+            title: Some("Friend's secret board".into()),
+        },
+        &VaultKeyring::default(),
+    )
+    .await
+    .expect("dashboard");
+    let (section,): (Uuid,) = sqlx::query_as(
+        "INSERT INTO dashboard_sections (dashboard_id, title) VALUES ($1, 'Top') RETURNING id",
+    )
+    .bind(board.id)
+    .fetch_one(&s.pool)
+    .await
+    .expect("section");
+    sqlx::query("INSERT INTO dashboard_items (section_id, bookmark_id) VALUES ($1, $2)")
+        .bind(section)
+        .bind(id)
+        .execute(&s.pool)
+        .await
+        .expect("pin");
+
+    let outcome = db::move_to_vault(&s.pool, s.owner.id, request(vec![], vec![id], Some(s.vault)), &s.keyring)
+        .await
+        .expect("move");
+    assert!(matches!(outcome, VaultMoveOutcome::Moved { .. }), "{outcome:?}");
+    let (pins,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM dashboard_items WHERE bookmark_id = $1")
+        .bind(id)
+        .fetch_one(&s.pool)
+        .await
+        .expect("count");
+    assert_eq!(pins, 0);
+}
+
+#[tokio::test]
 async fn moving_both_categories_together_is_not_blocked() {
     let Some(s) = setup().await else {
         return;

@@ -172,18 +172,18 @@ async fn find_blockers(
             continue;
         }
 
-        // Known issue: This counts pins on any dashboard, including other users'. Someone else's
-        // stale pin blocks the move indefinitely, and the message reveals that dashboard's title.
-        // Fix: delete foreign pins, and block only on the owner's dashboards.
+        // Only the owner's own dashboards block: other people's pins are removed by the move, and
+        // their titles are not the owner's to see.
         let boards: Vec<(Uuid, String)> = sqlx::query_as(
             r#"
             SELECT DISTINCT d.id, d.title FROM dashboard_items i
             JOIN dashboard_sections s ON s.id = i.section_id
             JOIN dashboards d ON d.id = s.dashboard_id
-            WHERE i.bookmark_id = $1 AND d.deleted_at IS NULL
+            WHERE i.bookmark_id = $1 AND d.deleted_at IS NULL AND d.owner_user_id = $2
             "#,
         )
         .bind(bookmark.id)
+        .bind(bookmark.owner_user_id)
         .fetch_all(pool)
         .await
         .map_err(db_err)?;
@@ -232,6 +232,19 @@ async fn write_encrypted(
             .fetch_all(&mut **tx)
             .await
             .map_err(db_err)?;
+    // Pins on other people's dashboards go: a vault bookmark is never shown to anyone else.
+    sqlx::query(
+        r#"
+        DELETE FROM dashboard_items i
+        USING dashboard_sections s, dashboards d, bookmarks b
+        WHERE i.bookmark_id = $1 AND s.id = i.section_id AND d.id = s.dashboard_id
+          AND b.id = i.bookmark_id AND d.owner_user_id <> b.owner_user_id
+        "#,
+    )
+    .bind(id)
+    .execute(&mut **tx)
+    .await
+    .map_err(db_err)?;
     sqlx::query(
         r#"
         UPDATE activity_events
