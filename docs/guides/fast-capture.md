@@ -4,7 +4,7 @@ Four ways to save the page you are on without opening Linkdean and pasting a lin
 
 ## Browser extension (Chrome, Edge, Firefox)
 
-Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf); Edge installs from the same listing. The Firefox add-on is in review on AMO. Until it is approved, or for a self-built build, load it unpacked from `apps/extension` (its README says how). **Config options → Fast capture** in Linkdean links to the store too. Capability summary: [features.md](../product/features.md).
+Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf) (Edge installs from the same listing) or from [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/linkdean/). For a build of your own, load it unpacked from `apps/extension` (its README says how). **Config options → Fast capture** in Linkdean links to both stores. Capability summary: [features.md](../product/features.md).
 
 1. Click the Linkdean button in the toolbar and choose **Sign in**. Keep `app.linkdean.app`, or type the address of your own Linkdean.
 2. Allow the extension to reach that site when the browser asks. It asks for that one site only.
