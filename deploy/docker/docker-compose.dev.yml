@@ -101,6 +101,7 @@ services:
       BIND: 0.0.0.0:8080
       AVATAR_DIR: /app/data/avatars
       PREVIEW_DIR: /app/data/previews
+      ARCHIVE_DIR: /app/data/archives
       BROWSER_WS_URL: http://chrome:9222
       # Chrome's only way out: a proxy in the API that refuses private addresses.
       BROWSER_PROXY_BIND: 0.0.0.0:3128
@@ -140,6 +141,8 @@ services:
       - cargo_registry:/usr/local/cargo/registry
       - avatars:/app/data/avatars
       - previews:/app/data/previews
+      # archived copies: {bookmark id}/{format}-{uuid}
+      - archives:/app/data/archives
     depends_on:
       db:
         condition: service_healthy
@@ -180,6 +183,7 @@ volumes:
   meili:
   avatars:
   previews:
+  archives:
   api_target:
   cargo_registry:
   web_node_modules:

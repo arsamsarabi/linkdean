@@ -6,6 +6,11 @@
 
 **Architecture:** A `bookmark_archives` table is a durable queue and the record of each copy. A runner task in the API process claims queued bookmarks and captures them through the shared Chrome. It converts the MHTML snapshot to one HTML file in the worker crate, encrypts vault copies with the vault key, and writes files under `ARCHIVE_DIR`. Routes serve copies with a sandbox CSP. The web app adds a dialog, a viewer route, a drawer section, badges, a Quick peek fallback, a Settings tab and admin limits.
 
+**Built differently from this plan:**
+- Purged bookmarks: no purge hooks. An hourly sweep in `archive_runner.rs` removes files that no row lists and that are over an hour old, which also covers deleted accounts and crashes. `purge_bookmark_archives` does not exist.
+- Vault moves: `archives_needing_rekey(pool, owner_id)` and `rekey_after_vault_move(state, keyring, owner_id)` scan the owner's copies whose key vault differs from the bookmark's vault, because a move between vaults does not show in the move result's ids.
+- The admin limits sit in Admin → Quotas, not Platform settings.
+
 **Tech stack:** Rust (axum, sqlx, chromiumoxide 0.8, `lol_html` (new)), Postgres, React with Mantine and TanStack Router and Query, vitest.
 
 **Conventions:**

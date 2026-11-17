@@ -91,7 +91,7 @@ Passkeys need no variables. They belong to the host in `APP_URL`: changing that 
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `BROWSER_WS_URL` | unset | Chrome DevTools address, `http://chrome:9222` with the service above. Unset, no screenshots are taken |
+| `BROWSER_WS_URL` | unset | Chrome DevTools address, `http://chrome:9222` with the service above. Unset, no screenshots are taken and pages cannot be archived (files still can) |
 | `BROWSER_PROXY_BIND` | unset | Address the API serves Chrome's egress proxy on, `0.0.0.0:3128` with the service above. Only starts when `BROWSER_WS_URL` is set too. The proxy connects only to public addresses, and only to ports 80, 443 and 1024 and up. The API refuses to start if the value is not `address:port` |
 
 ### Logging
@@ -158,6 +158,8 @@ These have working defaults inside the image. Change them only for a reason.
 | `MEILI_URL` | set by the compose file | Meilisearch address |
 | `AVATAR_DIR` | `/app/data/avatars` | Where uploaded avatars are stored. Keep it on the `avatars` volume |
 | `PREVIEW_DIR` | `/app/data/previews` | Where screenshots and cached favicons and Open Graph images are stored. Keep it on the `previews` volume |
+| `ARCHIVE_DIR` | `/app/data/archives` | Where archived copies of pages are stored. Keep it on the `archives` volume |
+| `ARCHIVE_CONCURRENCY` | `2` | Archive captures that run at once, 1 to 8. Each page capture holds a Chrome tab |
 | `STATIC_DIR` | `/app/static` | Built web app served by the API |
 
 ### Never in production

@@ -105,6 +105,7 @@ services:
     volumes:
       - avatars:/app/data/avatars
       - previews:/app/data/previews
+      - archives:/app/data/archives
     networks: [data, browser]
     depends_on:
       db:
@@ -130,6 +131,7 @@ volumes:
   meili:
   avatars:
   previews:
+  archives:
 ```
 
 Behind a reverse proxy on the same host, publish the port on loopback only: `"127.0.0.1:8080:8080"`.
@@ -172,7 +174,7 @@ curl -fsS http://localhost:8080/api/ready    # Postgres and Meilisearch reachabl
 
 ## Optional: page screenshots with Chrome
 
-Without Chrome, bookmark cards show the page's Open Graph image and favicon. With it, Linkdean also takes a screenshot of each saved page.
+Without Chrome, bookmark cards show the page's Open Graph image and favicon. With it, Linkdean also takes a screenshot of each saved page, and people can archive pages as single-file HTML or PDF. Archiving a file address, such as a PDF or an image, works without Chrome.
 
 Chrome opens every page your users save, so it runs locked down: as `nobody`, with a read-only filesystem, no Linux capabilities and its own sandbox on. It sits on the `browser` network with the API and has no route to Postgres or Meilisearch.
 

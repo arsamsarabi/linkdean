@@ -51,6 +51,20 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 ---
 
+## Archive
+
+- Archive a bookmark from its menu, the bookmark drawer or the Library's select mode (up to 500 at once): keep the page as single-file HTML (scripts removed; images, styles and fonts inlined), as a PDF, or both. An address that serves a file (PDF, image, audio, video) is kept as that file. Captures run in the background through the shared Chrome, two at a time by default (`ARCHIVE_CONCURRENCY`)
+- **Archive new bookmarks** (Settings → Archive, off by default) archives each saved bookmark in the chosen formats; imports are not archived
+- Viewer at `/archive/{id}`: the copy inside Linkdean with no scripts and links opening in a new tab, a switch between formats, the live page and a download. Cards show an **archived** badge; a broken or unreachable badge opens the copy; Quick peek offers the copy when a site refuses to embed
+- Archiving again replaces the copy and says so first; a failed attempt keeps the older copy. **Delete archive** removes every copy and keeps the bookmark
+- Downloads are named `<site>-<date>.<ext>`. Copies are served with a sandbox content security policy; an original file a browser could run (HTML, SVG) is only ever downloaded
+- Vault bookmarks: copies are encrypted with the vault key, captured and opened only while the vault is unlocked, and re-encrypted when the bookmark moves in or out of a vault
+- Access: the owner and write invitees archive; anyone who can read the bookmark opens and downloads its copies. Public lists never expose them
+- Limits (Admin → Quotas): archiving on or off, storage per account (unlimited by default; counted on the bookmarks you own, Trash included) and the largest copy (25 MB by default, 1 MB to 1 GB). A page or file over the cap, a bot check, a 404 or 410, or full storage fails with a reason in the drawer
+- Copies stay while a bookmark is in Trash and go when it is purged, through an hourly sweep of unlisted files
+
+---
+
 ## Vault & privacy
 
 - Multiple named vaults, each with its own passphrase and key (Argon2id + AES-GCM)

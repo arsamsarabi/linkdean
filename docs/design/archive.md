@@ -69,7 +69,7 @@ The copy is written to a temporary file and moved into place only when it succee
 
 ### Storage
 
-Copies live under `ARCHIVE_DIR` (a new `archives` volume), at `{bookmark_id}/{format}`. A vault bookmark's copy is encrypted with AES-256-GCM under the vault's data key. The associated data binds it to the vault, the bookmark and the format, as vault payloads do. Moving a bookmark into a vault encrypts its copies; moving it out decrypts them; moving it between vaults re-encrypts them, in the same move.
+Copies live under `ARCHIVE_DIR` (a new `archives` volume), at `{bookmark_id}/{format}-{random id}`. A new copy is written under a fresh name and swapped in, so a reader never sees half a file. A vault bookmark's copy is encrypted with AES-256-GCM under the vault's data key. The associated data binds it to the vault, the bookmark and the format, as vault payloads do. Moving a bookmark into a vault encrypts its copies; moving it out decrypts them; moving it between vaults re-encrypts them, right after the move, using the key of the vault each copy is in now. An hourly sweep deletes files that no row lists any more and are over an hour old: the files of purged bookmarks and deleted accounts, and files left by a crash.
 
 ### Quota and limits
 
@@ -118,7 +118,7 @@ An archived page is untrusted HTML. Scripts are stripped at capture, and the res
 - An `archives` volume in the production and dev Compose files, mounted at `ARCHIVE_DIR`.
 - New environment variables `ARCHIVE_DIR` and `ARCHIVE_CONCURRENCY`, documented in `self-hosting/environment.md`.
 - The hosted beta's backup (restic, in the private infrastructure repository) includes the archives volume. That is a separate change there.
-- Self-hosters turn archiving off or cap it in Admin → Platform settings.
+- Self-hosters turn archiving off or cap it in Admin → Quotas.
 
 ## Testing
 

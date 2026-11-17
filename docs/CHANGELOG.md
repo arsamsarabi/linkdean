@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Archive**: keep a copy of a bookmark as a web page (single-file HTML) or PDF, or the file itself when the address serves one, from its menu, the bookmark drawer or the Library's select mode, or for every new bookmark (**Settings → Archive**). Open the copy inside Linkdean at `/archive/{id}`, download it, archive again or delete it. Broken-link badges and Quick peek offer the copy. Vault copies are encrypted with the vault key. Admins turn archiving off or cap storage per account and the largest copy in **Admin → Quotas**. Self-hosters: add the `archives` volume at `/app/data/archives` (see the Compose files); pages need Chrome (`BROWSER_WS_URL`).
 - **Firefox add-on**: the browser extension is on [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/linkdean/), and **Config options → Fast capture** links to it beside the Chrome Web Store.
 - **Passkeys**: add one under **Profile → Edit profile → Passkeys**, then **Sign in with a passkey** from the login page, with no email or password to type.
 - **Sign in with Google, Microsoft or GitHub**: self-hosters can turn on each with its own client ID and secret, next to any OpenID Connect provider such as Authentik (now named on its button with `OIDC_NAME`).
