@@ -22,7 +22,7 @@ describe('FastCapturePanel', () => {
     )
   })
 
-  it('links the extension to its Chrome Web Store listing', () => {
+  it('links the extension to its Chrome and Firefox store listings', () => {
     render(
       <MantineProvider env="test">
         <FastCapturePanel />
@@ -30,6 +30,9 @@ describe('FastCapturePanel', () => {
     )
     expect(screen.getByRole('link', { name: 'Add to Chrome' }).getAttribute('href')).toBe(
       'https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf'
+    )
+    expect(screen.getByRole('link', { name: 'Add to Firefox' }).getAttribute('href')).toBe(
+      'https://addons.mozilla.org/firefox/addon/linkdean/'
     )
   })
 })

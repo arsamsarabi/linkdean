@@ -307,7 +307,7 @@ More in the [Getting started](https://docs.linkdean.app/docs/getting-started) gu
 
 ## Roadmap
 
-**Where we are:** the public beta is live at [app.linkdean.app](https://app.linkdean.app), with docs at [docs.linkdean.app](https://docs.linkdean.app) and the browser extension on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf). What comes next, in plain language: the [public roadmap](https://docs.linkdean.app/docs/roadmap). Bugs and ideas: [issues](https://github.com/arsamsarabi/linkdean/issues/new/choose) and [discussions](https://github.com/arsamsarabi/linkdean/discussions).
+**Where we are:** the public beta is live at [app.linkdean.app](https://app.linkdean.app), with docs at [docs.linkdean.app](https://docs.linkdean.app) and the browser extension on the [Chrome Web Store](https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf) and [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/linkdean/). What comes next, in plain language: the [public roadmap](https://docs.linkdean.app/docs/roadmap). Bugs and ideas: [issues](https://github.com/arsamsarabi/linkdean/issues/new/choose) and [discussions](https://github.com/arsamsarabi/linkdean/discussions).
 
 - Capabilities: [docs/product/features.md](docs/product/features.md)
 - Plan: [docs/product/roadmap.md](docs/product/roadmap.md)

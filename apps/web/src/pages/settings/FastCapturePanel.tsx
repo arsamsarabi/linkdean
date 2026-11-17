@@ -1,11 +1,13 @@
 import { useEffect, useRef, type ReactElement } from 'react'
 import { Anchor, Button, Code, CopyButton, Group, List, Paper, Stack, Text, Title } from '@mantine/core'
-import { IconBookmarkPlus, IconBrandChrome } from '@tabler/icons-react'
+import { IconBookmarkPlus, IconBrandChrome, IconBrandFirefox } from '@tabler/icons-react'
 import { bookmarkletSource } from '@/lib'
 
 const DOCS = 'https://docs.linkdean.app'
 /** The extension's Chrome Web Store listing; Edge installs from it too. */
 const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/ielbdodidimpcolkjhkjdaifpfibolhf'
+/** The extension's Firefox Add-ons (AMO) listing. */
+const FIREFOX_STORE_URL = 'https://addons.mozilla.org/firefox/addon/linkdean/'
 
 /** Settings → Fast capture: the browser extension, and the bookmarklet that saves the page you are on. */
 export function FastCapturePanel(): ReactElement {
@@ -25,7 +27,7 @@ export function FastCapturePanel(): ReactElement {
             <Title order={4}>Browser extension</Title>
             <Text size="sm" c="dimmed">
               Save the page you are on from the toolbar, the right-click menu or Alt+Shift+S, and see at a glance which
-              pages you have already saved. Works in Chrome and Edge; the Firefox add-on is in review.
+              pages you have already saved. Works in Chrome, Edge and Firefox.
             </Text>
           </Stack>
           <Group>
@@ -37,6 +39,16 @@ export function FastCapturePanel(): ReactElement {
               leftSection={<IconBrandChrome size={16} />}
             >
               Add to Chrome
+            </Button>
+            <Button
+              component="a"
+              href={FIREFOX_STORE_URL}
+              target="_blank"
+              rel="noreferrer"
+              variant="default"
+              leftSection={<IconBrandFirefox size={16} />}
+            >
+              Add to Firefox
             </Button>
             <Anchor
               href={`${DOCS}/docs/guides/fast-capture#browser-extension-chrome-edge-firefox`}
