@@ -5,8 +5,9 @@
 
 use linkdean_core::import_export::{build_linkdean_export, parse_linkdean_json};
 use linkdean_core::{
-    CreateBookmark, CreateCategory, CreateDashboard, DashboardSectionKind, DashboardSectionSettings,
-    DashboardSectionSource, PutDashboardLayout, PutDashboardSection, User, VaultKeyring,
+    CreateBookmark, CreateCategory, CreateDashboard, DashboardSectionKind,
+    DashboardSectionSettings, DashboardSectionSource, PutDashboardLayout, PutDashboardSection,
+    User, VaultKeyring,
 };
 use linkdean_db::{self as db};
 use sqlx::PgPool;

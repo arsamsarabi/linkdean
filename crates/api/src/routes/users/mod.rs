@@ -874,5 +874,11 @@ async fn user_avatar(
     Path(id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
     let target = db::require_viewable_profile(&state.pool, user.id, id).await?;
-    avatar_response(&state, target.id, target.has_avatar, "private, max-age=3600").await
+    avatar_response(
+        &state,
+        target.id,
+        target.has_avatar,
+        "private, max-age=3600",
+    )
+    .await
 }

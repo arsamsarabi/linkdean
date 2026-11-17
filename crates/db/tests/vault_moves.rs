@@ -756,9 +756,14 @@ async fn only_me_survives_a_trip_through_a_vault() {
         .await
         .expect("private");
     for to in [Some(s.vault), None] {
-        db::move_to_vault(&s.pool, s.owner.id, request(vec![], vec![id], to), &s.keyring)
-            .await
-            .expect("move");
+        db::move_to_vault(
+            &s.pool,
+            s.owner.id,
+            request(vec![], vec![id], to),
+            &s.keyring,
+        )
+        .await
+        .expect("move");
     }
     let raw = db::get_bookmark_raw(&s.pool, s.owner.id, id)
         .await
