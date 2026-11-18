@@ -237,6 +237,16 @@ fn want_markdown(as_: Option<&str>, format: ArchiveFormat) -> Result<bool, Error
     }
 }
 
+const NO_READABLE_MARKDOWN: &str = "No readable text in this copy.";
+
+fn markdown_body(html: &str) -> Result<String, Error> {
+    let md = html_to_reader_markdown(html);
+    if md.is_empty() {
+        return Err(Error::BadRequest(NO_READABLE_MARKDOWN.into()));
+    }
+    Ok(md)
+}
+
 #[utoipa::path(
     get,
     operation_id = "bookmarks_get_archive",
@@ -282,10 +292,7 @@ async fn get_copy(
         .and_then(|u| u.host_str().map(str::to_string));
     if want_markdown(q.as_.as_deref(), format)? {
         let html = String::from_utf8_lossy(&bytes);
-        let md = html_to_reader_markdown(&html);
-        if md.is_empty() {
-            return Err(Error::BadRequest("No readable text in this copy.".into()).into());
-        }
+        let md = markdown_body(&html)?;
         let headers = markdown_headers(host.as_deref(), row.captured_at);
         return Ok((StatusCode::OK, headers, md.into_bytes()).into_response());
     }
@@ -517,13 +524,20 @@ mod tests {
 
     #[test]
     fn as_md_only_with_html_format() {
-        assert_eq!(
-            want_markdown(Some("md"), ArchiveFormat::Html).unwrap(),
-            true
-        );
-        assert_eq!(want_markdown(None, ArchiveFormat::Html).unwrap(), false);
+        assert!(want_markdown(Some("md"), ArchiveFormat::Html).unwrap());
+        assert!(!want_markdown(None, ArchiveFormat::Html).unwrap());
         assert!(want_markdown(Some("md"), ArchiveFormat::Pdf).is_err());
         assert!(want_markdown(Some("md"), ArchiveFormat::File).is_err());
         assert!(want_markdown(Some("html"), ArchiveFormat::Html).is_err());
+    }
+
+    #[test]
+    fn empty_html_markdown_is_bad_request_with_exact_message() {
+        let err = markdown_body("<html><body><nav>x</nav></body></html>").unwrap_err();
+        match err {
+            Error::BadRequest(msg) => assert_eq!(msg, NO_READABLE_MARKDOWN),
+            other => panic!("expected BadRequest, got {other:?}"),
+        }
+        assert!(markdown_body("<article><h1>Hi</h1><p>There</p></article>").is_ok());
     }
 }
