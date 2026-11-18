@@ -960,6 +960,10 @@ pub struct BookmarkView {
     /// Archived copies, when any exist or are on their way.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub archive: Option<ArchiveSummary>,
+    /// Reader-mode archive body for Meili upserts only; never loaded in ViewBatch / list JSON.
+    #[serde(skip)]
+    #[schema(ignore)]
+    pub page_text: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

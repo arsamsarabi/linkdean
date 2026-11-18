@@ -709,6 +709,7 @@ async fn view_from_batch(
             link_check_error: None,
             link_checked_at: None,
             archive: batch.archives.get(&b.id).cloned(),
+            page_text: String::new(),
             created_at: b.created_at,
             updated_at: b.updated_at,
         }));
@@ -745,6 +746,7 @@ async fn view_from_batch(
         link_check_error,
         link_checked_at,
         archive: batch.archives.get(&b.id).cloned(),
+        page_text: String::new(),
         created_at: b.created_at,
         updated_at: b.updated_at,
     }))

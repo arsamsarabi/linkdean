@@ -303,6 +303,30 @@ pub struct StoredCopy {
     pub final_url: Option<String>,
     pub key_vault_id: Option<Uuid>,
     pub nonce: Option<Vec<u8>>,
+    /// Reader-mode text for Meili; stored only for non-vault plain HTML finishes.
+    pub page_text: Option<String>,
+}
+
+/// HTML archive page text for Meili upserts. Omits empty / NULL rows.
+pub async fn html_page_texts(pool: &PgPool, ids: &[Uuid]) -> Result<HashMap<Uuid, String>> {
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let rows: Vec<(Uuid, String)> = sqlx::query_as(
+        r#"
+        SELECT bookmark_id, page_text
+        FROM bookmark_archives
+        WHERE format = 'html'
+          AND page_text IS NOT NULL
+          AND page_text <> ''
+          AND bookmark_id = ANY($1)
+        "#,
+    )
+    .bind(ids)
+    .fetch_all(pool)
+    .await
+    .map_err(db_err)?;
+    Ok(rows.into_iter().collect())
 }
 
 /// Record new copies of a bookmark being captured. Returns the files no longer used: the copies
@@ -324,6 +348,12 @@ pub async fn finish_archive(
     if !rows.iter().any(|(_, status, _)| status == "running") {
         return Ok(copies.iter().map(|c| c.file_name.clone()).collect());
     }
+    let is_vault: bool =
+        sqlx::query_scalar("SELECT is_vault FROM bookmarks WHERE id = $1 FOR SHARE")
+            .bind(bookmark_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(db_err)?;
     let is_file = copies.iter().any(|c| c.format == ArchiveFormat::File);
     let mut unused = Vec::new();
     for (format, _, file_name) in &rows {
@@ -348,14 +378,20 @@ pub async fn finish_archive(
             .map_err(db_err)?;
     }
     for c in copies {
+        let page_text = if !is_vault && c.key_vault_id.is_none() && c.format == ArchiveFormat::Html
+        {
+            c.page_text.as_ref().filter(|s| !s.is_empty()).cloned()
+        } else {
+            None
+        };
         sqlx::query(
             r#"
             INSERT INTO bookmark_archives (bookmark_id, format, status, file_name, bytes,
-                content_type, final_url, key_vault_id, nonce, captured_at)
-            VALUES ($1, $2, 'done', $3, $4, $5, $6, $7, $8, now())
+                content_type, final_url, key_vault_id, nonce, page_text, captured_at)
+            VALUES ($1, $2, 'done', $3, $4, $5, $6, $7, $8, $9, now())
             ON CONFLICT (bookmark_id, format) DO UPDATE
             SET status = 'done', file_name = $3, bytes = $4, content_type = $5, final_url = $6,
-                key_vault_id = $7, nonce = $8, captured_at = now(), error = NULL,
+                key_vault_id = $7, nonce = $8, page_text = $9, captured_at = now(), error = NULL,
                 started_at = NULL
             "#,
         )
@@ -367,6 +403,7 @@ pub async fn finish_archive(
         .bind(&c.final_url)
         .bind(c.key_vault_id)
         .bind(&c.nonce)
+        .bind(&page_text)
         .execute(&mut *tx)
         .await
         .map_err(db_err)?;

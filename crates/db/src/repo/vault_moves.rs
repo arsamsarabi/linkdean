@@ -228,6 +228,11 @@ async fn write_encrypted(
     .execute(&mut **tx)
     .await
     .map_err(db_err)?;
+    sqlx::query("UPDATE bookmark_archives SET page_text = NULL WHERE bookmark_id = $1")
+        .bind(id)
+        .execute(&mut **tx)
+        .await
+        .map_err(db_err)?;
     let tag_ids: Vec<Uuid> =
         sqlx::query_scalar("DELETE FROM bookmark_tags WHERE bookmark_id = $1 RETURNING tag_id")
             .bind(id)

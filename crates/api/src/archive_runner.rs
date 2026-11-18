@@ -198,6 +198,8 @@ async fn capture(state: &AppState, id: Uuid, formats: &[ArchiveFormat]) -> Resul
             final_url: t.vault.is_none().then(|| final_url.clone()),
             key_vault_id,
             nonce,
+            // Task 5 wires extract_page_text for non-vault HTML.
+            page_text: None,
         });
     }
     let unused = match db::finish_archive(&state.pool, id, &stored).await {
