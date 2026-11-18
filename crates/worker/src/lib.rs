@@ -222,7 +222,17 @@ pub async fn enrich_bookmark(
         Ok(updated) => {
             let owner = updated.owner_user_id;
             match db::bookmark_to_view(pool, updated, &VaultKeyring::default(), owner).await {
-                Ok(Some(view)) => {
+                Ok(Some(mut view)) => {
+                    // ViewBatch leaves page_text empty; attach archive text so add_or_replace
+                    // does not wipe a Meili body already indexed after HTML capture.
+                    match db::html_page_texts(pool, &[bookmark_id]).await {
+                        Ok(mut texts) => {
+                            if let Some(t) = texts.remove(&bookmark_id) {
+                                view.page_text = t;
+                            }
+                        }
+                        Err(e) => warn!(%bookmark_id, "html page texts load failed: {e}"),
+                    }
                     if let Err(e) = search.upsert_bookmark(&view).await {
                         warn!(%bookmark_id, "search reindex after enrichment: {e}");
                     }
