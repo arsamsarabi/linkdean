@@ -84,6 +84,18 @@ so the first (admin) account can register. Later accounts need registration open
 attempts`: wait out the window, or restart the throwaway API (not the dev stack) to reset the
 counter. Use `--project=chromium --no-deps` to rerun specs without re-running setup.
 
+## Archive specs (`@archive`)
+
+`archive.spec.ts` seeds a finished HTML copy with SQL + a file under `ARCHIVE_DIR`
+(default `data/archives` at the repo root) so tests do not need a live Chrome capture.
+The seed helper uses `E2E_DATABASE_URL` or `DATABASE_URL` with `psql` when set; otherwise
+`docker exec pg-check psql … -d smoke`. Point `E2E_ARCHIVE_DIR` at the API's `ARCHIVE_DIR`
+if it is not the repo-root default.
+
+```sh
+pnpm exec playwright test e2e/archive.spec.ts --project=chromium
+```
+
 ## Cleanup
 
 Stop the throwaway API, `docker stop ld-meili-smoke ld-mailpit`, and optionally
