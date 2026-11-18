@@ -5,25 +5,26 @@ export const CLIENT_HEADER = { 'X-Linkdean-Client': 'web' }
 
 export const E2E_PASSWORD = 'e2e-correct-horse-battery'
 
-/** Fail with the start-the-stack hint when the API cannot be reached, else with the response. */
-async function ok(res: APIResponse, what: string): Promise<APIResponse> {
-  if (!res.ok()) throw new Error(`${what} failed: ${res.status()} ${await res.text()}`)
-  return res
-}
+const START_API_HINT =
+  'Start the throwaway stack first (API on BIND=127.0.0.1:18081, Vite on :5199); see apps/web/e2e/README.md.'
 
+/**
+ * Runs one API call and throws on a non-2xx. A network error, or an empty 5xx (what Vite's proxy
+ * returns when nothing listens on the API port), means the API is down, so say how to start it.
+ */
 async function call(what: string, fn: () => Promise<APIResponse>): Promise<APIResponse> {
+  let res: APIResponse
   try {
-    return await ok(await fn(), what)
+    res = await fn()
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    if (/ECONNREFUSED|ECONNRESET|socket hang up|connect/i.test(msg) && !/ failed: \d{3} /.test(msg)) {
-      throw new Error(
-        `${what}: cannot reach the API through the web baseURL. Start the throwaway stack ` +
-          `(API on BIND=127.0.0.1:18081, Vite on :5199) first; see apps/web/e2e/README.md. (${msg})`,
-      )
-    }
-    throw e
+    throw new Error(`${what}: cannot reach the API. ${START_API_HINT} (${e instanceof Error ? e.message : e})`)
   }
+  if (res.ok()) return res
+  const body = await res.text()
+  if (res.status() >= 500 && body.trim() === '') {
+    throw new Error(`${what}: API unreachable (HTTP ${res.status()}, empty body). ${START_API_HINT}`)
+  }
+  throw new Error(`${what} failed: ${res.status()} ${body}`)
 }
 
 /** `terms_version` from GET /api/auth/bootstrap-status; '' when the server sets none. */
@@ -36,7 +37,7 @@ export async function getTermsVersion(request: APIRequestContext): Promise<strin
 /** Registers a local user; the response sets the `linkdean_session` cookie on `request`. */
 export async function registerUser(
   request: APIRequestContext,
-  user: { email: string; password?: string; displayName?: string; bootstrapToken?: string },
+  user: { email: string; password?: string; displayName?: string; bootstrapToken?: string }
 ): Promise<void> {
   const terms_version = await getTermsVersion(request)
   await call('POST /api/auth/register', () =>
@@ -49,7 +50,7 @@ export async function registerUser(
         bootstrap_token: user.bootstrapToken ?? process.env.E2E_BOOTSTRAP_TOKEN,
         terms_version,
       },
-    }),
+    })
   )
 }
 
@@ -57,16 +58,16 @@ export async function registerUser(
 export async function loginRequest(
   request: APIRequestContext,
   email: string,
-  password: string = E2E_PASSWORD,
+  password: string = E2E_PASSWORD
 ): Promise<void> {
   await call('POST /api/auth/login', () =>
-    request.post('/api/auth/login', { headers: CLIENT_HEADER, data: { email, password } }),
+    request.post('/api/auth/login', { headers: CLIENT_HEADER, data: { email, password } })
   )
 }
 
 /** Marks onboarding done for the cookie-authenticated user on `request`. */
 export async function completeOnboarding(request: APIRequestContext): Promise<void> {
   await call('POST /api/auth/onboarding/complete', () =>
-    request.post('/api/auth/onboarding/complete', { headers: CLIENT_HEADER }),
+    request.post('/api/auth/onboarding/complete', { headers: CLIENT_HEADER })
   )
 }

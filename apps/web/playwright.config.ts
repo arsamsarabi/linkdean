@@ -40,7 +40,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `API_PROXY_TARGET=${apiProxy} pnpm dev --port ${webPort} --strictPort`,
+    command: `API_PROXY_TARGET=${apiProxy} pnpm dev --host 127.0.0.1 --port ${webPort} --strictPort`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
