@@ -45,6 +45,9 @@ fn is_chrome(tag: &str) -> bool {
 }
 
 fn collect_text(el: ElementRef<'_>, out: &mut Vec<String>) {
+    // Known issue: trimming each text node and joining with spaces splits words across
+    // inline tags (`Hel<i>lo</i>` → `Hel lo`). Fine for search this slice; upgrade by
+    // concatenating adjacent text without a space when no whitespace was in the source.
     for child in el.children() {
         match child.value() {
             Node::Text(t) => {
@@ -106,5 +109,26 @@ mod tests {
         let text = extract_page_text(&html);
         assert!(text.chars().count() <= PAGE_TEXT_MAX);
         assert!(!text.is_empty());
+    }
+
+    #[test]
+    fn multiple_articles_prefer_main_then_body() {
+        let html = r#"<html><body>
+          <main>
+            <article>FirstPiece</article>
+            <article>SecondPiece</article>
+          </main>
+        </body></html>"#;
+        let text = extract_page_text(html);
+        assert!(text.contains("FirstPiece"));
+        assert!(text.contains("SecondPiece"));
+
+        let body_only = r#"<html><body>
+          <article>A</article>
+          <article>B</article>
+          <p>BodyFallback</p>
+        </body></html>"#;
+        let text = extract_page_text(body_only);
+        assert!(text.contains("A") && text.contains("B") && text.contains("BodyFallback"));
     }
 }

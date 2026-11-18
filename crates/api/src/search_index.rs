@@ -3,73 +3,30 @@
 use crate::state::AppState;
 use linkdean_core::BookmarkView;
 use linkdean_db as db;
-use uuid::Uuid;
 
 /// Upsert one bookmark after loading HTML archive page text when indexed.
 pub async fn upsert(state: &AppState, view: &BookmarkView) -> anyhow::Result<()> {
-    let enriched = enrich_page_texts(state, std::slice::from_ref(view)).await?;
-    write_meili(state, &enriched).await
+    upsert_many(state, std::slice::from_ref(view)).await
 }
 
 /// Upsert many bookmarks after loading HTML archive page texts when indexed.
 pub async fn upsert_many(state: &AppState, views: &[BookmarkView]) -> anyhow::Result<()> {
-    let enriched = enrich_page_texts(state, views).await?;
-    write_meili(state, &enriched).await
-}
-
-async fn enrich_page_texts(
-    state: &AppState,
-    views: &[BookmarkView],
-) -> anyhow::Result<Vec<BookmarkView>> {
-    let ids: Vec<_> = views
-        .iter()
-        .filter(|v| !v.is_vault && v.deleted_at.is_none())
-        .map(|v| v.id)
-        .collect();
-    let mut texts = if ids.is_empty() {
-        Default::default()
-    } else {
-        // Fail closed: never upsert with empty page_text after a load error (Meili wipe).
-        db::html_page_texts(&state.pool, &ids)
-            .await
-            .map_err(|e| anyhow::anyhow!("html page texts load failed: {e}"))?
-    };
-    Ok(views
-        .iter()
-        .cloned()
-        .map(|mut v| {
-            if let Some(t) = texts.remove(&v.id) {
-                v.page_text = t;
-            }
-            v
-        })
-        .collect())
-}
-
-/// Re-check live vault/trash flags immediately before Meili write (post-move TOCTOU).
-async fn write_meili(state: &AppState, views: &[BookmarkView]) -> anyhow::Result<()> {
-    let ids: Vec<Uuid> = views.iter().map(|v| v.id).collect();
-    let gates = db::bookmark_index_gates(&state.pool, &ids)
+    let plan = db::plan_meili_index_writes(&state.pool, views)
         .await
-        .map_err(|e| anyhow::anyhow!("bookmark index gates failed: {e}"))?;
-
-    let mut to_upsert = Vec::with_capacity(views.len());
-    for view in views {
-        match gates.get(&view.id) {
-            Some((false, false)) => to_upsert.push(view.clone()),
-            Some((true, _)) | Some((_, true)) | None => {
-                // Vault, trash, or gone: remove rather than re-insert page_text.
-                state.search.delete_bookmark(view.id).await?;
-            }
+        .map_err(|e| anyhow::anyhow!("meili index plan failed: {e}"))?;
+    for id in plan.delete {
+        // Warn-and-continue so one vault/trash id does not abort an import batch.
+        if let Err(e) = state.search.delete_bookmark(id).await {
+            tracing::warn!(bookmark_id = %id, error = %e, "meili delete during index plan failed");
         }
     }
-    if to_upsert.is_empty() {
+    if plan.upsert.is_empty() {
         return Ok(());
     }
-    if to_upsert.len() == 1 {
-        state.search.upsert_bookmark(&to_upsert[0]).await
+    if plan.upsert.len() == 1 {
+        state.search.upsert_bookmark(&plan.upsert[0]).await
     } else {
-        state.search.upsert_bookmarks(&to_upsert).await
+        state.search.upsert_bookmarks(&plan.upsert).await
     }
 }
 
@@ -92,34 +49,66 @@ mod tests {
         }
     }
 
+    /// Direct `SearchClient::upsert_bookmark(s)` only in `search_index` (after the shared
+    /// plan) or in the worker (after `plan_meili_index_writes`).
     #[test]
-    fn upsert_call_sites_go_through_search_index() {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-        let mut files = Vec::new();
-        rust_files_under(&root, &mut files);
-
+    fn upsert_call_sites_go_through_shared_plan() {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .expect("workspace");
         let mut offenders = Vec::new();
         let mut admin_uses_helper = false;
-        for path in &files {
-            let rel = path.strip_prefix(&root).unwrap_or(path);
-            let text = fs::read_to_string(path).unwrap_or_default();
-            if rel == Path::new("search_index.rs") {
-                continue;
+        let mut worker_uses_plan = false;
+
+        for crate_src in ["crates/api/src", "crates/worker/src"] {
+            let root = workspace.join(crate_src);
+            let mut files = Vec::new();
+            rust_files_under(&root, &mut files);
+            for path in files {
+                let rel = path
+                    .strip_prefix(&workspace)
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|_| path.display().to_string());
+                let text = fs::read_to_string(&path).unwrap_or_default();
+                if !text.contains("upsert_bookmark") {
+                    continue;
+                }
+                if rel.ends_with("crates/api/src/search_index.rs") {
+                    continue;
+                }
+                if rel.ends_with("crates/worker/src/lib.rs") {
+                    worker_uses_plan = text.contains("plan_meili_index_writes");
+                    if !worker_uses_plan {
+                        offenders.push(rel);
+                    }
+                    continue;
+                }
+                offenders.push(rel);
             }
-            if text.contains("upsert_bookmark") {
-                offenders.push(rel.display().to_string());
-            }
-            if rel.starts_with("routes/admin") && text.contains("search_index::") {
+        }
+
+        let admin = workspace.join("crates/api/src/routes/admin");
+        let mut admin_files = Vec::new();
+        rust_files_under(&admin, &mut admin_files);
+        for path in admin_files {
+            let text = fs::read_to_string(&path).unwrap_or_default();
+            if text.contains("search_index::") {
                 admin_uses_helper = true;
             }
         }
+
         assert!(
             offenders.is_empty(),
-            "direct SearchClient upsert outside search_index.rs: {offenders:?}"
+            "direct SearchClient upsert without shared plan: {offenders:?}"
         );
         assert!(
             admin_uses_helper,
             "admin reindex must call search_index:: upsert helper"
+        );
+        assert!(
+            worker_uses_plan,
+            "worker enrich must call db::plan_meili_index_writes before Meili upsert"
         );
     }
 }

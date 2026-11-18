@@ -904,11 +904,59 @@ pub async fn bookmark_index_gates(
     .bind(ids)
     .fetch_all(pool)
     .await
-    .map_err(|e| Error::msg(e.to_string()))?;
+    .map_err(db_err)?;
     Ok(rows
         .into_iter()
         .map(|(id, is_vault, soft_deleted)| (id, (is_vault, soft_deleted)))
         .collect())
+}
+
+/// What Meili should receive after attaching archive `page_text` and re-checking vault/trash.
+#[derive(Debug, Default)]
+pub struct MeiliIndexPlan {
+    pub upsert: Vec<linkdean_core::BookmarkView>,
+    pub delete: Vec<Uuid>,
+}
+
+/// Fail-closed attach of HTML `page_text` plus live vault/trash gates for Meili writes.
+/// Shared by the API search helper and the enrichment worker so neither can wipe body text.
+pub async fn plan_meili_index_writes(
+    pool: &PgPool,
+    views: &[linkdean_core::BookmarkView],
+) -> Result<MeiliIndexPlan> {
+    let candidate_ids: Vec<Uuid> = views
+        .iter()
+        .filter(|v| !v.is_vault && v.deleted_at.is_none())
+        .map(|v| v.id)
+        .collect();
+    let mut texts = if candidate_ids.is_empty() {
+        HashMap::new()
+    } else {
+        super::archives::html_page_texts(pool, &candidate_ids).await?
+    };
+
+    let mut with_text: Vec<linkdean_core::BookmarkView> = views
+        .iter()
+        .cloned()
+        .map(|mut v| {
+            if let Some(t) = texts.remove(&v.id) {
+                v.page_text = t;
+            }
+            v
+        })
+        .collect();
+
+    let ids: Vec<Uuid> = with_text.iter().map(|v| v.id).collect();
+    let gates = bookmark_index_gates(pool, &ids).await?;
+
+    let mut plan = MeiliIndexPlan::default();
+    for view in with_text.drain(..) {
+        match gates.get(&view.id) {
+            Some((false, false)) => plan.upsert.push(view),
+            Some((true, _)) | Some((_, true)) | None => plan.delete.push(view.id),
+        }
+    }
+    Ok(plan)
 }
 
 /// Bookmark for serving its preview, favicon or OG image. A dashboard share shows its

@@ -191,8 +191,19 @@ async fn capture(state: &AppState, id: Uuid, formats: &[ArchiveFormat]) -> Resul
             }
         };
         let page_text = if t.vault.is_none() && format == ArchiveFormat::Html {
-            let html = String::from_utf8_lossy(&bytes);
-            Some(linkdean_core::page_text::extract_page_text(&html))
+            let html = String::from_utf8_lossy(&bytes).into_owned();
+            // CPU-heavy on large SingleFile pages; keep the runtime free.
+            match tokio::task::spawn_blocking(move || {
+                linkdean_core::page_text::extract_page_text(&html)
+            })
+            .await
+            {
+                Ok(text) => Some(text),
+                Err(e) => {
+                    warn!(bookmark_id = %id, error = %e, "page text extract join failed");
+                    None
+                }
+            }
         } else {
             None
         };

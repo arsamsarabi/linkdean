@@ -625,3 +625,69 @@ async fn delete_archives_clears_page_text() {
     let texts = db::html_page_texts(&pool, &[id]).await.unwrap();
     assert!(texts.get(&id).is_none());
 }
+
+#[tokio::test]
+async fn meili_plan_attaches_page_text_and_skips_vault() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "meili-plan").await;
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "PlanVault", "plan-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    let mut stored = copy(Html, "for-plan", 10);
+    stored.page_text = Some("indexed body".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+
+    let raw = db::get_bookmark_raw(&pool, owner.id, id).await.unwrap();
+    let view = db::bookmark_to_view(&pool, raw, &none, owner.id)
+        .await
+        .unwrap()
+        .expect("view");
+    assert!(
+        view.page_text.is_empty(),
+        "ViewBatch leaves page_text empty"
+    );
+    let plan = db::plan_meili_index_writes(&pool, &[view]).await.unwrap();
+    assert_eq!(plan.upsert.len(), 1);
+    assert_eq!(plan.upsert[0].page_text, "indexed body");
+    assert!(plan.delete.is_empty());
+
+    let outcome = db::move_to_vault(
+        &pool,
+        owner.id,
+        linkdean_core::MoveToVaultRequest {
+            category_ids: vec![],
+            bookmark_ids: vec![id],
+            destination_vault_id: Some(vault.id),
+        },
+        &keyring,
+    )
+    .await
+    .expect("move");
+    assert!(matches!(
+        outcome,
+        linkdean_core::VaultMoveOutcome::Moved { .. }
+    ));
+
+    let raw = db::get_bookmark_raw(&pool, owner.id, id).await.unwrap();
+    let vault_view = db::bookmark_to_view(&pool, raw, &keyring, owner.id)
+        .await
+        .unwrap()
+        .expect("vault view");
+    assert!(vault_view.is_vault);
+    let plan = db::plan_meili_index_writes(&pool, &[vault_view])
+        .await
+        .unwrap();
+    assert!(plan.upsert.is_empty());
+    assert_eq!(plan.delete, vec![id]);
+}
