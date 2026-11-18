@@ -190,6 +190,12 @@ async fn capture(state: &AppState, id: Uuid, formats: &[ArchiveFormat]) -> Resul
                 return Err(format!("The copy could not be saved: {e}"));
             }
         };
+        let page_text = if t.vault.is_none() && format == ArchiveFormat::Html {
+            let html = String::from_utf8_lossy(&bytes);
+            Some(linkdean_core::page_text::extract_page_text(&html))
+        } else {
+            None
+        };
         stored.push(StoredCopy {
             format,
             file_name,
@@ -198,10 +204,11 @@ async fn capture(state: &AppState, id: Uuid, formats: &[ArchiveFormat]) -> Resul
             final_url: t.vault.is_none().then(|| final_url.clone()),
             key_vault_id,
             nonce,
-            // Task 5 wires extract_page_text for non-vault HTML.
-            page_text: None,
+            page_text,
         });
     }
+    // Known issue: finish-vs-vault-move can leave the HTML file unencrypted (slice-1).
+    // Suggested fix: rekey or check vault after finish / hold bookmark lock across capture+finish.
     let unused = match db::finish_archive(&state.pool, id, &stored).await {
         Ok(unused) => unused,
         Err(e) => {
@@ -210,6 +217,24 @@ async fn capture(state: &AppState, id: Uuid, formats: &[ArchiveFormat]) -> Resul
         }
     };
     remove_files(&dir, unused.iter()).await;
+    if t.vault.is_none() {
+        match db::get_bookmark_raw(&state.pool, t.owner, id).await {
+            Ok(raw) => {
+                match db::bookmark_to_view(&state.pool, raw, &VaultKeyring::default(), t.owner)
+                    .await
+                {
+                    Ok(Some(view)) if !view.is_vault => {
+                        if let Err(e) = crate::search_index::upsert(state, &view).await {
+                            warn!(bookmark_id = %id, error = %e, "meili upsert after archive failed");
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(e) => warn!(bookmark_id = %id, error = %e, "view after archive failed"),
+                }
+            }
+            Err(e) => warn!(bookmark_id = %id, error = %e, "load after archive failed"),
+        }
+    }
     // Formats asked for but not made: a file stands in for both page formats.
     let missing: Vec<ArchiveFormat> = formats
         .iter()

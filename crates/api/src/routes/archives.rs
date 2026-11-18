@@ -177,6 +177,21 @@ async fn delete_all(
 ) -> ApiResult<Json<Value>> {
     let names = db::delete_archives(&state.pool, user.id, id).await?;
     crate::archive_runner::remove_files(&state.archive_dir(id), names.iter()).await;
+    let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
+    if let Some(view) = db::bookmark_to_view(
+        &state.pool,
+        raw,
+        &linkdean_core::VaultKeyring::default(),
+        user.id,
+    )
+    .await?
+    {
+        if !view.is_vault {
+            if let Err(e) = crate::search_index::upsert(&state, &view).await {
+                tracing::warn!(bookmark_id = %id, error = %e, "meili upsert after archive delete failed");
+            }
+        }
+    }
     Ok(Json(json!({ "ok": true })))
 }
 
