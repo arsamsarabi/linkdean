@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement } from 'react'
+import { useMemo, useRef, useState, type ReactElement } from 'react'
 import { MultiSelect, Stack } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useCreateCategory } from '@/hooks'
@@ -32,10 +32,13 @@ export function BookmarkCategoriesField({ categories, value, onChange, canCreate
   const options = useMemo(() => categorySelectData(writable), [writable])
 
   const [search, setSearch] = useState('')
+  // Mantine may clear search before onChange(CREATE_OPTION); keep the offered name out of that race.
+  const createNameRef = useRef('')
 
   const typed = search.trim()
   const nameTaken = writable.some((c) => c.name.toLowerCase() === typed.toLowerCase())
   const offerCreate = canCreate && typed !== '' && !nameTaken
+  if (offerCreate) createNameRef.current = typed
   const data = offerCreate ? [...options, { value: CREATE_OPTION, label: `Create "${typed}"` }] : options
 
   async function createNamed(name: string): Promise<void> {
@@ -58,7 +61,7 @@ export function BookmarkCategoriesField({ categories, value, onChange, canCreate
 
   function handleChange(ids: string[]): void {
     if (ids.includes(CREATE_OPTION)) {
-      const name = typed
+      const name = createNameRef.current
       setSearch('')
       void createNamed(name)
       return

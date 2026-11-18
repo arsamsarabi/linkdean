@@ -14,3 +14,10 @@ graphify-out/
 apps/web/.pnpm-store/
 
 .pnpm-store/
+
+# Playwright (apps/web)
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/playwright/.cache/
+apps/web/e2e/.auth/

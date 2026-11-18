@@ -5,7 +5,8 @@
 db-global-state = { max-threads = 1 }
 
 [[profile.default.overrides]]
-filter = "package(linkdean-db) & (binary(api_keys) | binary(email_outbox) | binary(email_verification) | binary(instance_races) | binary(notification_email))"
+# archives: claim_next_archive + platform archive settings are global (GATE mutex is a no-op across nextest processes).
+filter = "package(linkdean-db) & (binary(api_keys) | binary(archives) | binary(email_outbox) | binary(email_verification) | binary(instance_races) | binary(notification_email))"
 test-group = "db-global-state"
 
 [profile.ci]

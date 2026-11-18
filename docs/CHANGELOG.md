@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Playwright @smoke on PR CI**: Chromium journeys in `apps/web/e2e` run against a throwaway Postgres, Meilisearch and API on every pull request (`Web e2e (@smoke)` job).
 - **Archive**: keep a copy of a bookmark as a web page (single-file HTML) or PDF, or the file itself when the address serves one, from its menu, the bookmark drawer or the Library's select mode, or for every new bookmark (**Settings → Archive**). Open the copy inside Linkdean at `/archive/{id}`, download it, archive again or delete it. Broken-link badges and Quick peek offer the copy. Vault copies are encrypted with the vault key. Admins turn archiving off or cap storage per account and the largest copy in **Admin → Quotas**. Self-hosters: add the `archives` volume at `/app/data/archives` (see the Compose files); pages need Chrome (`BROWSER_WS_URL`).
 - **Firefox add-on**: the browser extension is on [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/linkdean/), and **Config options → Fast capture** links to it beside the Chrome Web Store.
 - **Passkeys**: add one under **Profile → Edit profile → Passkeys**, then **Sign in with a passkey** from the login page, with no email or password to type.
@@ -48,6 +49,7 @@
 
 ### Fixed
 
+- Upgraded `lettre` to 0.11.24 for the SMTP security advisories in RUSTSEC-2026-0560…0565.
 - Library and dashboards:
   - **Create "name"** on the bookmark form creates the category at once and shows **Category created**, instead of opening a second panel people often missed before saving to Unsorted.
   - Search results show the bookmark's real folders (and catch Meili up when tags or folders changed), instead of an **Unsorted** chip after a reload.
@@ -87,7 +89,6 @@
 - The API shuts down cleanly on `docker stop`: it finishes open requests for up to 8 seconds and exits, instead of being killed after Docker's 10-second timeout.
 - Docs pages load their own content directly, so links, search engines and link previews see the right page; unknown docs addresses return a 404 page.
 - Docs edits trigger a docs-site deploy again after the restructure; fixed links the move broke.
-
 
 ## [0.0.2] - 2026-11-06
 
