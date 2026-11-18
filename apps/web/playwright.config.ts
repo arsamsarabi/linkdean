@@ -7,7 +7,7 @@ import { defineConfig, devices } from '@playwright/test'
  * Default target is the throwaway smoke stack (Vite :5199 → API :18081). Override with
  * PLAYWRIGHT_BASE_URL / PLAYWRIGHT_WEB_PORT. Reuse an already-running Vite when not on CI.
  *
- * Auth setup project + storageState land in plan Task 2 (`e2e/auth.setup.ts`).
+ * `setup` registers a user via the API and writes `e2e/.auth/user.json`; `chromium` reuses it.
  *
  * @see https://playwright.dev/docs/test-configuration
  * @see .claude/skills/linkdean-throwaway-smoke-stack/SKILL.md
@@ -31,9 +31,12 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
+    { name: 'setup', testMatch: 'auth.setup.ts' },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      testIgnore: 'auth.setup.ts',
+      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
+      dependencies: ['setup'],
     },
   ],
   webServer: {
