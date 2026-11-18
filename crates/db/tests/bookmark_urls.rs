@@ -35,6 +35,10 @@ fn only_http_and_https_are_web_urls() {
         "file:///etc/passwd",
         "a.example",
         "",
+        "https://not a url",
+        "https://",
+        "http://",
+        "https:///",
     ] {
         assert!(
             matches!(db::require_web_url(bad), Err(Error::BadRequest(_))),

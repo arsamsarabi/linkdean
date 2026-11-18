@@ -21,8 +21,6 @@ function cat(id: string, name: string, extra: Partial<Category> = {}): Category 
 
 const reading = cat('c1', 'Reading')
 const work = cat('c2', 'Work')
-const vaultParent = cat('c3', 'Secrets', { is_vault: true, vault_id: 'v1' })
-const readOnly = cat('c4', 'Their folder', { access: 'read' })
 
 let selected: string[] = []
 
@@ -61,12 +59,8 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
-function input(label: string): HTMLElement {
-  return screen.getAllByLabelText(label).find((el) => el.tagName === 'INPUT')!
-}
-
 function picker(): HTMLElement {
-  return input('Categories')
+  return screen.getAllByLabelText('Categories').find((el) => el.tagName === 'INPUT')!
 }
 
 describe('BookmarkCategoriesField', () => {
@@ -89,14 +83,12 @@ describe('BookmarkCategoriesField', () => {
     await waitFor(() => expect(screen.queryByRole('option', { name: /^Create/ })).toBeNull())
   })
 
-  it('creates the category at the top level and selects it', async () => {
+  it('creates the category at the top level, selects it, and toasts Category created', async () => {
+    const { notifications } = await import('@mantine/notifications')
     createCategory.mutateAsync.mockResolvedValue(cat('new1', 'Recipes'))
     render(<Harness categories={[reading]} />)
     await userEvent.type(picker(), 'Recipes')
     await userEvent.click(await screen.findByRole('option', { name: 'Create "Recipes"' }))
-
-    expect((screen.getByRole('textbox', { name: 'New category' }) as HTMLInputElement).value).toBe('Recipes')
-    await userEvent.click(screen.getByRole('button', { name: 'Create and select' }))
 
     expect(createCategory.mutateAsync).toHaveBeenCalledWith({
       name: 'Recipes',
@@ -105,47 +97,19 @@ describe('BookmarkCategoriesField', () => {
       vault_id: null,
     })
     await waitFor(() => expect(selected).toEqual(['new1']))
-    expect(screen.queryByRole('textbox', { name: 'New category' })).toBeNull()
     // The new category shows as a chosen pill even before the category list refetches.
     expect(Array.from(document.querySelectorAll('.mantine-Pill-label'), (el) => el.textContent)).toEqual(['Recipes'])
+    expect(notifications.show).toHaveBeenCalledWith({ message: 'Category created' })
   })
 
-  it('creates under a chosen parent, inheriting its vault', async () => {
-    createCategory.mutateAsync.mockResolvedValue(cat('new2', 'Keys', { parent_id: 'c3', vault_id: 'v1' }))
-    render(<Harness categories={[reading, vaultParent]} />)
-    await userEvent.type(picker(), 'Keys')
-    await userEvent.click(await screen.findByRole('option', { name: 'Create "Keys"' }))
-    await userEvent.click(input('Inside'))
-    await userEvent.click(await screen.findByRole('option', { name: 'Secrets (vault)' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Create and select' }))
-
-    expect(createCategory.mutateAsync).toHaveBeenCalledWith({
-      name: 'Keys',
-      parent_id: 'c3',
-      is_hidden: false,
-      vault_id: 'v1',
-    })
-    await waitFor(() => expect(selected).toEqual(['new2']))
-  })
-
-  it('offers only writable folders as parents', async () => {
-    render(<Harness categories={[reading, readOnly]} />)
-    await userEvent.type(picker(), 'Recipes')
-    await userEvent.click(await screen.findByRole('option', { name: 'Create "Recipes"' }))
-    await userEvent.click(input('Inside'))
-    expect(await screen.findByRole('option', { name: 'Reading' })).toBeTruthy()
-    expect(screen.queryByRole('option', { name: 'Their folder' })).toBeNull()
-  })
-
-  it('keeps the panel open and selects nothing when creating fails', async () => {
+  it('selects nothing when creating fails', async () => {
     createCategory.mutateAsync.mockRejectedValue(new Error('Name already used'))
     render(<Harness categories={[reading]} />)
     await userEvent.type(picker(), 'Recipes')
     await userEvent.click(await screen.findByRole('option', { name: 'Create "Recipes"' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Create and select' }))
 
     await waitFor(() => expect(createCategory.mutateAsync).toHaveBeenCalled())
-    expect(screen.getByRole('textbox', { name: 'New category' })).toBeTruthy()
     expect(selected).toEqual([])
+    expect(screen.queryByRole('textbox', { name: 'New category' })).toBeNull()
   })
 })

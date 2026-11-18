@@ -27,8 +27,12 @@ export function MoveToVaultModal({ categoryIds, bookmarkIds, onClose }: Props): 
   const [destination, setDestination] = useState<string | null>(null)
   const [blockers, setBlockers] = useState<VaultMoveBlocker[]>([])
 
+  const allVaults = vaults.data?.vaults ?? []
+  const unlocked = allVaults.filter((v) => v.unlocked)
+  const noVaultYet = allVaults.length === 0
+
   const options = [
-    ...(vaults.data?.vaults ?? []).filter((v) => v.unlocked).map((v) => ({ value: v.id, label: v.name })),
+    ...unlocked.map((v) => ({ value: v.id, label: v.name })),
     { value: OUT_OF_VAULT, label: 'Out of vault' },
   ]
 
@@ -56,26 +60,37 @@ export function MoveToVaultModal({ categoryIds, bookmarkIds, onClose }: Props): 
   return (
     <Modal opened onClose={onClose} title="Move to vault">
       <Stack>
-        <Select label="Destination" data={options} value={destination} onChange={setDestination} />
-        <Text size="xs" c="dimmed">
-          Locked vaults aren't listed. Unlock one first to move items into it.
-        </Text>
-        {blockers.length > 0 ? (
-          <Alert color="yellow" variant="light" title="Fix these first, then move again">
-            <List size="sm" spacing="xs">
-              {blockers.map((blocker) => (
-                <List.Item key={`${blocker.kind}:${blocker.subject_id}:${blocker.related_id ?? ''}`}>
-                  <Anchor component={Link} to={fixTarget(blocker)} onClick={onClose}>
-                    {blocker.message}
-                  </Anchor>
-                </List.Item>
-              ))}
-            </List>
-          </Alert>
-        ) : null}
-        <Button disabled={!destination} loading={move.isPending} onClick={() => void onMove()}>
-          Move
-        </Button>
+        {noVaultYet ? (
+          <>
+            <Text size="sm">{"You haven't set up a vault yet"}</Text>
+            <Button component={Link} to="/vaults" onClick={onClose}>
+              Set up vault
+            </Button>
+          </>
+        ) : (
+          <>
+            <Select label="Destination" data={options} value={destination} onChange={setDestination} />
+            <Text size="xs" c="dimmed">
+              Locked vaults aren&apos;t listed. Unlock one first to move items into it.
+            </Text>
+            {blockers.length > 0 ? (
+              <Alert color="yellow" variant="light" title="Fix these first, then move again">
+                <List size="sm" spacing="xs">
+                  {blockers.map((blocker) => (
+                    <List.Item key={`${blocker.kind}:${blocker.subject_id}:${blocker.related_id ?? ''}`}>
+                      <Anchor component={Link} to={fixTarget(blocker)} onClick={onClose}>
+                        {blocker.message}
+                      </Anchor>
+                    </List.Item>
+                  ))}
+                </List>
+              </Alert>
+            ) : null}
+            <Button disabled={!destination} loading={move.isPending} onClick={() => void onMove()}>
+              Move
+            </Button>
+          </>
+        )}
       </Stack>
     </Modal>
   )

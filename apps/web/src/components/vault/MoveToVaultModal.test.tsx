@@ -17,7 +17,13 @@ vi.stubGlobal(
 Element.prototype.scrollIntoView = () => undefined
 
 const move = vi.hoisted(() => vi.fn())
-const hooks = vi.hoisted(() => ({ rejectWith: null as Error | null }))
+const hooks = vi.hoisted(() => ({
+  rejectWith: null as Error | null,
+  vaults: [
+    { id: 'v1', name: 'Work', unlocked: true, has_recovery_key: true, in_global: false },
+    { id: 'v2', name: 'Home', unlocked: false, has_recovery_key: true, in_global: false },
+  ] as { id: string; name: string; unlocked: boolean; has_recovery_key: boolean; in_global: boolean }[],
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to }: { children: unknown; to: string }) => <a href={to}>{children as string}</a>,
@@ -26,10 +32,7 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('@/hooks', () => ({
   useVaults: () => ({
     data: {
-      vaults: [
-        { id: 'v1', name: 'Work', unlocked: true, has_recovery_key: true, in_global: false },
-        { id: 'v2', name: 'Home', unlocked: false, has_recovery_key: true, in_global: false },
-      ],
+      vaults: hooks.vaults,
     },
   }),
   useMoveToVault: () => ({
@@ -59,8 +62,21 @@ describe('MoveToVaultModal', () => {
   beforeEach(() => {
     move.mockReset()
     hooks.rejectWith = null
+    hooks.vaults = [
+      { id: 'v1', name: 'Work', unlocked: true, has_recovery_key: true, in_global: false },
+      { id: 'v2', name: 'Home', unlocked: false, has_recovery_key: true, in_global: false },
+    ]
   })
   afterEach(cleanup)
+
+  it('offers a set-up path when the person has no vault yet', () => {
+    hooks.vaults = []
+    render(modal())
+    expect(screen.getByText("You haven't set up a vault yet")).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Set up vault' }).getAttribute('href')).toBe('/vaults')
+    expect(screen.queryByLabelText('Destination')).toBeNull()
+    expect(screen.queryByText("Locked vaults aren't listed")).toBeNull()
+  })
 
   it('offers only unlocked vaults and moves on confirm', async () => {
     move.mockResolvedValue({ ok: true })

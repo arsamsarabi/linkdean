@@ -18,9 +18,8 @@ test.describe('Library', () => {
     await cats.click()
     await cats.pressSequentially(folder)
     await page.getByRole('option', { name: `Create "${folder}"` }).click()
-    await expect(drawer.getByRole('textbox', { name: 'New category' })).toHaveValue(folder)
-    await drawer.getByRole('button', { name: 'Create and select' }).click()
-    await expect(drawer.getByText(folder, { exact: true })).toBeVisible() // the category pill
+    // Create is immediate (no parent panel); wait for the pill after the API returns.
+    await expect(drawer.getByText(folder, { exact: true })).toBeVisible()
 
     await drawer.getByRole('button', { name: 'Add bookmark' }).click()
     await expect(drawer).toBeHidden()

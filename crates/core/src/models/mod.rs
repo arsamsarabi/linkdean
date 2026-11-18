@@ -1295,6 +1295,8 @@ pub struct SearchHit {
     pub has_preview: bool,
     pub tags: Vec<String>,
     pub category_id: Option<Uuid>,
+    #[serde(default)]
+    pub categories: Vec<CategoryRef>,
     pub is_vault: bool,
     pub can_write: bool,
 }

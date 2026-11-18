@@ -26,7 +26,7 @@
 - Browser extension: an opt-in toolbar icon that is in color on pages already in your library and grey elsewhere, checked in the browser against hashes of your saved addresses.
 - Browser extension: the first popup opened after signing in offers the saved-page icon once, with **Allow** and **Not now**. The `tabs` permission stays optional, so installing shows no extra warning.
 - **File one by one**: a filing queue that walks through Unsorted bookmarks, suggesting folders and tags you already use on the same site, with keyboard shortcuts and swipes. The sidebar shows how many bookmarks are in Unsorted.
-- Create a category from the bookmark form: type a name that matches no category, pick **Create "name"**, and choose where it goes.
+- Create a category from the bookmark form: type a name that matches no category and pick **Create "name"** to create it at the top level and select it.
 - Import checks for bookmarks already in your library and lets you skip, replace, merge or import each one again; folders that already exist are reused.
 - Explorer folder tiles show how many bookmarks each folder holds again.
 - **Config options → Fast capture** links to the browser extension on the Chrome Web Store.
@@ -50,6 +50,10 @@
 ### Fixed
 
 - Library and dashboards:
+  - **Create "name"** on the bookmark form creates the category at once and shows **Category created**, instead of opening a second panel people often missed before saving to Unsorted.
+  - Search results show the bookmark's real folders (and catch Meili up when tags or folders changed), instead of an **Unsorted** chip after a reload.
+  - The bookmark URL field checks on blur and blocks Add until the address is a real `http(s)` URL, so a stray paste like `not a url` no longer saves as a dead link.
+  - **Move to vault** with no vault yet offers **Set up vault**, instead of only **Out of vault** and a note about locked vaults.
   - Bookmarks with no saved site icon show a globe, instead of asking Google for one: the request was blocked anyway, logged an error per tile, and would have sent each bookmarked site to Google.
   - When a bulk tag, folder or delete fails for some bookmarks, the notice gives the reason and those bookmarks stay selected to retry.
   - Bulk **Move to vault** leaves out bookmarks shared with you, which can't go in a vault, instead of failing the whole move.

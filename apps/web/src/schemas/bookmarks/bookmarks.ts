@@ -53,7 +53,7 @@ export const searchHitSchema = z.object({
   has_preview: z.boolean(),
   tags: z.array(z.string()),
   category_id: z.string().nullish(),
-  categories: z.array(categoryRefSchema).optional(),
+  categories: z.array(categoryRefSchema).default([]),
   is_vault: z.boolean(),
   vault_id: z.string().nullish(),
   can_write: z.boolean(),

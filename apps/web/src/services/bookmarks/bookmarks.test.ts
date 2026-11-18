@@ -126,6 +126,7 @@ describe('filling a draft from the page', () => {
     expect(isFetchableUrl('https://')).toBe(false)
     expect(isFetchableUrl('javascript:alert(1)')).toBe(false)
     expect(isFetchableUrl('example.com')).toBe(false)
+    expect(isFetchableUrl('https://not a url')).toBe(false)
   })
 })
 

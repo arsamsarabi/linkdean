@@ -45,17 +45,35 @@ fn reject_nul<'a>(fields: impl IntoIterator<Item = &'a str>) -> Result<()> {
 
 /// Only web addresses are stored. Browsers, exports and API clients may open a saved URL,
 /// so `javascript:`, `data:` and other schemes are refused here rather than at every reader.
+/// A scheme alone (`https://`) or a host with spaces (`https://not a url`) is also refused.
 pub fn require_web_url(url: &str) -> Result<()> {
-    let scheme = url
-        .trim_start()
-        .split_once(':')
-        .map(|(s, _)| s.to_ascii_lowercase());
-    match scheme.as_deref() {
-        Some("http" | "https") => Ok(()),
-        _ => Err(Error::BadRequest(
-            "bookmark URLs must start with http:// or https://".into(),
-        )),
+    let trimmed = url.trim();
+    if trimmed.chars().any(char::is_whitespace) {
+        return Err(Error::BadRequest(
+            "bookmark URL is not a valid web address".into(),
+        ));
     }
+    let scheme = trimmed.split_once(':').map(|(s, _)| s.to_ascii_lowercase());
+    match scheme.as_deref() {
+        Some("http" | "https") => {}
+        _ => {
+            return Err(Error::BadRequest(
+                "bookmark URLs must start with http:// or https://".into(),
+            ));
+        }
+    }
+    let Some((_, after)) = trimmed.split_once("://") else {
+        return Err(Error::BadRequest(
+            "bookmark URL is not a valid web address".into(),
+        ));
+    };
+    let host = after.split(['/', '?', '#']).next().unwrap_or("");
+    if host.is_empty() {
+        return Err(Error::BadRequest(
+            "bookmark URL is not a valid web address".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn reject_nul_in_update(req: &UpdateBookmark) -> Result<()> {
@@ -2072,4 +2090,26 @@ pub async fn live_plain_bookmark_ids(
     .await
     .map_err(db_err)?;
     Ok(rows.into_iter().collect())
+}
+
+/// Live non-vault bookmarks for `ids`, as views for `viewer_id`. Search uses this so
+/// category chips and tags match Postgres even when Meili's document is behind a write.
+pub async fn plain_bookmark_views_by_ids(
+    pool: &PgPool,
+    viewer_id: Uuid,
+    ids: &[Uuid],
+) -> Result<HashMap<Uuid, BookmarkView>> {
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let rows = sqlx::query_as::<_, Bookmark>(
+        "SELECT * FROM bookmarks WHERE id = ANY($1) AND is_vault = FALSE AND deleted_at IS NULL",
+    )
+    .bind(ids)
+    .fetch_all(pool)
+    .await
+    .map_err(db_err)?;
+    let none = VaultKeyring::default();
+    let views = bookmarks_to_views(pool, rows, viewer_id, |_| &none).await?;
+    Ok(views.into_iter().map(|v| (v.id, v)).collect())
 }
