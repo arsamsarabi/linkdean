@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { test as setup } from '@playwright/test'
 import { completeOnboarding, credentialsFile, registerUser } from './fixtures/api'
 
@@ -15,6 +16,8 @@ setup('register user and save storageState', async ({ page }) => {
   const request = page.context().request
 
   await registerUser(request, { email })
+  // CI checkout has no e2e/.auth/ (gitignored); create it before writing credentials / storageState.
+  mkdirSync(dirname(credentialsFile), { recursive: true })
   writeFileSync(credentialsFile, JSON.stringify({ email }))
   await completeOnboarding(request)
 
