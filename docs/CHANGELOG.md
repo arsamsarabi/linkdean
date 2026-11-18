@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Search inside archived pages**: library search matches words from the body of non-vault HTML archives after the copy finishes. Vault bookmarks never contribute page text. Existing HTML copies gain body search when you archive again.
 - **Playwright @smoke on PR CI**: Chromium journeys in `apps/web/e2e` run against a throwaway Postgres, Meilisearch and API on every pull request (`Web e2e (@smoke)` job).
 - **Archive**: keep a copy of a bookmark as a web page (single-file HTML) or PDF, or the file itself when the address serves one, from its menu, the bookmark drawer or the Library's select mode, or for every new bookmark (**Settings → Archive**). Open the copy inside Linkdean at `/archive/{id}`, download it, archive again or delete it. Broken-link badges and Quick peek offer the copy. Vault copies are encrypted with the vault key. Admins turn archiving off or cap storage per account and the largest copy in **Admin → Quotas**. Self-hosters: add the `archives` volume at `/app/data/archives` (see the Compose files); pages need Chrome (`BROWSER_WS_URL`).
 - **Firefox add-on**: the browser extension is on [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/linkdean/), and **Config options → Fast capture** links to it beside the Chrome Web Store.
