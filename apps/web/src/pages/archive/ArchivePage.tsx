@@ -4,7 +4,14 @@ import { IconArchive, IconDownload, IconExternalLink } from '@tabler/icons-react
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { EmptyState, PageContainer, QueryErrorAlert } from '@/components'
 import { useArchives, useBookmark } from '@/hooks'
-import { ARCHIVE_FORMAT_LABELS, archiveFileUrl, formatArchiveDate, formatBytes, primaryArchiveFormat } from '@/lib'
+import {
+  ARCHIVE_FORMAT_LABELS,
+  archiveFileUrl,
+  archiveMarkdownUrl,
+  formatArchiveDate,
+  formatBytes,
+  primaryArchiveFormat,
+} from '@/lib'
 import type { BookmarkArchive } from '@/schemas'
 import styles from './ArchivePage.module.css'
 
@@ -96,6 +103,17 @@ export function ArchivePage(): ReactElement {
           >
             Download
           </Button>
+          {current.format === 'html' ? (
+            <Button
+              size="xs"
+              variant="light"
+              component="a"
+              href={archiveMarkdownUrl(id)}
+              leftSection={<IconDownload size={14} stroke={1.5} />}
+            >
+              Markdown
+            </Button>
+          ) : null}
         </Group>
       </Group>
       <ArchiveBody bookmarkId={id} archive={current} title={title} />

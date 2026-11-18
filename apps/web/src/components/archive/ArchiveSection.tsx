@@ -5,7 +5,7 @@ import { IconArchive, IconDownload, IconEye, IconTrash } from '@tabler/icons-rea
 import { Link } from '@tanstack/react-router'
 import { ConfirmModal } from '@/components/confirm-modal'
 import { useArchives, useDeleteArchives } from '@/hooks'
-import { ARCHIVE_FORMAT_LABELS, archiveFileUrl, formatArchiveDate, formatBytes } from '@/lib'
+import { ARCHIVE_FORMAT_LABELS, archiveFileUrl, archiveMarkdownUrl, formatArchiveDate, formatBytes } from '@/lib'
 import type { BookmarkArchive } from '@/schemas'
 import { ArchiveDialog } from './ArchiveDialog'
 
@@ -117,6 +117,13 @@ function ArchiveRow({ bookmarkId, archive: a }: { bookmarkId: string; archive: B
                 <IconDownload size={12} stroke={1.5} /> Download
               </Group>
             </Anchor>
+            {a.format === 'html' ? (
+              <Anchor href={archiveMarkdownUrl(bookmarkId)} size="xs">
+                <Group gap={2} component="span">
+                  <IconDownload size={12} stroke={1.5} /> Markdown
+                </Group>
+              </Anchor>
+            ) : null}
           </Group>
         ) : null}
       </Group>

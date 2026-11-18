@@ -5,6 +5,11 @@ export function archiveFileUrl(bookmarkId: string, format: ArchiveFormat, downlo
   return `/api/bookmarks/${bookmarkId}/archive/${format}${download ? '?download=1' : ''}`
 }
 
+/** Reader-mode Markdown derived from the HTML archive (always a download). */
+export function archiveMarkdownUrl(bookmarkId: string): string {
+  return `/api/bookmarks/${bookmarkId}/archive/html?download=1&as=md`
+}
+
 /** The copy the viewer opens first: the page as HTML, then the original file, then the PDF. */
 export function primaryArchiveFormat(formats: ArchiveFormat[]): ArchiveFormat | null {
   return (['html', 'file', 'pdf'] as const).find((f) => formats.includes(f)) ?? null
