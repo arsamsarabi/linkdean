@@ -14,6 +14,7 @@ mod quotas;
 mod rate_limit;
 mod request_id;
 mod routes;
+mod search_index;
 mod security;
 mod shutdown;
 mod state;

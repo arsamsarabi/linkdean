@@ -612,7 +612,7 @@ async fn reindex_search(
             if v.owner_user_id != u.id {
                 continue;
             }
-            match state.search.upsert_bookmark(&v).await {
+            match crate::search_index::upsert(&state, &v).await {
                 Ok(()) => upserted += 1,
                 Err(e) => {
                     failed += 1;
