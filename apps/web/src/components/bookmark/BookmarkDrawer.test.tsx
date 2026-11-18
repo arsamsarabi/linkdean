@@ -202,6 +202,36 @@ describe('BookmarkDrawer quick save', () => {
   })
 })
 
+describe('BookmarkDrawer URL validation', () => {
+  afterEach(() => {
+    cleanup()
+    create.mutateAsync.mockReset()
+  })
+
+  it('shows an inline error on blur for a non-URL and blocks Add bookmark', async () => {
+    renderDrawer({})
+    const url = screen.getByLabelText(/^URL/)
+    await userEvent.type(url, 'not a url')
+    await userEvent.tab()
+    expect(await screen.findByText(/Enter a valid web address/i)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add bookmark' })).toHaveProperty('disabled', true)
+    expect(create.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('clears the error once the address is a web URL', async () => {
+    renderDrawer({})
+    const url = screen.getByLabelText(/^URL/)
+    await userEvent.type(url, 'not a url')
+    await userEvent.tab()
+    expect(await screen.findByText(/Enter a valid web address/i)).toBeTruthy()
+    await userEvent.clear(url)
+    await userEvent.type(url, 'example.com/recipes')
+    await userEvent.tab()
+    expect(screen.queryByText(/Enter a valid web address/i)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add bookmark' })).toHaveProperty('disabled', false)
+  })
+})
+
 describe('BookmarkDrawer unsaved changes', () => {
   afterEach(cleanup)
 

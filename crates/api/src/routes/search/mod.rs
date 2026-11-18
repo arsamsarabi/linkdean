@@ -79,6 +79,9 @@ async fn search(
                         tracing::warn!(bookmark_id = %stale, error = %e, "drop stale search document failed");
                     }
                 }
+                // Categories and tags come from Postgres so a card never shows Unsorted after
+                // the library already moved the bookmark. Meili still ranks the hits.
+                let views = db::plain_bookmark_views_by_ids(&state.pool, user.id, &ids).await?;
                 for d in docs {
                     let Ok(id) = Uuid::parse_str(&d.id) else {
                         continue;
@@ -90,28 +93,38 @@ async fn search(
                     {
                         continue;
                     }
-                    let owner_user_id = Uuid::parse_str(&d.owner_user_id).unwrap_or(user.id);
+                    let Some(view) = views.get(&id) else {
+                        continue;
+                    };
+                    // Keep Meili in sync when its denormalized fields lag a category/tag write.
+                    if view.tags != d.tags
+                        || view.category_id.map(|c| c.to_string()) != d.category_id
+                        || view
+                            .categories
+                            .iter()
+                            .map(|c| c.id.to_string())
+                            .collect::<Vec<_>>()
+                            != d.category_ids
+                    {
+                        if let Err(e) = state.search.upsert_bookmark(view).await {
+                            tracing::warn!(bookmark_id = %id, error = %e, "meili catch-up upsert failed");
+                        }
+                    }
                     let can_write = db::bookmark_can_write(&state.pool, user.id, id)
                         .await
                         .unwrap_or(false);
                     hits.push(SearchHit {
                         id,
-                        owner_user_id,
-                        title: d.title,
-                        url: d.url,
-                        description: if d.description.is_empty() {
-                            None
-                        } else {
-                            Some(d.description)
-                        },
-                        favicon_url: d.favicon_url,
-                        preview_image_url: d.preview_image_url,
-                        has_preview: d.has_preview,
-                        tags: d.tags,
-                        category_id: d
-                            .category_id
-                            .as_deref()
-                            .and_then(|s| Uuid::parse_str(s).ok()),
+                        owner_user_id: view.owner_user_id,
+                        title: view.title.clone(),
+                        url: view.url.clone(),
+                        description: view.description.clone(),
+                        favicon_url: view.favicon_url.clone(),
+                        preview_image_url: view.preview_image_url.clone(),
+                        has_preview: view.has_preview,
+                        tags: view.tags.clone(),
+                        category_id: view.category_id,
+                        categories: view.categories.clone(),
                         is_vault: false,
                         can_write,
                     });
@@ -144,6 +157,7 @@ async fn search(
                             has_preview: v.has_preview,
                             tags: v.tags,
                             category_id: v.category_id,
+                            categories: v.categories,
                             is_vault: true,
                             can_write: v.can_write,
                         });
@@ -166,6 +180,7 @@ async fn search(
                             has_preview: v.has_preview,
                             tags: v.tags,
                             category_id: v.category_id,
+                            categories: v.categories,
                             is_vault: true,
                             can_write: v.can_write,
                         });
