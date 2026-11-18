@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Breaking
+
+- **Archives volume.** Self-hosters who keep a Compose file: add a named `archives` volume mounted at `/app/data/archives` on the API (see [quick-start](self-hosting/quick-start.md) and [environment](self-hosting/environment.md) for `ARCHIVE_DIR`). Without it, archived copies are lost when the container is replaced. Include that volume in backups. HTML and PDF page captures also need Chrome (`BROWSER_WS_URL`); original-file archives do not.
+
 ### Added
 
 - **Search inside archived pages**: library search matches words from the body of non-vault HTML archives after the copy finishes. Vault bookmarks never contribute page text. Existing HTML copies gain body search when you archive again.
