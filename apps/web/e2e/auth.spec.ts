@@ -35,10 +35,32 @@ test.describe('Auth', () => {
     await expect(page).toHaveURL(/\/login/)
   })
   test.skip('AUTH-03 @auth @p1: register with terms checkbox when TERMS_VERSION is set — assert submit is blocked until the checkbox is ticked', async () => {})
-  test.skip('AUTH-04 @auth @p1: sign out returns to login — assert /login is shown and /library redirects back to /login', async () => {})
+  test('AUTH-04 @auth @p1: sign out returns to login — assert /login is shown and /library redirects back to /login', async ({
+    page,
+  }) => {
+    // Sign in with the setup user, then Logout from the account menu.
+    const { email } = JSON.parse(readFileSync(credentialsFile, 'utf8')) as { email: string }
+    await page.goto('/login')
+    await page.getByLabel('Email').fill(email)
+    await page.getByRole('textbox', { name: 'Password' }).fill(E2E_PASSWORD)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await expect(page.getByRole('link', { name: 'Library' }).first()).toBeVisible()
+
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    await page.getByRole('menuitem', { name: 'Logout' }).click()
+    await expect(page).toHaveURL(/\/login/)
+
+    await page.goto('/library')
+    await expect(page).toHaveURL(/\/login/)
+  })
   test.skip('AUTH-05 @auth @p1: forgot password shows confirmation — assert neutral "check your email" message appears for any address', async () => {})
   test.skip('AUTH-06 @auth @p2: reset password with valid link then sign in — assert new password signs in and old password is rejected', async () => {})
   test.skip('AUTH-07 @auth @p2: verify email link marks account verified — assert verified state shown and unverified banner is gone', async () => {})
-  test.skip('AUTH-08 @auth @p1: signed-out visit to a protected route redirects to login — assert /library redirects to /login', async () => {})
+  test('AUTH-08 @auth @p1: signed-out visit to a protected route redirects to login — assert /library redirects to /login', async ({
+    page,
+  }) => {
+    await page.goto('/library')
+    await expect(page).toHaveURL(/\/login/)
+  })
   test.skip('AUTH-09 @auth @p2: banned user is sent to /banned with reason — assert ban reason is visible and the app is not reachable', async () => {})
 })

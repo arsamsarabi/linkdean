@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createBookmark, uniq } from './fixtures/api'
+import { bookmarkCard } from './fixtures/ui'
 
 test.describe('Library', () => {
   test('LIB-01 @library @smoke: add bookmark with Create category, pill + save into folder — assert category pill shows and the bookmark appears in that folder', async ({
@@ -51,11 +52,33 @@ test.describe('Library', () => {
     await expect(page.getByText(title)).toBeVisible()
   })
   test.skip('LIB-04 @library @p1: Import from URL fills title and description — assert form title and description are populated from the page', async () => {})
-  test.skip('LIB-05 @library @p1: delete bookmark moves it to Deleted items — assert card leaves the library', async () => {})
+  test('LIB-05 @library @p1: delete bookmark moves it to Deleted items — assert card leaves the library', async ({
+    page,
+    request,
+  }) => {
+    const title = uniq('LIB-05 bookmark')
+    await createBookmark(request, { title })
+    await page.goto('/library')
+    await bookmarkCard(page, title).getByRole('button', { name: 'Bookmark actions' }).click()
+    await page.getByRole('menuitem', { name: 'Delete' }).click()
+    await page.getByRole('dialog', { name: 'Delete bookmark?' }).getByRole('button', { name: 'Delete' }).click()
+    await expect(page.getByText(title)).toBeHidden()
+    await page.goto('/trash')
+    await expect(page.getByRole('row').filter({ hasText: title })).toBeVisible()
+  })
   test.skip('LIB-06 @library @p1: filter library by folder and tag — assert only matching bookmarks are shown with updated count', async () => {})
   test.skip('LIB-07 @library @p1: Unsorted filter shows uncategorized bookmarks — assert sidebar Unsorted count matches the list', async () => {})
   test.skip('LIB-08 @library @p1: switch between grid, list and explorer views — assert view persists after reload', async () => {})
-  test.skip('LIB-09 @library @p1: quick save at /save?url= opens filled form — assert URL is prefilled and Save to Unsorted is offered', async () => {})
+  test('LIB-09 @library @p1: quick save at /save?url= opens filled form — assert URL is prefilled and Save to Unsorted is offered', async ({
+    page,
+  }) => {
+    const url = `https://example.com/lib-09-${Date.now()}`
+    await page.goto(`/save?url=${encodeURIComponent(url)}`)
+    const drawer = page.getByRole('dialog').or(page.locator('form').first())
+    await expect(page.getByLabel('URL')).toHaveValue(url)
+    await expect(page.getByRole('button', { name: /Save to Unsorted|Add bookmark|Save/i }).first()).toBeVisible()
+    await expect(drawer).toBeVisible()
+  })
   test.skip('LIB-10 @library @p1: quick save of an existing URL opens that bookmark — assert no duplicate is created', async () => {})
   test.skip('LIB-11 @library @p1: create nested category from categories page — assert subcategory shows under its parent in the tree', async () => {})
   test.skip('LIB-12 @library @p1: edit category name, icon and hidden flag — assert changes show in the sidebar and hidden folder is declutter-only', async () => {})

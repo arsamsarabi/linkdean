@@ -74,8 +74,9 @@ Implement in order (each green before next):
 
 ### Task 6: P1 (after P0 green in CI)
 
-- [ ] Un-skip and implement vault create/unlock/move, share invite accept, filing queue happy path, trash restore
-- [ ] Commit per journey area
+- [x] Vault create/unlock/lock/wrong-pass/move in/out (VAULT-02…07); filing queue FILE-01…05; AUTH-04/08; LIB-05/09; TRASH-02
+- [ ] Share invite accept (SHARE-*) — needs a second user; still skipped (rate-limit sensitive)
+- [x] Commit per journey area; Playwright `workers: 1` (shared storageState user)
 
 ### Task 7: P2 (later)
 

@@ -123,3 +123,75 @@ export async function setBookmarkCategories(
     request.patch(`/api/bookmarks/${id}`, { headers: CLIENT_HEADER, data: { category_ids: categoryIds } })
   )
 }
+
+export const E2E_VAULT_PASSPHRASE = 'e2e-vault-pass-12'
+
+/** Creates a vault (unlocked in this session); returns id + one-time recovery key. */
+export async function createVault(
+  request: APIRequestContext,
+  name: string,
+  passphrase: string = E2E_VAULT_PASSPHRASE
+): Promise<{ id: string; recoveryKey: string }> {
+  const res = await call('POST /api/vaults', () =>
+    request.post('/api/vaults', { headers: CLIENT_HEADER, data: { name, passphrase } })
+  )
+  const body = (await res.json()) as { vault: { id: string }; recovery_key: string }
+  return { id: body.vault.id, recoveryKey: body.recovery_key }
+}
+
+/** Locks a vault in the current session. */
+export async function lockVault(request: APIRequestContext, id: string): Promise<void> {
+  await call('POST /api/vaults/:id/lock', () => request.post(`/api/vaults/${id}/lock`, { headers: CLIENT_HEADER }))
+}
+
+/** Locks every vault for the session (so Move-to-vault shows no destinations). */
+export async function lockAllVaults(request: APIRequestContext): Promise<void> {
+  await call('POST /api/vaults/lock-all', () => request.post('/api/vaults/lock-all', { headers: CLIENT_HEADER }))
+}
+
+/** Unlocks a vault in the current session. */
+export async function unlockVault(
+  request: APIRequestContext,
+  id: string,
+  passphrase: string = E2E_VAULT_PASSPHRASE
+): Promise<void> {
+  await call('POST /api/vaults/:id/unlock', () =>
+    request.post(`/api/vaults/${id}/unlock`, { headers: CLIENT_HEADER, data: { passphrase } })
+  )
+}
+
+/** Moves bookmarks into a vault (or out when `vaultId` is null). */
+export async function moveToVault(
+  request: APIRequestContext,
+  bookmarkIds: string[],
+  vaultId: string | null
+): Promise<void> {
+  await call('POST /api/vaults/move', () =>
+    request.post('/api/vaults/move', {
+      headers: CLIENT_HEADER,
+      data: { bookmark_ids: bookmarkIds, category_ids: [], destination_vault_id: vaultId },
+    })
+  )
+}
+
+/** Patches the signed-in user's settings (partial). */
+export async function patchSettings(request: APIRequestContext, patch: Record<string, unknown>): Promise<void> {
+  await call('PATCH /api/users/me/settings', () =>
+    request.patch('/api/users/me/settings', { headers: CLIENT_HEADER, data: patch })
+  )
+}
+
+/** Files every Unsorted bookmark into a dump folder so /file starts on the next create. */
+export async function clearUnsortedQueue(request: APIRequestContext): Promise<void> {
+  const dumpId = await createCategory(request, uniq('e2e-unsorted-dump'))
+  for (;;) {
+    const res = await call('GET /api/bookmarks?folder=uncategorized', () =>
+      request.get('/api/bookmarks?folder=uncategorized&limit=50')
+    )
+    const body = (await res.json()) as { items: { id: string }[] }
+    if (!body.items.length) return
+    for (const item of body.items) {
+      await setBookmarkCategories(request, item.id, [dumpId])
+    }
+  }
+}

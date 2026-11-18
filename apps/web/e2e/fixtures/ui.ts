@@ -9,3 +9,8 @@ export function bookmarkCard(page: Page, title: string): Locator {
     .getByRole('link', { name: title, exact: true })
     .locator('xpath=ancestor::div[.//button[@aria-label="Bookmark actions"] and .//a[contains(@href,"category=")]][1]')
 }
+
+/** The settings vault card (Paper) whose heading text is exactly `name`. */
+export function vaultSettingsCard(page: Page, name: string): Locator {
+  return page.getByText(name, { exact: true }).locator('xpath=ancestor::div[contains(@class,"mantine-Paper-root")][1]')
+}
