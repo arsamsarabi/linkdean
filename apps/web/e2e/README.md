@@ -3,13 +3,13 @@
 Specs run against the **throwaway smoke stack**, never the `linkdean-*` dev database.
 Full rules: `.claude/skills/linkdean-throwaway-smoke-stack/SKILL.md`.
 
-| Piece | Default |
-|---|---|
-| Vite (web) | `127.0.0.1:5199` (`PLAYWRIGHT_WEB_PORT`, `PLAYWRIGHT_BASE_URL`) |
-| API | `BIND=127.0.0.1:18081` (`API_PROXY_TARGET`) |
-| Database | `smoke` on `pg-check` (`localhost:55432`) |
-| Meilisearch | `ld-meili-smoke` on `127.0.0.1:57700` (needed for `@smoke` search) |
-| Mailpit | `ld-mailpit` on `11025` / UI `18025` (optional but matches smoke skill) |
+| Piece       | Default                                                                 |
+| ----------- | ----------------------------------------------------------------------- |
+| Vite (web)  | `127.0.0.1:5199` (`PLAYWRIGHT_WEB_PORT`, `PLAYWRIGHT_BASE_URL`)         |
+| API         | `BIND=127.0.0.1:18081` (`API_PROXY_TARGET`)                             |
+| Database    | `smoke` on `pg-check` (`localhost:55432`)                               |
+| Meilisearch | `ld-meili-smoke` on `127.0.0.1:57700` (needed for `@smoke` search)      |
+| Mailpit     | `ld-mailpit` on `11025` / UI `18025` (optional but matches smoke skill) |
 
 ## Bring up the throwaway API
 
