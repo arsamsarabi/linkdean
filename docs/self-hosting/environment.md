@@ -151,6 +151,7 @@ These have working defaults inside the image. Change them only for a reason.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `SESSION_DAYS` | `30` | Days a sign-in lasts |
+| `UPDATE_CHECK` | `true` | The server asks GitHub for newer Linkdean releases, at most every 6 hours, and admins see an update badge at the bottom of the sidebar. Only the server contacts GitHub, never people's browsers. `false` turns the check off |
 | `CORS_ORIGINS` | `APP_URL` | Comma-separated browser origins allowed to call the API. `*` allows any origin; avoid it on a reachable server |
 | `RUST_LOG` | `info` | Log filter, such as `debug` or `info,linkdean_api=debug` |
 | `BIND` | `0.0.0.0:8080` | Listen address inside the container. If you change the port, change `ports:` and the healthcheck too |

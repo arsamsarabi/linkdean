@@ -88,7 +88,23 @@ export const experimentalFlagsSchema = z.object({
 /** `GET /auth/config`: public server settings. Only the fields the app reads are listed. */
 export const authConfigSchema = z.object({
   experimental: experimentalFlagsSchema.default({ agent_skills: false }),
+  /** The running server's version, such as `0.0.12`. */
+  version: z.string().nullish(),
 })
+
+/** `GET /admin/update`: a newer Linkdean release, or null when up to date or unknown. */
+export const updateStatusSchema = z.object({
+  current: z.string(),
+  update: z
+    .object({
+      latest: z.string(),
+      level: z.enum(['patch', 'minor', 'major', 'breaking']),
+      url: z.string(),
+    })
+    .nullable(),
+})
+
+export type UpdateStatus = z.infer<typeof updateStatusSchema>
 
 export const platformSettingsSchema = z.object({
   registration_open: z.boolean(),
