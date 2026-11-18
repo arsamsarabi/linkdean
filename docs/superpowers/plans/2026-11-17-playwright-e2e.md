@@ -29,7 +29,7 @@
 
 - [x] `apps/web/e2e/**/*.spec.ts` — **102** `test.skip` cases (`pnpm exec playwright test --list`)
 - [x] `@smoke` set (10): AUTH-01, AUTH-02, ONB-01, LIB-01, LIB-02, LIB-03, SRCH-01, DASH-01, TRASH-01, VAULT-01
-- [ ] Commit: `Add Playwright e2e inventory as skipped journey stubs.`
+- [x] Commit: `Add Playwright e2e inventory as skipped journey stubs.` (`f74b726`)
 
 Full journey catalog also recorded by explore pass (AUTH…ADM); stubs are the source of truth going forward.
 
@@ -37,24 +37,27 @@ Full journey catalog also recorded by explore pass (AUTH…ADM); stubs are the s
 
 Grounding (from auth exploration): `POST /api/auth/register` + `X-Linkdean-Client: web`; `terms_version` from `GET /api/auth/bootstrap-status`; ready via `POST /api/auth/onboarding/complete` (and SQL `email_verified_at` only if verified-email gate is on); seed `localStorage.linkdean_signed_in='1'` before `storageState` or the SPA treats the session as signed out. Throwaway ports: Vite **5199**, API **18081**, DB **smoke** on `pg-check`. Login UI: `getByLabel('Email'|'Password')`, `Sign in`.
 
-- [ ] `e2e/fixtures/api.ts` — bootstrap-status → register (unique `e2e-*` email) or login; client header on mutating calls
-- [ ] `e2e/auth.setup.ts` — onboarding/complete + localStorage marker → `e2e/.auth/user.json`
-- [ ] Gitignore `e2e/.auth/`; config defaults to 5199 / API 18081; setup project + chromium `dependencies`
+- [x] `e2e/fixtures/api.ts` — bootstrap-status → register (unique `e2e-*` email) or login; client header on mutating calls
+- [x] `e2e/auth.setup.ts` — onboarding/complete + localStorage marker → `e2e/.auth/user.json`
+- [x] Gitignore `e2e/.auth/`; config defaults to 5199 / API 18081; setup project + chromium `dependencies` (Vite `--host 127.0.0.1`)
 - [ ] Optional: smoke-only project with `grep: /@smoke/` once P0 is implemented
-- [ ] Commit: `Add Playwright auth fixtures and smoke project wiring.`
+- [x] Commit: `Add Playwright auth fixtures and smoke project wiring.` (`8a5ad96`, follow-up `ff9f4a9`)
+- [x] Verified green: `pnpm exec playwright test --project=setup` against throwaway API :18081 / smoke DB
 
 ### Task 3: Implement P0 @smoke (un-skip + fill)
 
 Implement in order (each green before next):
 
-- [ ] AUTH-01 / AUTH-02
-- [ ] ONB-01 (or demote if seed skips UI onboarding)
-- [ ] LIB-01 / LIB-02 / LIB-03
-- [ ] SRCH-01
-- [ ] DASH-01
-- [ ] TRASH-01
-- [ ] VAULT-01
-- [ ] Commit per 1–2 green specs: `Implement @smoke …`
+- [x] AUTH-01 / AUTH-02
+- [x] ONB-01 (walks a fresh non-first user through Vault skip + Import skip; the first-admin steps need an empty DB)
+- [x] LIB-01 / LIB-03
+- [ ] LIB-02 — `test.fixme`: no on-blur URL validation in `BookmarkDrawer`, and the API saves `https://not a url`. Flip to `test` once the UI validates.
+- [x] SRCH-01
+- [x] DASH-01
+- [x] TRASH-01
+- [x] VAULT-01 (asserts the real no-vault modal: only "Out of vault"; the UI has no "Set up vault" prompt yet)
+- [x] Commit per 1–2 green specs: `Implement @smoke …`
+- Note: `POST /api/auth/register` is limited to 10 per 15 min per IP, so each run registers only twice (setup + ONB-01); AUTH-01 reuses the setup user via `e2e/.auth/credentials.json`.
 
 ### Task 4: Throwaway runner docs/script
 
