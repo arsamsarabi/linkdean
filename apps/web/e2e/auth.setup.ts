@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
+import { writeFileSync } from 'node:fs'
 import { test as setup } from '@playwright/test'
-import { completeOnboarding, registerUser } from './fixtures/api'
+import { completeOnboarding, credentialsFile, registerUser } from './fixtures/api'
 
 export const authFile = 'e2e/.auth/user.json'
 
@@ -14,6 +15,7 @@ setup('register user and save storageState', async ({ page }) => {
   const request = page.context().request
 
   await registerUser(request, { email })
+  writeFileSync(credentialsFile, JSON.stringify({ email }))
   await completeOnboarding(request)
 
   await page.goto('/login')

@@ -33,3 +33,13 @@ storage state (cookie `linkdean_session`). Helpers live in `fixtures/api.ts`.
 
 If the smoke DB is empty and the API sets `BOOTSTRAP_TOKEN`, export `E2E_BOOTSTRAP_TOKEN`
 so the first (admin) account can register. Later accounts need registration open.
+
+`auth.setup.ts` also writes `e2e/.auth/credentials.json` (the setup user's email) so sign-in
+specs reuse that account.
+
+## Registration rate limit
+
+`POST /api/auth/register` allows **10 per 15 minutes per IP**, counted in API memory. Each full run
+registers twice (setup + `ONB-01`). After several reruns you get `429 too many attempts`: wait out
+the window, or restart the throwaway API (not the dev stack) to reset the counter. Use
+`--no-deps` to rerun specs without re-running setup.

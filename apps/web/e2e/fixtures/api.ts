@@ -1,7 +1,11 @@
+import { randomUUID } from 'node:crypto'
 import type { APIRequestContext, APIResponse } from '@playwright/test'
 
 /** Header the API requires on cookie-authenticated writes (see src/lib/auth/authToken.ts). */
 export const CLIENT_HEADER = { 'X-Linkdean-Client': 'web' }
+
+/** The setup user's email, so sign-in specs reuse it (registering is rate limited to 10 per 15 min per IP). */
+export const credentialsFile = 'e2e/.auth/credentials.json'
 
 export const E2E_PASSWORD = 'e2e-correct-horse-battery'
 
@@ -69,5 +73,53 @@ export async function loginRequest(
 export async function completeOnboarding(request: APIRequestContext): Promise<void> {
   await call('POST /api/auth/onboarding/complete', () =>
     request.post('/api/auth/onboarding/complete', { headers: CLIENT_HEADER })
+  )
+}
+
+/** A short unique suffix so parallel specs sharing one signed-in user never collide on titles. */
+export function uniq(prefix: string): string {
+  return `${prefix} ${randomUUID().slice(0, 8)}`
+}
+
+/** Creates a top-level category for the cookie-authenticated user; returns its id. */
+export async function createCategory(request: APIRequestContext, name: string): Promise<string> {
+  const res = await call('POST /api/categories', () =>
+    request.post('/api/categories', { headers: CLIENT_HEADER, data: { name, parent_id: null, is_hidden: false } })
+  )
+  return ((await res.json()) as { id: string }).id
+}
+
+/** Creates a bookmark (optionally filed into categories); returns its id. */
+export async function createBookmark(
+  request: APIRequestContext,
+  b: { url?: string; title: string; categoryIds?: string[] }
+): Promise<string> {
+  const res = await call('POST /api/bookmarks', () =>
+    request.post('/api/bookmarks', {
+      headers: CLIENT_HEADER,
+      data: {
+        url: b.url ?? `https://example.com/${randomUUID()}`,
+        title: b.title,
+        category_ids: b.categoryIds ?? [],
+        tags: [],
+      },
+    })
+  )
+  return ((await res.json()) as { id: string }).id
+}
+
+/** Soft-deletes a bookmark (moves it to Deleted items). */
+export async function deleteBookmark(request: APIRequestContext, id: string): Promise<void> {
+  await call('DELETE /api/bookmarks/:id', () => request.delete(`/api/bookmarks/${id}`, { headers: CLIENT_HEADER }))
+}
+
+/** Re-files a bookmark into exactly these categories. */
+export async function setBookmarkCategories(
+  request: APIRequestContext,
+  id: string,
+  categoryIds: string[]
+): Promise<void> {
+  await call('PATCH /api/bookmarks/:id', () =>
+    request.patch(`/api/bookmarks/${id}`, { headers: CLIENT_HEADER, data: { category_ids: categoryIds } })
   )
 }
