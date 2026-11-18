@@ -228,6 +228,7 @@ cargo fmt --all -- --check
 - Public crate APIs that other crates call need rustdoc examples where non-obvious
 - Record architecture-affecting decisions in `docs/` (or update ARCHITECTURE.md)
 - Keep `.env.example` in sync when adding config keys
+- A change that needs operators to act on upgrade (a manual migration step, a renamed or removed env var, a volume change, an API break for clients) goes under a `### Breaking` heading in `docs/CHANGELOG.md`'s `[Unreleased]` section, with the steps to take. The release workflow copies that section into the GitHub release notes, and the sidebar version badge turns red for admins on older versions. Add nothing there for changes that need no action. See [Upgrading an existing install](../docs/self-hosting/operations.md#upgrading-an-existing-install)
 
 ---
 
