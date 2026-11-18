@@ -61,9 +61,9 @@ Implement in order (each green before next):
 
 ### Task 4: Throwaway runner docs/script
 
-- [ ] `apps/web/e2e/README.md` — how to bring up throwaway API/DB/Meili and run `pnpm test:e2e --grep @smoke`
-- [ ] Align `playwright.config` baseURL/port with smoke skill (5199 vs 5173) via env
-- [ ] Commit: `Document throwaway Playwright smoke runner.`
+- [x] `apps/web/e2e/README.md` — how to bring up throwaway API/DB/Meili and run `pnpm test:e2e -- --grep @smoke`
+- [x] Align `playwright.config` baseURL/port with smoke skill (5199 vs 5173) via env
+- [x] Commit: `Document throwaway Playwright smoke runner.`
 
 ### Task 5: PR CI job
 
