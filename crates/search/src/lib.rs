@@ -30,7 +30,8 @@ pub struct BookmarkDoc {
 }
 
 fn search_attributes_to_retrieve() -> &'static [&'static str] {
-    &["id"]
+    // Omit page_text so hits stay small; keep catch-up fields for the search route.
+    &["id", "tags", "category_id", "category_ids"]
 }
 
 impl BookmarkDoc {
@@ -230,8 +231,12 @@ mod tests {
     }
 
     #[test]
-    fn search_query_retrieves_only_id() {
-        assert_eq!(search_attributes_to_retrieve(), &["id"][..]);
+    fn search_query_retrieves_catch_up_fields_without_page_text() {
+        assert_eq!(
+            search_attributes_to_retrieve(),
+            &["id", "tags", "category_id", "category_ids"][..]
+        );
+        assert!(!search_attributes_to_retrieve().contains(&"page_text"));
     }
 
     #[test]
