@@ -17,18 +17,21 @@ test.describe('Vault', () => {
   // ponytail: the UI has no "Set up vault" prompt yet; with no vault the modal just lists "Out of vault".
   test('VAULT-01 @vault @smoke: Move to vault with no vault offers no vault destination — assert only "Out of vault" is listed and Move needs a choice (no "Set up vault" prompt exists in the UI yet)', async ({
     page,
-    request,
   }) => {
     const title = uniq('VAULT-01 bookmark')
+    // page.request shares the browser cookie jar (vault unlock is session-scoped).
+    const request = page.request
     await lockAllVaults(request)
     await createBookmark(request, { title })
     await page.goto('/library')
+    await expect(page.getByRole('link', { name: title, exact: true })).toBeVisible()
     await bookmarkCard(page, title).getByRole('button', { name: 'Bookmark actions' }).click()
     await page.getByRole('menuitem', { name: 'Move to vault' }).click()
 
-    const modal = page.getByRole('dialog', { name: 'Move to vault' })
-    await expect(modal.getByRole('button', { name: 'Move', exact: true })).toBeDisabled()
-    await modal.getByRole('combobox', { name: 'Destination' }).click()
+    // Prefer Destination/Move over dialog name — Mantine title a11y can miss the name in CI.
+    await expect(page.getByRole('combobox', { name: 'Destination' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Move', exact: true })).toBeDisabled()
+    await page.getByRole('combobox', { name: 'Destination' }).click()
     await expect(page.getByRole('option')).toHaveText(['Out of vault'])
   })
 

@@ -14,8 +14,11 @@ test.describe('Library', () => {
     const drawer = page.getByRole('dialog', { name: 'Add bookmark' })
     await drawer.getByLabel('URL').fill('https://example.com/lib-01')
     await drawer.getByLabel('Title').fill(title)
-    await drawer.getByRole('combobox', { name: 'Categories' }).fill(folder)
+    const cats = drawer.getByRole('combobox', { name: 'Categories' })
+    await cats.click()
+    await cats.pressSequentially(folder)
     await page.getByRole('option', { name: `Create "${folder}"` }).click()
+    await expect(drawer.getByRole('textbox', { name: 'New category' })).toHaveValue(folder)
     await drawer.getByRole('button', { name: 'Create and select' }).click()
     await expect(drawer.getByText(folder, { exact: true })).toBeVisible() // the category pill
 
