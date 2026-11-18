@@ -10,8 +10,9 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use chrono::{DateTime, Utc};
 use linkdean_core::{
-    crypto, ArchiveFormat, Bookmark, BookmarkArchiveView, BulkArchive, BulkArchiveFailure,
-    BulkArchiveResult, Error, RequestArchive, MAX_BULK_ARCHIVE_IDS,
+    crypto, page_text::html_to_reader_markdown, ArchiveFormat, Bookmark, BookmarkArchiveView,
+    BulkArchive, BulkArchiveFailure, BulkArchiveResult, Error, RequestArchive,
+    MAX_BULK_ARCHIVE_IDS,
 };
 use linkdean_db::{self as db};
 use serde::Deserialize;
@@ -219,6 +220,31 @@ async fn delete_all(
 struct CopyQuery {
     /// `1` serves the copy as a download.
     download: Option<String>,
+    /// `md` converts an HTML copy to reader-mode Markdown (always a download).
+    #[serde(rename = "as")]
+    as_: Option<String>,
+}
+
+/// Whether this request wants Markdown. `as=md` only with HTML; other `as` values error.
+fn want_markdown(as_: Option<&str>, format: ArchiveFormat) -> Result<bool, Error> {
+    match as_ {
+        None => Ok(false),
+        Some("md") if format == ArchiveFormat::Html => Ok(true),
+        Some("md") => Err(Error::BadRequest(
+            "Markdown download is only available for HTML archives".into(),
+        )),
+        Some(_) => Err(Error::BadRequest("Unknown as= value".into())),
+    }
+}
+
+const NO_READABLE_MARKDOWN: &str = "No readable text in this copy.";
+
+fn markdown_body(html: &str) -> Result<String, Error> {
+    let md = html_to_reader_markdown(html);
+    if md.is_empty() {
+        return Err(Error::BadRequest(NO_READABLE_MARKDOWN.into()));
+    }
+    Ok(md)
 }
 
 #[utoipa::path(
@@ -258,13 +284,19 @@ async fn get_copy(
         }
         _ => stored,
     };
-    let download = q.download.is_some_and(|v| v != "0" && v != "false");
     let host = row
         .final_url
         .as_deref()
         .or(Some(b.url.as_str()).filter(|u| !u.is_empty()))
         .and_then(|u| url::Url::parse(u).ok())
         .and_then(|u| u.host_str().map(str::to_string));
+    if want_markdown(q.as_.as_deref(), format)? {
+        let html = String::from_utf8_lossy(&bytes);
+        let md = markdown_body(&html)?;
+        let headers = markdown_headers(host.as_deref(), row.captured_at);
+        return Ok((StatusCode::OK, headers, md.into_bytes()).into_response());
+    }
+    let download = q.download.is_some_and(|v| v != "0" && v != "false");
     let headers = copy_headers(
         format,
         row.content_type.as_deref().unwrap_or(""),
@@ -330,17 +362,6 @@ fn download_name(
     host: Option<&str>,
     captured_at: Option<DateTime<Utc>>,
 ) -> String {
-    let host: String = host
-        .unwrap_or("archive")
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric() || *c == '.' || *c == '-')
-        .collect();
-    let host = if host.is_empty() {
-        "archive".into()
-    } else {
-        host
-    };
-    let date = captured_at.unwrap_or_else(Utc::now).format("%Y-%m-%d");
     let mime = content_type.split(';').next().unwrap_or("").trim();
     let ext = match format {
         ArchiveFormat::Html => "html",
@@ -366,7 +387,43 @@ fn download_name(
             _ => "bin",
         },
     };
+    download_name_ext(ext, host, captured_at)
+}
+
+fn download_name_ext(ext: &str, host: Option<&str>, captured_at: Option<DateTime<Utc>>) -> String {
+    let host: String = host
+        .unwrap_or("archive")
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '.' || *c == '-')
+        .collect();
+    let host = if host.is_empty() {
+        "archive".into()
+    } else {
+        host
+    };
+    let date = captured_at.unwrap_or_else(Utc::now).format("%Y-%m-%d");
     format!("{host}-{date}.{ext}")
+}
+
+fn markdown_headers(host: Option<&str>, captured_at: Option<DateTime<Utc>>) -> HeaderMap {
+    let mut h = HeaderMap::new();
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-store"),
+    );
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    h.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/markdown; charset=utf-8"),
+    );
+    let name = download_name_ext("md", host, captured_at);
+    if let Ok(v) = HeaderValue::from_str(&format!("attachment; filename=\"{name}\"")) {
+        h.insert(header::CONTENT_DISPOSITION, v);
+    }
+    h
 }
 
 #[cfg(test)]
@@ -451,5 +508,36 @@ mod tests {
             download_name(ArchiveFormat::Html, "", None, day()),
             "archive-2026-11-03.html"
         );
+    }
+
+    #[test]
+    fn markdown_downloads_are_named_md_and_always_attach() {
+        let h = markdown_headers(Some("example.com"), day());
+        assert_eq!(h[header::CONTENT_TYPE], "text/markdown; charset=utf-8");
+        assert_eq!(
+            h[header::CONTENT_DISPOSITION],
+            "attachment; filename=\"example.com-2026-11-03.md\""
+        );
+        assert_eq!(h[header::CACHE_CONTROL], "private, no-store");
+        assert_eq!(h[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
+    }
+
+    #[test]
+    fn as_md_only_with_html_format() {
+        assert!(want_markdown(Some("md"), ArchiveFormat::Html).unwrap());
+        assert!(!want_markdown(None, ArchiveFormat::Html).unwrap());
+        assert!(want_markdown(Some("md"), ArchiveFormat::Pdf).is_err());
+        assert!(want_markdown(Some("md"), ArchiveFormat::File).is_err());
+        assert!(want_markdown(Some("html"), ArchiveFormat::Html).is_err());
+    }
+
+    #[test]
+    fn empty_html_markdown_is_bad_request_with_exact_message() {
+        let err = markdown_body("<html><body><nav>x</nav></body></html>").unwrap_err();
+        match err {
+            Error::BadRequest(msg) => assert_eq!(msg, NO_READABLE_MARKDOWN),
+            other => panic!("expected BadRequest, got {other:?}"),
+        }
+        assert!(markdown_body("<article><h1>Hi</h1><p>There</p></article>").is_ok());
     }
 }

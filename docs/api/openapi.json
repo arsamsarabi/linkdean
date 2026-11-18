@@ -6907,6 +6907,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "`md` converts an HTML copy to reader-mode Markdown (always a download).",
+            "in": "query",
+            "name": "as",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

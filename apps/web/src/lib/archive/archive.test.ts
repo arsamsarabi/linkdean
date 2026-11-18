@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { bookmarkSchema } from '@/schemas'
-import { archiveFileUrl, archivePending, formatBytes, hasArchive, primaryArchiveFormat } from './archive'
+import {
+  archiveFileUrl,
+  archiveMarkdownUrl,
+  archivePending,
+  formatBytes,
+  hasArchive,
+  primaryArchiveFormat,
+} from './archive'
 
 describe('archive helpers', () => {
   it('builds the copy and download addresses', () => {
     expect(archiveFileUrl('b1', 'html')).toBe('/api/bookmarks/b1/archive/html')
     expect(archiveFileUrl('b1', 'pdf', true)).toBe('/api/bookmarks/b1/archive/pdf?download=1')
+  })
+
+  it('builds the Markdown download address for HTML', () => {
+    expect(archiveMarkdownUrl('b1')).toBe('/api/bookmarks/b1/archive/html?download=1&as=md')
   })
 
   it('opens the page first, then the original file, then the PDF', () => {

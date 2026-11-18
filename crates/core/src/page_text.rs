@@ -23,6 +23,88 @@ pub fn extract_page_text(html: &str) -> String {
     collapsed.chars().take(PAGE_TEXT_MAX).collect()
 }
 
+/// Reader-mode Markdown from archived HTML (headings + paragraphs). Never panics; may return empty.
+pub fn html_to_reader_markdown(html: &str) -> String {
+    let doc = Html::parse_document(html);
+    let Some(root) = select_root(&doc) else {
+        return String::new();
+    };
+
+    let mut blocks = Vec::new();
+    collect_markdown_blocks(root, &mut blocks);
+    let joined = blocks
+        .into_iter()
+        .map(|b| b.trim().to_string())
+        .filter(|b| !b.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n");
+
+    joined.chars().take(PAGE_TEXT_MAX).collect()
+}
+
+fn heading_level(tag: &str) -> Option<u8> {
+    match tag {
+        "h1" => Some(1),
+        "h2" => Some(2),
+        "h3" => Some(3),
+        "h4" => Some(4),
+        "h5" => Some(5),
+        "h6" => Some(6),
+        _ => None,
+    }
+}
+
+fn collect_markdown_blocks(el: ElementRef<'_>, out: &mut Vec<String>) {
+    let tag = el.value().name();
+    if is_chrome(tag) {
+        return;
+    }
+    if let Some(level) = heading_level(tag) {
+        let mut parts = Vec::new();
+        collect_text(el, &mut parts);
+        let text = parts
+            .join(" ")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !text.is_empty() {
+            out.push(format!("{} {}", "#".repeat(level as usize), text));
+        }
+        return;
+    }
+    if tag == "p" || tag == "li" || tag == "blockquote" || tag == "pre" {
+        let mut parts = Vec::new();
+        collect_text(el, &mut parts);
+        let text = parts
+            .join(" ")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !text.is_empty() {
+            out.push(text);
+        }
+        return;
+    }
+
+    for child in el.children() {
+        match child.value() {
+            Node::Element(_) => {
+                if let Some(child_el) = ElementRef::wrap(child) {
+                    collect_markdown_blocks(child_el, out);
+                }
+            }
+            Node::Text(t) => {
+                let s = t.trim();
+                if !s.is_empty() {
+                    // Loose text under article/div/body — treat as a paragraph.
+                    out.push(s.split_whitespace().collect::<Vec<_>>().join(" "));
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn select_root<'a>(doc: &'a Html) -> Option<ElementRef<'a>> {
     // Selectors are compile-time constants; parse cannot fail for these.
     let article_sel = Selector::parse("article").ok()?;
@@ -130,5 +212,51 @@ mod tests {
         </body></html>"#;
         let text = extract_page_text(body_only);
         assert!(text.contains("A") && text.contains("B") && text.contains("BodyFallback"));
+    }
+
+    #[test]
+    fn headings_and_paragraphs_become_markdown() {
+        let html = r#"<html><body>
+      <article><h1>Title</h1><p>First para.</p><h2>Sub</h2><p>Second.</p></article>
+    </body></html>"#;
+        let md = html_to_reader_markdown(html);
+        assert!(md.contains("# Title"));
+        assert!(md.contains("## Sub"));
+        assert!(md.contains("First para."));
+        assert!(md.contains("Second."));
+    }
+
+    #[test]
+    fn chrome_is_dropped_from_markdown() {
+        let html = r#"<html><body>
+      <nav>Nav noise</nav>
+      <article><h1>Keep</h1><p>Body</p></article>
+      <footer>Footer noise</footer>
+      <script>ignore()</script>
+    </body></html>"#;
+        let md = html_to_reader_markdown(html);
+        assert!(md.contains("# Keep"));
+        assert!(md.contains("Body"));
+        assert!(!md.contains("Nav noise"));
+        assert!(!md.contains("Footer noise"));
+        assert!(!md.contains("ignore"));
+    }
+
+    #[test]
+    fn markdown_output_is_capped_at_page_text_max_multibyte() {
+        let unit = "字";
+        let many = unit.repeat(PAGE_TEXT_MAX + 50);
+        let html = format!("<article><p>{many}</p></article>");
+        let md = html_to_reader_markdown(&html);
+        assert!(md.chars().count() <= PAGE_TEXT_MAX);
+    }
+
+    #[test]
+    fn markdown_empty_or_garbage_yields_empty() {
+        assert!(html_to_reader_markdown("").is_empty());
+        assert!(
+            html_to_reader_markdown("<html><body><nav>x</nav></body></html>").is_empty()
+                || html_to_reader_markdown("<html><body></body></html>").is_empty()
+        );
     }
 }
