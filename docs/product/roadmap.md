@@ -57,7 +57,11 @@ Archiving and AI assistance come first: they are the biggest gaps against Raindr
 
 14. **Localization** (M). i18n-ready strings first, then locale packs.
 
-15. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests.
+15. **Test coverage** (ongoing). Raise coverage on the API routes and the web pages with the least tests. Every fix and feature already ships with tests. Playwright `@smoke` and most `@p1` already run on the throwaway stack in PR CI; remaining journey stubs stay in `apps/web/e2e/`:
+    - Enable **LIB-02** (invalid URL on blur blocks Add). The drawer now validates; confirm smoke, then flip `test.fixme` to `test`.
+    - **Share** P1 (`SHARE-*`): invite, accept, decline, revoke, public list link, with a second user (register is rate-limited; seed via API).
+    - **P2** as feasible: archive viewer, admin screenshots and search reindex, public list report, passkey and SSO edges, plus the other skipped `@p2` stubs.
+    - Optional: a Playwright project that greps only `@smoke` for faster local runs.
 
 ---
 
