@@ -1,7 +1,13 @@
-import { test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 test.describe('Dashboard', () => {
-  test.skip('DASH-01 @dashboard @smoke: home dashboard loads for signed-in user — assert greeting header and dashboard sections render at /', async () => {})
+  test('DASH-01 @dashboard @smoke: home dashboard loads for signed-in user — assert greeting header and dashboard sections render at /', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await expect(page.getByText(/^Good (morning|afternoon|evening)/)).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  })
   test.skip('DASH-02 @dashboard @p1: create a new dashboard from the switcher — assert new board is selected and listed', async () => {})
   test.skip('DASH-03 @dashboard @p1: Edit layout adds a Pinned section — assert section appears with the chosen title', async () => {})
   test.skip('DASH-04 @dashboard @p1: pin a bookmark from the + on a pinned section — assert bookmark tile appears in the section', async () => {})

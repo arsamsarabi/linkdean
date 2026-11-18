@@ -1,9 +1,55 @@
-import { test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+import { createBookmark, uniq } from './fixtures/api'
 
 test.describe('Library', () => {
-  test.skip('LIB-01 @library @smoke: add bookmark with Create category, pill + save into folder — assert category pill shows and the bookmark appears in that folder', async () => {})
-  test.skip('LIB-02 @library @smoke: invalid URL blur error blocks Add — assert URL error shows on blur and Add stays disabled', async () => {})
-  test.skip('LIB-03 @library @smoke: open library and see saved bookmark — assert saved bookmark card is visible on /library', async () => {})
+  test('LIB-01 @library @smoke: add bookmark with Create category, pill + save into folder — assert category pill shows and the bookmark appears in that folder', async ({
+    page,
+  }) => {
+    const title = uniq('LIB-01 bookmark')
+    const folder = uniq('LIB-01 folder')
+    await page.goto('/library')
+    await page.getByRole('button', { name: 'Add bookmark' }).first().click()
+
+    const drawer = page.getByRole('dialog', { name: 'Add bookmark' })
+    await drawer.getByLabel('URL').fill('https://example.com/lib-01')
+    await drawer.getByLabel('Title').fill(title)
+    await drawer.getByRole('combobox', { name: 'Categories' }).fill(folder)
+    await page.getByRole('option', { name: `Create "${folder}"` }).click()
+    await drawer.getByRole('button', { name: 'Create and select' }).click()
+    await expect(drawer.getByText(folder, { exact: true })).toBeVisible() // the category pill
+
+    await drawer.getByRole('button', { name: 'Add bookmark' }).click()
+    await expect(drawer).toBeHidden()
+
+    await page.getByRole('link', { name: folder }).first().click()
+    await expect(page.getByText(title)).toBeVisible()
+  })
+  // Blocked on product: BookmarkDrawer has no on-blur URL validation, and POST /api/bookmarks accepts
+  // "https://not a url" (observed: toast "Saved"). Body below is the intended behaviour; flip to `test` once
+  // the drawer validates the URL.
+  test.fixme('LIB-02 @library @smoke: invalid URL blur error blocks Add — assert URL error shows on blur and Add stays disabled', async ({
+    page,
+  }) => {
+    await page.goto('/library')
+    await page.getByRole('button', { name: 'Add bookmark' }).first().click()
+    const drawer = page.getByRole('dialog', { name: 'Add bookmark' })
+    const add = drawer.getByRole('button', { name: 'Add bookmark' })
+
+    await expect(add).toBeDisabled() // empty URL
+    await drawer.getByLabel('URL').fill('not a url')
+    await drawer.getByLabel('URL').blur()
+    await expect(drawer.getByText(/valid.*(url|address)/i)).toBeVisible()
+    await expect(add).toBeDisabled()
+  })
+  test('LIB-03 @library @smoke: open library and see saved bookmark — assert saved bookmark card is visible on /library', async ({
+    page,
+    request,
+  }) => {
+    const title = uniq('LIB-03 bookmark')
+    await createBookmark(request, { title })
+    await page.goto('/library')
+    await expect(page.getByText(title)).toBeVisible()
+  })
   test.skip('LIB-04 @library @p1: Import from URL fills title and description — assert form title and description are populated from the page', async () => {})
   test.skip('LIB-05 @library @p1: delete bookmark moves it to Deleted items — assert card leaves the library', async () => {})
   test.skip('LIB-06 @library @p1: filter library by folder and tag — assert only matching bookmarks are shown with updated count', async () => {})
