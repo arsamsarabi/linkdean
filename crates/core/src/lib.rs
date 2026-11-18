@@ -6,6 +6,7 @@ pub mod extension_connect;
 pub mod import_export;
 pub mod legal;
 pub mod models;
+pub mod page_text;
 pub mod preview_image;
 pub mod unsubscribe;
 
