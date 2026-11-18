@@ -22,7 +22,7 @@ Snapshot, view and download.
 - When a site refuses to show in Quick peek, or the link checker finds the page gone, offer the copy.
 - Vault bookmarks get copies encrypted with the vault key.
 
-Not in this slice: the export zip with archives, reader-mode Markdown download, embedded video and audio, and version history (see Later).
+Not in this slice: the export zip with archives, embedded video and audio, and version history (see Later). Markdown download ships separately (see below).
 
 ## Page text (search)
 
@@ -32,7 +32,11 @@ After a successful **non-vault HTML** archive (new or replace), Linkdean extract
 - Deleting the archive (or replacing HTML with a `file` copy) clears body text from search even though the bookmark remains.
 - No backfill: existing done HTML rows stay without page text until the person archives again.
 - Shared-category invitees who can already open the archive may also match on the **owner’s** indexed page body. That is intentional for this slice; do not special-case body matches to owners only.
-- Reader-mode Markdown download stays Later (see below); this section is search indexing only.
+- Reader-mode Markdown download is separate (see Markdown download below); this section is search indexing only.
+
+## Markdown download
+
+Anyone who can download an HTML archive can also download a reader-mode Markdown version (`as=md` on the HTML copy route). Conversion runs on the fly from the stored HTML (headings and paragraphs); nothing new is stored. Vault copies decrypt in memory while unlocked, same as opening the HTML. Empty conversion returns a clear client error; the archive row is unchanged. PDF and original-file copies do not offer Markdown.
 
 ## Decisions
 
@@ -141,6 +145,5 @@ An archived page is untrusted HTML. Scripts are stripped at capture, and the res
 ## Later
 
 - Export: the full export gains **Include archives** and becomes a zip.
-- Downloads: reader-mode Markdown taken from the copy, offered as a download (page-text search already ships above).
 - Embedded media: explore downloading `<video>` and `<audio>` files that are plain links (not streams), within the caps.
 - Version history: keep earlier copies.
