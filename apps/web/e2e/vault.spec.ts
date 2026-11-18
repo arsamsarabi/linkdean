@@ -14,8 +14,7 @@ import { bookmarkCard, vaultSettingsCard } from './fixtures/ui'
 test.describe('Vault', () => {
   test.describe.configure({ mode: 'serial' })
 
-  // ponytail: the UI has no "Set up vault" prompt yet; with no vault the modal just lists "Out of vault".
-  test('VAULT-01 @vault @smoke: Move to vault with no vault offers no vault destination — assert only "Out of vault" is listed and Move needs a choice (no "Set up vault" prompt exists in the UI yet)', async ({
+  test('VAULT-01 @vault @smoke: Move to vault with no vault offers Set up vault — assert the prompt and link to /vaults (no Destination select yet)', async ({
     page,
   }) => {
     const title = uniq('VAULT-01 bookmark')
@@ -28,11 +27,9 @@ test.describe('Vault', () => {
     await bookmarkCard(page, title).getByRole('button', { name: 'Bookmark actions' }).click()
     await page.getByRole('menuitem', { name: 'Move to vault' }).click()
 
-    // Prefer Destination/Move over dialog name — Mantine title a11y can miss the name in CI.
-    await expect(page.getByRole('combobox', { name: 'Destination' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Move', exact: true })).toBeDisabled()
-    await page.getByRole('combobox', { name: 'Destination' }).click()
-    await expect(page.getByRole('option')).toHaveText(['Out of vault'])
+    await expect(page.getByText("You haven't set up a vault yet")).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Set up vault' })).toHaveAttribute('href', '/vaults')
+    await expect(page.getByRole('combobox', { name: 'Destination' })).toHaveCount(0)
   })
 
   test('VAULT-02 @vault @p1: create vault with passphrase shows recovery key once — assert recovery key is displayed and not shown again after close', async ({

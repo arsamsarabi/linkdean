@@ -49,6 +49,7 @@
 
 ### Fixed
 
+- Upgraded `lettre` to 0.11.24 for the SMTP security advisories in RUSTSEC-2026-0560…0565.
 - Library and dashboards:
   - **Create "name"** on the bookmark form creates the category at once and shows **Category created**, instead of opening a second panel people often missed before saving to Unsorted.
   - Search results show the bookmark's real folders (and catch Meili up when tags or folders changed), instead of an **Unsorted** chip after a reload.
@@ -88,7 +89,6 @@
 - The API shuts down cleanly on `docker stop`: it finishes open requests for up to 8 seconds and exits, instead of being killed after Docker's 10-second timeout.
 - Docs pages load their own content directly, so links, search engines and link previews see the right page; unknown docs addresses return a 404 page.
 - Docs edits trigger a docs-site deploy again after the restructure; fixed links the move broke.
-
 
 ## [0.0.2] - 2026-11-06
 
