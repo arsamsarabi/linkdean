@@ -1,5 +1,6 @@
 mod email;
 mod reports;
+mod update;
 
 use crate::auth::AdminUser;
 use crate::error::ApiResult;
@@ -36,6 +37,7 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(screenshot_retry_status, retry_screenshots))
         .merge(email::router())
         .merge(reports::router())
+        .merge(update::router())
 }
 
 #[utoipa::path(

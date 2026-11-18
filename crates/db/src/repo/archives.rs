@@ -338,6 +338,13 @@ pub async fn finish_archive(
     copies: &[StoredCopy],
 ) -> Result<Vec<String>> {
     let mut tx = pool.begin().await.map_err(db_err)?;
+    // Lock bookmarks before archive rows so vault moves (bookmarks → archives) cannot deadlock.
+    let is_vault: bool =
+        sqlx::query_scalar("SELECT is_vault FROM bookmarks WHERE id = $1 FOR SHARE")
+            .bind(bookmark_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(db_err)?;
     let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
         "SELECT format, status, file_name FROM bookmark_archives WHERE bookmark_id = $1 FOR UPDATE",
     )
@@ -348,12 +355,6 @@ pub async fn finish_archive(
     if !rows.iter().any(|(_, status, _)| status == "running") {
         return Ok(copies.iter().map(|c| c.file_name.clone()).collect());
     }
-    let is_vault: bool =
-        sqlx::query_scalar("SELECT is_vault FROM bookmarks WHERE id = $1 FOR SHARE")
-            .bind(bookmark_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(db_err)?;
     let is_file = copies.iter().any(|c| c.format == ArchiveFormat::File);
     let mut unused = Vec::new();
     for (format, _, file_name) in &rows {

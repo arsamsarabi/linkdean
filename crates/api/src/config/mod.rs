@@ -61,6 +61,8 @@ pub struct Config {
     pub dev_routes: bool,
     /// Experimental: `GET /api/agent-skill` and its UI. Off unless `EXPERIMENTAL_AGENT_SKILLS`.
     pub experimental_agent_skills: bool,
+    /// Ask GitHub for newer Linkdean releases to show admins. Off with `UPDATE_CHECK=false`.
+    pub update_check: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
@@ -247,6 +249,7 @@ impl Config {
             block_disposable_emails: env_bool("BLOCK_DISPOSABLE_EMAILS", false),
             dev_routes: env_bool("ALLOW_DEFAULT_SECRETS", false),
             experimental_agent_skills: env_bool("EXPERIMENTAL_AGENT_SKILLS", false),
+            update_check: env_bool("UPDATE_CHECK", true),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),

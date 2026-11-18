@@ -30,6 +30,8 @@ vi.mock('@/hooks', () => ({
   usePrefetchActivity: () => () => undefined,
   useCategories: () => ({ isLoading: false, data: folders }),
   useShareInvites: () => ({ data: { invites: [{ id: 'i1', rejected_at: null }] } }),
+  useAppVersion: () => '0.0.12',
+  useUpdateStatus: () => ({ isSuccess: false, data: undefined }),
 }))
 
 vi.mock('./useIconRail', () => ({

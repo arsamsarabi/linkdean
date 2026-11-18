@@ -1,5 +1,5 @@
 import { type ReactElement, type ReactNode } from 'react'
-import { AppShell, Badge, NavLink, ScrollArea, Stack, Text } from '@mantine/core'
+import { AppShell, Badge, Box, NavLink, ScrollArea, Stack, Text } from '@mantine/core'
 import {
   IconBookmark,
   IconBooks,
@@ -24,6 +24,7 @@ import classes from './AppShell.module.css'
 import { SidebarFolders } from './SidebarFolders'
 import { EXACT } from './sidebarLinks'
 import { SidebarRail } from './SidebarRail'
+import { SidebarVersion } from './SidebarVersion'
 import { useIconRail } from './useIconRail'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
@@ -214,6 +215,9 @@ export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props):
               onClick={closeNav}
             />
           ) : null}
+          <Box px="sm" pt="xs">
+            <SidebarVersion isAdmin={isAdmin} />
+          </Box>
         </Stack>
       </AppShell.Section>
     </>

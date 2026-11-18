@@ -13,3 +13,13 @@ export function useExperimentalFlags(): ExperimentalFlags {
   })
   return data?.experimental ?? OFF
 }
+
+/** The running server's version, such as `0.0.12`, once `/auth/config` has answered. */
+export function useAppVersion(): string | undefined {
+  const { data } = useQuery({
+    queryKey: ['auth-config'],
+    queryFn: api.authConfig,
+    staleTime: Infinity,
+  })
+  return data?.version ?? undefined
+}

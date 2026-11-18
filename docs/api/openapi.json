@@ -3964,6 +3964,52 @@
         ]
       }
     },
+    "/admin/update": {
+      "get": {
+        "operationId": "admin_update_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "`update` is null when this is the newest release, the check is off or GitHub could not be reached; otherwise `{ latest, level: patch|minor|major|breaking, url }`"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "session_token": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/admin/users": {
       "get": {
         "operationId": "admin_list_users",

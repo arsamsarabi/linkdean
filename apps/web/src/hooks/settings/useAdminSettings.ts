@@ -14,6 +14,7 @@ import type {
   RegistrationInvite,
   ScreenshotRetryStatus,
   TestEmailResult,
+  UpdateStatus,
 } from '@/schemas'
 
 type PlatformEnvelope = {
@@ -155,5 +156,16 @@ export function useSendTestEmail(): UseMutationResult<TestEmailResult, Error, vo
   return useMutation({
     mutationFn: () => api.sendTestEmail(),
     onSettled: () => void qc.invalidateQueries({ queryKey: ['admin', 'email'] }),
+  })
+}
+
+/** A newer Linkdean release, for the sidebar badge. The server caches GitHub for hours. */
+export function useUpdateStatus(enabled: boolean): UseQueryResult<UpdateStatus> {
+  return useQuery({
+    queryKey: ['admin', 'update'],
+    queryFn: () => api.getUpdateStatus(),
+    enabled,
+    staleTime: 60 * 60 * 1000,
+    retry: false,
   })
 }
