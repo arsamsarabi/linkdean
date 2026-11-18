@@ -3,20 +3,24 @@
 use crate::state::AppState;
 use linkdean_core::BookmarkView;
 use linkdean_db as db;
+use uuid::Uuid;
 
 /// Upsert one bookmark after loading HTML archive page text when indexed.
 pub async fn upsert(state: &AppState, view: &BookmarkView) -> anyhow::Result<()> {
-    let enriched = enrich_page_texts(state, std::slice::from_ref(view)).await;
-    state.search.upsert_bookmark(&enriched[0]).await
+    let enriched = enrich_page_texts(state, std::slice::from_ref(view)).await?;
+    write_meili(state, &enriched).await
 }
 
 /// Upsert many bookmarks after loading HTML archive page texts when indexed.
 pub async fn upsert_many(state: &AppState, views: &[BookmarkView]) -> anyhow::Result<()> {
-    let enriched = enrich_page_texts(state, views).await;
-    state.search.upsert_bookmarks(&enriched).await
+    let enriched = enrich_page_texts(state, views).await?;
+    write_meili(state, &enriched).await
 }
 
-async fn enrich_page_texts(state: &AppState, views: &[BookmarkView]) -> Vec<BookmarkView> {
+async fn enrich_page_texts(
+    state: &AppState,
+    views: &[BookmarkView],
+) -> anyhow::Result<Vec<BookmarkView>> {
     let ids: Vec<_> = views
         .iter()
         .filter(|v| !v.is_vault && v.deleted_at.is_none())
@@ -25,15 +29,12 @@ async fn enrich_page_texts(state: &AppState, views: &[BookmarkView]) -> Vec<Book
     let mut texts = if ids.is_empty() {
         Default::default()
     } else {
-        match db::html_page_texts(&state.pool, &ids).await {
-            Ok(m) => m,
-            Err(e) => {
-                tracing::warn!(error = %e, "html page texts load failed");
-                Default::default()
-            }
-        }
+        // Fail closed: never upsert with empty page_text after a load error (Meili wipe).
+        db::html_page_texts(&state.pool, &ids)
+            .await
+            .map_err(|e| anyhow::anyhow!("html page texts load failed: {e}"))?
     };
-    views
+    Ok(views
         .iter()
         .cloned()
         .map(|mut v| {
@@ -42,7 +43,34 @@ async fn enrich_page_texts(state: &AppState, views: &[BookmarkView]) -> Vec<Book
             }
             v
         })
-        .collect()
+        .collect())
+}
+
+/// Re-check live vault/trash flags immediately before Meili write (post-move TOCTOU).
+async fn write_meili(state: &AppState, views: &[BookmarkView]) -> anyhow::Result<()> {
+    let ids: Vec<Uuid> = views.iter().map(|v| v.id).collect();
+    let gates = db::bookmark_index_gates(&state.pool, &ids)
+        .await
+        .map_err(|e| anyhow::anyhow!("bookmark index gates failed: {e}"))?;
+
+    let mut to_upsert = Vec::with_capacity(views.len());
+    for view in views {
+        match gates.get(&view.id) {
+            Some((false, false)) => to_upsert.push(view.clone()),
+            Some((true, _)) | Some((_, true)) | None => {
+                // Vault, trash, or gone: remove rather than re-insert page_text.
+                state.search.delete_bookmark(view.id).await?;
+            }
+        }
+    }
+    if to_upsert.is_empty() {
+        return Ok(());
+    }
+    if to_upsert.len() == 1 {
+        state.search.upsert_bookmark(&to_upsert[0]).await
+    } else {
+        state.search.upsert_bookmarks(&to_upsert).await
+    }
 }
 
 #[cfg(test)]

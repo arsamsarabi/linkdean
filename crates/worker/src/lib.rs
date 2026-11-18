@@ -225,16 +225,34 @@ pub async fn enrich_bookmark(
                 Ok(Some(mut view)) => {
                     // ViewBatch leaves page_text empty; attach archive text so add_or_replace
                     // does not wipe a Meili body already indexed after HTML capture.
+                    // Fail closed on load Err: skip Meili (never upsert empty page_text).
                     match db::html_page_texts(pool, &[bookmark_id]).await {
                         Ok(mut texts) => {
                             if let Some(t) = texts.remove(&bookmark_id) {
                                 view.page_text = t;
                             }
+                            // Re-check vault/trash immediately before Meili write (post-move TOCTOU).
+                            match db::bookmark_index_gates(pool, &[bookmark_id]).await {
+                                Ok(gates) => match gates.get(&bookmark_id) {
+                                    Some((false, false)) => {
+                                        if let Err(e) = search.upsert_bookmark(&view).await {
+                                            warn!(%bookmark_id, "search reindex after enrichment: {e}");
+                                        }
+                                    }
+                                    Some((true, _)) | Some((_, true)) | None => {
+                                        if let Err(e) = search.delete_bookmark(bookmark_id).await {
+                                            warn!(%bookmark_id, "search delete after late vault/trash: {e}");
+                                        }
+                                    }
+                                },
+                                Err(e) => {
+                                    warn!(%bookmark_id, "index gate check failed; skipping Meili upsert: {e}")
+                                }
+                            }
                         }
-                        Err(e) => warn!(%bookmark_id, "html page texts load failed: {e}"),
-                    }
-                    if let Err(e) = search.upsert_bookmark(&view).await {
-                        warn!(%bookmark_id, "search reindex after enrichment: {e}");
+                        Err(e) => {
+                            warn!(%bookmark_id, "html page texts load failed; skipping Meili upsert: {e}")
+                        }
                     }
                 }
                 Ok(None) => {}

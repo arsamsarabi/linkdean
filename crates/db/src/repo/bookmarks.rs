@@ -886,6 +886,31 @@ pub async fn get_bookmark_raw(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<
         .ok_or(Error::NotFound)
 }
 
+/// Live `(is_vault, soft_deleted)` for Meili upsert TOCTOU checks. Missing ids are absent.
+pub async fn bookmark_index_gates(
+    pool: &PgPool,
+    ids: &[Uuid],
+) -> Result<HashMap<Uuid, (bool, bool)>> {
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let rows: Vec<(Uuid, bool, bool)> = sqlx::query_as(
+        r#"
+        SELECT id, is_vault, deleted_at IS NOT NULL
+        FROM bookmarks
+        WHERE id = ANY($1)
+        "#,
+    )
+    .bind(ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(rows
+        .into_iter()
+        .map(|(id, is_vault, soft_deleted)| (id, (is_vault, soft_deleted)))
+        .collect())
+}
+
 /// Bookmark for serving its preview, favicon or OG image. A dashboard share shows its
 /// non-vault pins to invitees without granting `bookmark_can_read`, so those images
 /// are allowed here and nowhere else: this must not back social or write paths.
