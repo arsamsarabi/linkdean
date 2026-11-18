@@ -106,6 +106,121 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  # Throwaway Postgres + Meili + API + Vite; never the compose/dev stack.
+  # @see apps/web/e2e/README.md and docs/superpowers/plans/2026-11-17-playwright-e2e.md
+  e2e:
+    name: Web e2e (@smoke)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: linkdean
+          POSTGRES_PASSWORD: linkdean
+          POSTGRES_DB: smoke
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U linkdean -d smoke"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      meilisearch:
+        image: getmeili/meilisearch:v1.11
+        env:
+          MEILI_MASTER_KEY: ci-meili-master-key-0001
+          MEILI_NO_ANALYTICS: "true"
+        ports: ["7700:7700"]
+    env:
+      CARGO_TERM_COLOR: always
+      # Published DB login is refused unless this is set (CI-only throwaway).
+      ALLOW_DEFAULT_SECRETS: "true"
+      BIND: 127.0.0.1:18081
+      DATABASE_URL: postgres://linkdean:linkdean@127.0.0.1:5432/smoke
+      SESSION_SECRET: ci-e2e-session-secret-16+
+      MEILI_URL: http://127.0.0.1:7700
+      MEILI_MASTER_KEY: ci-meili-master-key-0001
+      APP_URL: http://127.0.0.1:5199/
+      BROWSER_WS_URL: http://127.0.0.1:59998
+      TERMS_VERSION: "2026-11-15"
+      TERMS_URL: https://example.com/terms
+      PRIVACY_URL: https://example.com/privacy
+      API_PROXY_TARGET: http://127.0.0.1:18081
+      PLAYWRIGHT_WEB_PORT: "5199"
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:5199
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install system libraries
+        run: |
+          for attempt in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=3 update &&
+              sudo apt-get -o Acquire::Retries=3 install -y pkg-config libssl-dev cmake libwebp-dev &&
+              exit 0
+            echo "apt attempt $attempt failed; retrying in 30 s"
+            sleep 30
+          done
+          exit 1
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.94"
+      - uses: Swatinem/rust-cache@v2
+      - name: Build API
+        run: cargo build -p linkdean-api --locked
+      - name: Wait for Meilisearch
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:7700/health >/dev/null; then
+              echo "meili ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "meili did not become healthy" >&2
+          exit 1
+      - name: Start API
+        run: |
+          ./target/debug/linkdean-api > /tmp/linkdean-api.log 2>&1 &
+          echo $! > /tmp/linkdean-api.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:18081/api/health >/dev/null; then
+              echo "API healthy"
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/linkdean-api.pid)" 2>/dev/null; then
+              echo "API exited early:" >&2
+              cat /tmp/linkdean-api.log >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "API did not become healthy:" >&2
+          cat /tmp/linkdean-api.log >&2
+          exit 1
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Install web deps and Chromium
+        working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install chromium --with-deps
+      - name: Run @smoke
+        working-directory: apps/web
+        run: pnpm exec playwright test --grep @smoke
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
   extension:
     name: Extension (format, lint, types, test, build)
     runs-on: ubuntu-24.04

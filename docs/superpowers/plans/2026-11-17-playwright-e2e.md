@@ -67,10 +67,10 @@ Implement in order (each green before next):
 
 ### Task 5: PR CI job
 
-- [ ] Add CI job: services (postgres, meili) → migrate → API → `pnpm test:e2e --grep @smoke`
-- [ ] Artifacts: playwright report on failure
-- [ ] CHANGELOG under Unreleased
-- [ ] Commit: `Run Playwright @smoke on PR CI.`
+- [x] Add CI job: services (postgres, meili) → migrate → API → `pnpm test:e2e --grep @smoke`
+- [x] Artifacts: playwright report on failure (`playwright-report` + `test-results`)
+- [x] CHANGELOG under Unreleased
+- [x] Commit: `Run Playwright @smoke on PR CI.`
 
 ### Task 6: P1 (after P0 green in CI)
 
