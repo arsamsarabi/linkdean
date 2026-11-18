@@ -203,6 +203,19 @@ jobs:
             notes="$notes Browser extension $EXTENSION_VERSION submitted to the Chrome Web Store and AMO for review."
           fi
           notes="$notes Docs: [docs.linkdean.app](https://docs.linkdean.app)."
+          # Copy this version's "### Breaking" section from the changelog. The app's sidebar
+          # badge reads that heading in the release notes to warn admins before they update.
+          # Without a "## [x.y.z]" section for this version, [Unreleased] holds its changes.
+          section="## [${GITHUB_REF_NAME#v}]"
+          grep -qF "$section" docs/CHANGELOG.md || section="## [Unreleased]"
+          breaking=$(awk -v v="$section" '
+            index($0, v) == 1 { inv = 1; next }
+            inv && /^## \[/ { exit }
+            inv && /^### / { inb = ($0 ~ /^### Breaking/) }
+            inv && inb { print }' docs/CHANGELOG.md)
+          if [ -n "$breaking" ]; then
+            notes="$notes"$'\n\n'"$breaking"
+          fi
           # A moved tag leaves its old release behind (as a draft once the tag is deleted).
           # Remove it so this run's release replaces it.
           gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \

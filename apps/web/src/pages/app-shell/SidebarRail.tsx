@@ -19,6 +19,7 @@ import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
 import { recentFolders } from './folderLists'
 import { EXACT } from './sidebarLinks'
+import { SidebarVersion } from './SidebarVersion'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 
@@ -175,6 +176,7 @@ export function SidebarRail({ pathname, search, vaultUnlocked, isAdmin }: Props)
               onClick={closeNav}
             />
           ) : null}
+          <SidebarVersion isAdmin={isAdmin} compact />
         </Stack>
       </AppShell.Section>
     </>

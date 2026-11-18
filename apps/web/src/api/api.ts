@@ -90,6 +90,7 @@ import {
   unreadCountSchema,
   unsubscribeLinkSchema,
   unsubscribeResultSchema,
+  updateStatusSchema,
   userEnvelopeSchema,
   vaultsEnvelopeSchema,
   webauthnStartSchema,
@@ -177,6 +178,7 @@ import {
   type TrashKind,
   type UnsubscribeLink,
   type UnsubscribeResult,
+  type UpdateStatus,
   type UserPublic,
   type UserSettings,
   type Vault,
@@ -310,6 +312,8 @@ export const api = {
     req('/admin/search/reindex', { method: 'POST' }, adminReindexSchema),
 
   getEmailStatus: (): Promise<EmailStatus> => req('/admin/email', {}, emailStatusSchema),
+
+  getUpdateStatus: (): Promise<UpdateStatus> => req('/admin/update', {}, updateStatusSchema),
 
   sendTestEmail: (): Promise<TestEmailResult> => req('/admin/email/test', { method: 'POST' }, testEmailResultSchema),
 

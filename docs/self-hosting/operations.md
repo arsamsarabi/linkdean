@@ -217,6 +217,19 @@ Scripts written against older builds that sent `null` to mean "no change" will n
 
 ### Upgrading an existing install
 
+Admins see the running version at the foot of the sidebar, and a badge when a newer release is out (turn the check off with `UPDATE_CHECK=false`):
+
+| Badge | Meaning |
+| --- | --- |
+| Blue, **Patch** | Bug fixes. Safe to update |
+| Teal, **New features** | New features. Safe to update |
+| Orange, **Major** | A major release. Read the release notes first |
+| Red, **Breaking** | At least one release between yours and the newest needs manual steps. Read the **Breaking** section of each of those releases' notes (also in the [changelog](../CHANGELOG.md)) and follow the steps in order |
+
+The badge links to the newest release's notes on GitHub. When you skip several releases, check every release in between, not only the newest.
+
+#### Before upgrading past commit `bdef6d8`
+
 Earlier builds ran as root with a default database password. Before upgrading past commit `bdef6d8`:
 
 1. **Database password.** Postgres sets its password only when the `db` volume is first created, so a new `POSTGRES_PASSWORD` does not change an existing database. If the database still uses `linkdean`, change it to match your new value before starting the new `api`:
@@ -242,7 +255,7 @@ Earlier builds ran as root with a default database password. Before upgrading pa
 
 The dev stack (`deploy/docker/docker-compose.dev.yml`) and `.env.example` use well-known secrets and set `ALLOW_DEFAULT_SECRETS=true`, so they start without generating anything. Never copy those values into production.
 
-The dev and production Compose files share a project name and volumes. Run one at a time. A database volume first created by the dev stack keeps the password `linkdean`; follow [Upgrading an existing install](#upgrading-an-existing-install) step 1 before switching that volume to production.
+The dev and production Compose files share a project name and volumes. Run one at a time. A database volume first created by the dev stack keeps the password `linkdean`; follow [Before upgrading past commit `bdef6d8`](#before-upgrading-past-commit-bdef6d8) step 1 before switching that volume to production.
 
 Running the API and web on the host is covered in the README under Development.
 
@@ -302,7 +315,7 @@ docker run --rm \
   tar czf /out/linkdean-files-$(date +%F).tgz -C / avatars previews
 ```
 
-Restore Postgres with `pg_restore` into a fresh DB, restore Meili dump per [Meilisearch dump docs](https://www.meilisearch.com/docs/learn/dump), then extract the files tarball back onto the named volumes and run the `chown` from [Upgrading](#upgrading-an-existing-install) step 3 if the tarball was made as root. After restore, use **Admin → Reindex search** if the Meili dump was skipped.
+Restore Postgres with `pg_restore` into a fresh DB, restore Meili dump per [Meilisearch dump docs](https://www.meilisearch.com/docs/learn/dump), then extract the files tarball back onto the named volumes and run the `chown` from [Before upgrading past commit `bdef6d8`](#before-upgrading-past-commit-bdef6d8) step 3 if the tarball was made as root. After restore, use **Admin → Reindex search** if the Meili dump was skipped.
 
 ## Data volumes
 

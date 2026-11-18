@@ -236,6 +236,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Public docs site: [docs.linkdean.app](https://docs.linkdean.app), with content from this `docs/` tree
 - Public marketing site: [linkdean.app](https://linkdean.app)
 - Public app: [app.linkdean.app](https://app.linkdean.app), the hosted public beta
+- Version at the foot of the sidebar (and in `GET /api/auth/config`). Admins see a badge when a newer GitHub release is out: blue for a patch, teal for new features, orange for a major release and red when any release in between has a `### Breaking` heading in its notes (the release workflow copies it from that version's CHANGELOG section). The badge links to the release notes. Only the server asks GitHub, at most every 6 hours (`GET /api/admin/update`); `UPDATE_CHECK=false` turns it off
 - Healthchecks on db / Meili / api; `GET /api/health` (reports the running version) and `GET /api/ready`
 - Security headers on every response (`Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`; optional `Strict-Transport-Security` via `HSTS_MAX_AGE`). Image routes keep their own sandbox CSP. `/.well-known/security.txt` and `/security.txt` point to the project security contact
 - Supply chain: CI runs `cargo audit` and `pnpm audit --prod` on every PR; Dependabot opens updates for Cargo, npm and GitHub Actions

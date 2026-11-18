@@ -410,6 +410,7 @@ When modifying JS files:
 - Complex logic must be explained inline
 - Public hooks/services must include usage examples
 - Record major decisions when they affect architecture
+- A change that needs operators or API clients to act on upgrade goes under `### Breaking` in `docs/CHANGELOG.md`'s `[Unreleased]` section, with the steps to take. It turns the admin sidebar update badge red (see `crates/AGENTS.md` §14)
 
 ---
 

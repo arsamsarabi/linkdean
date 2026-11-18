@@ -11,6 +11,7 @@ export {
   useRevokeRegistrationInvite,
   useEmailStatus,
   useSendTestEmail,
+  useUpdateStatus,
 } from './useAdminSettings'
 export {
   useApiKeys,

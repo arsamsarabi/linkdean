@@ -12,7 +12,7 @@ The stack does not start without these. Generate each with `openssl rand -hex 32
 
 | Variable | What it does |
 | --- | --- |
-| `POSTGRES_PASSWORD` | Password of the `linkdean` database user. Postgres applies it only when the `pgdata` volume is first created; changing it later needs `ALTER USER`, see [Upgrading an existing install](./operations.md#upgrading-an-existing-install) |
+| `POSTGRES_PASSWORD` | Password of the `linkdean` database user. Postgres applies it only when the `pgdata` volume is first created; changing it later needs `ALTER USER`, see [Before upgrading past commit `bdef6d8`](./operations.md#before-upgrading-past-commit-bdef6d8) |
 | `MEILI_MASTER_KEY` | Meilisearch master key. The search container runs with it, and the API uses it to index and search. At least 16 bytes |
 | `SESSION_SECRET` | At least 16 characters. Signs the one-click unsubscribe links in notification email, so changing it voids links already sent. Sessions are random tokens stored hashed in Postgres, not signed with this |
 
@@ -151,6 +151,7 @@ These have working defaults inside the image. Change them only for a reason.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `SESSION_DAYS` | `30` | Days a sign-in lasts |
+| `UPDATE_CHECK` | `true` | The server asks GitHub for newer Linkdean releases, at most every 6 hours, and admins see an update badge at the bottom of the sidebar. Only the server contacts GitHub, never people's browsers. `false` turns the check off |
 | `CORS_ORIGINS` | `APP_URL` | Comma-separated browser origins allowed to call the API. `*` allows any origin; avoid it on a reachable server |
 | `RUST_LOG` | `info` | Log filter, such as `debug` or `info,linkdean_api=debug` |
 | `BIND` | `0.0.0.0:8080` | Listen address inside the container. If you change the port, change `ports:` and the healthcheck too |
