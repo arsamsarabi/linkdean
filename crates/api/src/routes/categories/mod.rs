@@ -175,7 +175,7 @@ async fn fork(
     let (cat, copied) = db::fork_category(&state.pool, user.id, id, req).await?;
     let bookmarks_copied = copied.len();
     for view in &copied {
-        if let Err(e) = state.search.upsert_bookmark(view).await {
+        if let Err(e) = crate::search_index::upsert(&state, view).await {
             tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert after fork failed");
         }
     }

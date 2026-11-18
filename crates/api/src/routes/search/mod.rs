@@ -106,7 +106,7 @@ async fn search(
                             .collect::<Vec<_>>()
                             != d.category_ids
                     {
-                        if let Err(e) = state.search.upsert_bookmark(view).await {
+                        if let Err(e) = crate::search_index::upsert(&state, view).await {
                             tracing::warn!(bookmark_id = %id, error = %e, "meili catch-up upsert failed");
                         }
                     }

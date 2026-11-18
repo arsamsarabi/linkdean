@@ -528,7 +528,7 @@ async fn move_items(
     for id in joined_search {
         let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
         if let Some(view) = db::bookmark_to_view(&state.pool, raw, &keyring, user.id).await? {
-            if let Err(e) = state.search.upsert_bookmark(&view).await {
+            if let Err(e) = crate::search_index::upsert(&state, &view).await {
                 tracing::warn!(bookmark_id = %id, error = %e, "meili upsert failed");
             }
         }

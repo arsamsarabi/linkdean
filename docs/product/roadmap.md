@@ -18,10 +18,9 @@ Nothing open right now. The next item comes from **Next** below.
 
 ## Next: high value after the beta settles
 
-Archiving and AI assistance come first: they are the biggest gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](https://docs.linkdean.app/docs/compare).
+AI assistance comes first among the remaining gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](https://docs.linkdean.app/docs/compare). Archive page-text search has shipped; Markdown download and the rest of item 12 are still open.
 
-12. **Archive & downloads** (L, in phases). The first slice shipped: snapshots as HTML, PDF or the file itself, the viewer, downloads, vault encryption, the dead-link and Quick peek fallbacks, and admin limits (see [features](./features.md#archive) and the [archive design](../design/archive.md)). Still to come:
-    - Page text: reader-mode text taken from the snapshot and indexed in Meilisearch, so search covers page contents, not only titles and notes. Vault copies are never indexed.
+12. **Archive & downloads** (L, in phases). Shipped so far: snapshots as HTML, PDF or the file itself, the viewer, downloads, vault encryption, the dead-link and Quick peek fallbacks, admin limits, and page-text search from non-vault HTML archives via Meilisearch (see [features](./features.md#archive) and the [archive design](../design/archive.md)). Still to come:
     - Downloads: reader-mode Markdown per bookmark, and an option in the full export to include archives (zip).
     - Media: explore downloading embedded `<video>` and `<audio>` files that are plain links, not streams, behind the per-item and per-account caps.
     - Version history: keep more than one copy per format.

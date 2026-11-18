@@ -7,7 +7,7 @@ Requirements agreed with the product owner on 2026-11-17, in an interview. This 
 Link rot is the main reason people keep bookmarks on their own server. Linkwarden, Karakeep and Raindrop.io (Pro) all keep a copy of each page; Linkdean stores previews only. The owner ranked the goals:
 
 1. Link-rot insurance: a bookmark still works after its page dies or changes.
-2. Search page contents (a later slice; the copy is its source).
+2. Search page contents (shipped for non-vault HTML copies; see Page text below).
 3. Own my data: download copies, and later include them in the export.
 4. Read offline or later, inside Linkdean.
 
@@ -22,7 +22,17 @@ Snapshot, view and download.
 - When a site refuses to show in Quick peek, or the link checker finds the page gone, offer the copy.
 - Vault bookmarks get copies encrypted with the vault key.
 
-Not in this slice: the export zip with archives, reader-mode Markdown and page-text search, embedded video and audio, and version history (see Later).
+Not in this slice: the export zip with archives, reader-mode Markdown download, embedded video and audio, and version history (see Later).
+
+## Page text (search)
+
+After a successful **non-vault HTML** archive (new or replace), Linkdean extracts reader-mode page text from the snapshot, stores it on the HTML archive row, and indexes it in Meilisearch so library search matches words in the page body, not only title, URL, description, notes and tags.
+
+- Vault bookmarks are never extracted, never stored as page text, and never upserted to Meili. Moving a bookmark into a vault clears stored page text and removes the Meili document.
+- Deleting the archive (or replacing HTML with a `file` copy) clears body text from search even though the bookmark remains.
+- No backfill: existing done HTML rows stay without page text until the person archives again.
+- Shared-category invitees who can already open the archive may also match on the **owner’s** indexed page body. That is intentional for this slice; do not special-case body matches to owners only.
+- Reader-mode Markdown download stays Later (see below); this section is search indexing only.
 
 ## Decisions
 
@@ -131,6 +141,6 @@ An archived page is untrusted HTML. Scripts are stripped at capture, and the res
 ## Later
 
 - Export: the full export gains **Include archives** and becomes a zip.
-- Page text: reader-mode Markdown taken from the copy, offered as a download and indexed in Meilisearch, so search covers page contents.
+- Downloads: reader-mode Markdown taken from the copy, offered as a download (page-text search already ships above).
 - Embedded media: explore downloading `<video>` and `<audio>` files that are plain links (not streams), within the caps.
 - Version history: keep earlier copies.

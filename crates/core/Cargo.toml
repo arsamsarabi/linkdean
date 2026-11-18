@@ -17,6 +17,7 @@ hex.workspace = true
 hmac.workspace = true
 image.workspace = true
 rand.workspace = true
+scraper.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

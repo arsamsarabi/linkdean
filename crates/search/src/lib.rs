@@ -1,7 +1,7 @@
 use anyhow::Context;
 use linkdean_core::BookmarkView;
 use meilisearch_sdk::client::Client;
-use meilisearch_sdk::search::SearchQuery;
+use meilisearch_sdk::search::{SearchQuery, Selectors};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -11,7 +11,8 @@ pub struct SearchClient {
     index_name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct BookmarkDoc {
     pub id: String,
     pub owner_user_id: String,
@@ -21,14 +22,16 @@ pub struct BookmarkDoc {
     pub notes: String,
     pub tags: Vec<String>,
     pub category_id: Option<String>,
-    #[serde(default)]
     pub category_ids: Vec<String>,
-    #[serde(default)]
     pub favicon_url: Option<String>,
-    #[serde(default)]
     pub preview_image_url: Option<String>,
-    #[serde(default)]
     pub has_preview: bool,
+    pub page_text: String,
+}
+
+fn search_attributes_to_retrieve() -> &'static [&'static str] {
+    // Omit page_text so hits stay small; keep catch-up fields for the search route.
+    &["id", "tags", "category_id", "category_ids"]
 }
 
 impl BookmarkDoc {
@@ -46,6 +49,7 @@ impl BookmarkDoc {
             favicon_url: view.favicon_url.clone(),
             preview_image_url: view.preview_image_url.clone(),
             has_preview: view.has_preview,
+            page_text: view.page_text.clone(),
         }
     }
 }
@@ -68,7 +72,14 @@ impl SearchClient {
             .await
             .context("filterable attrs")?;
         index
-            .set_searchable_attributes(["title", "url", "description", "notes", "tags"])
+            .set_searchable_attributes([
+                "title",
+                "url",
+                "description",
+                "notes",
+                "tags",
+                "page_text",
+            ])
             .await
             .context("searchable attrs")?;
         Ok(())
@@ -159,6 +170,7 @@ impl SearchClient {
             .with_query(query)
             .with_filter(&filter)
             .with_limit(limit)
+            .with_attributes_to_retrieve(Selectors::Some(search_attributes_to_retrieve()))
             .execute::<BookmarkDoc>()
             .await
             .context("meili search")?;
@@ -183,6 +195,49 @@ fn meili_visibility_filter(user: Uuid, readable_category_ids: &[Uuid]) -> String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use linkdean_core::BookmarkView;
+    use serde_json::json;
+
+    fn sample_view(page_text: &str) -> BookmarkView {
+        let mut view: BookmarkView = serde_json::from_value(json!({
+            "id": "00000000-0000-0000-0000-000000000001",
+            "owner_user_id": "00000000-0000-0000-0000-000000000002",
+            "category_id": null,
+            "categories": [],
+            "url": "https://example.test/",
+            "title": "Title",
+            "description": null,
+            "notes": null,
+            "favicon_url": null,
+            "preview_image_url": null,
+            "has_preview": false,
+            "is_private": false,
+            "is_vault": false,
+            "vault_id": null,
+            "tags": [],
+            "can_write": true,
+            "created_at": "2020-01-01T00:00:00Z",
+            "updated_at": "2020-01-01T00:00:00Z",
+        }))
+        .expect("sample BookmarkView");
+        view.page_text = page_text.into();
+        view
+    }
+
+    #[test]
+    fn bookmark_doc_includes_page_text_from_view() {
+        let doc = BookmarkDoc::from_view(&sample_view("needle"));
+        assert_eq!(doc.page_text, "needle");
+    }
+
+    #[test]
+    fn search_query_retrieves_catch_up_fields_without_page_text() {
+        assert_eq!(
+            search_attributes_to_retrieve(),
+            &["id", "tags", "category_id", "category_ids"][..]
+        );
+        assert!(!search_attributes_to_retrieve().contains(&"page_text"));
+    }
 
     #[test]
     fn filter_owner_only_when_no_cats() {

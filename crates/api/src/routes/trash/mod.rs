@@ -76,7 +76,7 @@ async fn restore(
             let keyring = state.vault_keyring(&vault_session, user.id).await;
             if let Some(view) = db::bookmark_to_view(&state.pool, raw, &keyring, user.id).await? {
                 if !view.is_vault {
-                    if let Err(e) = state.search.upsert_bookmark(&view).await {
+                    if let Err(e) = crate::search_index::upsert(&state, &view).await {
                         tracing::warn!(bookmark_id = %id, error = %e, "meili upsert after restore failed");
                     }
                 }

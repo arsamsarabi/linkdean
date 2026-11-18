@@ -235,7 +235,7 @@ async fn create(
         Err(e) => tracing::warn!(bookmark_id = %view.id, error = %e, "automatic archive failed"),
     }
     if !view.is_vault {
-        if let Err(e) = state.search.upsert_bookmark(&view).await {
+        if let Err(e) = crate::search_index::upsert(&state, &view).await {
             tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
         }
         let pool = state.pool.clone();
@@ -276,7 +276,7 @@ async fn update(
         if let Err(e) = state.search.delete_bookmark(id).await {
             tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
         }
-    } else if let Err(e) = state.search.upsert_bookmark(&view).await {
+    } else if let Err(e) = crate::search_index::upsert(&state, &view).await {
         tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
     }
     Ok(Json(view))
@@ -414,7 +414,7 @@ async fn upload_preview(
         .await?
         .ok_or(Error::NotFound)?;
     if !view.is_vault {
-        if let Err(e) = state.search.upsert_bookmark(&view).await {
+        if let Err(e) = crate::search_index::upsert(&state, &view).await {
             tracing::warn!(bookmark_id = %id, error = %e, "meili upsert failed");
         }
     }
@@ -462,7 +462,7 @@ async fn delete_preview(
         .await?
         .ok_or(Error::NotFound)?;
     if !view.is_vault {
-        if let Err(e) = state.search.upsert_bookmark(&view).await {
+        if let Err(e) = crate::search_index::upsert(&state, &view).await {
             tracing::warn!(bookmark_id = %id, error = %e, "meili upsert failed");
         }
     }
@@ -732,7 +732,7 @@ async fn save_copy(
 ) -> ApiResult<Json<BookmarkView>> {
     let view = db::save_bookmark_copy(&state.pool, user.id, id).await?;
     if !view.is_vault {
-        if let Err(e) = state.search.upsert_bookmark(&view).await {
+        if let Err(e) = crate::search_index::upsert(&state, &view).await {
             tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
         }
         let pool = state.pool.clone();

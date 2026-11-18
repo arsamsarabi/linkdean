@@ -59,6 +59,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - **Archive new bookmarks** (Settings → Archive, off by default) archives each saved bookmark in the chosen formats; imports are not archived
 - Viewer at `/archive/{id}`: the copy inside Linkdean with no scripts and links opening in a new tab, a switch between formats, the live page and a download. Cards show an **archived** badge; a broken or unreachable badge opens the copy; Quick peek offers the copy when a site refuses to embed
 - Archiving again replaces the copy and says so first; a failed attempt keeps the older copy. **Delete archive** removes every copy and keeps the bookmark
+- Library search matches words from the body of non-vault HTML archives (extracted when the copy finishes). Vault bookmarks never contribute page text. Existing HTML copies gain body search on the next archive
 - Downloads are named `<site>-<date>.<ext>`. Copies are served with a sandbox content security policy; an original file a browser could run (HTML, SVG) is only ever downloaded
 - Vault bookmarks: copies are encrypted with the vault key, captured and opened only while the vault is unlocked, and re-encrypted when the bookmark moves in or out of a vault
 - Access: the owner and write invitees archive; anyone who can read the bookmark opens and downloads its copies. Public lists never expose them

@@ -608,18 +608,18 @@ async fn reindex_search(
         else {
             continue;
         };
-        for v in items {
+        let owned: Vec<_> = items
+            .into_iter()
             // Shared rows appear under multiple invitees; upsert by id is idempotent.
             // Prefer owner-owned docs: skip when listing through a non-owner (shared).
-            if v.owner_user_id != u.id {
-                continue;
-            }
-            match state.search.upsert_bookmark(&v).await {
-                Ok(()) => upserted += 1,
-                Err(e) => {
-                    failed += 1;
-                    tracing::warn!(bookmark_id = %v.id, error = %e, "meili reindex upsert failed");
-                }
+            .filter(|v| v.owner_user_id == u.id)
+            .collect();
+        let n = owned.len() as u64;
+        match crate::search_index::upsert_many(&state, &owned).await {
+            Ok(()) => upserted += n,
+            Err(e) => {
+                failed += n;
+                tracing::warn!(user_id = %u.id, count = n, error = %e, "meili reindex batch failed");
             }
         }
     }

@@ -116,6 +116,7 @@ fn copy(format: linkdean_core::ArchiveFormat, name: &str, bytes: i64) -> StoredC
         final_url: Some("https://archive.example/final".into()),
         key_vault_id: None,
         nonce: None,
+        page_text: None,
     }
 }
 
@@ -445,4 +446,248 @@ async fn vault_copies_need_the_vault_and_follow_moves() {
         row.final_url.is_none(),
         "a vault copy keeps no plain address"
     );
+}
+
+#[tokio::test]
+async fn html_finish_stores_page_text() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "page-text").await;
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    let mut stored = copy(Html, "with-text", 10);
+    stored.page_text = Some("readable body".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+    let texts = db::html_page_texts(&pool, &[id]).await.unwrap();
+    assert_eq!(texts.get(&id).map(String::as_str), Some("readable body"));
+}
+
+#[tokio::test]
+async fn encrypted_finish_never_stores_page_text() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "enc-text").await;
+    let (vault, _, _) = db::create_vault(&pool, owner.id, "Enc", "enc-passphrase")
+        .await
+        .expect("vault");
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    let mut stored = copy(Html, "enc", 10);
+    stored.key_vault_id = Some(vault.id);
+    stored.nonce = Some(vec![1, 2, 3]);
+    stored.page_text = Some("secret".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+    let texts = db::html_page_texts(&pool, &[id]).await.unwrap();
+    assert!(texts.get(&id).is_none());
+}
+
+#[tokio::test]
+async fn finish_after_bookmark_is_vault_stores_no_page_text() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "late-vault").await;
+    let (vault, _, _) = db::create_vault(&pool, owner.id, "Late", "late-passphrase")
+        .await
+        .expect("vault");
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    // Bookmark becomes vault while capture is still running.
+    sqlx::query(
+        "UPDATE bookmarks SET is_vault = TRUE, vault_id = $1, vault_ciphertext = $2, vault_nonce = $3 WHERE id = $4",
+    )
+    .bind(vault.id)
+    .bind(vec![0u8; 16])
+    .bind(vec![0u8; 12])
+    .bind(id)
+    .execute(&pool)
+    .await
+    .expect("mark vault");
+    let mut stored = copy(Html, "late", 10);
+    stored.page_text = Some("late".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+    let texts = db::html_page_texts(&pool, &[id]).await.unwrap();
+    assert!(texts.get(&id).is_none());
+}
+
+#[tokio::test]
+async fn move_into_vault_clears_page_text() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "move-text").await;
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "Move", "move-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    let mut stored = copy(Html, "before-move", 10);
+    stored.page_text = Some("will clear".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+    assert_eq!(
+        db::html_page_texts(&pool, &[id])
+            .await
+            .unwrap()
+            .get(&id)
+            .map(String::as_str),
+        Some("will clear")
+    );
+
+    let outcome = db::move_to_vault(
+        &pool,
+        owner.id,
+        linkdean_core::MoveToVaultRequest {
+            category_ids: vec![],
+            bookmark_ids: vec![id],
+            destination_vault_id: Some(vault.id),
+        },
+        &keyring,
+    )
+    .await
+    .expect("move");
+    assert!(matches!(
+        outcome,
+        linkdean_core::VaultMoveOutcome::Moved { .. }
+    ));
+    let texts = db::html_page_texts(&pool, &[id]).await.unwrap();
+    assert!(texts.get(&id).is_none());
+}
+
+#[tokio::test]
+async fn file_finish_clears_html_page_text() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "file-text").await;
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    let mut stored = copy(Html, "html-first", 10);
+    stored.page_text = Some("html body".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    db::finish_archive(&pool, id, &[copy(File, "as-file", 5)])
+        .await
+        .unwrap();
+    let texts = db::html_page_texts(&pool, &[id]).await.unwrap();
+    assert!(texts.is_empty() || texts.get(&id).is_none());
+}
+
+#[tokio::test]
+async fn delete_archives_clears_page_text() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "del-text").await;
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    let mut stored = copy(Html, "to-delete", 10);
+    stored.page_text = Some("gone soon".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+    db::delete_archives(&pool, owner.id, id).await.unwrap();
+    let texts = db::html_page_texts(&pool, &[id]).await.unwrap();
+    assert!(texts.get(&id).is_none());
+}
+
+#[tokio::test]
+async fn meili_plan_attaches_page_text_and_skips_vault() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "meili-plan").await;
+    let (vault, key, _) = db::create_vault(&pool, owner.id, "PlanVault", "plan-passphrase")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    let id = bookmark(&pool, &owner, None).await;
+    let none = VaultKeyring::default();
+    db::request_archive(&pool, owner.id, id, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, id).await;
+    let mut stored = copy(Html, "for-plan", 10);
+    stored.page_text = Some("indexed body".into());
+    db::finish_archive(&pool, id, &[stored]).await.unwrap();
+
+    let raw = db::get_bookmark_raw(&pool, owner.id, id).await.unwrap();
+    let view = db::bookmark_to_view(&pool, raw, &none, owner.id)
+        .await
+        .unwrap()
+        .expect("view");
+    assert!(
+        view.page_text.is_empty(),
+        "ViewBatch leaves page_text empty"
+    );
+    let plan = db::plan_meili_index_writes(&pool, &[view]).await.unwrap();
+    assert_eq!(plan.upsert.len(), 1);
+    assert_eq!(plan.upsert[0].page_text, "indexed body");
+    assert!(plan.delete.is_empty());
+
+    let outcome = db::move_to_vault(
+        &pool,
+        owner.id,
+        linkdean_core::MoveToVaultRequest {
+            category_ids: vec![],
+            bookmark_ids: vec![id],
+            destination_vault_id: Some(vault.id),
+        },
+        &keyring,
+    )
+    .await
+    .expect("move");
+    assert!(matches!(
+        outcome,
+        linkdean_core::VaultMoveOutcome::Moved { .. }
+    ));
+
+    let raw = db::get_bookmark_raw(&pool, owner.id, id).await.unwrap();
+    let vault_view = db::bookmark_to_view(&pool, raw, &keyring, owner.id)
+        .await
+        .unwrap()
+        .expect("vault view");
+    assert!(vault_view.is_vault);
+    let plan = db::plan_meili_index_writes(&pool, &[vault_view])
+        .await
+        .unwrap();
+    assert!(plan.upsert.is_empty());
+    assert_eq!(plan.delete, vec![id]);
 }

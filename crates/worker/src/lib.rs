@@ -223,8 +223,23 @@ pub async fn enrich_bookmark(
             let owner = updated.owner_user_id;
             match db::bookmark_to_view(pool, updated, &VaultKeyring::default(), owner).await {
                 Ok(Some(view)) => {
-                    if let Err(e) = search.upsert_bookmark(&view).await {
-                        warn!(%bookmark_id, "search reindex after enrichment: {e}");
+                    // Shared with API search_index: attach page_text + live vault/trash gates.
+                    match db::plan_meili_index_writes(pool, &[view]).await {
+                        Ok(plan) => {
+                            for id in plan.delete {
+                                if let Err(e) = search.delete_bookmark(id).await {
+                                    warn!(%id, "search delete after late vault/trash: {e}");
+                                }
+                            }
+                            for view in plan.upsert {
+                                if let Err(e) = search.upsert_bookmark(&view).await {
+                                    warn!(bookmark_id = %view.id, "search reindex after enrichment: {e}");
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!(%bookmark_id, "meili index plan failed; skipping Meili upsert: {e}")
+                        }
                     }
                 }
                 Ok(None) => {}

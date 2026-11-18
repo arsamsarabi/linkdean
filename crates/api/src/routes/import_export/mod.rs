@@ -193,7 +193,7 @@ async fn import(
     .await
     {
         Ok(items) => {
-            if let Err(e) = state.search.upsert_bookmarks(&items).await {
+            if let Err(e) = crate::search_index::upsert_many(&state, &items).await {
                 tracing::warn!(user_id = %user.id, error = %e, "meili reindex after import failed");
             }
         }
