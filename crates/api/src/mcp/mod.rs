@@ -85,14 +85,19 @@ mod tests {
             return None;
         };
         let dir = std::env::temp_dir().join(format!("ld-mcp-{}", Uuid::new_v4().simple()));
+        // Prefer CI / caller Meili env; otherwise the local dev defaults.
+        if std::env::var_os("MEILI_URL").is_none() {
+            std::env::set_var("MEILI_URL", "http://127.0.0.1:7700");
+        }
+        if std::env::var_os("MEILI_MASTER_KEY").is_none() {
+            std::env::set_var("MEILI_MASTER_KEY", "dev_master_key_change_me");
+        }
         // Real local Meili so search_bookmarks(q) can index + hit; ALLOW_DEFAULT_SECRETS
         // permits the published meili key used by the dev stack.
         for (k, v) in [
             ("DATABASE_URL", url.as_str()),
             ("SESSION_SECRET", "mcp-scaffold-session-secret-01"),
             ("ALLOW_DEFAULT_SECRETS", "true"),
-            ("MEILI_URL", "http://127.0.0.1:7700"),
-            ("MEILI_MASTER_KEY", "dev_master_key_change_me"),
             ("APP_URL", "http://localhost:5199"),
             ("AVATAR_DIR", dir.join("avatars").to_str().unwrap()),
             ("PREVIEW_DIR", dir.join("previews").to_str().unwrap()),
@@ -332,9 +337,7 @@ mod tests {
             .ensure_index()
             .await
             .expect("Meili must be reachable at MEILI_URL for search_with_q_returns_hits");
-        state
-            .search
-            .upsert_bookmark(&view)
+        crate::search_index::upsert(&state, &view)
             .await
             .expect("upsert meili");
 
@@ -599,9 +602,7 @@ mod tests {
             .unwrap());
 
         state.search.ensure_index().await.expect("Meili");
-        state
-            .search
-            .upsert_bookmark(&view)
+        crate::search_index::upsert(&state, &view)
             .await
             .expect("upsert meili");
 
