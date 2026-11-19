@@ -1,8 +1,6 @@
 //! MCP server handler with read-only bookmark tools.
 
-use super::dto::{
-    McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList, McpTagList,
-};
+use super::dto::{McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList, McpTagList};
 use super::tools::{
     get_archive_status, get_bookmark, list_folders, list_tags, require_user_state, search_bookmarks,
 };
@@ -139,9 +137,7 @@ impl LinkdeanMcp {
     ) -> Result<Json<McpArchiveStatusList>, ErrorData> {
         let (user, state) = require_user_state(&parts)?;
         let bookmark_id = parse_uuid(&params.bookmark_id, "bookmark_id")?;
-        Ok(Json(
-            get_archive_status(&state, &user, bookmark_id).await?,
-        ))
+        Ok(Json(get_archive_status(&state, &user, bookmark_id).await?))
     }
 }
 

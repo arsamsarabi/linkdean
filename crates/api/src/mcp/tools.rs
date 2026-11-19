@@ -1,8 +1,7 @@
 //! MCP tool handlers: search/read bookmarks, folders, tags, archive status.
 
 use super::dto::{
-    McpArchiveStatus, McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList,
-    McpTagList,
+    McpArchiveStatus, McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList, McpTagList,
 };
 use crate::state::AppState;
 use axum::http::request::Parts;
@@ -209,9 +208,7 @@ pub async fn list_folders(state: &AppState, user: &User) -> Result<McpFolderList
 }
 
 pub async fn list_tags(state: &AppState, user: &User) -> Result<McpTagList, ErrorData> {
-    let tags = db::list_tags(&state.pool, user.id)
-        .await
-        .map_err(mcp_err)?;
+    let tags = db::list_tags(&state.pool, user.id).await.map_err(mcp_err)?;
     Ok(McpTagList::from_tags(&tags))
 }
 

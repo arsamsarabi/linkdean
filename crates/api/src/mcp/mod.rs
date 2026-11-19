@@ -594,11 +594,9 @@ mod tests {
                 .unwrap();
         }
         // Sanity: share still grants bookmark_can_read (asymmetry without MCP guard).
-        assert!(
-            db::bookmark_can_read(&state.pool, sharee.id, view.id)
-                .await
-                .unwrap()
-        );
+        assert!(db::bookmark_can_read(&state.pool, sharee.id, view.id)
+            .await
+            .unwrap());
 
         state.search.ensure_index().await.expect("Meili");
         state
@@ -686,8 +684,7 @@ mod tests {
             .unwrap();
 
         let app = app(state, true);
-        let (status, body) =
-            json_status(app, tools_call(&key, "list_folders", json!({}))).await;
+        let (status, body) = json_status(app, tools_call(&key, "list_folders", json!({}))).await;
         assert_eq!(status, StatusCode::OK, "body={body}");
         assert!(body.get("error").is_none(), "rpc error: {body}");
         let payload = tool_payload(&body);
@@ -717,7 +714,15 @@ mod tests {
         };
         let owner = verified_user(&state.pool, "tags").await;
         let key = api_key_for(&state.pool, &owner).await;
-        bookmark(&state.pool, &owner, "Tagged", None, &["alpha", "beta"], None).await;
+        bookmark(
+            &state.pool,
+            &owner,
+            "Tagged",
+            None,
+            &["alpha", "beta"],
+            None,
+        )
+        .await;
 
         let app = app(state, true);
         let (status, body) = json_status(app, tools_call(&key, "list_tags", json!({}))).await;
@@ -777,10 +782,7 @@ mod tests {
             let obj = row.as_object().expect("object");
             for key in obj.keys() {
                 assert!(
-                    matches!(
-                        key.as_str(),
-                        "format" | "status" | "bytes" | "captured_at"
-                    ),
+                    matches!(key.as_str(), "format" | "status" | "bytes" | "captured_at"),
                     "unexpected archive field {key}: {row}"
                 );
             }
