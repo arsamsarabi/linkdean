@@ -33,6 +33,10 @@ use utoipa_axum::router::OpenApiRouter;
 /// experimental features only when their flag is on (otherwise they answer 404).
 pub fn api_router(dev_routes: bool, agent_skills: bool) -> Router<AppState> {
     let (mut routes, _) = documented(agent_skills).split_for_parts();
+    // MCP sits outside OpenAPI; same experimental flag as the Agent Skill zip.
+    if agent_skills {
+        routes = routes.merge(crate::mcp::router());
+    }
     if dev_routes {
         routes = routes.merge(dev::router());
     }

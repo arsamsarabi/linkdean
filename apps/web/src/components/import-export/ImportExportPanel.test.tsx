@@ -22,8 +22,9 @@ vi.mock('@/hooks', async (orig) => ({
   }),
 }))
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
-// The Agent Skill card has its own tests.
+// The Agent Skill / MCP cards have their own tests.
 vi.mock('./AgentSkillCard', () => ({ AgentSkillCard: () => <p>Agent Skill card</p> }))
+vi.mock('./McpConnectCard', () => ({ McpConnectCard: () => <p>MCP card</p> }))
 
 beforeAll(() => {
   vi.stubGlobal(
@@ -104,7 +105,7 @@ describe('ImportExportPanel import', () => {
   })
 })
 
-describe('ImportExportPanel Agent Skill card', () => {
+describe('ImportExportPanel Agent Skill and MCP cards', () => {
   function renderPanel(): void {
     render(
       <MantineProvider env="test">
@@ -113,14 +114,16 @@ describe('ImportExportPanel Agent Skill card', () => {
     )
   }
 
-  it('is hidden while the experimental flag is off', () => {
+  it('hides MCP card when flag off', () => {
     renderPanel()
+    expect(screen.queryByText('MCP card')).toBeNull()
     expect(screen.queryByText('Agent Skill card')).toBeNull()
   })
 
-  it('shows when the server turns the flag on', () => {
+  it('shows MCP card when experimental agent skills are on', () => {
     flags.agent_skills = true
     renderPanel()
+    expect(screen.getByText('MCP card')).toBeTruthy()
     expect(screen.getByText('Agent Skill card')).toBeTruthy()
   })
 })

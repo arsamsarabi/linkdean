@@ -49,9 +49,19 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U linkdean -d linkdean_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      meilisearch:
+        image: getmeili/meilisearch:v1.11
+        env:
+          MEILI_MASTER_KEY: ci-meili-master-key-0001
+          MEILI_NO_ANALYTICS: "true"
+        ports: ["7700:7700"]
     env:
       # DB tests skip silently without this, so CI always sets it.
       DATABASE_URL: postgres://linkdean:linkdean@localhost:5432/linkdean_test
+      # MCP / search tests hit Meili when present (same key as the service above).
+      MEILI_URL: http://127.0.0.1:7700
+      MEILI_MASTER_KEY: ci-meili-master-key-0001
+      ALLOW_DEFAULT_SECRETS: "true"
       CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v7
@@ -75,6 +85,17 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest
+      - name: Wait for Meilisearch
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:7700/health >/dev/null; then
+              echo "meili ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "meili did not become healthy" >&2
+          exit 1
       - run: cargo fmt --all -- --check
       # Runs tests in parallel across all test binaries; see .config/nextest.toml for the
       # files that share global state and take turns.

@@ -11,7 +11,7 @@ Canonical markdown for operators, contributors, and the public docs site.
 | [self-hosting/operations.md](./self-hosting/operations.md) | Secrets, proxy, email, SSO, backup, upgrades, local Compose | Yes |
 | [product/features.md](./product/features.md) | What ships today | Yes |
 | [guides/fast-capture.md](./guides/fast-capture.md) | Extension, bookmarklet, share, Shortcuts | Yes |
-| [guides/agent-skills.md](./guides/agent-skills.md) | Folders and tags as Agent Skills | Yes |
+| [guides/agent-skills.md](./guides/agent-skills.md) | MCP connect and Agent Skill zips | Yes |
 | [product/architecture.md](./product/architecture.md) | Stack and domain model | Yes |
 | [product/roadmap.md](./product/roadmap.md) | Planned work | No (GitHub) |
 | [product/ideas.md](./product/ideas.md) | Unprioritised scratch ideas | No |

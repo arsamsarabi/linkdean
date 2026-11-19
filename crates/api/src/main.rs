@@ -8,6 +8,7 @@ mod legal;
 mod logging;
 mod mail;
 mod maintenance;
+mod mcp;
 mod metrics;
 mod notification_mail;
 mod quotas;

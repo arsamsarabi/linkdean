@@ -1,10 +1,53 @@
 # Agent Skills
 
-Coding and research agents keep asking for the same references. Your folders already hold them. Linkdean turns a folder or a tag into an [Agent Skill](https://agentskills.io): a small folder with a `SKILL.md` file that Claude Code, Codex, Cursor and other agents load when your task matches it. Capability summary: [features.md](../product/features.md).
+Coding and research agents keep asking for the same references. Your folders already hold them. Linkdean exposes the library to agents in two ways: a live **MCP** connection for search and read, and a downloadable [Agent Skill](https://agentskills.io) zip for offline use. Capability summary: [features.md](../product/features.md).
 
-**Experimental.** Agent Skills are off unless the server sets `EXPERIMENTAL_AGENT_SKILLS=true` ([environment variables](../self-hosting/environment.md#experimental-features)). On Linkdean's hosted beta they are not switched on yet.
+**Experimental.** Both paths are off unless the server sets `EXPERIMENTAL_AGENT_SKILLS=true` ([environment variables](../self-hosting/environment.md#experimental-features)). On Linkdean's hosted beta they are not switched on yet.
 
-## What is in a skill
+## Connect with MCP
+
+Point an MCP client at your instance with an API key for live search and read. Create a key under **Config options → API keys**. The **MCP** card under **Config options → Import / Export** shows the endpoint for this host.
+
+Endpoint: `https://your-linkdean/api/mcp` (Streamable HTTP). Send the key on every request:
+
+```http
+Authorization: Bearer ldk_…
+```
+
+Illustrative client config (field names follow your client's docs):
+
+```json
+{
+  "mcpServers": {
+    "linkdean": {
+      "url": "https://your-linkdean/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ldk_…"
+      }
+    }
+  }
+}
+```
+
+Read-only tools:
+
+| Tool | What it does |
+| --- | --- |
+| `search_bookmarks` | Search or browse by text, folder and/or tag (folder includes subfolders) |
+| `get_bookmark` | One bookmark: title, URL, notes, tags, folders, dates |
+| `list_folders` | Folder tree you can see (shared included; vault excluded) |
+| `list_tags` | Tags in your library |
+| `get_archive_status` | Whether an archive copy exists and which formats — not the page body |
+
+Never included: vault folders and bookmarks, trash, writes, or archive file bytes / reader text.
+
+When the flag is off, `/api/mcp` answers `404`.
+
+## Download a skill (offline)
+
+A folder or a tag becomes an Agent Skill: a small folder with a `SKILL.md` that Claude Code, Codex, Cursor and other agents load when your task matches it.
+
+### What is in a skill
 
 - A **name** and a **description** that say what the links cover and when to use them. The description lists the subfolders and the most used tags, so the agent picks the skill for the right tasks.
 - Short instructions: prefer these links over a web search, cite the link used, and treat your notes as context.
@@ -19,7 +62,7 @@ Never included:
 - bookmarks in Deleted items;
 - someone else's "Only me" bookmarks, or their notes, in a folder shared with you.
 
-## Download a skill
+### Download
 
 - **From a folder:** in the library's Explorer view, open a folder's **⋯** menu and choose **Agent Skill (.zip)**. Subfolders are included.
 - **From a folder or a tag:** go to **Config options → Import / Export → Agent Skill**, choose **Folder** or **Tag**, pick one and select **Download skill**. A tag skill covers your own bookmarks.
@@ -30,7 +73,7 @@ Unzip it into your agent's skills folder. For Claude Code that is `~/.claude/ski
 unzip rust-web.zip -d ~/.claude/skills
 ```
 
-## Keep it current with an API key
+### Keep it current with an API key
 
 Create a key under **Config options → API keys**, then fetch the skill from a script or a scheduled job. The Agent Skill card shows the command with the folder or tag filled in.
 

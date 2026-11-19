@@ -19,6 +19,7 @@ import { useExperimentalFlags, useExportBookmarks, useImportBookmarks, useImport
 import type { DuplicateDecisions, ImportPreview, ImportResult } from '@/schemas'
 import { AgentSkillCard } from './AgentSkillCard'
 import { ImportDuplicatesDrawer } from './ImportDuplicatesDrawer'
+import { McpConnectCard } from './McpConnectCard'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
 
@@ -180,7 +181,12 @@ export function ImportExportPanel(): ReactElement {
           </Stack>
         </Paper>
 
-        {experimental.agent_skills ? <AgentSkillCard /> : null}
+        {experimental.agent_skills ? (
+          <>
+            <McpConnectCard />
+            <AgentSkillCard />
+          </>
+        ) : null}
       </SimpleGrid>
       {review ? (
         <ImportDuplicatesDrawer

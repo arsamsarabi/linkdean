@@ -12,10 +12,10 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Agent Skills, next steps** · `near` · (S–M). Folders and tags already download as Agent Skills; an API key can fetch them (see features). Extend the agent surface without giving up the privacy stance. Write tools wait on item 7 (and on item 2 for scopes).
-    - **Phase A — MCP:** Read-only MCP server (search and read bookmarks, folders/tags, archive metadata), alongside zip skills (MCP led in UI/docs).
+1. **Agent Skills, next steps** · `near` · (S–M). Read-only MCP and zip Agent Skills already ship (see features). Extend the agent surface without giving up the privacy stance. Write tools wait on item 7 (and on item 2 for scopes).
     - **Phase B — Archive text:** Include archived reader-mode text so the agent can read a page without fetching it when a copy exists.
     - **Phase C — Saved searches:** Skills from a saved library search, once saved searches exist.
+
 
 2. **API key permissions** · `near` · (M). Keys today are all-or-nothing for whatever the account can do. Split read vs write (and finer scopes) so a script or agent gets only what it needs.
     - **Phase A — Scopes:** Per-key read/write (and sensible function groups: library, archive, import/export, etc.); enforce on REST.
@@ -40,7 +40,8 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - **Phase A — i18n-ready:** Extract and wrap UI strings.
     - **Phase B — Locale packs:** First translated locale(s).
 
-7. **MCP write tools** · `mid` · (S–M). After read-only MCP (item 1 Phase A) and API key permissions (item 2): expose create/update (and similar) tools only when the key’s scopes allow. Vault stays out.
+7. **MCP write tools** · `mid` · (S–M). After read-only MCP (shipped) and API key permissions (item 2): expose create/update (and similar) tools only when the key’s scopes allow. Vault stays out.
+
     - **Phase A — Scoped writes:** Mirror permitted REST mutations as MCP tools; refuse clearly when the key lacks the scope.
 
 8. **Archive follow-ups** · `parked` · (L). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)).
