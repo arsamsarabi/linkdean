@@ -13,7 +13,7 @@ import {
 } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { ApiKeysPanel, ImportExportPanel, QueryErrorAlert, VaultPanel, VaultPreferencesCard } from '@/components'
-import { applyTheme, useMe, useUpdateSettings } from '@/hooks'
+import { applyTheme, useArchivesEnabled, useMe, useUpdateSettings } from '@/hooks'
 import type { UserSettings } from '@/schemas'
 import { ArchiveSettingsPanel } from './ArchiveSettingsPanel'
 import { DeleteAccountCard } from './DeleteAccountCard'
@@ -36,6 +36,7 @@ export function SettingsPage(): ReactElement {
   const search = useSearch({ strict: false }) as { tab?: string; reauth?: string; oidc_error?: string }
   const { setColorScheme } = useMantineColorScheme()
   const me = useMe()
+  const archivesEnabled = useArchivesEnabled()
   const tab: SettingsTab = isSettingsTab(search.tab) ? search.tab : 'general'
   const settings = me.data?.settings
   const save = useUpdateSettings()
@@ -91,9 +92,11 @@ export function SettingsPage(): ReactElement {
           <Tabs.Tab value="capture" leftSection={<IconBolt size={16} stroke={1.5} />}>
             Fast capture
           </Tabs.Tab>
-          <Tabs.Tab value="archive" leftSection={<IconArchive size={16} stroke={1.5} />}>
-            Archive
-          </Tabs.Tab>
+          {archivesEnabled ? (
+            <Tabs.Tab value="archive" leftSection={<IconArchive size={16} stroke={1.5} />}>
+              Archive
+            </Tabs.Tab>
+          ) : null}
           <Tabs.Tab value="import" leftSection={<IconArrowsExchange size={16} stroke={1.5} />}>
             Import / Export
           </Tabs.Tab>
@@ -125,13 +128,15 @@ export function SettingsPage(): ReactElement {
           <FastCapturePanel />
         </Tabs.Panel>
 
-        <Tabs.Panel value="archive">
-          {settings ? (
-            <ArchiveSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
-          ) : (
-            <SettingsSkeleton />
-          )}
-        </Tabs.Panel>
+        {archivesEnabled ? (
+          <Tabs.Panel value="archive">
+            {settings ? (
+              <ArchiveSettingsPanel settings={settings} saving={save.isPending} onPatch={patch} />
+            ) : (
+              <SettingsSkeleton />
+            )}
+          </Tabs.Panel>
+        ) : null}
 
         <Tabs.Panel value="import">
           <ImportExportPanel />

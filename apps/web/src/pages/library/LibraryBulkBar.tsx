@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { Button, Group, Text } from '@mantine/core'
 import { IconArchive, IconFolders, IconLock, IconTags, IconTrash } from '@tabler/icons-react'
 import { ArchiveDialog } from '@/components'
-import { useMe } from '@/hooks'
+import { useArchivesEnabled, useMe } from '@/hooks'
 import styles from './LibraryPage.module.css'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
@@ -12,6 +12,7 @@ const MAX_BULK_ARCHIVE = 500
 export function LibraryBulkBar(): ReactElement | null {
   const lib = useLibraryPageModel()
   const me = useMe()
+  const archivesEnabled = useArchivesEnabled()
   const [archiveOpen, setArchiveOpen] = useState(false)
   if (!lib.selectMode) return null
 
@@ -67,16 +68,18 @@ export function LibraryBulkBar(): ReactElement | null {
         >
           {notMine.size > 0 && vaultIds.length > 0 ? `Move ${vaultIds.length} to vault` : 'Move to vault'}
         </Button>
-        <Button
-          size="compact-sm"
-          variant="light"
-          leftSection={<IconArchive size={14} stroke={1.5} />}
-          disabled={selectedCount === 0 || selectedCount > MAX_BULK_ARCHIVE}
-          title={selectedCount > MAX_BULK_ARCHIVE ? `Archive at most ${MAX_BULK_ARCHIVE} at a time` : undefined}
-          onClick={() => setArchiveOpen(true)}
-        >
-          Archive
-        </Button>
+        {archivesEnabled ? (
+          <Button
+            size="compact-sm"
+            variant="light"
+            leftSection={<IconArchive size={14} stroke={1.5} />}
+            disabled={selectedCount === 0 || selectedCount > MAX_BULK_ARCHIVE}
+            title={selectedCount > MAX_BULK_ARCHIVE ? `Archive at most ${MAX_BULK_ARCHIVE} at a time` : undefined}
+            onClick={() => setArchiveOpen(true)}
+          >
+            Archive
+          </Button>
+        ) : null}
         <Button
           size="compact-sm"
           color="red"

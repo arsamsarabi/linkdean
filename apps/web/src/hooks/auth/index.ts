@@ -1,6 +1,6 @@
 export { useMe } from './useMe'
 export { useBootstrap } from './useBootstrap'
-export { useAppVersion, useExperimentalFlags } from './useExperimentalFlags'
+export { useAppVersion, useArchivesEnabled, useExperimentalFlags } from './useExperimentalFlags'
 export {
   useCompleteOnboarding,
   useDropSignedOutCache,

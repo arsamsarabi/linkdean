@@ -90,6 +90,8 @@ export const authConfigSchema = z.object({
   experimental: experimentalFlagsSchema.default({ agent_skills: false }),
   /** The running server's version, such as `0.0.12`. */
   version: z.string().nullish(),
+  /** When false, the server refuses new archives; the UI hides write actions. Default true. */
+  archives_enabled: z.boolean().default(true),
 })
 
 /** `GET /admin/update`: a newer Linkdean release, or null when up to date or unknown. */
