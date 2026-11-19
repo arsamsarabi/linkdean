@@ -538,6 +538,133 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn sharee_cannot_see_only_me_via_mcp() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "onlyme-owner").await;
+        let sharee = verified_user(&state.pool, "onlyme-sharee").await;
+        let sharee_key = api_key_for(&state.pool, &sharee).await;
+        let folder = category(&state.pool, &owner, "Shared only-me", None).await;
+        let needle = format!("onlyme-{}", Uuid::new_v4().simple());
+        let view = bookmark(
+            &state.pool,
+            &owner,
+            &format!("Private {needle}"),
+            Some(folder),
+            &[],
+            Some("owner-only"),
+        )
+        .await;
+        sqlx::query("UPDATE bookmarks SET is_private = TRUE WHERE id = $1")
+            .bind(view.id)
+            .execute(&state.pool)
+            .await
+            .unwrap();
+        // Re-load so Meili upsert carries is_private; MCP filters on DB views either way.
+        let view = db::bookmark_to_view(
+            &state.pool,
+            db::get_bookmark_raw(&state.pool, owner.id, view.id)
+                .await
+                .unwrap(),
+            &VaultKeyring::default(),
+            owner.id,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert!(view.is_private);
+        db::create_share(
+            &state.pool,
+            owner.id,
+            folder,
+            CreateCategoryShare {
+                email: sharee.email.clone(),
+                access: ShareAccess::Read,
+            },
+        )
+        .await
+        .unwrap();
+        for invite in db::list_share_invites(&state.pool, sharee.id)
+            .await
+            .unwrap()
+        {
+            db::accept_share_invite(&state.pool, sharee.id, invite.id)
+                .await
+                .unwrap();
+        }
+        // Sanity: share still grants bookmark_can_read (asymmetry without MCP guard).
+        assert!(
+            db::bookmark_can_read(&state.pool, sharee.id, view.id)
+                .await
+                .unwrap()
+        );
+
+        state.search.ensure_index().await.expect("Meili");
+        state
+            .search
+            .upsert_bookmark(&view)
+            .await
+            .expect("upsert meili");
+
+        let app = app(state.clone(), true);
+        let (status, body) = json_status(
+            app.clone(),
+            tools_call(
+                &sharee_key,
+                "get_bookmark",
+                json!({ "id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.to_lowercase().contains("not found"),
+            "sharee get_bookmark must not-found Only-me, got: {body}"
+        );
+        let payload = tool_payload(&body);
+        assert!(
+            payload.get("url").is_none() || payload.is_null(),
+            "must not leak Only-me body: {payload}"
+        );
+
+        let (status, body) = json_status(
+            app.clone(),
+            tools_call(
+                &sharee_key,
+                "get_archive_status",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.to_lowercase().contains("not found"),
+            "sharee get_archive_status must not-found Only-me, got: {body}"
+        );
+
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &sharee_key,
+                "search_bookmarks",
+                json!({ "q": needle, "limit": 20 }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert!(body.get("error").is_none(), "rpc error: {body}");
+        let payload = tool_payload(&body);
+        let bookmarks = payload["bookmarks"].as_array().expect("bookmarks array");
+        assert!(
+            bookmarks.iter().all(|b| b["id"] != view.id.to_string()),
+            "Meili search must omit others' Only-me: {payload}"
+        );
+    }
+
+    #[tokio::test]
     async fn list_folders_excludes_vault() {
         let Some((state, _dir)) = state().await else {
             return;

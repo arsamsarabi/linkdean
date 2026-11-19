@@ -12,14 +12,19 @@ use rmcp::model::ErrorData;
 use uuid::Uuid;
 
 pub fn mcp_err(err: Error) -> ErrorData {
+    // Agents only get actionable client messages; hide internal/auth detail.
     let message = match &err {
         Error::NotFound => "not found".to_string(),
         Error::BadRequest(msg) => msg.clone(),
-        Error::Forbidden => "forbidden".to_string(),
-        Error::Unauthorized | Error::SessionExpired => "unauthorized".to_string(),
-        other => other.to_string(),
+        _ => "request failed".to_string(),
     };
     ErrorData::invalid_params(message, None)
+}
+
+/// Agent Skills stance: Only-me bookmarks are owner-visible only, even when a
+/// share would otherwise grant `bookmark_can_read`.
+fn others_only_me(is_private: bool, owner_user_id: Uuid, viewer_id: Uuid) -> bool {
+    is_private && owner_user_id != viewer_id
 }
 
 pub fn require_user_state(parts: &Parts) -> Result<(User, AppState), ErrorData> {
@@ -145,6 +150,10 @@ pub async fn search_bookmarks(
         let Some(view) = views.get(&id) else {
             continue;
         };
+        // Match empty-q browse / Agent Skills: hide others' Only-me from sharees.
+        if others_only_me(view.is_private, view.owner_user_id, user.id) {
+            continue;
+        }
         if let Some(ref scope) = folder_scope {
             let in_folder = view.categories.iter().any(|c| scope.contains(&c.id))
                 || view.category_id.is_some_and(|cid| scope.contains(&cid));
@@ -179,6 +188,9 @@ pub async fn get_bookmark(
             "vault not available via MCP",
             None,
         ));
+    }
+    if others_only_me(raw.is_private, raw.owner_user_id, user.id) {
+        return Err(mcp_err(Error::NotFound));
     }
     let view = db::bookmark_to_view(&state.pool, raw, &VaultKeyring::default(), user.id)
         .await
@@ -217,6 +229,9 @@ pub async fn get_archive_status(
             "vault not available via MCP",
             None,
         ));
+    }
+    if others_only_me(raw.is_private, raw.owner_user_id, user.id) {
+        return Err(mcp_err(Error::NotFound));
     }
     let views = db::list_archives(&state.pool, bookmark_id)
         .await
