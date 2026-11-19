@@ -68,7 +68,7 @@ Local stdio was deferred as a later convenience, not Phase A.
 
 | Tool | Behaviour |
 | --- | --- |
-| `search_bookmarks` | Optional text `q` plus optional folder/tag filters; bounded page size. **Empty `q` with folder and/or tag:** library-list path (browse that scope). **Non-empty `q`:** Meili search, then apply folder/tag filters if set. |
+| `search_bookmarks` | Optional text `q` plus optional folder/tag filters; bounded page size. **Empty `q` with folder and/or tag:** library-list path (browse that scope). **Non-empty `q`:** Meili search, then apply folder/tag filters if set. **Folder filter includes subfolders** (same as Agent Skill zips), not “this folder only”. |
 | `get_bookmark` | One bookmark: title, URL, notes, tags, folders, dates — same visibility as REST get. |
 | `list_folders` | Folder tree the user can see, including shared; **exclude vault folders**. |
 | `list_tags` | Tags for that library. |
@@ -126,6 +126,7 @@ Illustrative client config (field names follow client docs at ship time):
 - Tools-only (no MCP resources) in v1.
 - Stateless Streamable HTTP preferred.
 - Same experimental env flag as zip skills.
+- `search_bookmarks`: empty `q` + folder/tag → library browse; non-empty `q` → Meili then filters; folder scope includes descendants.
 - Exact `rmcp` version and Axum nest details: pick current stable that matches workspace Axum at implement time.
 
 ## Out of scope pointers
