@@ -23,3 +23,5 @@
 **Where in the app:** a folder's **⋯ → Agent Skill (.zip)** in Explorer view, or **Config options → Import / Export → Agent Skill**.
 
 User guide: [guides/agent-skills.md](../guides/agent-skills.md).
+
+**Next (Phase A):** a read-only remote MCP server for live search/read — [mcp-readonly.md](./mcp-readonly.md).
