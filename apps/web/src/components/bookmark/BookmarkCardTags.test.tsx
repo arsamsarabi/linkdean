@@ -19,6 +19,7 @@ vi.mock('@/hooks', () => ({
   useRecordBookmarkOpen: () => vi.fn(),
   useOwnerActions: () => ({ following: false, muted: false, blocking: false }),
   useApiImage: () => ({ src: undefined, failed: false }),
+  useArchivesEnabled: () => true,
 }))
 
 vi.mock('@/components/peek', () => ({

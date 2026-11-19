@@ -27,6 +27,7 @@ vi.mock('./useLibraryPageModel', () => ({ useLibraryPageModel: () => lib }))
 vi.mock('@/hooks', async (orig) => ({
   ...(await orig<typeof import('@/hooks')>()),
   useMe: () => ({ data: { user: { id: 'me' } } }),
+  useArchivesEnabled: () => true,
 }))
 
 describe('LibraryBulkBar', () => {
