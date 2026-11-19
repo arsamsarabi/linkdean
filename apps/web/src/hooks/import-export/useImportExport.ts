@@ -20,8 +20,13 @@ export function useImportPreview(): UseMutationResult<ImportPreview, Error, Prev
   })
 }
 
+export type ExportOptions = {
+  format: string
+  includeArchives?: boolean
+}
+
 export type ExportState = {
-  exportBookmarks: (format: string) => Promise<void>
+  exportBookmarks: (opts: ExportOptions | string) => Promise<void>
   isExporting: boolean
   exportError: Error | null
   clearExportError: () => void
@@ -31,11 +36,12 @@ export function useExportBookmarks(): ExportState {
   const [isExporting, setIsExporting] = useState(false)
   const [exportError, setExportError] = useState<Error | null>(null)
 
-  async function exportBookmarks(format: string): Promise<void> {
+  async function exportBookmarks(opts: ExportOptions | string): Promise<void> {
+    const { format, includeArchives = false } = typeof opts === 'string' ? { format: opts } : opts
     setIsExporting(true)
     setExportError(null)
     try {
-      const res = await fetch(api.exportUrl(format), {
+      const res = await fetch(api.exportUrl(format, includeArchives), {
         credentials: 'include',
       })
       if (!res.ok) {
@@ -45,7 +51,11 @@ export function useExportBookmarks(): ExportState {
       const a = document.createElement('a')
       const objectUrl = URL.createObjectURL(blob)
       a.href = objectUrl
-      a.download = format === 'html' ? 'linkdean-bookmarks.html' : 'linkdean-export.json'
+      a.download = includeArchives
+        ? 'linkdean-export.zip'
+        : format === 'html'
+          ? 'linkdean-bookmarks.html'
+          : 'linkdean-export.json'
       a.click()
       URL.revokeObjectURL(objectUrl)
     } catch (e) {

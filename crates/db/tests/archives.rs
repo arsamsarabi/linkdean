@@ -691,3 +691,40 @@ async fn meili_plan_attaches_page_text_and_skips_vault() {
     assert!(plan.upsert.is_empty());
     assert_eq!(plan.delete, vec![id]);
 }
+
+#[tokio::test]
+async fn done_archives_for_owner_lists_only_that_owners_done_copies() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = GATE.lock().await;
+    let owner = person(&pool, "export-owner").await;
+    let other = person(&pool, "export-other").await;
+    let none = VaultKeyring::default();
+    let mine = bookmark(&pool, &owner, None).await;
+    let theirs = bookmark(&pool, &other, None).await;
+    db::request_archive(&pool, owner.id, mine, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, mine).await;
+    db::finish_archive(&pool, mine, &[copy(Html, "mine-html", 11)])
+        .await
+        .unwrap();
+    db::request_archive(&pool, other.id, theirs, &[Html], &none)
+        .await
+        .unwrap();
+    claim(&pool, theirs).await;
+    db::finish_archive(&pool, theirs, &[copy(Html, "theirs-html", 22)])
+        .await
+        .unwrap();
+    // Queued-only row must not appear.
+    let pending = bookmark(&pool, &owner, None).await;
+    db::request_archive(&pool, owner.id, pending, &[Pdf], &none)
+        .await
+        .unwrap();
+
+    let rows = db::done_archives_for_owner(&pool, owner.id).await.unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].bookmark_id, mine);
+    assert_eq!(rows[0].file_name.as_deref(), Some("mine-html"));
+}
