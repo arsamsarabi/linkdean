@@ -144,6 +144,5 @@ An archived page is untrusted HTML. Scripts are stripped at capture, and the res
 
 ## Later
 
-- Export: the full export gains **Include archives** and becomes a zip.
-- Embedded media: explore downloading `<video>` and `<audio>` files that are plain links (not streams), within the caps.
 - Version history: keep earlier copies.
+- Embedded media (follow-up): Chrome's MHTML already includes plain `<video>` / `<audio>` / `<source>` files it fetched; the converter inlines those as `data:` under the per-resource cap (same as images). Still open: fetching media URLs that never landed in the snapshot (lazy players, separate ranges), while skipping streams (`m3u8`, `blob:`, MSE). Stay inside the item and account caps; fail soft and leave the live link.
