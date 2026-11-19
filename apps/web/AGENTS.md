@@ -1,4 +1,4 @@
-# CODI Engineering Playbook
+# Linkdean Engineering Playbook
 
 ## 1. Role and priorities
 
