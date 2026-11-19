@@ -9430,6 +9430,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "When set (and not `0`/`false`), the response is a zip with the export file plus archives.",
+            "in": "query",
+            "name": "include_archives",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

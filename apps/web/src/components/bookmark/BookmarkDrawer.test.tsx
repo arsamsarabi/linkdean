@@ -12,6 +12,7 @@ const pageDetails = { isPending: false, mutateAsync: vi.fn() }
 vi.mock('@/hooks', async (orig) => ({
   ...(await orig<typeof import('@/hooks')>()),
   useCreateBookmark: () => create,
+  useArchivesEnabled: () => true,
   useArchives: () => ({ data: [], isLoading: false }),
   useDeleteArchives: () => idle,
   useUpdateBookmark: () => idle,

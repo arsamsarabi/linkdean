@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { api } from '@/api'
-import { useExperimentalFlags } from './useExperimentalFlags'
+import { useArchivesEnabled, useExperimentalFlags } from './useExperimentalFlags'
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -16,7 +16,7 @@ describe('useExperimentalFlags', () => {
     vi.spyOn(api, 'authConfig').mockReturnValue(new Promise((r) => (answer = r)))
     const { result } = renderHook(() => useExperimentalFlags(), { wrapper })
     expect(result.current.agent_skills).toBe(false)
-    answer({ experimental: { agent_skills: true } })
+    answer({ experimental: { agent_skills: true }, archives_enabled: true })
     await waitFor(() => expect(result.current.agent_skills).toBe(true))
   })
 
@@ -25,5 +25,16 @@ describe('useExperimentalFlags', () => {
     const { result } = renderHook(() => useExperimentalFlags(), { wrapper })
     await waitFor(() => expect(spy).toHaveBeenCalled())
     expect(result.current.agent_skills).toBe(false)
+  })
+})
+
+describe('useArchivesEnabled', () => {
+  it('stays on until the server answers, then follows archives_enabled', async () => {
+    let answer: (v: Awaited<ReturnType<typeof api.authConfig>>) => void = () => {}
+    vi.spyOn(api, 'authConfig').mockReturnValue(new Promise((r) => (answer = r)))
+    const { result } = renderHook(() => useArchivesEnabled(), { wrapper })
+    expect(result.current).toBe(true)
+    answer({ experimental: { agent_skills: false }, archives_enabled: false })
+    await waitFor(() => expect(result.current).toBe(false))
   })
 })

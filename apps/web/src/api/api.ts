@@ -798,7 +798,11 @@ export const api = {
       importResultSchema
     ),
 
-  exportUrl: (format: string): string => `/api/export?format=${format}`,
+  exportUrl: (format: string, includeArchives = false): string => {
+    const q = new URLSearchParams({ format })
+    if (includeArchives) q.set('include_archives', '1')
+    return `/api/export?${q}`
+  },
 
   /** A folder (with its subfolders) or a tag as an Agent Skill: a zip, or the SKILL.md alone. */
   agentSkillUrl: (source: AgentSkillSource, format: 'zip' | 'md' = 'zip'): string => {

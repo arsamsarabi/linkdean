@@ -18,15 +18,12 @@ Nothing open right now. The next item comes from **Next** below.
 
 ## Next: high value after the beta settles
 
-AI assistance comes first among the remaining gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](https://docs.linkdean.app/docs/compare). Archive page-text search and Markdown download have shipped; the rest of item 12 is still open.
+AI assistance comes first among the remaining gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](https://docs.linkdean.app/docs/compare). Most of item 12 has shipped; version history, out-of-band media fetch, and per-tier limits remain.
 
-12. **Archive & downloads** (L, in phases). Shipped so far: snapshots as HTML, PDF or the file itself, the viewer, downloads, vault encryption, the dead-link and Quick peek fallbacks, admin limits, page-text search from non-vault HTML archives via Meilisearch, and reader-mode Markdown download from HTML copies (see [features](./features.md#archive) and the [archive design](../design/archive.md)). Still to come:
-    - Downloads: an option in the full export to include archives (zip).
-    - Media: explore downloading embedded `<video>` and `<audio>` files that are plain links, not streams, behind the per-item and per-account caps.
+12. **Archive & downloads** (L, in phases). Shipped so far: snapshots as HTML, PDF or the file itself, the viewer, downloads, vault encryption, the dead-link and Quick peek fallbacks, admin limits, page-text search from non-vault HTML archives via Meilisearch, reader-mode Markdown download from HTML copies, Include archives on full export (zip), auto-archive on import when **Archive new bookmarks** is on, hiding archive write actions when the admin turns archiving off, and inlining `<video>` / `<audio>` already present in the MHTML snapshot (see [features](./features.md#archive) and the [archive design](../design/archive.md)). Still to come:
+    - Media: fetch plain `<video>` / `<audio>` URLs that never landed in the Chrome snapshot (not streams), under the per-item and per-account caps; fail soft and leave the live link.
     - Version history: keep more than one copy per format.
-    - Tiers: per-tier archive storage limits for the hosted service.
-    - Archive imported bookmarks when **Archive new bookmarks** is on, throttled.
-    - Hide the archive actions when an admin has turned archiving off (today the server refuses with a message).
+    - Tiers: per-tier archive storage limits for the hosted service (needs membership plans; today only the platform-wide archive quota applies).
 
 16. **AI assistance** (M–L). Karakeep is built around AI tagging, Linkwarden offers it with local models, and Raindrop.io has it on Pro. Linkdean has none. Add it without giving up the privacy stance.
     - Off by default. Each account opts in; the operator chooses the provider: bring-your-own-key (any OpenAI-compatible API, or Anthropic) or a local model (Ollama) on a self-hosted instance.

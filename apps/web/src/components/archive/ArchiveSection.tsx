@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { IconArchive, IconDownload, IconEye, IconTrash } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { ConfirmModal } from '@/components/confirm-modal'
-import { useArchives, useDeleteArchives } from '@/hooks'
+import { useArchives, useArchivesEnabled, useDeleteArchives } from '@/hooks'
 import { ARCHIVE_FORMAT_LABELS, archiveFileUrl, archiveMarkdownUrl, formatArchiveDate, formatBytes } from '@/lib'
 import type { BookmarkArchive } from '@/schemas'
 import { ArchiveDialog } from './ArchiveDialog'
@@ -18,8 +18,10 @@ type Props = {
 export function ArchiveSection({ bookmarkId, canWrite }: Props): ReactElement {
   const archives = useArchives(bookmarkId)
   const del = useDeleteArchives()
+  const archivesEnabled = useArchivesEnabled()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const canMutate = canWrite && archivesEnabled
   const rows = archives.data ?? []
   const stored = rows.filter((a) => a.available)
   const newest =
@@ -47,12 +49,14 @@ export function ArchiveSection({ bookmarkId, canWrite }: Props): ReactElement {
         <Text size="sm" c="dimmed">
           {archives.isLoading
             ? 'Loading…'
-            : 'No copy kept yet. Archive the page to keep it if the site changes or goes away.'}
+            : archivesEnabled
+              ? 'No copy kept yet. Archive the page to keep it if the site changes or goes away.'
+              : 'Archiving is turned off on this server.'}
         </Text>
       ) : (
         rows.map((a) => <ArchiveRow key={a.format} bookmarkId={bookmarkId} archive={a} />)
       )}
-      {canWrite ? (
+      {canMutate ? (
         <Group gap="xs">
           <Button
             size="xs"

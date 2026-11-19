@@ -200,6 +200,26 @@ pub async fn archive_row(
     .map_err(db_err)
 }
 
+/// Done copies the owner can include in a full export zip (file on disk).
+pub async fn done_archives_for_owner(pool: &PgPool, owner_id: Uuid) -> Result<Vec<ArchiveRow>> {
+    sqlx::query_as::<_, ArchiveRow>(
+        r#"
+        SELECT a.bookmark_id, a.format, a.status, a.file_name, a.bytes, a.content_type,
+               a.final_url, a.key_vault_id, a.nonce, a.captured_at, a.error
+        FROM bookmark_archives a
+        JOIN bookmarks b ON b.id = a.bookmark_id
+        WHERE b.owner_user_id = $1
+          AND a.status = 'done'
+          AND a.file_name IS NOT NULL
+        ORDER BY a.bookmark_id, a.format
+        "#,
+    )
+    .bind(owner_id)
+    .fetch_all(pool)
+    .await
+    .map_err(db_err)
+}
+
 /// Badge data for a page of bookmarks.
 pub async fn archive_summaries(
     pool: &PgPool,

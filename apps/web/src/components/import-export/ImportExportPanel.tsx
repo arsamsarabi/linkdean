@@ -1,5 +1,17 @@
 import { useState, type ReactElement } from 'react'
-import { Alert, Button, FileInput, Group, Paper, Select, SimpleGrid, Stack, ThemeIcon, Title } from '@mantine/core'
+import {
+  Alert,
+  Button,
+  Checkbox,
+  FileInput,
+  Group,
+  Paper,
+  Select,
+  SimpleGrid,
+  Stack,
+  ThemeIcon,
+  Title,
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconDownload, IconFileExport, IconInfoCircle, IconUpload } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components/query-error-alert'
@@ -26,6 +38,7 @@ export function ImportExportPanel(): ReactElement {
   const importMut = useImportBookmarks()
   const vaultUnlocked = !!useMe().data?.vault_unlocked
   const { exportBookmarks, isExporting, exportError, clearExportError } = useExportBookmarks()
+  const [includeArchives, setIncludeArchives] = useState(false)
 
   const previewMut = useImportPreview()
   // A file with duplicates, waiting for the person's choices in the review drawer.
@@ -68,7 +81,7 @@ export function ImportExportPanel(): ReactElement {
 
   async function exportFile(fmt: string): Promise<void> {
     try {
-      await exportBookmarks(fmt)
+      await exportBookmarks({ format: fmt, includeArchives })
     } catch (e) {
       notifications.show({ color: 'red', message: String(e) })
     }
@@ -127,6 +140,16 @@ export function ImportExportPanel(): ReactElement {
                 ? 'Vault is unlocked, so vault items are included in the export as plain text. Keep the file safe.'
                 : 'Vault items are skipped while the vault is locked. Unlock it first to include them.'}
             </Alert>
+            <Checkbox
+              label="Include archives"
+              description={
+                includeArchives
+                  ? 'Download a zip with the export file and every archived copy you can read. Locked vault copies are skipped.'
+                  : 'Add archived page copies to the download as a zip.'
+              }
+              checked={includeArchives}
+              onChange={(e) => setIncludeArchives(e.currentTarget.checked)}
+            />
             {exportError ? (
               <QueryErrorAlert
                 error={exportError}
@@ -143,7 +166,7 @@ export function ImportExportPanel(): ReactElement {
                 loading={isExporting}
                 onClick={() => void exportFile('json')}
               >
-                JSON
+                JSON{includeArchives ? ' zip' : ''}
               </Button>
               <Button
                 variant="light"
@@ -151,7 +174,7 @@ export function ImportExportPanel(): ReactElement {
                 loading={isExporting}
                 onClick={() => void exportFile('html')}
               >
-                Netscape HTML
+                Netscape HTML{includeArchives ? ' zip' : ''}
               </Button>
             </Group>
           </Stack>

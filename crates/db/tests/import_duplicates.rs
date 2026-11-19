@@ -4,7 +4,10 @@
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
 use linkdean_core::import_export::{parse_netscape, DuplicateAction, DuplicateDecisions};
-use linkdean_core::{CreateBookmark, CreateCategory, User, VaultKeyring};
+use linkdean_core::{
+    ArchiveFormat, ArchiveStatus, CreateBookmark, CreateCategory, UpdateSettings, User,
+    VaultKeyring,
+};
 use linkdean_db::{self as db};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -458,4 +461,84 @@ async fn merge_keeps_your_values_and_adds_the_files_tags_and_folders() {
     let mut paths: Vec<&str> = view.categories.iter().map(|c| c.path.as_str()).collect();
     paths.sort();
     assert_eq!(paths, vec!["New", "Old"]);
+}
+
+#[tokio::test]
+async fn import_queues_archives_when_archive_new_is_on() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    db::update_user_settings(
+        &pool,
+        me.id,
+        &UpdateSettings {
+            show_hidden: None,
+            vault_search_mode: None,
+            theme: None,
+            vault_auto_lock_minutes: None,
+            default_landing: None,
+            library_view: None,
+            trash_retention_days: None,
+            show_deleted_in_library: None,
+            show_vault_in_library: None,
+            vault_delete_mode: None,
+            show_keyboard_hints: None,
+            archive_new: Some(true),
+            archive_formats: Some(vec![ArchiveFormat::Html]),
+        },
+    )
+    .await
+    .unwrap();
+
+    let url = format!("https://archive-import.example/{}", Uuid::new_v4());
+    let c = import_with(
+        &pool,
+        &me,
+        &html(&a(&url, "Archived on import")),
+        DuplicateDecisions::default(),
+    )
+    .await;
+    assert_eq!(c.imported, 1);
+    assert!(c.any_archive_queued);
+
+    let bookmarks = db::list_bookmarks(&pool, me.id, None, false, &VaultKeyring::default(), false)
+        .await
+        .unwrap();
+    let id = bookmarks
+        .iter()
+        .find(|b| b.url == url)
+        .expect("imported")
+        .id;
+    let archives = db::list_archives(&pool, id).await.unwrap();
+    assert_eq!(archives.len(), 1);
+    assert_eq!(archives[0].format, ArchiveFormat::Html);
+    assert_eq!(archives[0].status, ArchiveStatus::Queued);
+}
+
+#[tokio::test]
+async fn import_skips_archives_when_archive_new_is_off() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool).await;
+    let url = format!("https://no-archive-import.example/{}", Uuid::new_v4());
+    let c = import_with(
+        &pool,
+        &me,
+        &html(&a(&url, "No auto archive")),
+        DuplicateDecisions::default(),
+    )
+    .await;
+    assert_eq!(c.imported, 1);
+    assert!(!c.any_archive_queued);
+    let bookmarks = db::list_bookmarks(&pool, me.id, None, false, &VaultKeyring::default(), false)
+        .await
+        .unwrap();
+    let id = bookmarks
+        .iter()
+        .find(|b| b.url == url)
+        .expect("imported")
+        .id;
+    assert!(db::list_archives(&pool, id).await.unwrap().is_empty());
 }

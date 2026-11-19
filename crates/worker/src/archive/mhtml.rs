@@ -255,7 +255,12 @@ fn rewrite(html: &str, base: Option<&Url>, res: &Resources) -> Result<String, St
             }
             Ok(())
         }))
-        .append_element_content_handler(element!("video[poster]", |el| {
+        .append_element_content_handler(element!("video, audio", |el| {
+            // Plain file parts Chrome already fetched (not streams). Leave the live URL when
+            // the part is missing or over max_resource — later slices may fetch those.
+            if let Some(uri) = el.get_attribute("src").and_then(|s| res.data_uri(base, &s)) {
+                el.set_attribute("src", &uri)?;
+            }
             if let Some(uri) = el
                 .get_attribute("poster")
                 .and_then(|s| res.data_uri(base, &s))
@@ -632,6 +637,26 @@ mod tests {
         );
         assert!(!out.contains("srcset"));
         assert!(out.contains(r#"<head><meta charset="utf-8"><base target="_blank">"#));
+    }
+
+    #[test]
+    fn video_and_audio_parts_already_in_mhtml_become_data_uris() {
+        let clip = b"fake-video";
+        let sound = b"fake-audio";
+        let out = convert(
+            "<html><head></head><body>\
+             <video src=3D\"clip.mp4\" poster=3D\"pic.png\"></video>\
+             <audio src=3D\"sound.mp3\"></audio>\
+             </body></html>",
+            &[
+                ("https://site.example/a/clip.mp4", "video/mp4", clip),
+                ("https://site.example/a/sound.mp3", "audio/mpeg", sound),
+                ("https://site.example/a/pic.png", "image/png", PNG),
+            ],
+        );
+        assert!(out.contains(r#"src="data:video/mp4;base64,"#), "{out}");
+        assert!(out.contains(r#"src="data:audio/mpeg;base64,"#), "{out}");
+        assert!(out.contains(r#"poster="data:image/png;base64,"#), "{out}");
     }
 
     #[test]
