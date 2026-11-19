@@ -148,4 +148,10 @@ async fn browse_tag_is_own_bookmarks_only() {
     assert!(got.contains(&"Mine A"), "{got:?}");
     assert!(got.contains(&"Mine B"), "{got:?}");
     assert!(!got.contains(&"Theirs"), "{got:?}");
+
+    // High limit must cap at 100 (not fall back to 50); with two hits, both still return.
+    let capped = db::mcp_browse_bookmarks(&pool, me.id, None, Some("design"), 200)
+        .await
+        .expect("high limit");
+    assert_eq!(capped.len(), 2);
 }

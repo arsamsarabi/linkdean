@@ -7,10 +7,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 fn clamp_limit(limit: i64) -> i64 {
-    if (1..=100).contains(&limit) {
-        limit
-    } else {
+    if limit < 1 {
         50
+    } else {
+        limit.min(100)
     }
 }
 
@@ -160,4 +160,19 @@ pub async fn mcp_browse_bookmarks(
 
     let none = VaultKeyring::default();
     bookmarks_to_views(pool, rows, user_id, |_| &none).await
+}
+
+#[cfg(test)]
+mod clamp_limit_tests {
+    use super::clamp_limit;
+
+    #[test]
+    fn high_caps_at_100_low_defaults_to_50() {
+        assert_eq!(clamp_limit(200), 100);
+        assert_eq!(clamp_limit(100), 100);
+        assert_eq!(clamp_limit(50), 50);
+        assert_eq!(clamp_limit(1), 1);
+        assert_eq!(clamp_limit(0), 50);
+        assert_eq!(clamp_limit(-3), 50);
+    }
 }
