@@ -101,6 +101,7 @@ mod tests {
             ("APP_URL", "http://localhost:5199"),
             ("AVATAR_DIR", dir.join("avatars").to_str().unwrap()),
             ("PREVIEW_DIR", dir.join("previews").to_str().unwrap()),
+            ("ARCHIVE_DIR", dir.join("archives").to_str().unwrap()),
             ("EXPERIMENTAL_AGENT_SKILLS", "false"),
         ] {
             // Edition 2021: setting variables is safe. No other test reads these.
@@ -889,6 +890,225 @@ mod tests {
         assert!(
             payload.get("archives").is_none() || payload.is_null(),
             "must not leak archive rows: {payload}"
+        );
+    }
+
+    async fn claim_archive(pool: &sqlx::PgPool, bookmark_id: uuid::Uuid) {
+        loop {
+            let (got, formats) = db::claim_next_archive(pool)
+                .await
+                .expect("claim")
+                .expect("queued archive work");
+            if got == bookmark_id {
+                return;
+            }
+            db::fail_archive(pool, got, &formats, "drained by mcp test")
+                .await
+                .expect("drain foreign archive");
+        }
+    }
+
+    async fn finish_html_archive(state: &AppState, owner_id: uuid::Uuid, bookmark_id: uuid::Uuid) {
+        db::request_archive(
+            &state.pool,
+            owner_id,
+            bookmark_id,
+            &[ArchiveFormat::Html],
+            &VaultKeyring::default(),
+        )
+        .await
+        .expect("queue archive");
+        claim_archive(&state.pool, bookmark_id).await;
+        let dir = state.archive_dir(bookmark_id);
+        tokio::fs::create_dir_all(&dir).await.expect("archive dir");
+        let file_name = "page.html";
+        let html = r#"<!doctype html><html><body><article><h1>Archived Title</h1><p>Hello archive body.</p></article></body></html>"#;
+        tokio::fs::write(dir.join(file_name), html)
+            .await
+            .expect("write html");
+        db::finish_archive(
+            &state.pool,
+            bookmark_id,
+            &[db::StoredCopy {
+                format: ArchiveFormat::Html,
+                file_name: file_name.into(),
+                bytes: html.len() as i64,
+                content_type: "text/html".into(),
+                final_url: Some("https://archive.mcp.example/page".into()),
+                key_vault_id: None,
+                nonce: None,
+                page_text: Some("Archived Title Hello archive body.".into()),
+            }],
+        )
+        .await
+        .expect("finish archive");
+    }
+
+    #[tokio::test]
+    async fn get_archive_text_returns_reader_markdown() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-text-ok").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let view = bookmark(&state.pool, &owner, "Has archive", None, &[], None).await;
+        finish_html_archive(&state, owner.id, view.id).await;
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "get_archive_text",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert!(body.get("error").is_none(), "rpc error: {body}");
+        let payload = tool_payload(&body);
+        assert_eq!(payload["bookmark_id"], view.id.to_string());
+        assert_eq!(payload["format"], "html");
+        let md = payload["markdown"].as_str().expect("markdown");
+        assert!(md.contains("Archived Title"), "{md}");
+        assert!(md.contains("Hello archive body"), "{md}");
+    }
+
+    #[tokio::test]
+    async fn get_archive_text_without_html_copy_errors() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-text-missing").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let view = bookmark(&state.pool, &owner, "No archive", None, &[], None).await;
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "get_archive_text",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.to_lowercase().contains("html archive") || body.get("error").is_some(),
+            "expected no-html error, got: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_archive_text_rejects_unsupported_format() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-text-fmt").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let view = bookmark(&state.pool, &owner, "Fmt", None, &[], None).await;
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "get_archive_text",
+                json!({ "bookmark_id": view.id.to_string(), "format": "pdf" }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body).to_lowercase();
+        assert!(
+            msg.contains("html") || msg.contains("unsupported") || body.get("error").is_some(),
+            "expected unsupported format, got: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_archive_text_hides_vault() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-text-vault").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let (vault, vault_key, _) =
+            db::create_vault(&state.pool, owner.id, "Text Vault", "vault-passphrase")
+                .await
+                .unwrap();
+        let mut keyring = VaultKeyring::default();
+        keyring.insert(vault.id, vault_key);
+        let view = db::create_bookmark(
+            &state.pool,
+            owner.id,
+            CreateBookmark {
+                url: format!("https://vault-text.mcp.example/{}", Uuid::new_v4()),
+                title: Some("Vault archived link".into()),
+                vault_id: Some(vault.id),
+                ..Default::default()
+            },
+            &keyring,
+        )
+        .await
+        .unwrap();
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "get_archive_text",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body).to_lowercase();
+        assert!(
+            msg.contains("vault") || body.get("error").is_some(),
+            "expected vault refusal, got: {body}"
+        );
+        let payload = tool_payload(&body);
+        assert!(
+            payload.get("markdown").is_none() || payload.is_null(),
+            "must not leak markdown: {payload}"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_archive_text_requires_read() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-text-owner").await;
+        let stranger = verified_user(&state.pool, "archive-text-stranger").await;
+        let key = api_key_for(&state.pool, &stranger).await;
+        let view = bookmark(&state.pool, &owner, "Private archive", None, &[], None).await;
+        finish_html_archive(&state, owner.id, view.id).await;
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "get_archive_text",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.to_lowercase().contains("not found") || body.get("error").is_some(),
+            "expected not-found for stranger, got: {body}"
+        );
+        let payload = tool_payload(&body);
+        assert!(
+            payload.get("markdown").is_none() || payload.is_null(),
+            "must not leak markdown: {payload}"
         );
     }
 }

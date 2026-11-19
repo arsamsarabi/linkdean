@@ -1,8 +1,11 @@
 //! MCP server handler with read-only bookmark tools.
 
-use super::dto::{McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList, McpTagList};
+use super::dto::{
+    McpArchiveStatusList, McpArchiveText, McpBookmark, McpBookmarkList, McpFolderList, McpTagList,
+};
 use super::tools::{
-    get_archive_status, get_bookmark, list_folders, list_tags, require_user_state, search_bookmarks,
+    get_archive_status, get_archive_text, get_bookmark, list_folders, list_tags,
+    require_user_state, search_bookmarks,
 };
 use axum::http::request::Parts;
 use rmcp::handler::server::tool::Extension;
@@ -59,6 +62,15 @@ pub struct GetBookmarkParams {
 pub struct GetArchiveStatusParams {
     /// Bookmark id whose archive copies to inspect.
     pub bookmark_id: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct GetArchiveTextParams {
+    /// Bookmark id whose HTML archive to read as Markdown.
+    pub bookmark_id: String,
+    /// Archive format; only `html` is supported (default).
+    #[serde(default)]
+    pub format: Option<String>,
 }
 
 fn parse_uuid(raw: &str, field: &str) -> Result<Uuid, ErrorData> {
@@ -139,6 +151,22 @@ impl LinkdeanMcp {
         let bookmark_id = parse_uuid(&params.bookmark_id, "bookmark_id")?;
         Ok(Json(get_archive_status(&state, &user, bookmark_id).await?))
     }
+
+    #[tool(
+        name = "get_archive_text",
+        description = "Reader-mode Markdown from a bookmark's HTML archive copy when one exists. Vault bookmarks unavailable; PDF/file copies are not supported."
+    )]
+    async fn get_archive_text_tool(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(params): Parameters<GetArchiveTextParams>,
+    ) -> Result<Json<McpArchiveText>, ErrorData> {
+        let (user, state) = require_user_state(&parts)?;
+        let bookmark_id = parse_uuid(&params.bookmark_id, "bookmark_id")?;
+        Ok(Json(
+            get_archive_text(&state, &user, bookmark_id, params.format.as_deref()).await?,
+        ))
+    }
 }
 
 #[tool_handler(router = self.tool_router)]
@@ -148,7 +176,7 @@ impl ServerHandler for LinkdeanMcp {
             .with_server_info(Implementation::new("linkdean", env!("CARGO_PKG_VERSION")))
             .with_protocol_version(ProtocolVersion::V_2025_03_26)
             .with_instructions(
-                "Linkdean read-only library tools. Search and read bookmarks, folders, tags, and archive status; no writes, no vault."
+                "Linkdean read-only library tools. Search and read bookmarks, folders, tags, archive status, and HTML archive reader text; no writes, no vault."
                     .to_string(),
             )
     }

@@ -37,9 +37,10 @@ Read-only tools:
 | `get_bookmark` | One bookmark: title, URL, notes, tags, folders, dates |
 | `list_folders` | Folder tree you can see (shared included; vault excluded) |
 | `list_tags` | Tags in your library |
-| `get_archive_status` | Whether an archive copy exists and which formats — not the page body |
+| `get_archive_status` | Whether an archive copy exists and which formats — metadata only |
+| `get_archive_text` | Reader-mode Markdown from an HTML archive when a copy exists |
 
-Never included: vault folders and bookmarks, trash, writes, or archive file bytes / reader text.
+Never included: vault folders and bookmarks, trash, writes, or raw archive file bytes (PDF/HTML/file). Reader text is available only through `get_archive_text`.
 
 When the flag is off, `/api/mcp` answers `404`.
 

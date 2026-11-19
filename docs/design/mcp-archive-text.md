@@ -1,6 +1,6 @@
 # MCP archive text (Agent Skills Phase B)
 
-**Status:** implementing.  
+**Status:** shipped (Phase B).  
 **Roadmap:** Agent Skills, next steps — Phase B (archive text).  
 **Related:** [mcp-readonly.md](./mcp-readonly.md) (Phase A), [agent-skills.md](./agent-skills.md), `crates/core/src/page_text.rs` (`html_to_reader_markdown`).
 
