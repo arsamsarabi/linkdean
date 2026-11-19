@@ -1,6 +1,9 @@
-//! MCP tool handlers: `search_bookmarks` and `get_bookmark`.
+//! MCP tool handlers: search/read bookmarks, folders, tags, archive status.
 
-use super::dto::{McpBookmark, McpBookmarkList};
+use super::dto::{
+    McpArchiveStatus, McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList,
+    McpTagList,
+};
 use crate::state::AppState;
 use axum::http::request::Parts;
 use linkdean_core::{Error, User, VaultKeyring};
@@ -182,4 +185,40 @@ pub async fn get_bookmark(
         .map_err(mcp_err)?
         .ok_or_else(|| ErrorData::invalid_params("not found", None))?;
     Ok(McpBookmark::from_view(&view, user.id))
+}
+
+/// Visible folders including shared; vault folders omitted.
+pub async fn list_folders(state: &AppState, user: &User) -> Result<McpFolderList, ErrorData> {
+    let cats = db::list_categories(&state.pool, user.id, true, &[], false)
+        .await
+        .map_err(mcp_err)?;
+    let visible: Vec<_> = cats.into_iter().filter(|c| !c.is_vault).collect();
+    Ok(McpFolderList::from_categories(&visible))
+}
+
+pub async fn list_tags(state: &AppState, user: &User) -> Result<McpTagList, ErrorData> {
+    let tags = db::list_tags(&state.pool, user.id)
+        .await
+        .map_err(mcp_err)?;
+    Ok(McpTagList::from_tags(&tags))
+}
+
+/// Archive format/status metadata only — no file bodies.
+pub async fn get_archive_status(
+    state: &AppState,
+    user: &User,
+    bookmark_id: Uuid,
+) -> Result<McpArchiveStatusList, ErrorData> {
+    let can_read = db::bookmark_can_read(&state.pool, user.id, bookmark_id)
+        .await
+        .map_err(mcp_err)?;
+    if !can_read {
+        return Err(mcp_err(Error::NotFound));
+    }
+    let views = db::list_archives(&state.pool, bookmark_id)
+        .await
+        .map_err(mcp_err)?;
+    Ok(McpArchiveStatusList {
+        archives: views.iter().map(McpArchiveStatus::from_view).collect(),
+    })
 }

@@ -71,8 +71,8 @@ mod tests {
     use axum::http::{header, Method, Request, StatusCode};
     use axum::Router;
     use linkdean_core::{
-        CreateApiKey, CreateBookmark, CreateCategory, CreateCategoryShare, ShareAccess, User,
-        VaultKeyring,
+        ArchiveFormat, CreateApiKey, CreateBookmark, CreateCategory, CreateCategoryShare,
+        ShareAccess, User, VaultKeyring,
     };
     use linkdean_db as db;
     use serde_json::{json, Value};
@@ -534,6 +534,171 @@ mod tests {
         assert!(
             payload["notes"].is_null(),
             "invitee must not see owner notes: {payload}"
+        );
+    }
+
+    #[tokio::test]
+    async fn list_folders_excludes_vault() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "folders").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let plain = category(&state.pool, &owner, "Plain", None).await;
+        let child = category(&state.pool, &owner, "Child", Some(plain)).await;
+        let locked = category(&state.pool, &owner, "Locked", None).await;
+        let (vault, _, _) =
+            db::create_vault(&state.pool, owner.id, "Folders Vault", "vault-passphrase")
+                .await
+                .unwrap();
+        sqlx::query("UPDATE categories SET is_vault = TRUE, vault_id = $2 WHERE id = $1")
+            .bind(locked)
+            .bind(vault.id)
+            .execute(&state.pool)
+            .await
+            .unwrap();
+
+        let app = app(state, true);
+        let (status, body) =
+            json_status(app, tools_call(&key, "list_folders", json!({}))).await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert!(body.get("error").is_none(), "rpc error: {body}");
+        let payload = tool_payload(&body);
+        let folders = payload["folders"].as_array().expect("folders array");
+        let ids: Vec<String> = folders
+            .iter()
+            .filter_map(|f| f["id"].as_str().map(str::to_string))
+            .collect();
+        assert!(ids.contains(&plain.to_string()), "{ids:?}");
+        assert!(ids.contains(&child.to_string()), "{ids:?}");
+        assert!(
+            !ids.contains(&locked.to_string()),
+            "vault folder must be omitted: {payload}"
+        );
+        let child_row = folders
+            .iter()
+            .find(|f| f["id"] == child.to_string())
+            .expect("child folder");
+        assert_eq!(child_row["parent_id"], plain.to_string());
+        assert_eq!(child_row["path"], "Plain / Child");
+    }
+
+    #[tokio::test]
+    async fn list_tags_returns_names() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "tags").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        bookmark(&state.pool, &owner, "Tagged", None, &["alpha", "beta"], None).await;
+
+        let app = app(state, true);
+        let (status, body) = json_status(app, tools_call(&key, "list_tags", json!({}))).await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert!(body.get("error").is_none(), "rpc error: {body}");
+        let payload = tool_payload(&body);
+        let names: Vec<&str> = payload["tags"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|t| t["name"].as_str())
+            .collect();
+        assert!(names.contains(&"alpha"), "{names:?}");
+        assert!(names.contains(&"beta"), "{names:?}");
+    }
+
+    #[tokio::test]
+    async fn get_archive_status_is_metadata_only() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-meta").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let view = bookmark(&state.pool, &owner, "To archive", None, &[], None).await;
+        db::request_archive(
+            &state.pool,
+            owner.id,
+            view.id,
+            &[ArchiveFormat::Html, ArchiveFormat::Pdf],
+            &VaultKeyring::default(),
+        )
+        .await
+        .expect("queue archive");
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "get_archive_status",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert!(body.get("error").is_none(), "rpc error: {body}");
+        let payload = tool_payload(&body);
+        let archives = payload["archives"].as_array().expect("archives array");
+        assert!(!archives.is_empty(), "{payload}");
+        for row in archives {
+            assert!(row["format"].is_string(), "{row}");
+            assert!(row["status"].is_string(), "{row}");
+            assert!(row.get("html").is_none(), "no html body key: {row}");
+            assert!(row.get("body").is_none(), "no body key: {row}");
+            assert!(row.get("content").is_none(), "no content key: {row}");
+            assert!(row.get("url").is_none(), "no download url: {row}");
+            let obj = row.as_object().expect("object");
+            for key in obj.keys() {
+                assert!(
+                    matches!(
+                        key.as_str(),
+                        "format" | "status" | "bytes" | "updated_at"
+                    ),
+                    "unexpected archive field {key}: {row}"
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn get_archive_status_requires_read() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-owner").await;
+        let stranger = verified_user(&state.pool, "archive-stranger").await;
+        let stranger_key = api_key_for(&state.pool, &stranger).await;
+        let view = bookmark(&state.pool, &owner, "Private", None, &[], None).await;
+        db::request_archive(
+            &state.pool,
+            owner.id,
+            view.id,
+            &[ArchiveFormat::Html],
+            &VaultKeyring::default(),
+        )
+        .await
+        .expect("queue archive");
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &stranger_key,
+                "get_archive_status",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.to_lowercase().contains("not found") || body.get("error").is_some(),
+            "expected not-found for stranger, got: {body}"
+        );
+        let payload = tool_payload(&body);
+        assert!(
+            payload.get("archives").is_none() || payload.is_null(),
+            "must not leak archive rows: {payload}"
         );
     }
 }

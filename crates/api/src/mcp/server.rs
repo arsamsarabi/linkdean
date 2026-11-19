@@ -1,7 +1,11 @@
 //! MCP server handler with read-only bookmark tools.
 
-use super::dto::{McpBookmark, McpBookmarkList};
-use super::tools::{get_bookmark, require_user_state, search_bookmarks};
+use super::dto::{
+    McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList, McpTagList,
+};
+use super::tools::{
+    get_archive_status, get_bookmark, list_folders, list_tags, require_user_state, search_bookmarks,
+};
 use axum::http::request::Parts;
 use rmcp::handler::server::tool::Extension;
 use rmcp::handler::server::wrapper::{Json, Parameters};
@@ -53,6 +57,12 @@ pub struct GetBookmarkParams {
     pub id: String,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct GetArchiveStatusParams {
+    /// Bookmark id whose archive copies to inspect.
+    pub bookmark_id: String,
+}
+
 fn parse_uuid(raw: &str, field: &str) -> Result<Uuid, ErrorData> {
     Uuid::parse_str(raw.trim())
         .map_err(|_| ErrorData::invalid_params(format!("invalid {field} uuid"), None))
@@ -93,6 +103,46 @@ impl LinkdeanMcp {
         let bookmark = get_bookmark(&state, &user, id).await?;
         Ok(Json(bookmark))
     }
+
+    #[tool(
+        name = "list_folders",
+        description = "List folders the user can see (owned and shared). Vault folders are excluded."
+    )]
+    async fn list_folders_tool(
+        &self,
+        Extension(parts): Extension<Parts>,
+    ) -> Result<Json<McpFolderList>, ErrorData> {
+        let (user, state) = require_user_state(&parts)?;
+        Ok(Json(list_folders(&state, &user).await?))
+    }
+
+    #[tool(
+        name = "list_tags",
+        description = "List tag names in the user's library."
+    )]
+    async fn list_tags_tool(
+        &self,
+        Extension(parts): Extension<Parts>,
+    ) -> Result<Json<McpTagList>, ErrorData> {
+        let (user, state) = require_user_state(&parts)?;
+        Ok(Json(list_tags(&state, &user).await?))
+    }
+
+    #[tool(
+        name = "get_archive_status",
+        description = "Archive copy status for a bookmark (format, status, bytes, timestamps). Metadata only — no file bodies."
+    )]
+    async fn get_archive_status_tool(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(params): Parameters<GetArchiveStatusParams>,
+    ) -> Result<Json<McpArchiveStatusList>, ErrorData> {
+        let (user, state) = require_user_state(&parts)?;
+        let bookmark_id = parse_uuid(&params.bookmark_id, "bookmark_id")?;
+        Ok(Json(
+            get_archive_status(&state, &user, bookmark_id).await?,
+        ))
+    }
 }
 
 #[tool_handler(router = self.tool_router)]
@@ -102,7 +152,7 @@ impl ServerHandler for LinkdeanMcp {
             .with_server_info(Implementation::new("linkdean", env!("CARGO_PKG_VERSION")))
             .with_protocol_version(ProtocolVersion::V_2025_03_26)
             .with_instructions(
-                "Linkdean read-only library tools. Search and read bookmarks; no writes."
+                "Linkdean read-only library tools. Search and read bookmarks, folders, tags, and archive status; no writes, no vault."
                     .to_string(),
             )
     }
