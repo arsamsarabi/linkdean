@@ -68,7 +68,7 @@ Local stdio was deferred as a later convenience, not Phase A.
 
 | Tool | Behaviour |
 | --- | --- |
-| `search_bookmarks` | Library search; optional folder/tag filters; bounded page size (match or reuse search route limits). |
+| `search_bookmarks` | Optional text `q` plus optional folder/tag filters; bounded page size. **Empty `q` with folder and/or tag:** library-list path (browse that scope). **Non-empty `q`:** Meili search, then apply folder/tag filters if set. |
 | `get_bookmark` | One bookmark: title, URL, notes, tags, folders, dates — same visibility as REST get. |
 | `list_folders` | Folder tree the user can see, including shared; **exclude vault folders**. |
 | `list_tags` | Tags for that library. |
