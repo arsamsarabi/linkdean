@@ -652,12 +652,72 @@ mod tests {
                 assert!(
                     matches!(
                         key.as_str(),
-                        "format" | "status" | "bytes" | "updated_at"
+                        "format" | "status" | "bytes" | "captured_at"
                     ),
                     "unexpected archive field {key}: {row}"
                 );
             }
         }
+    }
+
+    #[tokio::test]
+    async fn get_archive_status_hides_vault() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "archive-vault").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let (vault, vault_key, _) =
+            db::create_vault(&state.pool, owner.id, "Archive Vault", "vault-passphrase")
+                .await
+                .unwrap();
+        let mut keyring = VaultKeyring::default();
+        keyring.insert(vault.id, vault_key);
+        let view = db::create_bookmark(
+            &state.pool,
+            owner.id,
+            CreateBookmark {
+                url: format!("https://vault-archive.mcp.example/{}", Uuid::new_v4()),
+                title: Some("Vault archived link".into()),
+                vault_id: Some(vault.id),
+                ..Default::default()
+            },
+            &keyring,
+        )
+        .await
+        .unwrap();
+        assert!(view.is_vault);
+        db::request_archive(
+            &state.pool,
+            owner.id,
+            view.id,
+            &[ArchiveFormat::Html],
+            &keyring,
+        )
+        .await
+        .expect("queue vault archive");
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "get_archive_status",
+                json!({ "bookmark_id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.contains("vault not available via MCP"),
+            "expected vault tool error, got: {body}"
+        );
+        let payload = tool_payload(&body);
+        assert!(
+            payload.get("archives").is_none() || payload.is_null(),
+            "must not leak vault archive rows: {payload}"
+        );
     }
 
     #[tokio::test]

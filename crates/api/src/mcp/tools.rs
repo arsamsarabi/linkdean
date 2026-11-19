@@ -209,11 +209,14 @@ pub async fn get_archive_status(
     user: &User,
     bookmark_id: Uuid,
 ) -> Result<McpArchiveStatusList, ErrorData> {
-    let can_read = db::bookmark_can_read(&state.pool, user.id, bookmark_id)
+    let raw = db::get_bookmark_raw(&state.pool, user.id, bookmark_id)
         .await
         .map_err(mcp_err)?;
-    if !can_read {
-        return Err(mcp_err(Error::NotFound));
+    if raw.is_vault {
+        return Err(ErrorData::invalid_params(
+            "vault not available via MCP",
+            None,
+        ));
     }
     let views = db::list_archives(&state.pool, bookmark_id)
         .await

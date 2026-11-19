@@ -130,7 +130,7 @@ impl LinkdeanMcp {
 
     #[tool(
         name = "get_archive_status",
-        description = "Archive copy status for a bookmark (format, status, bytes, timestamps). Metadata only — no file bodies."
+        description = "Archive copy status for a bookmark (format, status, bytes, captured_at). Metadata only — no file bodies. Vault bookmarks unavailable."
     )]
     async fn get_archive_status_tool(
         &self,

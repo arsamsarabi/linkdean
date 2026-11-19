@@ -63,7 +63,7 @@ pub struct McpArchiveStatus {
     pub status: String,
     pub bytes: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated_at: Option<DateTime<Utc>>,
+    pub captured_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
@@ -154,7 +154,7 @@ impl McpArchiveStatus {
             format: view.format.as_str().to_string(),
             status: view.status.as_str().to_string(),
             bytes: view.bytes,
-            updated_at: view.captured_at,
+            captured_at: view.captured_at,
         }
     }
 }
