@@ -3,7 +3,6 @@
 **Status:** shipped (Phase A).  
 **Roadmap:** Agent Skills, next steps — Phase A done; remaining phases are archive text and saved searches. Write tools are a later item (MCP write tools), after API key permissions.
 
-
 Related: [agent-skills.md](./agent-skills.md) (zip / `SKILL.md` packaging), [guides/agent-skills.md](../guides/agent-skills.md).
 
 ## Intent
