@@ -327,10 +327,11 @@ mod tests {
             Some("secret note"),
         )
         .await;
-        if let Err(e) = state.search.ensure_index().await {
-            eprintln!("skipping search_with_q_returns_hits: meili unavailable ({e})");
-            return;
-        }
+        state
+            .search
+            .ensure_index()
+            .await
+            .expect("Meili must be reachable at MEILI_URL for search_with_q_returns_hits");
         state
             .search
             .upsert_bookmark(&view)
@@ -390,6 +391,44 @@ mod tests {
             .collect();
         assert!(titles.contains(&"In root"), "{titles:?}");
         assert!(titles.contains(&"In child"), "{titles:?}");
+    }
+
+    #[tokio::test]
+    async fn search_bookmarks_rejects_vault_folder() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "search-vault-folder").await;
+        let key = api_key_for(&state.pool, &owner).await;
+        let locked = category(&state.pool, &owner, "Locked", None).await;
+        bookmark(&state.pool, &owner, "Secret", Some(locked), &[], None).await;
+        let (vault, _, _) =
+            db::create_vault(&state.pool, owner.id, "Search Vault", "vault-passphrase")
+                .await
+                .unwrap();
+        sqlx::query("UPDATE categories SET is_vault = TRUE, vault_id = $2 WHERE id = $1")
+            .bind(locked)
+            .bind(vault.id)
+            .execute(&state.pool)
+            .await
+            .unwrap();
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "search_bookmarks",
+                json!({ "folder": locked.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.contains("vault folders can't be browsed via MCP"),
+            "expected vault folder tool error, got: {body}"
+        );
     }
 
     #[tokio::test]
