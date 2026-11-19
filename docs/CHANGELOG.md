@@ -8,6 +8,9 @@
 
 ### Added
 
+- **Archive export zip**: Settings → Import / Export can **Include archives**, downloading a zip of the JSON or Netscape file plus archived copies you can read (locked vault copies skipped).
+- **Archive on import**: **Archive new bookmarks** also queues archives for bookmarks created by an import.
+- **Archiving off hides write actions**: when an admin turns archiving off, Archive…, bulk Archive and related settings are hidden; Open and Download for existing copies stay.
 - **Markdown from archives**: download a readable Markdown version of an HTML archive (headings and paragraphs) from the drawer or the archive viewer. Vault copies work while unlocked; nothing new is stored.
 - **Search inside archived pages**: library search matches words from the body of non-vault HTML archives after the copy finishes. Vault bookmarks never contribute page text. Existing HTML copies gain body search when you archive again.
 - **Version in the sidebar**: the app's version (such as `v0.0.12`) sits at the foot of the sidebar. Admins also see a badge when a newer release is out, colored by how risky it is to update (patch, new features, major or breaking), which opens the release notes. The server checks GitHub at most every 6 hours; self-hosters turn it off with `UPDATE_CHECK=false`. A release counts as breaking when its section in this changelog has a `### Breaking` heading: the release workflow copies that heading into the GitHub release notes.

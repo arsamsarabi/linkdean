@@ -42,11 +42,11 @@ Anyone who can download an HTML archive can also download a reader-mode Markdown
 
 | Topic | Decision |
 | --- | --- |
-| Trigger | A manual **Archive…** action on a bookmark and in the bulk bar. Plus a per-account switch, **Archive new bookmarks automatically**, off by default. |
+| Trigger | A manual **Archive…** action on a bookmark and in the bulk bar. Plus a per-account switch, **Archive new bookmarks automatically**, off by default (also queues archives for bookmarks created by an import). When the admin turns archiving off, write actions are hidden; Open/Download for existing copies stay. |
 | Formats | The person picks per archive; HTML is preselected and PDF is optional. Automatic archiving uses the account's default formats, HTML unless changed. Format choice does not apply to direct files. |
 | Capture method | Chrome's own MHTML snapshot, converted to one HTML file in Rust. PDF from Chrome's print. No new service. |
 | Versions | Latest copy only. Archiving again warns that it replaces the copy from a given date. |
-| Media | Images, styles and fonts the page loaded are inlined. A single resource over 5 MB is left out. Embedded players keep their poster image and a link. Downloading embedded video or audio is explored in a later slice. |
+| Media | Images, styles, fonts and plain `<video>` / `<audio>` files Chrome already fetched are inlined. A single resource over 5 MB is left out. Fetching media URLs that never entered the snapshot is a later slice. |
 | Item cap | 25 MB per copy. A larger page or file fails with a clear message. |
 | Quota | Per-account archive storage. 500 MB on the hosted beta; unlimited by default when self-hosting. |
 | Vaults | Allowed while the vault is unlocked. Stored encrypted with the vault key and never indexed. |

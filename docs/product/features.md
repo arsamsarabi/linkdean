@@ -55,14 +55,14 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 ## Archive
 
-- Archive a bookmark from its menu, the bookmark drawer or the Library's select mode (up to 500 at once): keep the page as single-file HTML (scripts removed; images, styles and fonts inlined), as a PDF, or both. An address that serves a file (PDF, image, audio, video) is kept as that file. Captures run in the background through the shared Chrome, two at a time by default (`ARCHIVE_CONCURRENCY`)
-- **Archive new bookmarks** (Settings → Archive, off by default) archives each saved bookmark in the chosen formats; imports are not archived
+- Archive a bookmark from its menu, the bookmark drawer or the Library's select mode (up to 500 at once): keep the page as single-file HTML (scripts removed; images, styles, fonts and plain video/audio files Chrome already fetched inlined), as a PDF, or both. An address that serves a file (PDF, image, audio, video) is kept as that file. Captures run in the background through the shared Chrome, two at a time by default (`ARCHIVE_CONCURRENCY`)
+- **Archive new bookmarks** (Settings → Archive, off by default) archives each bookmark you save or import in the chosen formats
 - Viewer at `/archive/{id}`: the copy inside Linkdean with no scripts and links opening in a new tab, a switch between formats, the live page and a download. Cards show an **archived** badge; a broken or unreachable badge opens the copy; Quick peek offers the copy when a site refuses to embed
 - Archiving again replaces the copy and says so first; a failed attempt keeps the older copy. **Delete archive** removes every copy and keeps the bookmark
 - Library search matches words from the body of non-vault HTML archives (extracted when the copy finishes). Vault bookmarks never contribute page text. Existing HTML copies gain body search on the next archive
 - Downloads are named `<site>-<date>.<ext>`. HTML copies also offer a **Markdown** download (reader-mode headings and paragraphs, converted on the fly; vault while unlocked). Copies are served with a sandbox content security policy; an original file a browser could run (HTML, SVG) is only ever downloaded
 - Vault bookmarks: copies are encrypted with the vault key, captured and opened only while the vault is unlocked, and re-encrypted when the bookmark moves in or out of a vault
-- Access: the owner and write invitees archive; anyone who can read the bookmark opens and downloads its copies. Public lists never expose them
+- Access: the owner and write invitees archive; anyone who can read the bookmark opens and downloads its copies. Public lists never expose them. When an admin turns archiving off, Archive… and related write controls are hidden; existing Open and Download stay available
 - Limits (Admin → Quotas): archiving on or off, storage per account (unlimited by default; counted on the bookmarks you own, Trash included) and the largest copy (25 MB by default, 1 MB to 1 GB). A page or file over the cap, a bot check, a 404 or 410, or full storage fails with a reason in the drawer
 - Copies stay while a bookmark is in Trash and go when it is purged, through an hourly sweep of unlisted files
 
@@ -218,7 +218,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 - Import: Netscape HTML, Linkdean JSON, Pocket CSV, Raindrop CSV
 - Imported bookmarks get metadata and previews in the background
-- Export: Netscape HTML, Linkdean JSON (full account export of owned folders, bookmarks and dashboards; vault items included while unlocked)
+- Export: Netscape HTML, Linkdean JSON (full account export of owned folders, bookmarks and dashboards; vault items included while unlocked). Optionally **Include archives** to download a zip with the export file plus every archived copy you can read (locked vault copies are skipped)
 - **Agent Skills** (experimental, off unless the server sets `EXPERIMENTAL_AGENT_SKILLS=true`; [guide](../guides/agent-skills.md)) for coding and research agents (Claude Code, Codex, Cursor and others): a folder (with its subfolders) or a tag becomes an [Agent Skill](https://agentskills.io), a `SKILL.md` whose description tells the agent when to use it, with the links grouped by subfolder, their descriptions, tags and your notes. Download it from **Config options → Import / Export → Agent Skill** or a folder's **⋯ → Agent Skill (.zip)**, or fetch it with an API key from `GET /api/agent-skill?folder=<id>` or `?tag=<name>` (`&format=md` for the `SKILL.md` alone) so a script can keep it current
     - Over 100 links move to `references/LINKS.md`, which the agent reads only when needed; a skill holds up to 2,000 bookmarks and says how many it left out
     - Never includes vault folders or bookmarks, deleted bookmarks, someone else's "Only me" bookmarks or their notes. Shared folders work with read access; a tag covers your own bookmarks
