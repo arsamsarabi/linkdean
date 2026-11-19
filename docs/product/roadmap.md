@@ -18,25 +18,11 @@ Nothing open right now. The next item comes from **Next** below.
 
 ## Next: high value after the beta settles
 
-AI assistance comes first among the remaining gaps against Raindrop.io, Linkwarden and Karakeep on the public [comparison page](https://docs.linkdean.app/docs/compare). Most of item 12 has shipped; version history, out-of-band media fetch, and per-tier limits remain.
-
-12. **Archive & downloads** (L, in phases). Shipped so far: snapshots as HTML, PDF or the file itself, the viewer, downloads, vault encryption, the dead-link and Quick peek fallbacks, admin limits, page-text search from non-vault HTML archives via Meilisearch, reader-mode Markdown download from HTML copies, Include archives on full export (zip), auto-archive on import when **Archive new bookmarks** is on, hiding archive write actions when the admin turns archiving off, and inlining `<video>` / `<audio>` already present in the MHTML snapshot (see [features](./features.md#archive) and the [archive design](../design/archive.md)). Still to come:
-    - Media: fetch plain `<video>` / `<audio>` URLs that never landed in the Chrome snapshot (not streams), under the per-item and per-account caps; fail soft and leave the live link.
-    - Version history: keep more than one copy per format.
-    - Tiers: per-tier archive storage limits for the hosted service (needs membership plans; today only the platform-wide archive quota applies).
-
-16. **AI assistance** (M–L). Karakeep is built around AI tagging, Linkwarden offers it with local models, and Raindrop.io has it on Pro. Linkdean has none. Add it without giving up the privacy stance.
-    - Off by default. Each account opts in; the operator chooses the provider: bring-your-own-key (any OpenAI-compatible API, or Anthropic) or a local model (Ollama) on a self-hosted instance.
-    - Workflows, in order: tag and folder suggestions when saving and in **File one by one** (extends the same-site suggestions); a short summary per bookmark (from the archived page text when there is one); semantic search ("that article about...") through Meilisearch hybrid search with embeddings; related-bookmark and near-duplicate hints.
-    - Suggestions, not silent changes: nothing is applied without a click, unless the person turns on auto-tagging.
-    - Vault contents never leave the server for a model. The settings page shows what is sent.
-    - Hosted service: a limited free allowance, more with your own key.
-    - Depends on: phase 2 of item 12 for summaries and semantic search over page contents; tag suggestions do not.
-    - Later: AI-assisted dashboards. Suggest sections and their sources (folders, tags, websites) from what the person saves and opens, built on the sections that fill themselves.
+Archive & downloads (item 12) and AI assistance (item 16) are parked under **Far out**. Next focus is agent-facing surface area.
 
 22. **Agent Skills, next steps** (S–M). Folders and tags already download as Agent Skills, and an API key can fetch them (see features).
     - A read-only MCP server (search and read bookmarks), as well as or instead of generated files.
-    - With item 12, include the archived reader-mode text so the agent can read a page without fetching it.
+    - Include the archived reader-mode text so the agent can read a page without fetching it (archive copies already ship; see [features](./features.md#archive)).
     - Skills from a saved library search, once saved searches exist.
 
 ---
@@ -65,6 +51,18 @@ AI assistance comes first among the remaining gaps against Raindrop.io, Linkward
 
 Revisit once the stages above are done.
 
+- **Archive follow-ups** (was item 12 leftovers). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)). Still open:
+  - Media: fetch plain `<video>` / `<audio>` URLs that never landed in the Chrome snapshot (not streams), under the per-item and per-account caps; fail soft and leave the live link.
+  - Version history: keep more than one copy per format.
+  - Tiers: per-tier archive storage limits for the hosted service (needs membership plans; today only the platform-wide archive quota applies).
+- **AI assistance** (M–L, was item 16). Karakeep is built around AI tagging, Linkwarden offers it with local models, and Raindrop.io has it on Pro. Linkdean has none. Add it without giving up the privacy stance.
+  - Off by default. Each account opts in; the operator chooses the provider: bring-your-own-key (any OpenAI-compatible API, or Anthropic) or a local model (Ollama) on a self-hosted instance.
+  - Workflows, in order: tag and folder suggestions when saving and in **File one by one** (extends the same-site suggestions); a short summary per bookmark (from the archived page text when there is one); semantic search ("that article about...") through Meilisearch hybrid search with embeddings; related-bookmark and near-duplicate hints.
+  - Suggestions, not silent changes: nothing is applied without a click, unless the person turns on auto-tagging.
+  - Vault contents never leave the server for a model. The settings page shows what is sent.
+  - Hosted service: a limited free allowance, more with your own key.
+  - Tag suggestions can start without further archive work; summaries and semantic search over page contents use archived page text already indexed today.
+  - Later: AI-assisted dashboards. Suggest sections and their sources (folders, tags, websites) from what the person saves and opens, built on the sections that fill themselves.
 - **Privacy-respecting usage statistics** (M). Know how a public instance is used without tracking people.
   - Aggregate counts only (active users, bookmarks saved, features used), no personal data, page content or URLs, and nothing per person.
   - Off by default on self-hosted instances. Operators can send the statistics to their own backend with their own key (an OpenTelemetry exporter, or a service such as Datadog), building on the OpenTelemetry tracing the API already exports.
