@@ -18,10 +18,11 @@
 4. **Deliver it** (`GET /api/agent-skill?folder=|tag=&format=zip|md`). By default this is a zip with a `<name>/` folder, built by a small built-in zip writer. `md` returns just the `SKILL.md`. The endpoint works with API keys, so a script can keep a skill current.
 5. **Use it:** unzip into `~/.claude/skills` (or the agent's skills folder).
 
-**Experimental flag.** Off by default. `EXPERIMENTAL_AGENT_SKILLS=true` merges the route (otherwise `404`) and reports `experimental.agent_skills` in `GET /api/auth/config`, which the web app reads (`useExperimentalFlags`) to show the card and menu item. The dev compose file turns it on.
+**Experimental flag.** Off by default. `EXPERIMENTAL_AGENT_SKILLS=true` merges the zip route and the read-only MCP endpoint (otherwise `404`) and reports `experimental.agent_skills` in `GET /api/auth/config`, which the web app reads (`useExperimentalFlags`) to show the MCP and Agent Skill cards and the folder menu item. The dev compose file turns it on.
 
-**Where in the app:** a folder's **⋯ → Agent Skill (.zip)** in Explorer view, or **Config options → Import / Export → Agent Skill**.
+**Where in the app:** **Config options → Import / Export** leads with **MCP**; zip download stays secondary there and on a folder's **⋯ → Agent Skill (.zip)**.
 
 User guide: [guides/agent-skills.md](../guides/agent-skills.md).
 
-**Next (Phase A):** a read-only remote MCP server for live search/read — [mcp-readonly.md](./mcp-readonly.md).
+**Shipped (Phase A):** read-only remote MCP for live search/read — [mcp-readonly.md](./mcp-readonly.md). **Next:** Phase B (archive text) and Phase C (saved-search skills) on the product roadmap.
+

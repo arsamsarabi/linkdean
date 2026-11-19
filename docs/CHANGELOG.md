@@ -8,7 +8,9 @@
 
 ### Added
 
+- **Read-only MCP** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): Streamable HTTP at `/api/mcp` with a Bearer API key. Tools: `search_bookmarks`, `get_bookmark`, `list_folders`, `list_tags`, `get_archive_status`. Vault and writes stay out; Import / Export leads with an MCP connect card. See the [Agent Skills guide](guides/agent-skills.md).
 - **Archive export zip**: Settings → Import / Export can **Include archives**, downloading a zip of the JSON or Netscape file plus archived copies you can read (locked vault copies skipped).
+
 - **Archive on import**: **Archive new bookmarks** also queues archives for bookmarks created by an import.
 - **Archiving off hides write actions**: when an admin turns archiving off, Archive…, bulk Archive and related settings are hidden; Open and Download for existing copies stay.
 - **Markdown from archives**: download a readable Markdown version of an HTML archive (headings and paragraphs) from the drawer or the archive viewer. Vault copies work while unlocked; nothing new is stored.

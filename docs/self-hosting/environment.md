@@ -142,7 +142,7 @@ Off by default. They may change or go away between releases.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `EXPERIMENTAL_AGENT_SKILLS` | `false` | `true` turns on [Agent Skills](../guides/agent-skills.md): `GET /api/agent-skill`, the **Agent Skill** card under Import / Export and the folder menu item. Off, the route answers `404` and the app hides both |
+| `EXPERIMENTAL_AGENT_SKILLS` | `false` | `true` turns on [Agent Skills / MCP](../guides/agent-skills.md): Streamable HTTP at `/api/mcp`, `GET /api/agent-skill`, the **MCP** and **Agent Skill** cards under Import / Export, and the folder menu item. Off, both routes answer `404` and the app hides the cards |
 
 ### Advanced
 
