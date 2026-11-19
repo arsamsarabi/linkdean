@@ -2443,6 +2443,7 @@ dependencies = [
  "prometheus",
  "reqwest 0.12.28",
  "rmcp",
+ "schemars 1.2.3",
  "serde",
  "serde_json",
  "sha2 0.11.1",
@@ -3964,6 +3965,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "rand 0.10.3",
+ "rmcp-macros",
  "schemars 1.2.3",
  "serde",
  "serde_json",
@@ -3978,6 +3980,19 @@ dependencies = [
  "unicode-general-category",
  "unicode-normalization",
  "uuid",
+]
+
+[[package]]
+name = "rmcp-macros"
+version = "3.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3598e3f36f4af2b5219b133baf7d97a2197039225adc3d4acf3dd8805b5a2aef"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 3.0.9",
 ]
 
 [[package]]

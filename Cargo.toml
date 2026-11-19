@@ -37,7 +37,7 @@ openidconnect = "4"
 webauthn-rs = { version = "0.6.2", features = ["danger-allow-state-serialisation", "conditional-ui"] }
 rand = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-rmcp = { version = "3.11", default-features = false, features = ["server", "transport-streamable-http-server"] }
+rmcp = { version = "3.11", default-features = false, features = ["server", "transport-streamable-http-server", "macros"] }
 scraper = "0.29"
 lol_html = "3.0.3"
 serde = { version = "1", features = ["derive"] }
