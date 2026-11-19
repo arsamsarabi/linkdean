@@ -26,7 +26,7 @@ export function ArchiveSettingsPanel({ settings, saving, onPatch }: Props): Reac
         </Stack>
         <Switch
           label="Archive new bookmarks"
-          description="Each bookmark you save is archived in the formats below. Imports are not."
+          description="Each bookmark you save or import is archived in the formats below."
           checked={settings.archive_new}
           disabled={saving}
           onChange={(e) => onPatch({ archive_new: e.currentTarget.checked })}

@@ -70,6 +70,8 @@ pub struct ImportCounts {
     pub replaced: i32,
     /// Existing bookmarks topped up by Merge.
     pub merged: i32,
+    /// At least one new bookmark was queued for auto-archive (`archive_new`).
+    pub any_archive_queued: bool,
 }
 
 /// An import with no duplicate decisions: every bookmark is created, as before.
@@ -154,6 +156,15 @@ pub async fn apply_parsed_import_counted(
                 counts.imported += 1;
                 if let Some(source) = item.source_id {
                     new_ids.insert(source, created.id);
+                }
+                // Same as interactive create: respect Settings → Archive new bookmarks.
+                // Failures here must not fail the import; the drawer shows failed rows.
+                match super::archives::archive_new_bookmark(pool, user_id, created.id).await {
+                    Ok(true) => counts.any_archive_queued = true,
+                    Ok(false) => {}
+                    Err(e) => {
+                        tracing::warn!(?e, bookmark_id = %created.id, "import auto-archive failed")
+                    }
                 }
                 if item.is_private || item.created_at.is_some() || item.updated_at.is_some() {
                     sqlx::query(

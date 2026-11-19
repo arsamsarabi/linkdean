@@ -231,6 +231,10 @@ async fn import(
         state.enrich_opts(),
         user.id,
     ));
+    // One wake for the whole import; ARCHIVE_CONCURRENCY paces Chrome.
+    if counts.any_archive_queued {
+        state.archive_wake.notify_one();
+    }
 
     Ok(Json(json!({
         "job_id": job.id,
