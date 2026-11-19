@@ -51,13 +51,12 @@ export function AgentSkillCard(): ReactElement {
           <Title order={4}>Agent Skill</Title>
         </Group>
         <Text size="sm" c="dimmed">
-          Give coding and research agents (Claude Code, Codex, Cursor and others) your curated links. A folder or a tag
-          becomes an{' '}
+          Or download a static Agent Skill (.zip) for offline use. Pick a folder or a tag; unzip into the agent&apos;s
+          skills folder, such as <Code>~/.claude/skills</Code>. See{' '}
           <Anchor href="https://agentskills.io" target="_blank" rel="noreferrer">
-            Agent Skill
+            agentskills.io
           </Anchor>
-          : unzip it into the agent&apos;s skills folder, such as <Code>~/.claude/skills</Code>. Vault bookmarks are
-          never included.
+          . Vault bookmarks are never included.
         </Text>
         <SegmentedControl
           value={from}
