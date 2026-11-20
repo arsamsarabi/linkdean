@@ -136,6 +136,7 @@ pub async fn token(
         &user,
         CreateApiKey {
             name: grant.key_name,
+            scopes: None, // full access — extension needs library writes
         },
     )
     .await?;

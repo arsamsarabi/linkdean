@@ -339,7 +339,7 @@ export const api = {
 
   listApiKeys: (): Promise<{ keys: ApiKey[] }> => req('/api-keys', {}, apiKeysEnvelopeSchema),
 
-  createApiKey: (body: { name: string }): Promise<CreateApiKeyResponse> =>
+  createApiKey: (body: { name: string; scopes?: string[] }): Promise<CreateApiKeyResponse> =>
     req('/api-keys', { method: 'POST', body: JSON.stringify(body) }, createApiKeyResponseSchema),
 
   revokeApiKey: (id: string): Promise<{ ok: boolean }> => req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),

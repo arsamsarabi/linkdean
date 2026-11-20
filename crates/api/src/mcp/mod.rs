@@ -133,10 +133,17 @@ mod tests {
     }
 
     async fn api_key_for(pool: &sqlx::PgPool, user: &User) -> String {
-        db::create_api_key(pool, user, CreateApiKey { name: "mcp".into() })
-            .await
-            .unwrap()
-            .token
+        db::create_api_key(
+            pool,
+            user,
+            CreateApiKey {
+                name: "mcp".into(),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap()
+        .token
     }
 
     async fn api_key(pool: &sqlx::PgPool) -> String {
