@@ -25,16 +25,13 @@ describe('McpConnectCard', () => {
     expect(link.getAttribute('href')).toBe('/settings?tab=api-keys')
   })
 
-  it('leads with live search and read copy', () => {
+  it('mentions write tools when the key allows', () => {
     render(
       <MantineProvider env="test">
         <McpConnectCard />
       </MantineProvider>
     )
-    expect(
-      screen.getByText(
-        'Connect an agent with an API key for live search and read of your library. Vault items are never included.'
-      )
-    ).toBeTruthy()
+    expect(screen.getByText(/create, update or trash bookmarks/i)).toBeTruthy()
+    expect(screen.getByText(/library write/i)).toBeTruthy()
   })
 })

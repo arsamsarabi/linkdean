@@ -1,7 +1,7 @@
 # Saved library searches (+ Agent Skills Phase C)
 
 **Status:** Phase A (saved searches) and Phase C (Agent Skills from a saved search) shipped.  
-**Roadmap:** Agent Skills Phase C done; MCP write tools remain a separate item.
+**Roadmap:** Agent Skills Phase C done; MCP write tools shipped.
 
 ## Intent
 

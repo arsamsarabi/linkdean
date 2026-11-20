@@ -1,7 +1,7 @@
 # Read-only MCP server (Agent Skills Phase A)
 
-**Status:** shipped (Phase A).  
-**Roadmap:** Read-only MCP and archive text shipped; saved-search Agent Skills shipped ([saved-searches.md](./saved-searches.md)). Write tools are the next near item (MCP write tools); scopes already ship.
+**Status:** shipped (read tools + scoped bookmark writes).  
+**Roadmap:** MCP write tools (bookmark create/update/delete) shipped; scopes already ship. Related: [saved-searches.md](./saved-searches.md).
 
 Related: [agent-skills.md](./agent-skills.md) (zip / `SKILL.md` packaging), [guides/agent-skills.md](../guides/agent-skills.md).
 
@@ -12,7 +12,7 @@ Let people point an MCP client at their Linkdean instance with an API key so age
 ## Goals
 
 - Remote **Streamable HTTP** MCP on the Linkdean API (official Rust SDK `rmcp`), same deployable as the app.
-- **Read-only** tools: search, get bookmark, list folders, list tags, archive **metadata** only.
+- Tools: search, get bookmark, list folders, list tags, archive **metadata**/reader text; scoped **create / update / trash** bookmarks when the key has `library:write`.
 - Same privacy stance as Agent Skills: no vault, no trash, respect share visibility; no other people’s “Only me” notes.
 - Auth via existing `Bearer ldk_…` API keys (session cookie OK for manual testing).
 - Gated by `EXPERIMENTAL_AGENT_SKILLS` (same switch as zip skills).
@@ -20,8 +20,8 @@ Let people point an MCP client at their Linkdean instance with an API key so age
 
 ## Non-goals (this phase)
 
-- Write / mutate tools (roadmap: API key permissions, then MCP write tools).
-- Archive HTML/PDF bodies over MCP (reader Markdown is Phase B — [mcp-archive-text.md](./mcp-archive-text.md)).
+- Archive write tools (`archive:write`), folder/tag CRUD, social/import via MCP.
+- Archive HTML/PDF bodies over MCP (reader Markdown is [mcp-archive-text.md](./mcp-archive-text.md)).
 - Local stdio MCP binary.
 - OAuth for MCP; a second auth system beside API keys.
 - MCP resources (URI-style); tools only in v1.
@@ -36,7 +36,7 @@ Let people point an MCP client at their Linkdean instance with an API key so age
 ## Constraints
 
 - Crate boundaries: thin API route/handler; reuse `db` / search / existing visibility rules — do not duplicate authz.
-- Keys remain all-or-nothing until API key permissions ship; MCP still only **registers** read tools.
+- API key scopes ship; MCP tools check the scope they need.
 - Multi-instance self-host: prefer **stateless** Streamable HTTP (no sticky session requirement).
 - Follow current MCP Streamable HTTP + `rmcp` docs for the crate version pinned at implement time.
 
@@ -73,10 +73,15 @@ Local stdio was deferred as a later convenience, not Phase A.
 | `list_folders` | Folder tree the user can see, including shared; **exclude vault folders**. |
 | `list_tags` | Tags for that library. |
 | `get_archive_status` | Per-bookmark archive metadata (formats present, status). **Not** copy bodies. |
+| `create_bookmark` | Create (needs `library:write`). No vault. |
+| `update_bookmark` | Patch fields (needs `library:write`). No vault. |
+| `delete_bookmark` | Soft-delete / trash (needs `library:write`). No vault. |
 
-Always excluded: vault content, trash, writes, archive file bytes. Reader Markdown is Phase B (`get_archive_text`).
+Always excluded: vault content, raw archive file bytes. Reader Markdown via `get_archive_text`. Write tools: `create_bookmark`, `update_bookmark`, `delete_bookmark` (soft-delete) require `library:write`.
 
-Tool errors: plain MCP errors (`not found`, vault/unavailable messages). No stack traces or internal paths.
+Tool errors: plain MCP errors (`not found`, vault/unavailable, `missing scope \`…\``). No stack traces or internal paths.
+
+`/api/mcp` entry accepts any of `library:read|write` or `archive:read|write`; individual tools still check their own scope.
 
 ### Implementation sketch (left to builder)
 
@@ -131,9 +136,10 @@ Illustrative client config (field names follow client docs at ship time):
 
 ## Out of scope pointers
 
-| Later work | Roadmap |
+| Later work | Notes |
 | --- | --- |
-| Per-key read/write scopes + create templates | API key permissions (shipped) |
-| MCP create/update tools when scopes allow | MCP write tools |
+| Per-key read/write scopes + create templates | Shipped |
+| MCP bookmark create/update/delete | Shipped (this doc) |
+| MCP archive write / folder-tag CRUD | Not scheduled |
 | Archive reader text in agent surface | Shipped ([mcp-archive-text.md](./mcp-archive-text.md)) |
 | Saved-search skills | Shipped ([saved-searches.md](./saved-searches.md)) |

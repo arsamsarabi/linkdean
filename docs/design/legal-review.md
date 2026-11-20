@@ -4,7 +4,7 @@
 **Audience:** external counsel (England & Wales).  
 **Operator:** Arsam Sarabi, an individual (not a company). Contact: `contact@linkdean.app` / `privacy@linkdean.app` / `abuse@linkdean.app`.
 
-Prepared so counsel can review the managed service documents **before anything costs money** (paid plans). Eng will apply agreed edits, bump versions, and re-prompt acceptance. Prefer finishing MCP write tools, then plans/pricing, before relying on a formal legal pass.
+Prepared so counsel can review the managed service documents **before anything costs money** (paid plans). Eng will apply agreed edits, bump versions, and re-prompt acceptance. Prefer plans/pricing next; re-engage this brief before charging.
 
 ---
 
@@ -119,9 +119,9 @@ Re-verify against code before publishing counsel’s edits. Numbers below match 
 
 ## 5. Product context counsel should know
 
-**What Linkdean is.** A bookmark manager: save links, folders, tags, notes, lists, dashboards; optional page archives (HTML/PDF/file); optional client-side **vault** encryption; sharing and public lists; browser extension; REST API with scoped API keys; read-only MCP and downloadable Agent Skills that export **library** (non-vault) bookmarks as agent context.
+**What Linkdean is.** A bookmark manager: save links, folders, tags, notes, lists, dashboards; optional page archives (HTML/PDF/file); optional client-side **vault** encryption; sharing and public lists; browser extension; REST API with scoped API keys; MCP (read plus scoped bookmark writes) and downloadable Agent Skills that export **library** (non-vault) bookmarks as agent context.
 
-**Commercial status.** Public beta. **No paid plans yet.** Roadmap (after MCP write tools): define free vs paid tiers, then quotas, then checkout. Re-engage this brief before charging if counsel has not already signed off.
+**Commercial status.** Public beta. **No paid plans yet.** Roadmap next: define free vs paid tiers, then quotas, then checkout. Re-engage this brief before charging if counsel has not already signed off.
 
 **Managed vs self-host.** Open-source app. Self-hosters configure their own legal URLs/version or none. These pages are for **linkdean.app** / `app.linkdean.app`.
 

@@ -1,12 +1,12 @@
 # Agent Skills
 
-Coding and research agents keep asking for the same references. Your folders already hold them. Linkdean exposes the library to agents in two ways: a live **MCP** connection for search and read, and a downloadable [Agent Skill](https://agentskills.io) zip for offline use. Capability summary: [features.md](../product/features.md).
+Coding and research agents keep asking for the same references. Your folders already hold them. Linkdean exposes the library to agents in two ways: a live **MCP** connection for search, read and scoped writes, and a downloadable [Agent Skill](https://agentskills.io) zip for offline use. Capability summary: [features.md](../product/features.md).
 
 **Experimental.** Both paths are off unless the server sets `EXPERIMENTAL_AGENT_SKILLS=true` ([environment variables](../self-hosting/environment.md#experimental-features)). On Linkdean's hosted beta they are not switched on yet.
 
 ## Connect with MCP
 
-Point an MCP client at your instance with an API key for live search and read. Create a key under **Config options → API keys**. The **MCP** card under **Config options → Import / Export** shows the endpoint for this host.
+Point an MCP client at your instance with an API key. Create a key under **Config options → API keys** (use **Save bookmarks** or custom scopes with `library:write` if the agent should create or edit). The **MCP** card under **Config options → Import / Export** shows the endpoint for this host.
 
 Endpoint: `https://your-linkdean/api/mcp` (Streamable HTTP). Send the key on every request:
 
@@ -29,18 +29,21 @@ Illustrative client config (field names follow your client's docs):
 }
 ```
 
-Read-only tools:
+Tools (each call needs the matching API key scope):
 
-| Tool | What it does |
-| --- | --- |
-| `search_bookmarks` | Search or browse by text, folder and/or tag (folder includes subfolders) |
-| `get_bookmark` | One bookmark: title, URL, notes, tags, folders, dates |
-| `list_folders` | Folder tree you can see (shared included; vault excluded) |
-| `list_tags` | Tags in your library |
-| `get_archive_status` | Whether an archive copy exists and which formats — metadata only |
-| `get_archive_text` | Reader-mode Markdown from an HTML archive when a copy exists |
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `search_bookmarks` | `library:read` | Search or browse by text, folder and/or tag (folder includes subfolders) |
+| `get_bookmark` | `library:read` | One bookmark: title, URL, notes, tags, folders, dates |
+| `list_folders` | `library:read` | Folder tree you can see (shared included; vault excluded) |
+| `list_tags` | `library:read` | Tags in your library |
+| `create_bookmark` | `library:write` | Create a bookmark (url required; optional title, notes, tags, folders) |
+| `update_bookmark` | `library:write` | Update fields on a bookmark by id |
+| `delete_bookmark` | `library:write` | Soft-delete (trash) a bookmark by id |
+| `get_archive_status` | `archive:read` | Whether an archive copy exists and which formats — metadata only |
+| `get_archive_text` | `archive:read` | Reader-mode Markdown from an HTML archive when a copy exists |
 
-Never included: vault folders and bookmarks, trash, writes, or raw archive file bytes (PDF/HTML/file). Reader text is available only through `get_archive_text`.
+Never included: vault folders and bookmarks, or raw archive file bytes (PDF/HTML/file). Reader text is available only through `get_archive_text`. A missing scope returns a clear tool error.
 
 When the flag is off, `/api/mcp` answers `404`.
 

@@ -1,15 +1,21 @@
-//! MCP tool handlers: search/read bookmarks, folders, tags, archive status/text.
+//! MCP tool handlers: search/read bookmarks, folders, tags, archive status/text,
+//! and scoped library writes (create/update/delete). Vault stays out.
 
 use super::dto::{
     McpArchiveStatus, McpArchiveStatusList, McpArchiveText, McpBookmark, McpBookmarkList,
-    McpFolderList, McpTagList,
+    McpFolderList, McpOk, McpTagList,
 };
 use crate::state::AppState;
 use axum::http::request::Parts;
-use linkdean_core::{page_text::html_to_reader_markdown, ArchiveFormat, Error, User, VaultKeyring};
+use linkdean_core::{
+    page_text::html_to_reader_markdown, ArchiveFormat, CreateBookmark, Error, UpdateBookmark, User,
+    VaultKeyring,
+};
 use linkdean_db as db;
 use rmcp::model::ErrorData;
 use uuid::Uuid;
+
+const VAULT_MCP: &str = "vault not available via MCP";
 
 const NO_READABLE_MARKDOWN: &str = "No readable text in this copy.";
 const NO_HTML_ARCHIVE: &str = "No HTML archive copy for this bookmark.";
@@ -193,10 +199,7 @@ pub async fn get_bookmark(
         .await
         .map_err(mcp_err)?;
     if raw.is_vault {
-        return Err(ErrorData::invalid_params(
-            "vault not available via MCP",
-            None,
-        ));
+        return Err(ErrorData::invalid_params(VAULT_MCP, None));
     }
     if others_only_me(raw.is_private, raw.owner_user_id, user.id) {
         return Err(mcp_err(Error::NotFound));
@@ -259,10 +262,7 @@ pub async fn get_archive_text(
         .map_err(mcp_err)?
         .ok_or_else(|| ErrorData::invalid_params(NO_HTML_ARCHIVE, None))?;
     if row.key_vault_id.is_some() {
-        return Err(ErrorData::invalid_params(
-            "vault not available via MCP",
-            None,
-        ));
+        return Err(ErrorData::invalid_params(VAULT_MCP, None));
     }
     let name = row
         .file_name
@@ -297,13 +297,162 @@ async fn authorize_archive_bookmark(
         .await
         .map_err(mcp_err)?;
     if raw.is_vault {
-        return Err(ErrorData::invalid_params(
-            "vault not available via MCP",
-            None,
-        ));
+        return Err(ErrorData::invalid_params(VAULT_MCP, None));
     }
     if others_only_me(raw.is_private, raw.owner_user_id, user.id) {
         return Err(mcp_err(Error::NotFound));
     }
     Ok(())
+}
+
+async fn refuse_vault_folders(state: &AppState, folder_ids: &[Uuid]) -> Result<(), ErrorData> {
+    for id in folder_ids {
+        let cat = db::get_category_by_id(&state.pool, *id)
+            .await
+            .map_err(mcp_err)?;
+        if cat.is_vault {
+            return Err(ErrorData::invalid_params(VAULT_MCP, None));
+        }
+    }
+    Ok(())
+}
+
+async fn after_create_side_effects(
+    state: &AppState,
+    user_id: Uuid,
+    view: &linkdean_core::BookmarkView,
+) {
+    match db::archive_new_bookmark(&state.pool, user_id, view.id).await {
+        Ok(true) => state.archive_wake.notify_one(),
+        Ok(false) => {}
+        Err(e) => tracing::warn!(bookmark_id = %view.id, error = %e, "automatic archive failed"),
+    }
+    if view.is_vault {
+        return;
+    }
+    let state = state.clone();
+    let view = view.clone();
+    let uid = user_id;
+    let bid = view.id;
+    tokio::spawn(async move {
+        if let Err(e) = crate::search_index::upsert(&state, &view).await {
+            tracing::warn!(bookmark_id = %bid, error = %e, "meili upsert failed");
+        }
+        let opts = state.enrich_opts();
+        linkdean_worker::enrich_bookmark(&state.pool, &state.search, uid, bid, &opts).await;
+    });
+}
+
+/// Create a non-vault bookmark. `folder_ids` must not include vault folders.
+pub async fn create_bookmark(
+    state: &AppState,
+    user: &User,
+    url: String,
+    title: Option<String>,
+    notes: Option<String>,
+    folder_ids: Vec<Uuid>,
+    tags: Vec<String>,
+    is_favorite: bool,
+    is_unread: bool,
+    is_pinned: bool,
+) -> Result<McpBookmark, ErrorData> {
+    refuse_vault_folders(state, &folder_ids).await?;
+    let req = CreateBookmark {
+        url,
+        title,
+        description: None,
+        notes,
+        category_id: None,
+        category_ids: folder_ids,
+        tags,
+        is_favorite,
+        is_unread,
+        is_pinned,
+        vault_id: None,
+    };
+    let view = db::create_bookmark(&state.pool, user.id, req, &VaultKeyring::default())
+        .await
+        .map_err(mcp_err)?;
+    if view.is_vault {
+        // Should be unreachable when vault_id and vault folders are refused.
+        return Err(ErrorData::invalid_params(VAULT_MCP, None));
+    }
+    after_create_side_effects(state, user.id, &view).await;
+    Ok(McpBookmark::from_view(&view, user.id))
+}
+
+/// Patch a non-vault bookmark the caller can write.
+pub async fn update_bookmark(
+    state: &AppState,
+    user: &User,
+    id: Uuid,
+    url: Option<String>,
+    title: Option<String>,
+    notes: Option<Option<String>>,
+    folder_ids: Option<Vec<Uuid>>,
+    tags: Option<Vec<String>>,
+    is_favorite: Option<bool>,
+    is_unread: Option<bool>,
+    is_pinned: Option<bool>,
+) -> Result<McpBookmark, ErrorData> {
+    let raw = db::get_bookmark_raw(&state.pool, user.id, id)
+        .await
+        .map_err(mcp_err)?;
+    if raw.is_vault {
+        return Err(ErrorData::invalid_params(VAULT_MCP, None));
+    }
+    if others_only_me(raw.is_private, raw.owner_user_id, user.id) {
+        return Err(mcp_err(Error::NotFound));
+    }
+    if let Some(ref ids) = folder_ids {
+        refuse_vault_folders(state, ids).await?;
+    }
+    let req = UpdateBookmark {
+        url,
+        title,
+        description: None,
+        notes,
+        category_id: None,
+        category_ids: folder_ids,
+        tags,
+        add_tags: None,
+        add_category_ids: None,
+        is_favorite,
+        is_unread,
+        is_pinned,
+        is_private: None,
+    };
+    let view = db::update_bookmark(&state.pool, user.id, id, req, &VaultKeyring::default())
+        .await
+        .map_err(mcp_err)?;
+    if view.is_vault {
+        if let Err(e) = state.search.delete_bookmark(id).await {
+            tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
+        }
+        return Err(ErrorData::invalid_params(VAULT_MCP, None));
+    }
+    if let Err(e) = crate::search_index::upsert(state, &view).await {
+        tracing::warn!(bookmark_id = %view.id, error = %e, "meili upsert failed");
+    }
+    Ok(McpBookmark::from_view(&view, user.id))
+}
+
+/// Soft-delete (trash) a non-vault bookmark the caller owns.
+pub async fn delete_bookmark(state: &AppState, user: &User, id: Uuid) -> Result<McpOk, ErrorData> {
+    let raw = db::get_bookmark_raw(&state.pool, user.id, id)
+        .await
+        .map_err(mcp_err)?;
+    if raw.is_vault {
+        return Err(ErrorData::invalid_params(VAULT_MCP, None));
+    }
+    if others_only_me(raw.is_private, raw.owner_user_id, user.id) {
+        return Err(mcp_err(Error::NotFound));
+    }
+    db::delete_bookmark_by_mode(&state.pool, user.id, id)
+        .await
+        .map_err(mcp_err)?;
+    if let Err(e) = state.search.delete_bookmark(id).await {
+        tracing::warn!(bookmark_id = %id, error = %e, "meili delete failed");
+    }
+    Ok(McpOk { ok: true })
 }

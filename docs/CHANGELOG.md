@@ -8,11 +8,12 @@
 
 ### Added
 
+- **MCP write tools** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): `create_bookmark`, `update_bookmark` and `delete_bookmark` when the API key has `library:write`. Vault stays out; missing scopes return a clear tool error. See the [Agent Skills guide](guides/agent-skills.md).
 - **Agent Skills from saved searches** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): download a zip skill from a saved library search (`GET /api/agent-skill?search=<id>`), with live matches and vault always excluded. Config → Import / Export and saved-search menus.
 - **Saved searches:** name the current library query and filters, reopen from the library toolbar or the sidebar, rename or delete. Up to 50 per account. REST at `/api/saved-searches` (library scopes).
 - **API key permissions:** each key picks scopes at create time (library, archive, import/export, social, account × read/write). REST and MCP enforce them; login sessions stay unrestricted. Settings → API keys offers presets (read-only library, save bookmarks, full access) plus custom checkboxes, and lists scopes on active keys.
 - **MCP archive text** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): `get_archive_text` returns reader-mode Markdown from a bookmark's HTML archive when a copy exists, so agents can read the page without fetching the live URL. Vault copies stay out; PDF/file bodies are not served over MCP.
-- **Read-only MCP** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): Streamable HTTP at `/api/mcp` with a Bearer API key. Tools: `search_bookmarks`, `get_bookmark`, `list_folders`, `list_tags`, `get_archive_status`, `get_archive_text`. Vault and writes stay out; Import / Export leads with an MCP connect card. See the [Agent Skills guide](guides/agent-skills.md).
+- **MCP** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): Streamable HTTP at `/api/mcp` with a Bearer API key. Read tools: `search_bookmarks`, `get_bookmark`, `list_folders`, `list_tags`, `get_archive_status`, `get_archive_text`. Write tools (needs `library:write`): `create_bookmark`, `update_bookmark`, `delete_bookmark`. Vault stays out; Import / Export leads with an MCP connect card. See the [Agent Skills guide](guides/agent-skills.md).
 - **Archive export zip**: Settings → Import / Export can **Include archives**, downloading a zip of the JSON or Netscape file plus archived copies you can read (locked vault copies skipped).
 
 - **Archive on import**: **Archive new bookmarks** also queues archives for bookmarks created by an import.
