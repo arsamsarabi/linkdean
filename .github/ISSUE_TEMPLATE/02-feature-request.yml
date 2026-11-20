@@ -1,0 +1,63 @@
+name: Feature request
+description: Propose a concrete change to Linkdean.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for a **specific** product change. For open-ended brainstorming or “how do I…?”, use [Discussions](https://github.com/arsamsarabi/linkdean/discussions) instead.
+
+        Check the [public roadmap](https://docs.linkdean.app/docs/roadmap) and [features](https://docs.linkdean.app/docs/features) first — it may already be planned or shipped.
+
+        Please [search existing issues](https://github.com/arsamsarabi/linkdean/issues?q=is%3Aissue+label%3Aenhancement) too.
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Before filing
+      options:
+        - label: I checked the public roadmap and features list
+          required: true
+        - label: I searched existing issues / discussions and did not find a duplicate
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or missing today? Who hits it?
+      placeholder: When I … I cannot … because …
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should Linkdean do instead? Keep it concrete (one behavior, not a redesign of everything).
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where this would show up
+      options:
+        - Web app
+        - Browser extension
+        - API / MCP / Agent Skills
+        - Self-hosting / ops
+        - Docs or marketing site
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Workarounds today, or other products’ approaches you like (optional).
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope notes
+      description: Helps us triage against privacy and hosting goals.
+      options:
+        - label: This does not require sending vault contents or personal URLs to a third-party AI by default
+        - label: This works for self-hosters as well as the managed beta (or I explained why not)
