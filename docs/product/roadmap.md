@@ -12,7 +12,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Legal review** · `near` · (S). A lawyer reviews the Terms and Privacy Policy before anything costs money; bump versions when the reviewed text ships.
+1. **Legal review** · `near` · (S). A lawyer reviews the Terms and Privacy Policy before anything costs money; bump versions when the reviewed text ships. Counsel brief: [legal review](../design/legal-review.md).
 
 2. **Plans and pricing** · `near` · (M). Decide what stays free on the managed service, what a paid plan adds, and the limits of each. Self-hosting stays free for non-commercial use.
     - **Phase A — Define tiers:** Free vs paid limits, including archive storage.
