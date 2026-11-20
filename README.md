@@ -16,6 +16,7 @@
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/db-Postgres-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="Postgres" /></a>
   <a href="https://www.meilisearch.com/"><img src="https://img.shields.io/badge/search-Meilisearch-FF5CAA?style=flat-square" alt="Meilisearch" /></a>
   <a href="deploy/docker/docker-compose.yml"><img src="https://img.shields.io/badge/deploy-Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose" /></a>
+  <a href="https://github.com/arsamsarabi/linkdean/pkgs/container/linkdean"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Farsamsarabi%2Flinkdean%2Flinkdean&query=downloadCount&label=GHCR%20pulls&style=flat-square&logo=docker&logoColor=white&color=2496ED" alt="GHCR pulls" /></a>
 </p>
 
 <p align="center">
