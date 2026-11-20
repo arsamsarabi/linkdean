@@ -10,7 +10,26 @@ Linkdean is maintained by one person. Issues and pull requests are welcome, and 
 
 - Skim the [README](../README.md) so you know what Linkdean is (and isn't), and [docs/product/features.md](../docs/product/features.md) for what already ships.
 - Check [docs/product/roadmap.md](../docs/product/roadmap.md) and [existing issues](https://github.com/arsamsarabi/linkdean/issues) before starting something new.
-- For larger ideas, open an issue first so we can agree on the approach.
+- For larger ideas, open a [feature request](https://github.com/arsamsarabi/linkdean/issues/new?template=02-feature-request.yml) (or a Discussion if it's still fuzzy) so we can agree on the approach.
+
+## Issues and triage
+
+Use the [issue forms](https://github.com/arsamsarabi/linkdean/issues/new/choose):
+
+| Use | Template |
+| --- | --- |
+| Something broken | **Bug report** |
+| A concrete product change | **Feature request** |
+| How-to, brainstorming, or open questions | [Discussions](https://github.com/arsamsarabi/linkdean/discussions) |
+| Security vulnerability | [SECURITY.md](./SECURITY.md) (private) |
+
+**How we triage (maintainers):**
+
+1. New issues get `needs-triage` from the template.
+2. Confirm it's actionable and not a duplicate; remove `needs-triage` when accepted, or close with a short reason (`duplicate`, `wontfix`, `invalid`).
+3. **Bugs** stay as Issues until fixed or declined. Eng-owned defects we find ourselves can still be `Known issue:` comments in code (see below); public reports prefer Issues.
+4. **Features** may be accepted into the [product roadmap](../docs/product/roadmap.md) / [public roadmap](https://docs.linkdean.app/docs/roadmap), parked, or declined. The markdown roadmap stays the build-order source of truth — an Issue is not automatically a Near item.
+5. Response time is best-effort; one maintainer.
 
 ## Project layout
 
@@ -115,9 +134,9 @@ The release workflow reruns CI, refuses a tag that doesn't match both versions, 
 
 ## Reporting bugs
 
-A good bug report includes:
+Prefer the **Bug report** issue form. It asks for the same details as below:
 
-- The Linkdean version (the image tag or `LINKDEAN_VERSION`), or the commit if you build from source
+- The Linkdean version (the image tag or sidebar version), or the commit if you build from source
 - How you run it (published image, Compose from a checkout, or on the host) and which optional features are on (SMTP, SSO, Chrome screenshots)
 - Your browser, for web app issues
 - What you did, what you expected and what happened

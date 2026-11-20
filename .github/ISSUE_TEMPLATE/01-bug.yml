@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in Linkdean does not work as it should.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Leave out anything private (bookmark URLs, emails, API keys, vault content).
+
+        Security problems go through the [security policy](https://github.com/arsamsarabi/linkdean/blob/main/.github/SECURITY.md), not a public issue.
+
+        Please [search existing issues](https://github.com/arsamsarabi/linkdean/issues?q=is%3Aissue) first.
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Before filing
+      options:
+        - label: I searched existing issues and did not find a duplicate
+          required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - app.linkdean.app (public beta)
+        - My own self-hosted instance
+        - Browser extension (Chrome or Firefox)
+        - Docs or marketing site
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, in order.
+      placeholder: |
+        1. Open the Library
+        2. Choose Explorer
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead. Error text and screenshots help (drag files into this box).
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Browser and device
+      description: Skip for docs-only or API-only reports.
+      placeholder: Firefox 133 on macOS 15, Safari on iPhone
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Image tag (e.g. `0.0.13`), sidebar version, or commit if building from source. Required for self-hosted.
+      placeholder: 0.0.13
+  - type: textarea
+    id: setup
+    attributes:
+      label: Self-hosted setup (if applicable)
+      description: How you run it and which optional pieces are on. Omit secrets.
+      placeholder: |
+        Compose from the published image / checkout / host cargo+pnpm
+        Optional: SMTP, SSO, Chrome/BROWSER_WS_URL, Meilisearch, experimental flags
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or /api/ready (optional)
+      description: Paste relevant `docker compose logs api` lines or `/api/ready` JSON with secrets removed.
+      render: shell
