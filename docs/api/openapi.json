@@ -61,12 +61,19 @@
               "string",
               "null"
             ]
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
           "id",
           "name",
           "prefix",
+          "scopes",
           "created_at"
         ],
         "type": "object"
@@ -860,6 +867,16 @@
         "properties": {
           "name": {
             "type": "string"
+          },
+          "scopes": {
+            "description": "Omit or null for all scopes; empty list is rejected.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
