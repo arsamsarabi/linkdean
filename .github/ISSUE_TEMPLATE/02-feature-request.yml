@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this for a **specific** product change. For open-ended brainstorming or “how do I…?”, use [Discussions](https://github.com/arsamsarabi/linkdean/discussions) instead.
+        Use this for a **specific** product change. For open-ended brainstorming or “how do I…?”, use Discussions ([Ideas](https://github.com/arsamsarabi/linkdean/discussions/categories/ideas) or [Q&A](https://github.com/arsamsarabi/linkdean/discussions/categories/q-a)) instead.
 
         Check the [public roadmap](https://docs.linkdean.app/docs/roadmap) and [features](https://docs.linkdean.app/docs/features) first — it may already be planned or shipped.
 
