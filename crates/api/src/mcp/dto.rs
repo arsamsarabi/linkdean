@@ -71,6 +71,16 @@ pub struct McpArchiveStatusList {
     pub archives: Vec<McpArchiveStatus>,
 }
 
+/// Reader-mode Markdown from an HTML archive copy (Phase B).
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct McpArchiveText {
+    pub bookmark_id: String,
+    pub format: String,
+    pub markdown: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub captured_at: Option<DateTime<Utc>>,
+}
+
 impl McpBookmark {
     /// Map a REST/db view for MCP: drop vault fields; hide others' notes (Agent Skills stance).
     pub fn from_view(view: &BookmarkView, viewer_id: Uuid) -> Self {

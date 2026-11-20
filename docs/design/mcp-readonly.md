@@ -1,7 +1,7 @@
 # Read-only MCP server (Agent Skills Phase A)
 
 **Status:** shipped (Phase A).  
-**Roadmap:** Agent Skills, next steps — Phase A done; remaining phases are archive text and saved searches. Write tools are a later item (MCP write tools), after API key permissions.
+**Roadmap:** Agent Skills, next steps — Phase A done; Phase B archive text is [mcp-archive-text.md](./mcp-archive-text.md); remaining is saved searches. Write tools are a later item (MCP write tools), after API key permissions.
 
 Related: [agent-skills.md](./agent-skills.md) (zip / `SKILL.md` packaging), [guides/agent-skills.md](../guides/agent-skills.md).
 
@@ -21,7 +21,7 @@ Let people point an MCP client at their Linkdean instance with an API key so age
 ## Non-goals (this phase)
 
 - Write / mutate tools (roadmap: API key permissions, then MCP write tools).
-- Archive HTML/PDF/reader body over MCP (Phase B — Archive text).
+- Archive HTML/PDF bodies over MCP (reader Markdown is Phase B — [mcp-archive-text.md](./mcp-archive-text.md)).
 - Local stdio MCP binary.
 - OAuth for MCP; a second auth system beside API keys.
 - MCP resources (URI-style); tools only in v1.
@@ -74,7 +74,7 @@ Local stdio was deferred as a later convenience, not Phase A.
 | `list_tags` | Tags for that library. |
 | `get_archive_status` | Per-bookmark archive metadata (formats present, status). **Not** copy bodies. |
 
-Always excluded: vault content, trash, writes, archive file bytes / reader text.
+Always excluded: vault content, trash, writes, archive file bytes. Reader Markdown is Phase B (`get_archive_text`).
 
 Tool errors: plain MCP errors (`not found`, vault/unavailable messages). No stack traces or internal paths.
 

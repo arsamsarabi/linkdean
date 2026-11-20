@@ -24,6 +24,7 @@ export function McpConnectCard(): ReactElement {
         <List size="sm" spacing={4} c="dimmed">
           <List.Item>Search bookmarks</List.Item>
           <List.Item>Read bookmarks, folders, and tags</List.Item>
+          <List.Item>Read archived page text when a copy exists</List.Item>
           <List.Item>Vault items are never included</List.Item>
         </List>
         <Stack gap="xs">

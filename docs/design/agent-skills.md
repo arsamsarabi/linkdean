@@ -24,4 +24,4 @@
 
 User guide: [guides/agent-skills.md](../guides/agent-skills.md).
 
-**Shipped (Phase A):** read-only remote MCP for live search/read — [mcp-readonly.md](./mcp-readonly.md). **Next:** Phase B (archive text) and Phase C (saved-search skills) on the product roadmap.
+**Shipped:** read-only remote MCP for live search/read — [mcp-readonly.md](./mcp-readonly.md); HTML archive reader text via MCP — [mcp-archive-text.md](./mcp-archive-text.md). **Next:** Phase C (saved-search skills) on the product roadmap.

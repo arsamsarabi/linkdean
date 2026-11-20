@@ -1,14 +1,18 @@
-//! MCP tool handlers: search/read bookmarks, folders, tags, archive status.
+//! MCP tool handlers: search/read bookmarks, folders, tags, archive status/text.
 
 use super::dto::{
-    McpArchiveStatus, McpArchiveStatusList, McpBookmark, McpBookmarkList, McpFolderList, McpTagList,
+    McpArchiveStatus, McpArchiveStatusList, McpArchiveText, McpBookmark, McpBookmarkList,
+    McpFolderList, McpTagList,
 };
 use crate::state::AppState;
 use axum::http::request::Parts;
-use linkdean_core::{Error, User, VaultKeyring};
+use linkdean_core::{page_text::html_to_reader_markdown, ArchiveFormat, Error, User, VaultKeyring};
 use linkdean_db as db;
 use rmcp::model::ErrorData;
 use uuid::Uuid;
+
+const NO_READABLE_MARKDOWN: &str = "No readable text in this copy.";
+const NO_HTML_ARCHIVE: &str = "No HTML archive copy for this bookmark.";
 
 pub fn mcp_err(err: Error) -> ErrorData {
     // Agents only get actionable client messages; hide internal/auth detail.
@@ -218,6 +222,71 @@ pub async fn get_archive_status(
     user: &User,
     bookmark_id: Uuid,
 ) -> Result<McpArchiveStatusList, ErrorData> {
+    authorize_archive_bookmark(state, user, bookmark_id).await?;
+    let views = db::list_archives(&state.pool, bookmark_id)
+        .await
+        .map_err(mcp_err)?;
+    Ok(McpArchiveStatusList {
+        archives: views.iter().map(McpArchiveStatus::from_view).collect(),
+    })
+}
+
+/// Reader-mode Markdown from a non-vault HTML archive on disk.
+pub async fn get_archive_text(
+    state: &AppState,
+    user: &User,
+    bookmark_id: Uuid,
+    format: Option<&str>,
+) -> Result<McpArchiveText, ErrorData> {
+    let format = match format.map(str::trim).filter(|s| !s.is_empty()) {
+        None | Some("html") => ArchiveFormat::Html,
+        Some(other) => {
+            return Err(ErrorData::invalid_params(
+                format!("unsupported archive format `{other}`; only html is supported"),
+                None,
+            ));
+        }
+    };
+    authorize_archive_bookmark(state, user, bookmark_id).await?;
+    let row = db::archive_row(&state.pool, bookmark_id, format)
+        .await
+        .map_err(mcp_err)?
+        .ok_or_else(|| ErrorData::invalid_params(NO_HTML_ARCHIVE, None))?;
+    if row.key_vault_id.is_some() {
+        return Err(ErrorData::invalid_params(
+            "vault not available via MCP",
+            None,
+        ));
+    }
+    let name = row
+        .file_name
+        .as_deref()
+        .filter(|n| !n.is_empty())
+        .ok_or_else(|| ErrorData::invalid_params(NO_HTML_ARCHIVE, None))?;
+    if row.status != "done" {
+        return Err(ErrorData::invalid_params(NO_HTML_ARCHIVE, None));
+    }
+    let bytes = tokio::fs::read(state.archive_dir(bookmark_id).join(name))
+        .await
+        .map_err(|_| ErrorData::invalid_params(NO_HTML_ARCHIVE, None))?;
+    let html = String::from_utf8_lossy(&bytes);
+    let markdown = html_to_reader_markdown(&html);
+    if markdown.is_empty() {
+        return Err(ErrorData::invalid_params(NO_READABLE_MARKDOWN, None));
+    }
+    Ok(McpArchiveText {
+        bookmark_id: bookmark_id.to_string(),
+        format: format.as_str().to_string(),
+        markdown,
+        captured_at: row.captured_at,
+    })
+}
+
+async fn authorize_archive_bookmark(
+    state: &AppState,
+    user: &User,
+    bookmark_id: Uuid,
+) -> Result<(), ErrorData> {
     let raw = db::get_bookmark_raw(&state.pool, user.id, bookmark_id)
         .await
         .map_err(mcp_err)?;
@@ -230,10 +299,5 @@ pub async fn get_archive_status(
     if others_only_me(raw.is_private, raw.owner_user_id, user.id) {
         return Err(mcp_err(Error::NotFound));
     }
-    let views = db::list_archives(&state.pool, bookmark_id)
-        .await
-        .map_err(mcp_err)?;
-    Ok(McpArchiveStatusList {
-        archives: views.iter().map(McpArchiveStatus::from_view).collect(),
-    })
+    Ok(())
 }

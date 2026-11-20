@@ -12,8 +12,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Agent Skills, next steps** · `near` · (S–M). Read-only MCP and zip Agent Skills already ship (see features). Extend the agent surface without giving up the privacy stance. Write tools wait on item 7 (and on item 2 for scopes).
-    - **Phase B — Archive text:** Include archived reader-mode text so the agent can read a page without fetching it when a copy exists.
+1. **Agent Skills, next steps** · `near` · (S–M). Read-only MCP (including HTML archive reader text) and zip Agent Skills already ship (see features). Extend the agent surface without giving up the privacy stance. Write tools wait on item 7 (and on item 2 for scopes).
     - **Phase C — Saved searches:** Skills from a saved library search, once saved searches exist.
 
 
