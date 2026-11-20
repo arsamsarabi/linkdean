@@ -12,21 +12,18 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Agent Skills, next steps** · `near` · (S–M). Read-only MCP (including HTML archive reader text) and zip Agent Skills already ship (see features). Extend the agent surface without giving up the privacy stance. Write tools wait on item 7 (and on item 2 for scopes).
+1. **Agent Skills, next steps** · `near` · (S–M). Read-only MCP (including HTML archive reader text) and zip Agent Skills already ship (see features). Extend the agent surface without giving up the privacy stance. Write tools wait on item 6 (scopes already ship).
     - **Phase C — Saved searches:** Skills from a saved library search, once saved searches exist.
 
 
-2. **API key permissions** · `near` · (M). Keys already support per-key scopes (library/archive/import_export/social/account × read/write) on REST and MCP (see features). Finish the surface.
-    - **Phase B — Templates:** Presets when creating a key (e.g. read-only library, save bookmarks, full access) so people do not have to tick every box.
+2. **Legal review** · `near` · (S). A lawyer reviews the Terms and Privacy Policy before anything costs money; bump versions when the reviewed text ships.
 
-3. **Legal review** · `near` · (S). A lawyer reviews the Terms and Privacy Policy before anything costs money; bump versions when the reviewed text ships.
-
-4. **Plans and pricing** · `near` · (M). Decide what stays free on the managed service, what a paid plan adds, and the limits of each. Self-hosting stays free for non-commercial use.
+3. **Plans and pricing** · `near` · (M). Decide what stays free on the managed service, what a paid plan adds, and the limits of each. Self-hosting stays free for non-commercial use.
     - **Phase A — Define tiers:** Free vs paid limits, including archive storage.
     - **Phase B — Enforce quotas:** Wire plan limits into platform / account quotas.
     - **Phase C — Checkout:** Billing / payment integration (may trail B).
 
-5. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md).
+4. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md).
     - **Phase A — v1:** Orgs, team spaces, owner/admin/member/guest, restricted folders, email invites, lifecycle rules, basic audit log.
     - **Phase B — Invite links:** Role, expiry, use limit; off by default.
     - **Phase C — Verified domains:** DNS TXT proof, then auto-join for matching addresses.
@@ -34,20 +31,20 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - **Phase E — Team vaults:** Shared keys, rotation when members leave, recovery.
     - **Phase F — Audit and roles:** Richer audit (retention, SIEM/webhook, hash chain); custom roles and Billing manager when needed.
 
-6. **Localization** · `mid` · (M). Ship the product in more than English.
+5. **Localization** · `mid` · (M). Ship the product in more than English.
     - **Phase A — i18n-ready:** Extract and wrap UI strings.
     - **Phase B — Locale packs:** First translated locale(s).
 
-7. **MCP write tools** · `mid` · (S–M). After read-only MCP (shipped) and API key permissions (item 2): expose create/update (and similar) tools only when the key’s scopes allow. Vault stays out.
+6. **MCP write tools** · `mid` · (S–M). After read-only MCP (shipped) and API key scopes (shipped): expose create/update (and similar) tools only when the key’s scopes allow. Vault stays out.
 
     - **Phase A — Scoped writes:** Mirror permitted REST mutations as MCP tools; refuse clearly when the key lacks the scope.
 
-8. **Archive follow-ups** · `parked` · (L). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)).
+7. **Archive follow-ups** · `parked` · (L). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)).
     - **Phase A — Out-of-band media:** Fetch plain `<video>` / `<audio>` URLs that never landed in the Chrome snapshot (not streams), under item and account caps; fail soft and leave the live link.
     - **Phase B — Version history:** Keep more than one copy per format.
-    - **Phase C — Per-tier limits:** Hosted per-plan archive storage (needs item 4); today only the platform-wide archive quota applies.
+    - **Phase C — Per-tier limits:** Hosted per-plan archive storage (needs item 3); today only the platform-wide archive quota applies.
 
-9. **AI assistance** · `parked` · (M–L). Karakeep, Linkwarden and Raindrop.io (Pro) offer AI tagging or summaries; Linkdean has none. Add it without giving up the privacy stance.
+8. **AI assistance** · `parked` · (M–L). Karakeep, Linkwarden and Raindrop.io (Pro) offer AI tagging or summaries; Linkdean has none. Add it without giving up the privacy stance.
     - **Phase A — Opt-in provider:** Off by default; BYOK (OpenAI-compatible or Anthropic) or local Ollama on self-host; vault contents never leave for a model; settings show what is sent.
     - **Phase B — Tag and folder suggestions:** When saving and in **File one by one** (extends same-site suggestions); nothing applied without a click unless auto-tagging is on.
     - **Phase C — Summaries:** Short summary per bookmark from archived page text when present.
@@ -55,26 +52,26 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - **Phase E — Related / near-duplicates:** Hints for related and near-duplicate bookmarks.
     - **Phase F — Dashboards:** Suggest sections and sources from what the person saves and opens.
 
-10. **Privacy-respecting usage statistics** · `parked` · (M). Know how a public instance is used without tracking people.
+9. **Privacy-respecting usage statistics** · `parked` · (M). Know how a public instance is used without tracking people.
     - Aggregate counts only (active users, bookmarks saved, features used); no personal data, page content or URLs, nothing per person.
     - Off by default on self-hosted instances; operators can export to their own backend (OpenTelemetry / Datadog-style), building on tracing the API already exports.
     - Managed service uses the same hooks; document exactly what is collected.
 
-11. **Previews for sites behind bot protection** · `parked` · (M). Some sites (e.g. behind Cloudflare) block screenshot and metadata fetch. Investigate allowed options such as the site's own OG data or a user-uploaded preview.
+10. **Previews for sites behind bot protection** · `parked` · (M). Some sites (e.g. behind Cloudflare) block screenshot and metadata fetch. Investigate allowed options such as the site's own OG data or a user-uploaded preview.
 
-12. **Welcome email** · `parked` · (S). Welcome email for new accounts, with Dean's avatar badge. Security emails stay plain.
+11. **Welcome email** · `parked` · (S). Welcome email for new accounts, with Dean's avatar badge. Security emails stay plain.
 
-13. **Docs FAQ** · `parked` · (S). Frequently asked questions on the docs site.
+12. **Docs FAQ** · `parked` · (S). Frequently asked questions on the docs site.
 
-14. **Desktop app** · `parked` · (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
+13. **Desktop app** · `parked` · (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
 
-15. **Native mobile apps** · `parked` · (L). iOS and Android, separate from the responsive web app and PWA.
+14. **Native mobile apps** · `parked` · (L). iOS and Android, separate from the responsive web app and PWA.
 
-16. **Client-held vault key** · `parked` · (L). True end-to-end encryption where the server never sees the key. Makes vault search much harder.
+15. **Client-held vault key** · `parked` · (L). True end-to-end encryption where the server never sees the key. Makes vault search much harder.
 
-17. **Gamification** · `parked` · (M). Points and badges on top of likes and ratings.
+16. **Gamification** · `parked` · (M). Points and badges on top of likes and ratings.
 
-18. **Easter eggs** · `parked` · (S). Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), which needs React 19 support first). Internal only — never list on the public docs roadmap.
+17. **Easter eggs** · `parked` · (S). Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), which needs React 19 support first). Internal only — never list on the public docs roadmap.
 
 ---
 

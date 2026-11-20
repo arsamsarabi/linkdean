@@ -11,6 +11,9 @@ pub mod page_text;
 pub mod preview_image;
 pub mod unsubscribe;
 
-pub use api_scopes::{required_scope, ApiScopes, ScopeRequirement, ALL_SCOPES};
+pub use api_scopes::{
+    matching_template, required_scope, ApiKeyTemplate, ApiScopes, ScopeRequirement, ALL_SCOPES,
+    API_KEY_TEMPLATES,
+};
 pub use error::{Error, Result};
 pub use models::*;

@@ -18,6 +18,45 @@ pub const ALL_SCOPES: &[&str] = &[
     "account:write",
 ];
 
+/// Named create-time template (Phase B). UI may also offer `custom`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ApiKeyTemplate {
+    pub id: &'static str,
+    pub label: &'static str,
+    pub scopes: &'static [&'static str],
+}
+
+/// Presets when creating a key. Keep web `ApiKeysPanel` in sync.
+pub const API_KEY_TEMPLATES: &[ApiKeyTemplate] = &[
+    ApiKeyTemplate {
+        id: "read_only_library",
+        label: "Read-only library",
+        scopes: &["library:read"],
+    },
+    ApiKeyTemplate {
+        id: "save_bookmarks",
+        label: "Save bookmarks",
+        scopes: &["library:read", "library:write"],
+    },
+    ApiKeyTemplate {
+        id: "full_access",
+        label: "Full access",
+        scopes: ALL_SCOPES,
+    },
+];
+
+/// If `scopes` exactly matches a named template (order-independent), return its id.
+pub fn matching_template(scopes: &[String]) -> Option<&'static str> {
+    let set: BTreeSet<&str> = scopes.iter().map(String::as_str).collect();
+    for t in API_KEY_TEMPLATES {
+        let want: BTreeSet<&str> = t.scopes.iter().copied().collect();
+        if set == want {
+            return Some(t.id);
+        }
+    }
+    None
+}
+
 /// Validated set of scopes for one API key.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ApiScopes(BTreeSet<String>);
@@ -219,5 +258,20 @@ mod tests {
     fn all_catalogue_parses() {
         let v: Vec<String> = ALL_SCOPES.iter().map(|s| (*s).to_string()).collect();
         assert_eq!(ApiScopes::from_strings(&v).unwrap(), ApiScopes::all());
+    }
+
+    #[test]
+    fn templates_parse_and_match() {
+        for t in API_KEY_TEMPLATES {
+            let v: Vec<String> = t.scopes.iter().map(|s| (*s).to_string()).collect();
+            assert!(ApiScopes::from_strings(&v).is_ok(), "{}", t.id);
+            assert_eq!(matching_template(&v), Some(t.id));
+        }
+        let custom = vec!["library:read".into(), "archive:read".into()];
+        assert!(ApiScopes::from_strings(&custom).is_ok());
+        assert_eq!(matching_template(&custom), None);
+        // Order must not matter.
+        let shuffled = vec!["library:write".into(), "library:read".into()];
+        assert_eq!(matching_template(&shuffled), Some("save_bookmarks"));
     }
 }
