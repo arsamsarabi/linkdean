@@ -217,7 +217,7 @@ function bookmarksQuery(p: BookmarksListParams): URLSearchParams {
 }
 
 /** What an Agent Skill is made from. */
-export type AgentSkillSource = { folder: string } | { tag: string }
+export type AgentSkillSource = { folder: string } | { tag: string } | { search: string }
 
 export const api = {
   bootstrap: (): Promise<BootstrapStatus> => req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
@@ -818,9 +818,15 @@ export const api = {
     return `/api/export?${q}`
   },
 
-  /** A folder (with its subfolders) or a tag as an Agent Skill: a zip, or the SKILL.md alone. */
+  /** A folder, tag, or saved search as an Agent Skill: a zip, or the SKILL.md alone. */
   agentSkillUrl: (source: AgentSkillSource, format: 'zip' | 'md' = 'zip'): string => {
-    const q = new URLSearchParams('folder' in source ? { folder: source.folder, format } : { tag: source.tag, format })
+    const q = new URLSearchParams(
+      'folder' in source
+        ? { folder: source.folder, format }
+        : 'tag' in source
+          ? { tag: source.tag, format }
+          : { search: source.search, format }
+    )
     return `/api/agent-skill?${q.toString()}`
   },
 

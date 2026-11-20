@@ -142,6 +142,23 @@ pub async fn list_saved_searches(pool: &PgPool, owner: Uuid) -> Result<Vec<Saved
     rows.into_iter().map(to_view).collect()
 }
 
+pub async fn get_saved_search(pool: &PgPool, owner: Uuid, id: Uuid) -> Result<SavedSearchView> {
+    let row = sqlx::query_as::<_, SavedSearch>(
+        r#"
+        SELECT *
+        FROM saved_searches
+        WHERE id = $1 AND owner_user_id = $2
+        "#,
+    )
+    .bind(id)
+    .bind(owner)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+    to_view(row)
+}
+
 pub async fn create_saved_search(
     pool: &PgPool,
     owner: Uuid,

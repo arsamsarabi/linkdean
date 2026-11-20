@@ -1,7 +1,7 @@
 # Read-only MCP server (Agent Skills Phase A)
 
 **Status:** shipped (Phase A).  
-**Roadmap:** Agent Skills, next steps — Phase A done; Phase B archive text is [mcp-archive-text.md](./mcp-archive-text.md); remaining is skills from saved searches ([saved-searches.md](./saved-searches.md)). Write tools are a later item (MCP write tools); scopes already ship.
+**Roadmap:** Read-only MCP and archive text shipped; saved-search Agent Skills shipped ([saved-searches.md](./saved-searches.md)). Write tools are a later item (MCP write tools); scopes already ship.
 
 Related: [agent-skills.md](./agent-skills.md) (zip / `SKILL.md` packaging), [guides/agent-skills.md](../guides/agent-skills.md).
 
@@ -133,7 +133,7 @@ Illustrative client config (field names follow client docs at ship time):
 
 | Later work | Roadmap |
 | --- | --- |
-| Per-key read/write scopes + create templates | API key permissions |
+| Per-key read/write scopes + create templates | API key permissions (shipped) |
 | MCP create/update tools when scopes allow | MCP write tools |
-| Archive reader text in agent surface | Agent Skills Phase B |
-| Saved-search skills | Agent Skills Phase C |
+| Archive reader text in agent surface | Shipped ([mcp-archive-text.md](./mcp-archive-text.md)) |
+| Saved-search skills | Shipped ([saved-searches.md](./saved-searches.md)) |

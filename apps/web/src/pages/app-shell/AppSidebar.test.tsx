@@ -36,6 +36,8 @@ vi.mock('@/hooks', () => ({
   useCreateSavedSearch: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePatchSavedSearch: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSavedSearch: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useExperimentalFlags: () => ({ agent_skills: false }),
+  useDownloadAgentSkill: () => ({ download: vi.fn(), pending: false }),
 }))
 
 vi.mock('./useIconRail', () => ({

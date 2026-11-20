@@ -8,7 +8,7 @@ export function downloadName(disposition: string | null, fallback: string): stri
   return match?.[1] ?? fallback
 }
 
-/** Downloads a folder or tag as an Agent Skill zip, with a notification on failure. */
+/** Downloads a folder, tag, or saved search as an Agent Skill zip, with a notification on failure. */
 export function useDownloadAgentSkill(): {
   download: (source: AgentSkillSource) => Promise<void>
   pending: boolean

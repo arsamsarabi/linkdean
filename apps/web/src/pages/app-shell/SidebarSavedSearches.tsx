@@ -2,10 +2,16 @@ import { useState, type ReactElement } from 'react'
 import { ActionIcon, Group, NavLink, Skeleton, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconChevronDown, IconPencil, IconSearch, IconTrash } from '@tabler/icons-react'
+import { IconChevronDown, IconDownload, IconPencil, IconSearch, IconTrash } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { ConfirmModal } from '@/components'
-import { useDeleteSavedSearch, usePatchSavedSearch, useSavedSearches } from '@/hooks'
+import {
+  useDeleteSavedSearch,
+  useDownloadAgentSkill,
+  useExperimentalFlags,
+  usePatchSavedSearch,
+  useSavedSearches,
+} from '@/hooks'
 import { librarySearchFromSavedFilters, pathForSavedFilters } from '@/lib'
 import type { SavedSearch } from '@/schemas'
 import { SaveSearchModal } from '../library/SaveSearchModal'
@@ -26,6 +32,8 @@ export function SidebarSavedSearches({ onNavigate }: Props): ReactElement {
   const list = useSavedSearches()
   const patch = usePatchSavedSearch()
   const remove = useDeleteSavedSearch()
+  const experimental = useExperimentalFlags()
+  const agentSkill = useDownloadAgentSkill()
   const [expanded, setExpanded] = useLocalStorage({
     key: 'linkdean-sidebar-saved-searches-expanded',
     defaultValue: true,
@@ -86,6 +94,21 @@ export function SidebarSavedSearches({ onNavigate }: Props): ReactElement {
                 onClick={onNavigate}
                 rightSection={
                   <Group gap={2} wrap="nowrap" onClick={(e) => e.preventDefault()}>
+                    {experimental.agent_skills ? (
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        aria-label={`Download Agent Skill for ${s.name}`}
+                        loading={agentSkill.pending}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          void agentSkill.download({ search: s.id })
+                        }}
+                      >
+                        <IconDownload size={14} stroke={1.5} />
+                      </ActionIcon>
+                    ) : null}
                     <ActionIcon
                       size="sm"
                       variant="subtle"

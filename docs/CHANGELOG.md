@@ -8,6 +8,7 @@
 
 ### Added
 
+- **Agent Skills from saved searches** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): download a zip skill from a saved library search (`GET /api/agent-skill?search=<id>`), with live matches and vault always excluded. Config → Import / Export and saved-search menus.
 - **Saved searches:** name the current library query and filters, reopen from the library toolbar or the sidebar, rename or delete. Up to 50 per account. REST at `/api/saved-searches` (library scopes).
 - **API key permissions:** each key picks scopes at create time (library, archive, import/export, social, account × read/write). REST and MCP enforce them; login sessions stay unrestricted. Settings → API keys offers presets (read-only library, save bookmarks, full access) plus custom checkboxes, and lists scopes on active keys.
 - **MCP archive text** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): `get_archive_text` returns reader-mode Markdown from a bookmark's HTML archive when a copy exists, so agents can read the page without fetching the live URL. Vault copies stay out; PDF/file bodies are not served over MCP.

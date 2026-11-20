@@ -46,7 +46,7 @@ When the flag is off, `/api/mcp` answers `404`.
 
 ## Download a skill (offline)
 
-A folder or a tag becomes an Agent Skill: a small folder with a `SKILL.md` that Claude Code, Codex, Cursor and other agents load when your task matches it.
+A folder, a tag, or a saved library search becomes an Agent Skill: a small folder with a `SKILL.md` that Claude Code, Codex, Cursor and other agents load when your task matches it.
 
 ### What is in a skill
 
@@ -66,7 +66,7 @@ Never included:
 ### Download
 
 - **From a folder:** in the library's Explorer view, open a folder's **⋯** menu and choose **Agent Skill (.zip)**. Subfolders are included.
-- **From a folder or a tag:** go to **Config options → Import / Export → Agent Skill**, choose **Folder** or **Tag**, pick one and select **Download skill**. A tag skill covers your own bookmarks.
+- **From a folder, tag, or saved search:** go to **Config options → Import / Export → Agent Skill**, choose **Folder**, **Tag**, or **Saved search**, pick one and select **Download skill**. A tag skill covers your own bookmarks. A saved-search skill uses the search's live matches (vault bookmarks stay out); you can also download from a saved search's controls in the library toolbar or sidebar.
 
 Unzip it into your agent's skills folder. For Claude Code that is `~/.claude/skills` for every project, or `.claude/skills` inside one project:
 

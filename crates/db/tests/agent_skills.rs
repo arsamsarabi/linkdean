@@ -3,7 +3,8 @@
 //! Requires Postgres. Set `DATABASE_URL`. Skips when unset.
 
 use linkdean_core::{
-    CreateBookmark, CreateCategory, CreateCategoryShare, Error, ShareAccess, User, VaultKeyring,
+    CreateBookmark, CreateCategory, CreateCategoryShare, CreateSavedSearch, Error,
+    SavedSearchFilters, ShareAccess, User, VaultKeyring,
 };
 use linkdean_db::{self as db, SkillFrom};
 use sqlx::PgPool;
@@ -191,5 +192,78 @@ async fn a_tag_skill_holds_only_the_users_own_bookmarks() {
     assert!(found.links.iter().all(|l| l.path.is_empty()));
 
     let none = db::agent_skill_bookmarks(&pool, me.id, &SkillFrom::Tag("nothing".into())).await;
+    assert!(matches!(none, Err(Error::NotFound)));
+}
+
+#[tokio::test]
+async fn a_saved_search_skill_matches_live_filters_and_skips_vault() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let me = person(&pool, "ss-me").await;
+    let other = person(&pool, "ss-other").await;
+    bookmark(&pool, &me, "Keep", None, &["rust"]).await;
+    bookmark(&pool, &me, "Skip tag", None, &["go"]).await;
+    let (vault, key, _) = db::create_vault(&pool, me.id, "V", "vault-passphrase-long")
+        .await
+        .expect("vault");
+    let mut keyring = VaultKeyring::default();
+    keyring.insert(vault.id, key);
+    db::create_bookmark(
+        &pool,
+        me.id,
+        CreateBookmark {
+            url: format!("https://skills.example/{}", Uuid::new_v4()),
+            title: Some("Vaulted".into()),
+            tags: vec!["rust".into()],
+            vault_id: Some(vault.id),
+            ..Default::default()
+        },
+        &keyring,
+    )
+    .await
+    .expect("vault bookmark");
+
+    let search = db::create_saved_search(
+        &pool,
+        me.id,
+        CreateSavedSearch {
+            name: "Rust links".into(),
+            filters: SavedSearchFilters {
+                tag: vec!["rust".into()],
+                vault: Some(true),
+                vault_id: Some(vault.id),
+                ..Default::default()
+            },
+        },
+    )
+    .await
+    .expect("saved search");
+
+    let found = db::agent_skill_bookmarks(&pool, me.id, &SkillFrom::SavedSearch(search.id))
+        .await
+        .expect("skill");
+    assert_eq!(found.source.label, "Rust links");
+    assert_eq!(titles(&found), ["Keep"]);
+    assert!(found.links.iter().all(|l| l.path.is_empty()));
+
+    let stranger =
+        db::agent_skill_bookmarks(&pool, other.id, &SkillFrom::SavedSearch(search.id)).await;
+    assert!(matches!(stranger, Err(Error::NotFound)));
+
+    let empty = db::create_saved_search(
+        &pool,
+        me.id,
+        CreateSavedSearch {
+            name: "Nothing matches".into(),
+            filters: SavedSearchFilters {
+                tag: vec!["no-such-tag".into()],
+                ..Default::default()
+            },
+        },
+    )
+    .await
+    .expect("empty search");
+    let none = db::agent_skill_bookmarks(&pool, me.id, &SkillFrom::SavedSearch(empty.id)).await;
     assert!(matches!(none, Err(Error::NotFound)));
 }
