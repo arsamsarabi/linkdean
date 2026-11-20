@@ -193,6 +193,7 @@ fn resource_for_path(path: &str) -> Option<&'static str> {
         ("/api/search", "library"),
         ("/api/trash", "library"),
         ("/api/dashboards", "library"),
+        ("/api/saved-searches", "library"),
         ("/api/activity", "library"),
         ("/api/import", "import_export"),
         ("/api/export", "import_export"),
@@ -237,6 +238,14 @@ mod tests {
         );
         assert_eq!(
             required_scope("POST", "/api/bookmarks"),
+            ScopeRequirement::Need("library:write")
+        );
+        assert_eq!(
+            required_scope("GET", "/api/saved-searches"),
+            ScopeRequirement::Need("library:read")
+        );
+        assert_eq!(
+            required_scope("POST", "/api/saved-searches"),
             ScopeRequirement::Need("library:write")
         );
     }

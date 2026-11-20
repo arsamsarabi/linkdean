@@ -24,6 +24,7 @@ import classes from './AppShell.module.css'
 import { SidebarFolders } from './SidebarFolders'
 import { EXACT } from './sidebarLinks'
 import { SidebarRail } from './SidebarRail'
+import { SidebarSavedSearches } from './SidebarSavedSearches'
 import { SidebarVersion } from './SidebarVersion'
 import { useIconRail } from './useIconRail'
 
@@ -148,6 +149,8 @@ export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props):
         </Group>
 
         <SidebarFolders activeFolder={folder} onNavigate={closeNav} />
+
+        <SidebarSavedSearches onNavigate={closeNav} />
 
         <Group label="Library health">
           <NavLink

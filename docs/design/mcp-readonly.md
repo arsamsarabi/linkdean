@@ -1,7 +1,7 @@
 # Read-only MCP server (Agent Skills Phase A)
 
 **Status:** shipped (Phase A).  
-**Roadmap:** Agent Skills, next steps — Phase A done; Phase B archive text is [mcp-archive-text.md](./mcp-archive-text.md); remaining is saved searches. Write tools are a later item (MCP write tools), after API key permissions.
+**Roadmap:** Agent Skills, next steps — Phase A done; Phase B archive text is [mcp-archive-text.md](./mcp-archive-text.md); remaining is skills from saved searches ([saved-searches.md](./saved-searches.md)). Write tools are a later item (MCP write tools); scopes already ship.
 
 Related: [agent-skills.md](./agent-skills.md) (zip / `SKILL.md` packaging), [guides/agent-skills.md](../guides/agent-skills.md).
 

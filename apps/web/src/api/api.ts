@@ -77,6 +77,7 @@ import {
   reportConfigSchema,
   reportFiledSchema,
   resendVerificationResponseSchema,
+  savedSearchSchema,
   scheduleDeletionResponseSchema,
   screenshotRetryStatusSchema,
   searchResponseSchema,
@@ -167,6 +168,8 @@ import {
   type ReportConfig,
   type ResendVerificationResponse,
   type ResolveAbuseReport,
+  type SavedSearch,
+  type SavedSearchFilters,
   type ScheduleDeletionResponse,
   type ScreenshotRetryStatus,
   type ShareAccess,
@@ -343,6 +346,17 @@ export const api = {
     req('/api-keys', { method: 'POST', body: JSON.stringify(body) }, createApiKeyResponseSchema),
 
   revokeApiKey: (id: string): Promise<{ ok: boolean }> => req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),
+
+  listSavedSearches: (): Promise<SavedSearch[]> => req('/saved-searches', {}, z.array(savedSearchSchema)),
+
+  createSavedSearch: (body: { name: string; filters: SavedSearchFilters }): Promise<SavedSearch> =>
+    req('/saved-searches', { method: 'POST', body: JSON.stringify(body) }, savedSearchSchema),
+
+  patchSavedSearch: (id: string, body: { name?: string; filters?: SavedSearchFilters }): Promise<SavedSearch> =>
+    req(`/saved-searches/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, savedSearchSchema),
+
+  deleteSavedSearch: (id: string): Promise<{ ok: boolean }> =>
+    req(`/saved-searches/${id}`, { method: 'DELETE' }, okSchema),
 
   listActivity: (opts?: {
     limit?: number

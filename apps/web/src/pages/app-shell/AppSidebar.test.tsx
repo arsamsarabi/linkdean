@@ -32,6 +32,10 @@ vi.mock('@/hooks', () => ({
   useShareInvites: () => ({ data: { invites: [{ id: 'i1', rejected_at: null }] } }),
   useAppVersion: () => '0.0.12',
   useUpdateStatus: () => ({ isSuccess: false, data: undefined }),
+  useSavedSearches: () => ({ isLoading: false, data: [] }),
+  useCreateSavedSearch: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  usePatchSavedSearch: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteSavedSearch: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 vi.mock('./useIconRail', () => ({

@@ -365,6 +365,63 @@ pub struct CreateApiKeyResponse {
     pub token: String,
 }
 
+/// Library URL filter snapshot stored on a saved search.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
+pub struct SavedSearchFilters {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub q: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sort: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tag: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub flag: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub since: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vault: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vault_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct SavedSearch {
+    pub id: Uuid,
+    pub owner_user_id: Uuid,
+    pub name: String,
+    pub filters: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct SavedSearchView {
+    pub id: Uuid,
+    pub name: String,
+    pub filters: SavedSearchFilters,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct CreateSavedSearch {
+    pub name: String,
+    #[serde(default)]
+    pub filters: SavedSearchFilters,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct PatchSavedSearch {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub filters: Option<SavedSearchFilters>,
+}
+
 /// Minimal admin account row (no private user data).
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AdminUserSummary {

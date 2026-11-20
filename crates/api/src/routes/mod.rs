@@ -15,6 +15,7 @@ mod import_export;
 mod notifications;
 mod public;
 mod reports;
+mod saved_searches;
 mod search;
 mod share_invites;
 mod social;
@@ -113,6 +114,7 @@ fn documented(agent_skills: bool) -> OpenApiRouter<AppState> {
         .merge(tags::router())
         .merge(trash::router())
         .merge(search::router())
+        .merge(saved_searches::router())
         .merge(import_export::router())
         .merge(email_unsubscribe::router())
         .merge(vault::router())
