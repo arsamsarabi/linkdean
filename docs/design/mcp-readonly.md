@@ -1,7 +1,7 @@
 # Read-only MCP server (Agent Skills Phase A)
 
 **Status:** shipped (Phase A).  
-**Roadmap:** Read-only MCP and archive text shipped; saved-search Agent Skills shipped ([saved-searches.md](./saved-searches.md)). Write tools are a later item (MCP write tools); scopes already ship.
+**Roadmap:** Read-only MCP and archive text shipped; saved-search Agent Skills shipped ([saved-searches.md](./saved-searches.md)). Write tools are the next near item (MCP write tools); scopes already ship.
 
 Related: [agent-skills.md](./agent-skills.md) (zip / `SKILL.md` packaging), [guides/agent-skills.md](../guides/agent-skills.md).
 
