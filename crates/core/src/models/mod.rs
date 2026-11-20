@@ -332,6 +332,7 @@ pub struct ApiKey {
     pub name: String,
     pub token_hash: String,
     pub prefix: String,
+    pub scopes: Vec<String>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -343,14 +344,18 @@ pub struct ApiKeyView {
     pub id: Uuid,
     pub name: String,
     pub prefix: String,
+    pub scopes: Vec<String>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateApiKey {
     pub name: String,
+    /// Omit or null for all scopes; empty list is rejected.
+    #[serde(default)]
+    pub scopes: Option<Vec<String>>,
 }
 
 /// One-shot create response: view + plaintext token (shown once).

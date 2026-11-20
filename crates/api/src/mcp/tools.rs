@@ -44,6 +44,12 @@ pub fn require_user_state(parts: &Parts) -> Result<(User, AppState), ErrorData> 
     Ok((user, state))
 }
 
+/// Sessions always pass; API keys need the named scope.
+pub fn require_mcp_scope(parts: &Parts, scope: &str) -> Result<(), ErrorData> {
+    crate::auth::require_scope(parts, scope)
+        .map_err(|_| ErrorData::invalid_params(format!("missing scope `{scope}`"), None))
+}
+
 fn clamp_search_limit(limit: Option<u32>) -> usize {
     match limit {
         None => 50,

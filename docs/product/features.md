@@ -201,7 +201,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 ## API keys
 
-- Users create and revoke keys scoped to their own data (Settings → API keys)
+- Users create and revoke keys scoped to their own data (Settings → API keys). At create time they pick **permissions** (`library` / `archive` / `import_export` / `social` / `account`, each read and/or write). REST and MCP refuse calls the key lacks. Existing keys and omitted scopes keep full access; the browser extension still mints a full-access key. Sessions are never limited by scopes.
 - Bearer `ldk_…` accepted alongside session
 - A key cannot create more keys or use admin routes, even an admin's, so revoking a leaked key ends its access
 - Secret hashed at rest; plaintext shown once at creation

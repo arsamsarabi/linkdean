@@ -161,6 +161,7 @@ export const apiKeySchema = z.object({
   id: z.string(),
   name: z.string(),
   prefix: z.string(),
+  scopes: z.array(z.string()).default([]),
   last_used_at: z.string().nullish(),
   revoked_at: z.string().nullish(),
   created_at: z.string(),

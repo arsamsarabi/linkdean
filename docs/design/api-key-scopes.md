@@ -1,0 +1,64 @@
+# API key permissions — Phase A (scopes)
+
+**Status:** shipped (Phase A).  
+**Roadmap:** API key permissions — Phase A. Phase B is create-time templates.
+
+## Intent
+
+API keys today act as the full user on REST (and MCP). Split **read vs write** by **function group** so a script or agent gets only what it needs.
+
+## Goals
+
+- Per-key scopes stored on `api_keys`, chosen at create time.
+- Enforce on every `AuthUser` route when the caller is an API key (sessions stay unrestricted).
+- Sensible groups: library, archive, import/export, social, account — each with `:read` and `:write`.
+- Existing keys keep full access (migration default = all scopes).
+- UI: checkboxes when creating a key; list shows granted scopes.
+- MCP tools check the matching scopes (library/archive read).
+
+## Non-goals (this phase)
+
+- Create-time presets/templates (Phase B).
+- Editing scopes on an existing key (revoke + create).
+- OAuth / third-party apps.
+- Scopes finer than the groups below (e.g. per-folder).
+
+## Scope catalogue
+
+| Scope | Covers (API key) |
+| --- | --- |
+| `library:read` | Bookmarks, folders, tags, search, dashboards, trash list, activity |
+| `library:write` | Create/update/delete in those areas; open/check-link side effects |
+| `archive:read` | List/get archive copies and Markdown; MCP `get_archive_*` |
+| `archive:write` | Request/delete archives |
+| `import_export:read` | Export; Agent Skill zip/md fetch |
+| `import_export:write` | Import |
+| `social:read` | Social summary; share invite inbox reads |
+| `social:write` | Likes, ratings, comments; share invite actions |
+| `account:read` | Profile/settings reads; notifications list |
+| `account:write` | Profile/settings writes; vault unlock/ops; reports |
+
+`/api/mcp` entry requires `library:read` **or** `archive:read`. Individual tools require the scope they need.
+
+Exempt for keys: `/api/auth/*` (except key minting already `SessionUser`), health, public, metrics, OpenAPI. Unmapped authenticated paths: **fail closed** (403).
+
+## Approaches considered
+
+1. **Named scopes + path map in AuthUser** (chosen) — one enforcement point; handlers stay mostly unchanged.
+2. Annotate every handler — precise but huge churn.
+3. Only `read` / `write` umbrellas — too coarse vs roadmap.
+
+## Design notes
+
+- `CreateApiKey.scopes`: omit or null → all scopes (extension + scripts); empty array → 400.
+- Unknown scope strings → 400.
+- Browser extension minted keys get all scopes (same as omit).
+- `ApiKeyView` includes `scopes` for the settings UI.
+- Forbidden when missing: HTTP 403; MCP tool errors name the missing scope.
+
+## Testing
+
+- Create with subset; allowed route 200; other resource 403.
+- Session cookie ignores scopes.
+- Migration: pre-existing key has all scopes.
+- MCP: library-only key can search; archive text needs `archive:read`.

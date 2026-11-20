@@ -4,7 +4,7 @@ use super::dto::{
     McpArchiveStatusList, McpArchiveText, McpBookmark, McpBookmarkList, McpFolderList, McpTagList,
 };
 use super::tools::{
-    get_archive_status, get_archive_text, get_bookmark, list_folders, list_tags,
+    get_archive_status, get_archive_text, get_bookmark, list_folders, list_tags, require_mcp_scope,
     require_user_state, search_bookmarks,
 };
 use axum::http::request::Parts;
@@ -89,6 +89,7 @@ impl LinkdeanMcp {
         Extension(parts): Extension<Parts>,
         Parameters(params): Parameters<SearchBookmarksParams>,
     ) -> Result<Json<McpBookmarkList>, ErrorData> {
+        require_mcp_scope(&parts, "library:read")?;
         let (user, state) = require_user_state(&parts)?;
         let folder = match params.folder.as_deref() {
             None | Some("") => None,
@@ -108,6 +109,7 @@ impl LinkdeanMcp {
         Extension(parts): Extension<Parts>,
         Parameters(params): Parameters<GetBookmarkParams>,
     ) -> Result<Json<McpBookmark>, ErrorData> {
+        require_mcp_scope(&parts, "library:read")?;
         let (user, state) = require_user_state(&parts)?;
         let id = parse_uuid(&params.id, "id")?;
         let bookmark = get_bookmark(&state, &user, id).await?;
@@ -122,6 +124,7 @@ impl LinkdeanMcp {
         &self,
         Extension(parts): Extension<Parts>,
     ) -> Result<Json<McpFolderList>, ErrorData> {
+        require_mcp_scope(&parts, "library:read")?;
         let (user, state) = require_user_state(&parts)?;
         Ok(Json(list_folders(&state, &user).await?))
     }
@@ -134,6 +137,7 @@ impl LinkdeanMcp {
         &self,
         Extension(parts): Extension<Parts>,
     ) -> Result<Json<McpTagList>, ErrorData> {
+        require_mcp_scope(&parts, "library:read")?;
         let (user, state) = require_user_state(&parts)?;
         Ok(Json(list_tags(&state, &user).await?))
     }
@@ -147,6 +151,7 @@ impl LinkdeanMcp {
         Extension(parts): Extension<Parts>,
         Parameters(params): Parameters<GetArchiveStatusParams>,
     ) -> Result<Json<McpArchiveStatusList>, ErrorData> {
+        require_mcp_scope(&parts, "archive:read")?;
         let (user, state) = require_user_state(&parts)?;
         let bookmark_id = parse_uuid(&params.bookmark_id, "bookmark_id")?;
         Ok(Json(get_archive_status(&state, &user, bookmark_id).await?))
@@ -161,6 +166,7 @@ impl LinkdeanMcp {
         Extension(parts): Extension<Parts>,
         Parameters(params): Parameters<GetArchiveTextParams>,
     ) -> Result<Json<McpArchiveText>, ErrorData> {
+        require_mcp_scope(&parts, "archive:read")?;
         let (user, state) = require_user_state(&parts)?;
         let bookmark_id = parse_uuid(&params.bookmark_id, "bookmark_id")?;
         Ok(Json(

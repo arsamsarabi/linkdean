@@ -2,7 +2,7 @@ use crate::error::ApiError;
 use crate::state::AppState;
 use axum::extract::{FromRequestParts, OriginalUri};
 use axum::http::request::Parts;
-use linkdean_core::{Error, User};
+use linkdean_core::{required_scope, ApiScopes, Error, ScopeRequirement, User};
 use linkdean_db::{self as db};
 
 pub struct AuthUser(pub User);
@@ -15,9 +15,17 @@ impl FromRequestParts<AppState> for AuthUser {
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         let token = extract_token(parts).ok_or(Error::SessionExpired)?;
-        let user = db::user_from_token(&state.pool, &token)
-            .await?
-            .ok_or(Error::SessionExpired)?;
+        let (user, key_scopes) = if is_api_key(&token) {
+            let (user, scopes) = db::user_and_scopes_from_api_key(&state.pool, &token)
+                .await?
+                .ok_or(Error::SessionExpired)?;
+            (user, Some(scopes))
+        } else {
+            let user = db::user_from_token(&state.pool, &token)
+                .await?
+                .ok_or(Error::SessionExpired)?;
+            (user, None)
+        };
         if let Some(ban) = db::active_ban(&state.pool, user.id).await? {
             return Err(Error::Banned {
                 reason: ban.reason,
@@ -40,7 +48,48 @@ impl FromRequestParts<AppState> for AuthUser {
         {
             return Err(Error::EmailUnverified.into());
         }
+        if let Some(scopes) = key_scopes {
+            enforce_key_scopes(parts, &scopes)?;
+            parts.extensions.insert(scopes);
+        }
         Ok(AuthUser(user))
+    }
+}
+
+fn enforce_key_scopes(parts: &Parts, scopes: &ApiScopes) -> Result<(), ApiError> {
+    let path = request_path(parts);
+    let method = parts.method.as_str();
+    match required_scope(method, path) {
+        ScopeRequirement::Exempt => Ok(()),
+        ScopeRequirement::Need(need) => {
+            if scopes.contains(need) {
+                Ok(())
+            } else {
+                Err(Error::Forbidden.into())
+            }
+        }
+        ScopeRequirement::AnyOf(any) => {
+            if any.iter().any(|s| scopes.contains(s)) {
+                Ok(())
+            } else {
+                Err(Error::Forbidden.into())
+            }
+        }
+        ScopeRequirement::DenyUnmapped => Err(Error::Forbidden.into()),
+    }
+}
+
+/// Scopes for the current API-key caller, if any. Sessions have no entry.
+pub fn api_key_scopes(parts: &Parts) -> Option<&ApiScopes> {
+    parts.extensions.get::<ApiScopes>()
+}
+
+/// Require a scope when the caller is an API key. Sessions always pass.
+pub fn require_scope(parts: &Parts, scope: &str) -> Result<(), Error> {
+    match api_key_scopes(parts) {
+        None => Ok(()),
+        Some(scopes) if scopes.contains(scope) => Ok(()),
+        Some(_) => Err(Error::Forbidden),
     }
 }
 

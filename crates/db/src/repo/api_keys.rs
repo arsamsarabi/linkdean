@@ -1,6 +1,8 @@
 use chrono::Utc;
 use linkdean_core::crypto::{self, hash_token};
-use linkdean_core::{ApiKey, ApiKeyView, CreateApiKey, CreateApiKeyResponse, Error, Result, User};
+use linkdean_core::{
+    ApiKey, ApiKeyView, ApiScopes, CreateApiKey, CreateApiKeyResponse, Error, Result, User,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -14,6 +16,7 @@ fn to_view(row: ApiKey) -> ApiKeyView {
         id: row.id,
         name: row.name,
         prefix: row.prefix,
+        scopes: row.scopes,
         last_used_at: row.last_used_at,
         revoked_at: row.revoked_at,
         created_at: row.created_at,
@@ -62,6 +65,12 @@ pub async fn create_api_key(
         return Err(Error::BadRequest("name max 120 chars".into()));
     }
 
+    let scopes = match req.scopes {
+        None => ApiScopes::all(),
+        Some(list) => ApiScopes::from_strings(&list)?,
+    };
+    let scope_vec = scopes.to_vec();
+
     let secret = hex::encode(crypto::random_bytes(32));
     let token = format!("{TOKEN_PREFIX}{secret}");
     let token_hash = hash_token(&token);
@@ -70,8 +79,8 @@ pub async fn create_api_key(
 
     let row = sqlx::query_as::<_, ApiKey>(
         r#"
-        INSERT INTO api_keys (user_id, name, token_hash, prefix)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO api_keys (user_id, name, token_hash, prefix, scopes)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING *
         "#,
     )
@@ -79,6 +88,7 @@ pub async fn create_api_key(
     .bind(&name)
     .bind(&token_hash)
     .bind(&prefix)
+    .bind(&scope_vec)
     .fetch_one(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
@@ -108,14 +118,18 @@ pub async fn revoke_api_key(pool: &PgPool, user_id: Uuid, key_id: Uuid) -> Resul
     Ok(())
 }
 
-pub async fn user_from_api_key(pool: &PgPool, token: &str) -> Result<Option<User>> {
+/// User + scopes for a live API key. `scopes` is empty only if the row is missing (caller gets None).
+pub async fn user_and_scopes_from_api_key(
+    pool: &PgPool,
+    token: &str,
+) -> Result<Option<(User, ApiScopes)>> {
     if !token.starts_with(TOKEN_PREFIX) {
         return Ok(None);
     }
     let token_hash = hash_token(token);
-    let row: Option<(Uuid,)> = sqlx::query_as(
+    let row: Option<(Uuid, Vec<String>)> = sqlx::query_as(
         r#"
-        SELECT user_id FROM api_keys
+        SELECT user_id, scopes FROM api_keys
         WHERE token_hash = $1 AND revoked_at IS NULL
         "#,
     )
@@ -124,7 +138,7 @@ pub async fn user_from_api_key(pool: &PgPool, token: &str) -> Result<Option<User
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    let Some((uid,)) = row else {
+    let Some((uid, scope_list)) = row else {
         return Ok(None);
     };
     let Some(user) = find_user_by_id(pool, uid).await? else {
@@ -147,5 +161,14 @@ pub async fn user_from_api_key(pool: &PgPool, token: &str) -> Result<Option<User
     .execute(pool)
     .await;
 
-    Ok(Some(user))
+    // Trust DB catalogue; skip re-validation so a future migration can add scopes
+    // without breaking old binaries mid-deploy.
+    let scopes = ApiScopes::from_iter(scope_list);
+    Ok(Some((user, scopes)))
+}
+
+pub async fn user_from_api_key(pool: &PgPool, token: &str) -> Result<Option<User>> {
+    Ok(user_and_scopes_from_api_key(pool, token)
+        .await?
+        .map(|(u, _)| u))
 }

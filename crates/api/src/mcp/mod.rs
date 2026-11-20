@@ -79,6 +79,9 @@ mod tests {
     use tower::ServiceExt;
     use uuid::Uuid;
 
+    /// `claim_next_archive` is global; parallel MCP archive tests must not steal each other's queue.
+    static ARCHIVE_QUEUE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     async fn state() -> Option<(AppState, std::path::PathBuf)> {
         let Ok(url) = std::env::var("DATABASE_URL") else {
             eprintln!("skipping mcp http tests: DATABASE_URL unset");
@@ -133,10 +136,17 @@ mod tests {
     }
 
     async fn api_key_for(pool: &sqlx::PgPool, user: &User) -> String {
-        db::create_api_key(pool, user, CreateApiKey { name: "mcp".into() })
-            .await
-            .unwrap()
-            .token
+        db::create_api_key(
+            pool,
+            user,
+            CreateApiKey {
+                name: "mcp".into(),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap()
+        .token
     }
 
     async fn api_key(pool: &sqlx::PgPool) -> String {
@@ -909,6 +919,7 @@ mod tests {
     }
 
     async fn finish_html_archive(state: &AppState, owner_id: uuid::Uuid, bookmark_id: uuid::Uuid) {
+        let _queue = ARCHIVE_QUEUE.lock().await;
         db::request_archive(
             &state.pool,
             owner_id,

@@ -35,7 +35,7 @@ export function useApiKeys(enabled = true): UseQueryResult<{ keys: ApiKey[] }> {
   })
 }
 
-export function useCreateApiKey(): UseMutationResult<CreateApiKeyResponse, Error, { name: string }> {
+export function useCreateApiKey(): UseMutationResult<CreateApiKeyResponse, Error, { name: string; scopes?: string[] }> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body) => api.createApiKey(body),

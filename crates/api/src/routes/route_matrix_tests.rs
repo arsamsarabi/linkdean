@@ -175,6 +175,7 @@ async fn user(pool: &sqlx::PgPool, admin: bool) -> (String, String) {
         &u,
         linkdean_core::CreateApiKey {
             name: "matrix".into(),
+            ..Default::default()
         },
     )
     .await

@@ -16,8 +16,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - **Phase C — Saved searches:** Skills from a saved library search, once saved searches exist.
 
 
-2. **API key permissions** · `near` · (M). Keys today are all-or-nothing for whatever the account can do. Split read vs write (and finer scopes) so a script or agent gets only what it needs.
-    - **Phase A — Scopes:** Per-key read/write (and sensible function groups: library, archive, import/export, etc.); enforce on REST.
+2. **API key permissions** · `near` · (M). Keys already support per-key scopes (library/archive/import_export/social/account × read/write) on REST and MCP (see features). Finish the surface.
     - **Phase B — Templates:** Presets when creating a key (e.g. read-only library, save bookmarks, full access) so people do not have to tick every box.
 
 3. **Legal review** · `near` · (S). A lawyer reviews the Terms and Privacy Policy before anything costs money; bump versions when the reviewed text ships.

@@ -45,9 +45,16 @@ async fn create_auth_revoke_api_key() {
     .await
     .expect("create user");
 
-    let created = db::create_api_key(&pool, &user, CreateApiKey { name: "cli".into() })
-        .await
-        .expect("create key");
+    let created = db::create_api_key(
+        &pool,
+        &user,
+        CreateApiKey {
+            name: "cli".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("create key");
     assert!(created.token.starts_with("ldk_"));
     assert!(created.key.prefix.starts_with("ldk_"));
 
@@ -87,9 +94,16 @@ async fn platform_and_user_gates_block_keys() {
     .await
     .expect("create user");
 
-    let created = db::create_api_key(&pool, &user, CreateApiKey { name: "tmp".into() })
-        .await
-        .expect("create");
+    let created = db::create_api_key(
+        &pool,
+        &user,
+        CreateApiKey {
+            name: "tmp".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("create");
 
     let _ = db::set_api_keys_enabled(&pool, false)
         .await
@@ -104,6 +118,7 @@ async fn platform_and_user_gates_block_keys() {
             &user,
             CreateApiKey {
                 name: "blocked".into(),
+                ..Default::default()
             },
         )
         .await,
@@ -160,9 +175,16 @@ async fn password_change_ends_other_sessions_and_can_revoke_keys() {
         .await
         .expect("current");
     let other = db::create_session(&pool, user.id, 1).await.expect("other");
-    let key = db::create_api_key(&pool, &user, CreateApiKey { name: "cli".into() })
-        .await
-        .expect("key");
+    let key = db::create_api_key(
+        &pool,
+        &user,
+        CreateApiKey {
+            name: "cli".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("key");
     let current_hash = linkdean_core::crypto::hash_token(&current);
     let signed_in = |token: String| {
         let pool = pool.clone();
@@ -206,4 +228,68 @@ async fn password_change_ends_other_sessions_and_can_revoke_keys() {
     let wrong =
         db::change_password(&pool, user.id, "nope", "fourth-long-password", None, true).await;
     assert!(matches!(wrong, Err(Error::Unauthorized)));
+}
+
+#[tokio::test]
+async fn create_key_with_subset_of_scopes() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = PLATFORM_GATE.lock().await;
+    let user = db::create_user(
+        &pool,
+        &unique_email("scoped"),
+        Some("password-long-enough"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("user");
+    let created = db::create_api_key(
+        &pool,
+        &user,
+        CreateApiKey {
+            name: "ro-library".into(),
+            scopes: Some(vec!["library:read".into()]),
+        },
+    )
+    .await
+    .expect("create");
+    assert_eq!(created.key.scopes, vec!["library:read".to_string()]);
+    let (_, scopes) = db::user_and_scopes_from_api_key(&pool, &created.token)
+        .await
+        .expect("lookup")
+        .expect("found");
+    assert!(scopes.contains("library:read"));
+    assert!(!scopes.contains("library:write"));
+}
+
+#[tokio::test]
+async fn empty_scopes_rejected() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let _gate = PLATFORM_GATE.lock().await;
+    let user = db::create_user(
+        &pool,
+        &unique_email("empty-scopes"),
+        Some("password-long-enough"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("user");
+    let err = db::create_api_key(
+        &pool,
+        &user,
+        CreateApiKey {
+            name: "bad".into(),
+            scopes: Some(vec![]),
+        },
+    )
+    .await
+    .expect_err("empty scopes");
+    assert!(matches!(err, Error::BadRequest(_)));
 }
