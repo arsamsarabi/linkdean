@@ -8,7 +8,7 @@
 
 ### Added
 
-- **API key permissions:** each key picks scopes at create time (library, archive, import/export, social, account × read/write). REST and MCP enforce them; login sessions stay unrestricted. Settings → API keys shows the checkboxes and lists scopes on active keys.
+- **API key permissions:** each key picks scopes at create time (library, archive, import/export, social, account × read/write). REST and MCP enforce them; login sessions stay unrestricted. Settings → API keys offers presets (read-only library, save bookmarks, full access) plus custom checkboxes, and lists scopes on active keys.
 - **MCP archive text** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): `get_archive_text` returns reader-mode Markdown from a bookmark's HTML archive when a copy exists, so agents can read the page without fetching the live URL. Vault copies stay out; PDF/file bodies are not served over MCP.
 - **Read-only MCP** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): Streamable HTTP at `/api/mcp` with a Bearer API key. Tools: `search_bookmarks`, `get_bookmark`, `list_folders`, `list_tags`, `get_archive_status`, `get_archive_text`. Vault and writes stay out; Import / Export leads with an MCP connect card. See the [Agent Skills guide](guides/agent-skills.md).
 - **Archive export zip**: Settings → Import / Export can **Include archives**, downloading a zip of the JSON or Netscape file plus archived copies you can read (locked vault copies skipped).
