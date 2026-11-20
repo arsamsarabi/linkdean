@@ -4,7 +4,7 @@ import { IconPlugConnected } from '@tabler/icons-react'
 
 /**
  * Config options → Import / Export: point an MCP client at this instance with an API key
- * for live search and read. Vault items are never included.
+ * for live library tools. Vault items are never included.
  */
 export function McpConnectCard(): ReactElement {
   const mcpUrl = `${window.location.origin}/api/mcp`
@@ -19,11 +19,12 @@ export function McpConnectCard(): ReactElement {
           <Title order={4}>MCP</Title>
         </Group>
         <Text size="sm" c="dimmed">
-          Connect an agent with an API key for live search and read of your library. Vault items are never included.
+          Connect an agent with an API key for live search, read, and (when the key allows) create, update or trash
+          bookmarks. Vault items are never included.
         </Text>
         <List size="sm" spacing={4} c="dimmed">
-          <List.Item>Search bookmarks</List.Item>
-          <List.Item>Read bookmarks, folders, and tags</List.Item>
+          <List.Item>Search and read bookmarks, folders, and tags</List.Item>
+          <List.Item>Create, update, or trash bookmarks when the key has library write</List.Item>
           <List.Item>Read archived page text when a copy exists</List.Item>
           <List.Item>Vault items are never included</List.Item>
         </List>

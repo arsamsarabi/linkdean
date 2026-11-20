@@ -1122,4 +1122,178 @@ mod tests {
             "must not leak markdown: {payload}"
         );
     }
+
+    async fn scoped_key(pool: &sqlx::PgPool, user: &User, scopes: &[&str]) -> String {
+        db::create_api_key(
+            pool,
+            user,
+            CreateApiKey {
+                name: "mcp-scoped".into(),
+                scopes: Some(scopes.iter().map(|s| (*s).to_string()).collect()),
+            },
+        )
+        .await
+        .unwrap()
+        .token
+    }
+
+    #[tokio::test]
+    async fn create_update_delete_bookmark_with_library_write() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "mcp-write").await;
+        let key = scoped_key(&state.pool, &owner, &["library:read", "library:write"]).await;
+        let folder = category(&state.pool, &owner, "MCP Write", None).await;
+        let app = app(state.clone(), true);
+        let url = format!("https://mcp-write.example/{}", Uuid::new_v4());
+
+        let (status, body) = json_status(
+            app.clone(),
+            tools_call(
+                &key,
+                "create_bookmark",
+                json!({
+                    "url": url,
+                    "title": "Created via MCP",
+                    "notes": "hello",
+                    "folder": folder.to_string(),
+                    "tags": ["mcp-write"],
+                }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let created = tool_payload(&body);
+        let id = created["id"].as_str().expect("id").to_string();
+        assert_eq!(created["title"], "Created via MCP");
+        assert_eq!(created["url"], url);
+
+        let (status, body) = json_status(
+            app.clone(),
+            tools_call(
+                &key,
+                "update_bookmark",
+                json!({
+                    "id": id,
+                    "title": "Updated via MCP",
+                    "notes": "",
+                }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let updated = tool_payload(&body);
+        assert_eq!(updated["title"], "Updated via MCP");
+        assert!(updated["notes"].is_null(), "notes cleared: {updated}");
+
+        let (status, body) = json_status(
+            app,
+            tools_call(&key, "delete_bookmark", json!({ "id": id })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let deleted = tool_payload(&body);
+        assert_eq!(deleted["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn create_bookmark_requires_library_write() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "mcp-ro-write").await;
+        let key = scoped_key(&state.pool, &owner, &["library:read"]).await;
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "create_bookmark",
+                json!({
+                    "url": format!("https://mcp-ro.example/{}", Uuid::new_v4()),
+                    "title": "Nope",
+                }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        let msg = tool_error_message(&body);
+        assert!(
+            msg.contains("library:write") || msg.contains("missing scope"),
+            "expected missing library:write, got: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn write_tools_refuse_vault_bookmark() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "mcp-vault-write").await;
+        let key = scoped_key(&state.pool, &owner, &["library:read", "library:write"]).await;
+        let (vault, vault_key, _) =
+            db::create_vault(&state.pool, owner.id, "Write Vault", "vault-passphrase")
+                .await
+                .expect("vault");
+        let mut keyring = VaultKeyring::default();
+        keyring.insert(vault.id, vault_key);
+        let view = db::create_bookmark(
+            &state.pool,
+            owner.id,
+            CreateBookmark {
+                url: format!("https://vault-write.example/{}", Uuid::new_v4()),
+                title: Some("Secret".into()),
+                vault_id: Some(vault.id),
+                ..Default::default()
+            },
+            &keyring,
+        )
+        .await
+        .expect("vault bookmark");
+
+        let app = app(state, true);
+        let (status, body) = json_status(
+            app.clone(),
+            tools_call(
+                &key,
+                "update_bookmark",
+                json!({ "id": view.id.to_string(), "title": "Nope" }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert!(
+            tool_error_message(&body).contains("vault"),
+            "expected vault refusal on update: {body}"
+        );
+
+        let (status, body) = json_status(
+            app,
+            tools_call(
+                &key,
+                "delete_bookmark",
+                json!({ "id": view.id.to_string() }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert!(
+            tool_error_message(&body).contains("vault"),
+            "expected vault refusal on delete: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn library_write_only_key_can_initialize_mcp() {
+        let Some((state, _dir)) = state().await else {
+            return;
+        };
+        let owner = verified_user(&state.pool, "mcp-write-only").await;
+        let key = scoped_key(&state.pool, &owner, &["library:write"]).await;
+        let app = app(state, true);
+        let (status, body) = json_status(app, mcp_post(Some(&key))).await;
+        assert_eq!(status, StatusCode::OK, "body={body}");
+        assert_eq!(body["jsonrpc"], "2.0");
+    }
 }

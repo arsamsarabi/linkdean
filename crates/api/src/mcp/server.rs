@@ -1,11 +1,13 @@
-//! MCP server handler with read-only bookmark tools.
+//! MCP server handler: library read tools plus scoped bookmark writes.
 
 use super::dto::{
-    McpArchiveStatusList, McpArchiveText, McpBookmark, McpBookmarkList, McpFolderList, McpTagList,
+    McpArchiveStatusList, McpArchiveText, McpBookmark, McpBookmarkList, McpFolderList, McpOk,
+    McpTagList,
 };
 use super::tools::{
-    get_archive_status, get_archive_text, get_bookmark, list_folders, list_tags, require_mcp_scope,
-    require_user_state, search_bookmarks,
+    create_bookmark, delete_bookmark, get_archive_status, get_archive_text, get_bookmark,
+    list_folders, list_tags, require_mcp_scope, require_user_state, search_bookmarks,
+    update_bookmark,
 };
 use axum::http::request::Parts;
 use rmcp::handler::server::tool::Extension;
@@ -73,9 +75,87 @@ pub struct GetArchiveTextParams {
     pub format: Option<String>,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct CreateBookmarkParams {
+    /// Bookmark URL (required).
+    pub url: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub notes: Option<String>,
+    /// Single folder id (non-vault). Prefer `folders` for several.
+    #[serde(default)]
+    pub folder: Option<String>,
+    /// Folder ids (non-vault). Combined with `folder` when both are set.
+    #[serde(default)]
+    pub folders: Option<Vec<String>>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub is_favorite: Option<bool>,
+    #[serde(default)]
+    pub is_unread: Option<bool>,
+    #[serde(default)]
+    pub is_pinned: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct UpdateBookmarkParams {
+    /// Bookmark id to update.
+    pub id: String,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub title: Option<String>,
+    /// Set to replace notes; omit to leave unchanged. Empty string clears.
+    #[serde(default)]
+    pub notes: Option<String>,
+    /// When set, replaces the bookmark's folders (non-vault only).
+    #[serde(default)]
+    pub folders: Option<Vec<String>>,
+    /// When set, replaces tags.
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub is_favorite: Option<bool>,
+    #[serde(default)]
+    pub is_unread: Option<bool>,
+    #[serde(default)]
+    pub is_pinned: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct DeleteBookmarkParams {
+    /// Bookmark id to soft-delete (trash).
+    pub id: String,
+}
+
 fn parse_uuid(raw: &str, field: &str) -> Result<Uuid, ErrorData> {
     Uuid::parse_str(raw.trim())
         .map_err(|_| ErrorData::invalid_params(format!("invalid {field} uuid"), None))
+}
+
+fn parse_folder_ids(
+    folder: Option<&str>,
+    folders: Option<&[String]>,
+) -> Result<Vec<Uuid>, ErrorData> {
+    let mut ids = Vec::new();
+    if let Some(s) = folder.map(str::trim).filter(|s| !s.is_empty()) {
+        ids.push(parse_uuid(s, "folder")?);
+    }
+    if let Some(list) = folders {
+        for (i, raw) in list.iter().enumerate() {
+            let t = raw.trim();
+            if t.is_empty() {
+                continue;
+            }
+            let id = parse_uuid(t, &format!("folders[{i}]"))?;
+            if !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+    }
+    Ok(ids)
 }
 
 #[tool_router]
@@ -173,6 +253,90 @@ impl LinkdeanMcp {
             get_archive_text(&state, &user, bookmark_id, params.format.as_deref()).await?,
         ))
     }
+
+    #[tool(
+        name = "create_bookmark",
+        description = "Create a bookmark (url required). Optional title, notes, tags, folders. Needs library:write. Vault folders are refused."
+    )]
+    async fn create_bookmark_tool(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(params): Parameters<CreateBookmarkParams>,
+    ) -> Result<Json<McpBookmark>, ErrorData> {
+        require_mcp_scope(&parts, "library:write")?;
+        let (user, state) = require_user_state(&parts)?;
+        let folder_ids = parse_folder_ids(params.folder.as_deref(), params.folders.as_deref())?;
+        let bookmark = create_bookmark(
+            &state,
+            &user,
+            params.url,
+            params.title,
+            params.notes,
+            folder_ids,
+            params.tags.unwrap_or_default(),
+            params.is_favorite.unwrap_or(false),
+            params.is_unread.unwrap_or(false),
+            params.is_pinned.unwrap_or(false),
+        )
+        .await?;
+        Ok(Json(bookmark))
+    }
+
+    #[tool(
+        name = "update_bookmark",
+        description = "Update a bookmark by id. Pass only fields to change; folders/tags replace when set. Needs library:write. Vault bookmarks unavailable."
+    )]
+    async fn update_bookmark_tool(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(params): Parameters<UpdateBookmarkParams>,
+    ) -> Result<Json<McpBookmark>, ErrorData> {
+        require_mcp_scope(&parts, "library:write")?;
+        let (user, state) = require_user_state(&parts)?;
+        let id = parse_uuid(&params.id, "id")?;
+        let folders = match params.folders {
+            None => None,
+            Some(list) => Some(parse_folder_ids(None, Some(&list))?),
+        };
+        let notes = params.notes.map(|s| {
+            let t = s.trim();
+            if t.is_empty() {
+                None
+            } else {
+                Some(t.to_string())
+            }
+        });
+        let bookmark = update_bookmark(
+            &state,
+            &user,
+            id,
+            params.url,
+            params.title,
+            notes,
+            folders,
+            params.tags,
+            params.is_favorite,
+            params.is_unread,
+            params.is_pinned,
+        )
+        .await?;
+        Ok(Json(bookmark))
+    }
+
+    #[tool(
+        name = "delete_bookmark",
+        description = "Soft-delete (trash) a bookmark by id. Needs library:write. Vault bookmarks unavailable."
+    )]
+    async fn delete_bookmark_tool(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(params): Parameters<DeleteBookmarkParams>,
+    ) -> Result<Json<McpOk>, ErrorData> {
+        require_mcp_scope(&parts, "library:write")?;
+        let (user, state) = require_user_state(&parts)?;
+        let id = parse_uuid(&params.id, "id")?;
+        Ok(Json(delete_bookmark(&state, &user, id).await?))
+    }
 }
 
 #[tool_handler(router = self.tool_router)]
@@ -182,7 +346,7 @@ impl ServerHandler for LinkdeanMcp {
             .with_server_info(Implementation::new("linkdean", env!("CARGO_PKG_VERSION")))
             .with_protocol_version(ProtocolVersion::V_2025_03_26)
             .with_instructions(
-                "Linkdean read-only library tools. Search and read bookmarks, folders, tags, archive status, and HTML archive reader text; no writes, no vault."
+                "Linkdean library tools. Search and read bookmarks, folders, tags, archive status, and HTML archive reader text. Create, update, or trash bookmarks when the API key has library:write. Vault is never available."
                     .to_string(),
             )
     }

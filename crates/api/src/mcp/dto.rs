@@ -31,6 +31,11 @@ pub struct McpBookmarkList {
     pub bookmarks: Vec<McpBookmark>,
 }
 
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct McpOk {
+    pub ok: bool,
+}
+
 /// Folder tree entry for `list_folders` (no vault rows).
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct McpFolder {

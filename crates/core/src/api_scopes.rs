@@ -131,7 +131,13 @@ pub fn required_scope(method: &str, path: &str) -> ScopeRequirement {
     }
 
     if path.starts_with("/api/mcp") {
-        return ScopeRequirement::AnyOf(&["library:read", "archive:read"]);
+        // Connect with any library/archive scope; individual tools still check their own.
+        return ScopeRequirement::AnyOf(&[
+            "library:read",
+            "library:write",
+            "archive:read",
+            "archive:write",
+        ]);
     }
 
     let resource = resource_for_path(path);
@@ -251,10 +257,15 @@ mod tests {
     }
 
     #[test]
-    fn mcp_any_of_reads() {
+    fn mcp_any_of_library_or_archive() {
         assert_eq!(
             required_scope("POST", "/api/mcp"),
-            ScopeRequirement::AnyOf(&["library:read", "archive:read"])
+            ScopeRequirement::AnyOf(&[
+                "library:read",
+                "library:write",
+                "archive:read",
+                "archive:write",
+            ])
         );
     }
 
