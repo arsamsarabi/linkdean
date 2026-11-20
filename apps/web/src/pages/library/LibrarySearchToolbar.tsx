@@ -4,6 +4,7 @@ import { IconFilter, IconSearch, IconX } from '@tabler/icons-react'
 import { type SortKey } from '@/lib'
 import { LIBRARY_FILTER_PANEL_ID } from './libraryConstants'
 import styles from './LibraryPage.module.css'
+import { LibrarySavedSearchControls } from './LibrarySavedSearchControls'
 import { useLibraryPageModel } from './useLibraryPageModel'
 
 const iconSm = { size: 16, stroke: 1.5 } as const
@@ -63,6 +64,7 @@ export function LibrarySearchToolbar(): ReactElement {
               </Button>
             </Tooltip>
           ) : null}
+          <LibrarySavedSearchControls />
           <Select
             aria-label="Sort"
             value={lib.sort}

@@ -12,8 +12,8 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Agent Skills, next steps** · `near` · (S–M). Read-only MCP (including HTML archive reader text) and zip Agent Skills already ship (see features). Extend the agent surface without giving up the privacy stance. Write tools wait on item 6 (scopes already ship).
-    - **Phase C — Saved searches:** Skills from a saved library search, once saved searches exist.
+1. **Agent Skills, next steps** · `near` · (S–M). Read-only MCP (including HTML archive reader text) and zip Agent Skills already ship (see features). Saved library searches ship too. Extend the agent surface without giving up the privacy stance. Write tools wait on item 6 (scopes already ship).
+    - **Phase C — Skills from saved searches:** Turn a saved library search into an Agent Skill (live results; vault always excluded). Design: [saved searches](../design/saved-searches.md).
 
 
 2. **Legal review** · `near` · (S). A lawyer reviews the Terms and Privacy Policy before anything costs money; bump versions when the reviewed text ships.
