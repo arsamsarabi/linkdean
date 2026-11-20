@@ -1088,6 +1088,20 @@
         },
         "type": "object"
       },
+      "CreateSavedSearch": {
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/SavedSearchFilters"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "CreateSocialComment": {
         "properties": {
           "body": {
@@ -2025,6 +2039,27 @@
         },
         "type": "object"
       },
+      "PatchSavedSearch": {
+        "properties": {
+          "filters": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SavedSearchFilters"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "PendingShareInviteView": {
         "properties": {
           "access": {
@@ -2484,6 +2519,97 @@
         },
         "required": [
           "action"
+        ],
+        "type": "object"
+      },
+      "SavedSearchFilters": {
+        "description": "Library URL filter snapshot stored on a saved search.",
+        "properties": {
+          "category": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "flag": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "folder": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "q": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "since": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tag": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "vault": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "vault_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "SavedSearchView": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SavedSearchFilters"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "filters",
+          "created_at",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -10241,6 +10367,237 @@
         "summary": "Where to send abuse and takedown requests that do not fit the report form.",
         "tags": [
           "reports"
+        ]
+      }
+    },
+    "/saved-searches": {
+      "get": {
+        "operationId": "saved_searches_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SavedSearchView"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "saved-searches"
+        ]
+      },
+      "post": {
+        "operationId": "saved_searches_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSavedSearch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSearchView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "saved-searches"
+        ]
+      }
+    },
+    "/saved-searches/{id}": {
+      "delete": {
+        "operationId": "saved_searches_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "saved-searches"
+        ]
+      },
+      "patch": {
+        "operationId": "saved_searches_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchSavedSearch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSearchView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "saved-searches"
         ]
       }
     },
