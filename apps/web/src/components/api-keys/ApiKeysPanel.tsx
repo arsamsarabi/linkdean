@@ -1,17 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import {
-  Alert,
-  Button,
-  Checkbox,
-  Code,
-  Group,
-  Paper,
-  Skeleton,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { Alert, Button, Checkbox, Code, Group, Paper, Skeleton, Stack, Text, TextInput, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconCopy, IconKey, IconPlus, IconTrash } from '@tabler/icons-react'
 import { ConfirmModal, QueryErrorAlert } from '@/components'
@@ -80,8 +68,8 @@ export function ApiKeysPanel(): ReactElement {
   return (
     <Stack gap="lg" maw={640}>
       <Alert color="violet" variant="light" icon={<IconKey {...iconSm} />}>
-        Keys authenticate as you via <Code>Authorization: Bearer ldk_…</Code>. Each key only gets the
-        permissions you tick. Secret shown once at create.
+        Keys authenticate as you via <Code>Authorization: Bearer ldk_…</Code>. Each key only gets the permissions you
+        tick. Secret shown once at create.
       </Alert>
 
       {freshToken ? (
