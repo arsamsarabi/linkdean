@@ -1,10 +1,17 @@
 import { useState, type ReactElement } from 'react'
 import { ActionIcon, Button, Group, Menu, Tooltip } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconBookmark, IconDeviceFloppy, IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconBookmark, IconDeviceFloppy, IconDownload, IconPencil, IconTrash } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { ConfirmModal } from '@/components'
-import { useCreateSavedSearch, useDeleteSavedSearch, usePatchSavedSearch, useSavedSearches } from '@/hooks'
+import {
+  useCreateSavedSearch,
+  useDeleteSavedSearch,
+  useDownloadAgentSkill,
+  useExperimentalFlags,
+  usePatchSavedSearch,
+  useSavedSearches,
+} from '@/hooks'
 import { filtersFromLibraryState, librarySearchFromSavedFilters, pathForSavedFilters } from '@/lib'
 import type { SavedSearch } from '@/schemas'
 import { SaveSearchModal } from './SaveSearchModal'
@@ -19,6 +26,8 @@ export function LibrarySavedSearchControls(): ReactElement | null {
   const create = useCreateSavedSearch()
   const patch = usePatchSavedSearch()
   const remove = useDeleteSavedSearch()
+  const experimental = useExperimentalFlags()
+  const agentSkill = useDownloadAgentSkill()
 
   const [saveOpen, setSaveOpen] = useState(false)
   const [renameTarget, setRenameTarget] = useState<SavedSearch | null>(null)
@@ -79,6 +88,17 @@ export function LibrarySavedSearchControls(): ReactElement | null {
                   onClick={() => openSaved(s)}
                   rightSection={
                     <Group gap={2} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
+                      {experimental.agent_skills ? (
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          aria-label={`Download Agent Skill for ${s.name}`}
+                          loading={agentSkill.pending}
+                          onClick={() => void agentSkill.download({ search: s.id })}
+                        >
+                          <IconDownload size={14} stroke={1.5} />
+                        </ActionIcon>
+                      ) : null}
                       <ActionIcon
                         size="sm"
                         variant="subtle"

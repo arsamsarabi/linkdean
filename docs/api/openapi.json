@@ -4730,6 +4730,16 @@
             }
           },
           {
+            "description": "Saved search id (live filter matches; vault always excluded).",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "description": "`zip` (default): a `<name>/` folder. `md`: the `SKILL.md` alone, every link inline.",
             "in": "query",
             "name": "format",

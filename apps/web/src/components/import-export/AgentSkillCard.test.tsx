@@ -15,6 +15,9 @@ vi.mock('@/hooks', () => ({
     ],
   }),
   useTagNames: () => ({ data: ['design', 'rust'] }),
+  useSavedSearches: () => ({
+    data: [{ id: 's1', name: 'Rust weekly', filters: {}, created_at: '', updated_at: '' }],
+  }),
   useDownloadAgentSkill: () => ({ download, pending: false }),
 }))
 
@@ -63,5 +66,19 @@ describe('AgentSkillCard', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'design' }))
     await userEvent.click(screen.getByRole('button', { name: /download skill/i }))
     expect(download).toHaveBeenCalledWith({ tag: 'design' })
+  })
+
+  it('downloads a picked saved search', async () => {
+    render(
+      <MantineProvider env="test">
+        <AgentSkillCard />
+      </MantineProvider>
+    )
+    await userEvent.click(screen.getByRole('radio', { name: 'Saved search' }))
+    await userEvent.click(screen.getByPlaceholderText('Pick a saved search'))
+    await userEvent.click(await screen.findByRole('option', { name: 'Rust weekly' }))
+    await userEvent.click(screen.getByRole('button', { name: /download skill/i }))
+    expect(download).toHaveBeenCalledWith({ search: 's1' })
+    expect(screen.getByText(/agent-skill\?search=s1/)).toBeTruthy()
   })
 })

@@ -13,21 +13,23 @@ import {
   Title,
 } from '@mantine/core'
 import { IconDownload, IconRobot } from '@tabler/icons-react'
-import { useCategories, useDownloadAgentSkill, useTagNames } from '@/hooks'
+import { useCategories, useDownloadAgentSkill, useSavedSearches, useTagNames } from '@/hooks'
 import { categoryPath } from '@/lib'
 
-type From = 'folder' | 'tag'
+type From = 'folder' | 'tag' | 'search'
 
 /**
- * Config options → Import / Export: turn a folder (with its subfolders) or a tag into an Agent Skill
- * for coding and research agents, and show how to fetch it with an API key.
+ * Config options → Import / Export: turn a folder (with its subfolders), a tag, or a saved search
+ * into an Agent Skill for coding and research agents, and show how to fetch it with an API key.
  */
 export function AgentSkillCard(): ReactElement {
   const [from, setFrom] = useState<From>('folder')
   const [folder, setFolder] = useState<string | null>(null)
   const [tag, setTag] = useState<string | null>(null)
+  const [search, setSearch] = useState<string | null>(null)
   const categories = useCategories(true, false)
   const tags = useTagNames()
+  const saved = useSavedSearches()
   const { download, pending } = useDownloadAgentSkill()
 
   const folderData = useMemo(() => {
@@ -38,8 +40,26 @@ export function AgentSkillCard(): ReactElement {
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [categories.data])
 
-  const source = from === 'folder' ? (folder ? { folder } : null) : tag ? { tag } : null
-  const query = from === 'folder' ? `folder=${folder ?? '<folder id>'}` : `tag=${encodeURIComponent(tag ?? '<tag>')}`
+  const searchData = useMemo(() => (saved.data ?? []).map((s) => ({ value: s.id, label: s.name })), [saved.data])
+
+  const source =
+    from === 'folder'
+      ? folder
+        ? { folder }
+        : null
+      : from === 'tag'
+        ? tag
+          ? { tag }
+          : null
+        : search
+          ? { search }
+          : null
+  const query =
+    from === 'folder'
+      ? `folder=${folder ?? '<folder id>'}`
+      : from === 'tag'
+        ? `tag=${encodeURIComponent(tag ?? '<tag>')}`
+        : `search=${search ?? '<saved search id>'}`
 
   return (
     <Paper p="xl" withBorder>
@@ -51,8 +71,8 @@ export function AgentSkillCard(): ReactElement {
           <Title order={4}>Agent Skill</Title>
         </Group>
         <Text size="sm" c="dimmed">
-          Or download a static Agent Skill (.zip) for offline use. Pick a folder or a tag; unzip into the agent&apos;s
-          skills folder, such as <Code>~/.claude/skills</Code>. See{' '}
+          Or download a static Agent Skill (.zip) for offline use. Pick a folder, a tag, or a saved search; unzip into
+          the agent&apos;s skills folder, such as <Code>~/.claude/skills</Code>. See{' '}
           <Anchor href="https://agentskills.io" target="_blank" rel="noreferrer">
             agentskills.io
           </Anchor>
@@ -64,6 +84,7 @@ export function AgentSkillCard(): ReactElement {
           data={[
             { value: 'folder', label: 'Folder' },
             { value: 'tag', label: 'Tag' },
+            { value: 'search', label: 'Saved search' },
           ]}
           aria-label="Make the skill from"
         />
@@ -77,7 +98,7 @@ export function AgentSkillCard(): ReactElement {
             value={folder}
             onChange={setFolder}
           />
-        ) : (
+        ) : from === 'tag' ? (
           <Select
             label="Tag"
             description="Your own bookmarks with this tag."
@@ -86,6 +107,16 @@ export function AgentSkillCard(): ReactElement {
             data={tags.data ?? []}
             value={tag}
             onChange={setTag}
+          />
+        ) : (
+          <Select
+            label="Saved search"
+            description="Live matches of that search now. Vault bookmarks stay out."
+            placeholder="Pick a saved search"
+            searchable
+            data={searchData}
+            value={search}
+            onChange={setSearch}
           />
         )}
         <Group>

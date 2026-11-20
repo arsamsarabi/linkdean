@@ -1,6 +1,6 @@
-//! Agent Skills (<https://agentskills.io>) made from a folder or a tag: a `SKILL.md` an agent
-//! (Claude Code, Codex, Cursor and others) loads when the user's task matches its description,
-//! with the bookmarks as links grouped by subfolder.
+//! Agent Skills (<https://agentskills.io>) made from a folder, a tag, or a saved search: a
+//! `SKILL.md` an agent (Claude Code, Codex, Cursor and others) loads when the user's task matches
+//! its description, with the bookmarks as links grouped by subfolder.
 
 mod zip;
 
@@ -35,12 +35,13 @@ pub struct SkillLink {
 pub enum SkillSourceKind {
     Folder,
     Tag,
+    SavedSearch,
 }
 
 #[derive(Debug, Clone)]
 pub struct SkillSource {
     pub kind: SkillSourceKind,
-    /// Folder name or tag.
+    /// Folder name, tag, or saved search name.
     pub label: String,
 }
 
@@ -134,6 +135,10 @@ fn describe(source: &SkillSource, links: &[SkillLink]) -> String {
         SkillSourceKind::Tag => {
             format!("bookmarks tagged \"{}\" in Linkdean", clean(&source.label))
         }
+        SkillSourceKind::SavedSearch => format!(
+            "bookmarks matching the saved search \"{}\" in Linkdean",
+            clean(&source.label)
+        ),
     };
     let mut d = format!(
         "Curated reference links from {what} ({} bookmark{}).",
@@ -224,6 +229,9 @@ pub fn build_skill(
     let source_line = match source.kind {
         SkillSourceKind::Folder => format!("the folder **{heading}** and its subfolders"),
         SkillSourceKind::Tag => format!("the bookmarks tagged **{heading}**"),
+        SkillSourceKind::SavedSearch => {
+            format!("the saved search **{heading}** (live matches when generated)")
+        }
     };
     skill.push_str(&format!(
         "Links the user saved and curated in Linkdean, from {source_line}. Generated {}.\n\n",
@@ -332,6 +340,19 @@ mod tests {
         assert!(tokio < web && web < md.find("Axum docs").unwrap());
         assert!(md.contains("  - Tags: rust, http\n"));
         assert_eq!(skill.files.len(), 1);
+    }
+
+    #[test]
+    fn a_saved_search_skill_names_the_search() {
+        let source = SkillSource {
+            kind: SkillSourceKind::SavedSearch,
+            label: "Rust weekly".into(),
+        };
+        let skill = build_skill(&source, &[link("Axum", &[], &["rust"])], 0, when(), true);
+        assert_eq!(skill.name, "rust-weekly");
+        let md = &skill.files[0].1;
+        assert!(md.contains("saved search \\\"Rust weekly\\\""));
+        assert!(md.contains("the saved search **Rust weekly**"));
     }
 
     #[test]

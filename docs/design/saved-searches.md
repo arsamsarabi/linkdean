@@ -1,7 +1,7 @@
 # Saved library searches (+ Agent Skills Phase C)
 
-**Status:** design approved; PR A implements saved searches only.  
-**Roadmap:** unblocks Agent Skills — Phase C (skills from a saved search).
+**Status:** Phase A (saved searches) and Phase C (Agent Skills from a saved search) shipped.  
+**Roadmap:** Agent Skills Phase C done; MCP write tools remain a separate item.
 
 ## Intent
 
@@ -63,16 +63,46 @@ Mapped to library scopes. Migration `062_saved_searches.sql`.
 2. Reuse dashboards — wrong model.
 3. localStorage / URL-only — blocks Phase C.
 
-## Phase C — Agent Skills from a saved search (design only)
+## Phase C — Agent Skills from a saved search
 
-- Extend `GET /api/agent-skill` with `?search=<saved_search_id>` (alongside folder/tag).
-- Skill contents = bookmarks matching that search **now** (live query).
-- **Vault always excluded** from the skill payload, even if the saved search includes vault filters.
-- UI: Import / Export and folder/tag skill entry points gain “Saved search”.
+### API
+
+- Extend `GET /api/agent-skill` with `?search=<saved_search_id>` (mutually exclusive with `folder` / `tag`). Same `format=zip|md`.
 - Still gated by `EXPERIMENTAL_AGENT_SKILLS` and `import_export:read`.
+- Missing / not-owned search → `404`. Zero non-vault matches → `404` (same as tag skills).
 
-## Testing (PR A)
+### Live query
+
+- Skill contents = bookmarks matching that search **now** (not a frozen id list).
+- **Vault always excluded** from the skill payload: ignore `vault` / `vault_id` on the snapshot; never include vault bookmarks.
+- Soft cap: same as folder/tag skills (`MAX_SKILL_BOOKMARKS` = 2000); skill notes how many were left out.
+- Filters without `q`: map to the library page filter (folder, tags, flags, since presets resolved server-side, category OR). Own + readable shared non-vault bookmarks, same visibility rules as folder skills.
+- Filters with `q`: Meilisearch for the query (limit at least the skill cap), then intersect with the same non-vault filters. Ranking follows Meili order among survivors.
+- `SkillSourceKind::SavedSearch`; skill label = saved search name.
+
+### UI
+
+- **Config options → Import / Export → Agent Skill:** third source **Saved search** (select from the user’s list).
+- **Saved search menus** (library toolbar Saved menu + sidebar ⋯): **Download as Agent Skill** when the experimental flag is on.
+- Folder / tag skill entry points stay as they are.
+
+### Non-goals (Phase C)
+
+- Freezing bookmark ids at download time.
+- Including vault bookmarks.
+- Changing MCP tools (write tools remain a later roadmap item).
+
+## Testing
+
+### PR A (shipped)
 
 - Repo: create/list/patch/delete; uniqueness; cap; owner isolation.
 - API: session + scoped key; 403 without library write on mutate.
 - Web: save from toolbar; sidebar open applies filters; delete confirm.
+
+### Phase C
+
+- Repo: saved-search skill includes matching non-vault bookmarks; vault filters ignored; empty → NotFound; owner isolation; cap truncation.
+- Core: `SavedSearch` description / source line wording.
+- API: `?search=` alone ok; combine with folder/tag → 400; OpenAPI regenerated.
+- Web: Agent Skill card third segment; download from saved-search menu when flag on.
