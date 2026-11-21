@@ -53,7 +53,7 @@ Under **Admin → Quotas**, optional caps apply to every account (leave blank fo
 - Max import payload bytes (cannot exceed the 10 MiB hard cap).
 - Max uploaded image bytes (cannot exceed the avatar/preview hard caps).
 
-When a cap is hit the API answers `403` with `{"code":"quota_exceeded","meter":…}`. Users see current usage under **Settings → General** when any limit is set. Membership plans are not wired yet; limits go through one resolver so plans can plug in later.
+When a cap is hit the API answers `403` with `{"code":"quota_exceeded","meter":…}`. Users see current usage under **Settings → General** when any limit is set. Managed Free/Pro meters are defined in [plans and pricing](../design/plans-and-pricing.md); they are not enforced yet. Limits go through one resolver so plans can plug in later.
 
 ### Failed screenshots
 

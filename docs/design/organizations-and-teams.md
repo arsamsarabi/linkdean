@@ -123,19 +123,19 @@ Fixed now and used in the UI, API and docs, in American spelling.
 
 ## SaaS plans
 
-Self-hosted has every feature, with no plan gates. Plan checks live in one place in the code so the SaaS can gate features without scattering checks.
+Self-hosted has every feature, with no plan gates. Plan checks live in one place in the code so the SaaS can gate features without scattering checks. Personal Free vs Pro **meters** (bookmarks, images, enrich, archive) are frozen in [plans and pricing](./plans-and-pricing.md); this table is the org / feature pack matrix.
 
 | Plan | For | Includes |
 | --- | --- | --- |
-| Free | Individuals, families | Personal library, 1 vault; 1 organization with up to 3 members and 2 teams |
-| Pro | Individuals | Unlimited vaults; later, more storage for archives |
+| Free | Individuals, families | Personal library, 1 vault; Free personal meters; 1 organization with up to 3 members and 2 teams |
+| Pro | Individuals | Unlimited vaults; Pro personal meters (incl. larger archive) |
 | Team (per seat) | Small companies | Unlimited members and teams, roles, guests, folder restrictions, basic audit log |
 | Business (per seat) | Growing companies | Adds verified domains, invite links, organization policies, audit log export |
 | Enterprise (contract) | Large companies | Adds SSO/SAML, SCIM, custom roles, audit log streaming, team vaults, SLA |
 
 - Guests are free, up to 5 per paid seat.
 - A downgrade never locks anyone out of their own data: over-limit vaults stay unlockable and exportable; only creating new ones is blocked.
-- Pricing models, and whether there are one or several paid personal plans, are decided when the SaaS release is planned.
+- Dollar prices and checkout are Phase C of plans and pricing; one paid personal plan (Pro) is enough for v1.
 
 ## Backlog (after v1)
 

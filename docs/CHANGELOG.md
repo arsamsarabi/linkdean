@@ -6,6 +6,7 @@ Every release cuts a section: on release, rename `[Unreleased]` to the new versi
 
 ### Added
 
+- **Managed Free vs Pro tiers (design):** personal meters including archive storage are defined for the managed service; self-host stays operator quotas only. See [plans and pricing](design/plans-and-pricing.md). Enforcement and checkout still to come.
 - **Signed multi-platform image:** the app image is published for `linux/amd64` and `linux/arm64`, signed with keyless cosign, and carries an SPDX SBOM and SLSA provenance attestation. Verify with `cosign verify ghcr.io/arsamsarabi/linkdean:<version> --certificate-identity-regexp '^https://github.com/arsamsarabi/linkdean/.github/workflows/release.yml@refs/tags/v' --certificate-oidc-issuer https://token.actions.githubusercontent.com`.
 - **MCP write tools** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): `create_bookmark`, `update_bookmark` and `delete_bookmark` when the API key has `library:write`. Vault stays out; missing scopes return a clear tool error. See the [Agent Skills guide](guides/agent-skills.md).
 - **Agent Skills from saved searches** (experimental, same `EXPERIMENTAL_AGENT_SKILLS` flag): download a zip skill from a saved library search (`GET /api/agent-skill?search=<id>`), with live matches and vault always excluded. Config → Import / Export and saved-search menus.

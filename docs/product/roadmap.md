@@ -12,9 +12,9 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Plans and pricing** · `near` · (M). Decide what stays free on the managed service, what a paid plan adds, and the limits of each. Self-hosting stays free for non-commercial use.
-    - **Phase A — Define tiers:** Free vs paid limits, including archive storage.
-    - **Phase B — Enforce quotas:** Wire plan limits into platform / account quotas.
+1. **Plans and pricing** · `near` · (M). Decide what stays free on the managed service, what a paid plan adds, and the limits of each. Self-hosting stays free for non-commercial use. Tier table: [plans and pricing](../design/plans-and-pricing.md).
+    - **Phase A — Define tiers:** Done — Free vs Pro personal meters (incl. archive) and link to the org seat matrix.
+    - **Phase B — Enforce quotas:** Wire plan limits into the existing `ResolvedLimits` resolver.
     - **Phase C — Checkout:** Billing / payment integration (may trail B).
 
 2. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md).
