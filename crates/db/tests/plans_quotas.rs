@@ -68,7 +68,12 @@ async fn self_host_null_plan_ignores_free_caps() {
     let user = db::create_user(&pool, &email, Some("account-password"), None, None, None)
         .await
         .expect("user");
-    assert!(user.plan.is_none());
+    // Sibling tests may call ensure_managed_free_plans; keep this account on self-host.
+    sqlx::query("UPDATE users SET plan = NULL WHERE id = $1")
+        .bind(user.id)
+        .execute(&pool)
+        .await
+        .expect("clear plan");
     let limits = db::resolve_limits_for(&pool, user.id)
         .await
         .expect("limits");
