@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Question or open-ended idea
-    url: https://github.com/arsamsarabi/linkdean/discussions
-    about: Ask how something works, or brainstorm before a concrete feature request.
+  - name: Open-ended idea
+    url: https://github.com/arsamsarabi/linkdean/discussions/categories/ideas
+    about: Brainstorm in Discussions (Ideas) before a concrete feature request.
+  - name: Question
+    url: https://github.com/arsamsarabi/linkdean/discussions/categories/q-a
+    about: Ask how something works in Discussions (Q&A).
   - name: Security problem
     url: https://github.com/arsamsarabi/linkdean/blob/main/.github/SECURITY.md
     about: Report it privately, following the security policy.
