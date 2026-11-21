@@ -48,6 +48,15 @@ impl AppState {
             }
             None => tracing::info!("outbound email off: SMTP_HOST and MAIL_FROM unset"),
         }
+        if cfg.managed_service {
+            let n = db::ensure_managed_free_plans(&pool).await?;
+            if n > 0 {
+                tracing::info!(
+                    accounts = n,
+                    "managed service: assigned Free plan to accounts without one"
+                );
+            }
+        }
         Ok(Self {
             pool,
             search,

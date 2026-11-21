@@ -1011,8 +1011,7 @@ pub async fn create_bookmark(
             .chain(req.tags.iter().map(String::as_str)),
     )?;
     require_web_url(&req.url)?;
-    let limits =
-        super::quotas::resolve_limits(&super::platform::get_platform_settings(pool).await?);
+    let limits = super::quotas::resolve_limits_for(pool, user_id).await?;
     super::quotas::refuse_bookmark_quota(pool, user_id, &limits, 1).await?;
     let cat_ids = resolve_category_ids(&req.category_ids, req.category_id);
     let mut vault_id = req.vault_id;

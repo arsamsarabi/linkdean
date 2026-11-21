@@ -3,7 +3,9 @@
 use crate::ResolvedLimits;
 
 /// Personal plan on the managed service. Self-host leaves `users.plan` unset.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, utoipa::ToSchema,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum AccountPlan {
     Free,

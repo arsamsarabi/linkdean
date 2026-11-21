@@ -34,6 +34,7 @@ async fn admin(pool: &PgPool) -> User {
         pool,
         u.id,
         UpdateAdminUser {
+            plan: None,
             api_keys_enabled: None,
             is_admin: Some(true),
         },
@@ -146,6 +147,7 @@ async fn the_last_active_admin_cannot_be_banned_or_demoted() {
         &pool,
         last.id,
         UpdateAdminUser {
+            plan: None,
             api_keys_enabled: None,
             is_admin: Some(false),
         },

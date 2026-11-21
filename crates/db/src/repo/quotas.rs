@@ -1,7 +1,7 @@
-//! Per-user quota gauges and period counters. Limits come from `resolve_limits` (platform today).
+//! Per-user quota gauges and period counters. Limits come from platform ± managed plan.
 
 use chrono::{NaiveDate, Utc};
-use linkdean_core::{Error, ResolvedLimits, Result};
+use linkdean_core::{merge_limits, AccountPlan, Error, ResolvedLimits, Result};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -11,14 +11,35 @@ pub const METER_ENRICH: &str = "enrich";
 pub const METER_IMPORT: &str = "import";
 pub const METER_UPLOAD: &str = "upload";
 pub const METER_ARCHIVE: &str = "archive";
+pub const METER_VAULTS: &str = "vaults";
 
 /// Today UTC as the enrich period start (membership can change this later).
 pub fn enrich_period_start_utc() -> NaiveDate {
     Utc::now().date_naive()
 }
 
-pub fn resolve_limits(settings: &linkdean_core::PlatformSettings) -> ResolvedLimits {
-    ResolvedLimits::from(settings)
+/// Platform row alone, or merged with a managed plan when `plan` is set.
+pub fn resolve_limits(
+    settings: &linkdean_core::PlatformSettings,
+    plan: Option<AccountPlan>,
+) -> ResolvedLimits {
+    merge_limits(ResolvedLimits::from(settings), plan)
+}
+
+pub async fn get_user_plan(pool: &PgPool, user_id: Uuid) -> Result<Option<AccountPlan>> {
+    let raw: Option<String> = sqlx::query_scalar("SELECT plan FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?
+        .flatten();
+    Ok(raw.as_deref().and_then(AccountPlan::parse))
+}
+
+pub async fn resolve_limits_for(pool: &PgPool, user_id: Uuid) -> Result<ResolvedLimits> {
+    let settings = super::platform::get_platform_settings(pool).await?;
+    let plan = get_user_plan(pool, user_id).await?;
+    Ok(resolve_limits(&settings, plan))
 }
 
 pub async fn list_owned_bookmark_ids(pool: &PgPool, user_id: Uuid) -> Result<Vec<Uuid>> {
@@ -49,6 +70,19 @@ pub async fn count_owned_bookmarks(pool: &PgPool, user_id: Uuid) -> Result<i64> 
     Ok(n)
 }
 
+pub async fn count_vaults(pool: &PgPool, user_id: Uuid) -> Result<i64> {
+    let n: i64 = sqlx::query_scalar(
+        r#"
+        SELECT COUNT(*)::bigint FROM vaults WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(n)
+}
+
 /// Refuse when adding `additional` bookmarks would exceed the gauge.
 pub async fn refuse_bookmark_quota(
     pool: &PgPool,
@@ -63,6 +97,26 @@ pub async fn refuse_bookmark_quota(
     if used.saturating_add(additional) > limit {
         return Err(Error::QuotaExceeded {
             meter: METER_BOOKMARKS,
+            limit,
+            used,
+        });
+    }
+    Ok(())
+}
+
+/// Refuse when creating another vault would exceed the plan/platform vault cap.
+pub async fn refuse_vault_quota(
+    pool: &PgPool,
+    user_id: Uuid,
+    limits: &ResolvedLimits,
+) -> Result<()> {
+    let Some(limit) = limits.max_vaults else {
+        return Ok(());
+    };
+    let used = count_vaults(pool, user_id).await?;
+    if used.saturating_add(1) > limit {
+        return Err(Error::QuotaExceeded {
+            meter: METER_VAULTS,
             limit,
             used,
         });
@@ -149,5 +203,33 @@ mod tests {
         assert!(refuse_if_over_bytes(METER_UPLOAD, None, 0, 9_000_000).is_ok());
         assert!(refuse_if_over_bytes(METER_UPLOAD, Some(100), 90, 20).is_err());
         assert!(refuse_if_over_bytes(METER_UPLOAD, Some(100), 80, 20).is_ok());
+    }
+
+    #[test]
+    fn resolve_limits_merges_free_plan() {
+        let settings = linkdean_core::PlatformSettings {
+            registration_open: true,
+            api_keys_enabled: true,
+            require_verified_email: false,
+            max_bookmarks: None,
+            max_stored_image_bytes: None,
+            max_enrich_actions_per_day: None,
+            max_import_bytes: None,
+            max_upload_image_bytes: None,
+            abuse_contact_email: None,
+            screenshot_retry_cooldown_hours: 24,
+            screenshot_auto_retry_days: 7,
+            screenshot_retry_last_run_at: None,
+            archives_enabled: true,
+            max_archive_bytes: None,
+            max_archive_item_bytes: 25 * 1024 * 1024,
+            updated_at: chrono::Utc::now(),
+        };
+        let free = resolve_limits(&settings, Some(AccountPlan::Free));
+        assert_eq!(free.max_bookmarks, Some(5_000));
+        assert_eq!(free.max_vaults, Some(1));
+        let self_host = resolve_limits(&settings, None);
+        assert!(self_host.max_bookmarks.is_none());
+        assert!(self_host.max_vaults.is_none());
     }
 }

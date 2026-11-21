@@ -10,9 +10,8 @@ pub const HARD_IMPORT_BYTES: usize = 10 * 1024 * 1024;
 pub const HARD_AVATAR_BODY: usize = 6 * 1024 * 1024;
 pub const HARD_PREVIEW_BODY: usize = 9 * 1024 * 1024;
 
-pub async fn limits_for(pool: &sqlx::PgPool) -> Result<ResolvedLimits> {
-    let settings = db::get_platform_settings(pool).await?;
-    Ok(db::resolve_limits(&settings))
+pub async fn limits_for(pool: &sqlx::PgPool, user_id: Uuid) -> Result<ResolvedLimits> {
+    db::resolve_limits_for(pool, user_id).await
 }
 
 /// Avatar + preview/favicon/og files for the user's owned bookmarks.
@@ -78,11 +77,15 @@ pub async fn refuse_upload(
 }
 
 pub async fn usage_view(state: &AppState, user_id: Uuid) -> Result<QuotaUsageView> {
-    let limits = limits_for(&state.pool).await?;
+    let limits = limits_for(&state.pool, user_id).await?;
+    let plan = db::get_user_plan(&state.pool, user_id)
+        .await?
+        .map(|p| p.as_str().to_string());
     let bookmarks = db::count_owned_bookmarks(&state.pool, user_id).await?;
     let stored_image_bytes = stored_image_bytes(state, user_id).await?;
     let enrich_actions_today = db::enrich_usage_today(&state.pool, user_id).await?;
     let archive_bytes = db::archive_bytes_for_owner(&state.pool, user_id).await?;
+    let vaults = db::count_vaults(&state.pool, user_id).await?;
     Ok(QuotaUsageView {
         limits,
         bookmarks,
@@ -90,5 +93,7 @@ pub async fn usage_view(state: &AppState, user_id: Uuid) -> Result<QuotaUsageVie
         enrich_actions_today,
         enrich_period_start: db::enrich_period_start_utc().to_string(),
         archive_bytes,
+        plan,
+        vaults,
     })
 }

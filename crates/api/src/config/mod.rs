@@ -63,6 +63,9 @@ pub struct Config {
     pub experimental_agent_skills: bool,
     /// Ask GitHub for newer Linkdean releases to show admins. Off with `UPDATE_CHECK=false`.
     pub update_check: bool,
+    /// Managed Linkdean service: assign Free/Pro plans and merge them into quotas.
+    /// Self-host leaves this off (platform quotas only).
+    pub managed_service: bool,
     pub link_check: linkdean_worker::LinkCheckOpts,
 }
 
@@ -250,6 +253,7 @@ impl Config {
             dev_routes: env_bool("ALLOW_DEFAULT_SECRETS", false),
             experimental_agent_skills: env_bool("EXPERIMENTAL_AGENT_SKILLS", false),
             update_check: env_bool("UPDATE_CHECK", true),
+            managed_service: env_bool("MANAGED_SERVICE", false),
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),

@@ -92,6 +92,8 @@ export const authConfigSchema = z.object({
   version: z.string().nullish(),
   /** When false, the server refuses new archives; the UI hides write actions. Default true. */
   archives_enabled: z.boolean().default(true),
+  /** Managed service: Free/Pro plans apply. Self-host leaves this false. */
+  managed_service: z.boolean().default(false),
 })
 
 /** `GET /admin/update`: a newer Linkdean release, or null when up to date or unknown. */
@@ -145,6 +147,7 @@ export const resolvedLimitsSchema = z.object({
   max_import_bytes: z.number().int().positive().nullish(),
   max_upload_image_bytes: z.number().int().positive().nullish(),
   max_archive_bytes: z.number().int().nonnegative().nullish(),
+  max_vaults: z.number().int().positive().nullish(),
 })
 
 export const quotaUsageSchema = z.object({
@@ -155,6 +158,9 @@ export const quotaUsageSchema = z.object({
   enrich_period_start: z.string(),
   /** Archived copies on the bookmarks the person owns. */
   archive_bytes: z.number().int().default(0),
+  /** Managed plan name. Absent on self-host. */
+  plan: z.enum(['free', 'pro']).nullish(),
+  vaults: z.number().int().default(0),
 })
 
 export const apiKeySchema = z.object({
@@ -191,6 +197,8 @@ export const adminUserSummarySchema = z.object({
   /** False for SSO-only accounts, which cannot get a reset link. */
   has_password: z.boolean().default(true),
   email_verified: z.boolean().default(true),
+  /** Managed plan. Absent on self-host. */
+  plan: z.enum(['free', 'pro']).nullish(),
 })
 
 export const adminUsersEnvelopeSchema = z.object({

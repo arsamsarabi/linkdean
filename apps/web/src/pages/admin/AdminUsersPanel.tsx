@@ -1,9 +1,9 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Badge, Button, Divider, Group, Pagination, Paper, Stack, Switch, Text, TextInput } from '@mantine/core'
+import { Badge, Button, Divider, Group, Pagination, Paper, Select, Stack, Switch, Text, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconSearch } from '@tabler/icons-react'
 import { QueryErrorAlert } from '@/components'
-import { useAdminUsers, useLiftBans, useMe, useSetEmailVerified, useUpdateAdminUser } from '@/hooks'
+import { useAdminUsers, useLiftBans, useManagedService, useMe, useSetEmailVerified, useUpdateAdminUser } from '@/hooks'
 import { SettingsSkeleton } from '@/pages/settings'
 import type { AdminUserSummary } from '@/schemas'
 import { banEndLabel } from '@/services'
@@ -22,6 +22,7 @@ function matchesAdminUser(u: AdminUserSummary, q: string): boolean {
 export function AdminUsersPanel(): ReactElement {
   const users = useAdminUsers(true)
   const patchUser = useUpdateAdminUser()
+  const managed = useManagedService()
   const [userQuery, setUserQuery] = useState('')
   const [page, setPage] = useState(1)
   const allUsers = useMemo(() => users.data?.users ?? [], [users.data?.users])
@@ -186,6 +187,29 @@ export function AdminUsersPanel(): ReactElement {
                 )
               }}
             />
+            {managed ? (
+              <Select
+                label="Plan"
+                description="Personal Free or Pro meters until checkout ships."
+                data={[
+                  { value: 'free', label: 'Free' },
+                  { value: 'pro', label: 'Pro' },
+                ]}
+                value={u.plan ?? 'free'}
+                disabled={patchUser.isPending}
+                allowDeselect={false}
+                onChange={(value) => {
+                  if (value !== 'free' && value !== 'pro') return
+                  patchUser.mutate(
+                    { id: u.id, plan: value },
+                    {
+                      onSuccess: () => notifications.show({ message: 'Plan updated' }),
+                      onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+                    }
+                  )
+                }}
+              />
+            ) : null}
             {i < pageUsers.length - 1 ? <Divider /> : null}
           </Stack>
         ))}

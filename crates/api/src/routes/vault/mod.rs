@@ -108,6 +108,8 @@ async fn create(
 ) -> ApiResult<Json<Value>> {
     require_session(&vault_session)?;
     check_passphrase(&req.passphrase)?;
+    let limits = crate::quotas::limits_for(&state.pool, user.id).await?;
+    db::refuse_vault_quota(&state.pool, user.id, &limits).await?;
     let (vault, key, recovery_key) =
         db::create_vault(&state.pool, user.id, &req.name, &req.passphrase).await?;
     state

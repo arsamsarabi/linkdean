@@ -9,8 +9,8 @@ use axum::extract::{Path, State};
 use axum::Json;
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
-    ChangeBans, CreateBan, CreateRegistrationInvite, LiftBans, ModerateRequest, UpdateAdminUser,
-    UpdatePlatformSettings,
+    ChangeBans, CreateBan, CreateRegistrationInvite, Error, LiftBans, ModerateRequest,
+    UpdateAdminUser, UpdatePlatformSettings,
 };
 use linkdean_db::{self as db};
 use serde_json::{json, Value};
@@ -288,8 +288,20 @@ async fn patch_user(
     State(state): State<AppState>,
     AdminUser(_admin): AdminUser,
     Path(id): Path<Uuid>,
-    Json(req): Json<UpdateAdminUser>,
+    Json(mut req): Json<UpdateAdminUser>,
 ) -> ApiResult<Json<Value>> {
+    if req.plan.is_some() && !state.cfg.managed_service {
+        return Err(Error::BadRequest("plan changes require MANAGED_SERVICE".into()).into());
+    }
+    if state.cfg.managed_service {
+        if let Some(plan) = req.plan.as_deref() {
+            if linkdean_core::AccountPlan::parse(plan).is_none() {
+                return Err(Error::BadRequest("plan must be free or pro".into()).into());
+            }
+        }
+    } else {
+        req.plan = None;
+    }
     let user = db::update_admin_user(&state.pool, id, req).await?;
     Ok(Json(json!({ "user": user })))
 }

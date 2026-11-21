@@ -11,10 +11,9 @@ Organization seat plans (Free org size, Team, Business, Enterprise) live in [org
 - Reuse today's meters (`max_bookmarks`, `max_stored_image_bytes`, `max_enrich_actions_per_day`, `max_archive_bytes`, plus import/upload clamps). Do not invent parallel counters.
 - Align archive Free with the hosted beta already documented at 500 MB ([archive design](./archive.md#quota-and-limits)).
 
-## Non-goals (Phase A)
+## Non-goals
 
 - Dollar prices, trials, coupons, tax, invoices (Phase C).
-- Code that selects a plan or rejects over-plan usage (Phase B).
 - Changing self-host licence text beyond "free for non-commercial use" already on the roadmap.
 - Per-seat archive multipliers for Team/Business (decide with Orgs Phase A / Archive Phase C).
 
@@ -57,7 +56,7 @@ Plan checks live in that one resolver path so SaaS gating does not scatter throu
 | Phase | Done when |
 | --- | --- |
 | **A — Define tiers** (this doc) | Free vs Pro personal meters + archive numbers agreed; org seat matrix linked. |
-| **B — Enforce quotas** | Managed accounts carry a plan; resolver applies the table; Settings shows plan name and caps. |
+| **B — Enforce quotas** | Done — `MANAGED_SERVICE` assigns Free; resolver merges plan + platform; Settings shows plan and caps; admin can set Free/Pro. |
 | **C — Checkout** | Buy/change Pro (and later seat plans); no price invented here. |
 
 ## Open for Phase B (not blocking A)

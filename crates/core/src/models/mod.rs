@@ -451,12 +451,18 @@ pub struct AdminUserSummary {
     /// False for accounts that only sign in with SSO.
     pub has_password: bool,
     pub email_verified: bool,
+    /// Managed plan (`free` / `pro`). `None` on self-host.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateAdminUser {
     pub api_keys_enabled: Option<bool>,
     pub is_admin: Option<bool>,
+    /// Set Free/Pro on managed service. Ignored / rejected by the API when not managed.
+    #[serde(default)]
+    pub plan: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]

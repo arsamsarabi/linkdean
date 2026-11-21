@@ -132,6 +132,7 @@ async fn platform_and_user_gates_block_keys() {
         &pool,
         user.id,
         UpdateAdminUser {
+            plan: None,
             api_keys_enabled: Some(false),
             is_admin: None,
         },
@@ -148,6 +149,7 @@ async fn platform_and_user_gates_block_keys() {
         &pool,
         user.id,
         UpdateAdminUser {
+            plan: None,
             api_keys_enabled: Some(true),
             is_admin: None,
         },

@@ -388,7 +388,7 @@ async fn upload_avatar(
         break;
     }
     let raw = bytes.ok_or_else(|| Error::BadRequest("missing avatar file field".into()))?;
-    let limits = crate::quotas::limits_for(&state.pool).await?;
+    let limits = crate::quotas::limits_for(&state.pool, user.id).await?;
     crate::quotas::refuse_upload(
         &state,
         user.id,

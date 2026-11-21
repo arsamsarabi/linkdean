@@ -9,7 +9,13 @@ function line(label: string, used: number, limit: number | null | undefined, uni
   return `${label}: ${used}${unit} / ${limit}${unit}`
 }
 
-/** Shows platform quota usage when any limit is configured. */
+function planLabel(plan: 'free' | 'pro' | null | undefined): string {
+  if (plan === 'pro') return 'Pro'
+  if (plan === 'free') return 'Free'
+  return ''
+}
+
+/** Shows plan and quota usage when a managed plan or any limit is configured. */
 export function QuotaUsagePanel(): ReactElement | null {
   const usage = useQuotaUsage()
 
@@ -20,33 +26,48 @@ export function QuotaUsagePanel(): ReactElement | null {
   const data = usage.data
   if (!data) return null
 
-  const { limits } = data
+  const { limits, plan } = data
   const anyLimit =
     limits.max_bookmarks != null ||
     limits.max_stored_image_bytes != null ||
     limits.max_enrich_actions_per_day != null ||
     limits.max_import_bytes != null ||
     limits.max_upload_image_bytes != null ||
-    limits.max_archive_bytes != null
-  if (!anyLimit) return null
+    limits.max_archive_bytes != null ||
+    limits.max_vaults != null
+  if (!plan && !anyLimit) return null
 
   return (
     <Paper p="lg" withBorder>
       <Stack gap="sm">
         <Title order={4}>Usage</Title>
-        <Text size="sm" c="dimmed">
-          Limits set by the instance admin. Empty means unlimited.
-        </Text>
-        {limits.max_bookmarks != null ? (
+        {plan ? (
+          <>
+            <Text size="sm" fw={500}>
+              Plan: {planLabel(plan)}
+            </Text>
+            <Text size="sm" c="dimmed">
+              Caps from your plan, tightened further if the instance admin set a lower limit.
+            </Text>
+          </>
+        ) : (
+          <Text size="sm" c="dimmed">
+            Limits set by the instance admin. Empty means unlimited.
+          </Text>
+        )}
+        {plan || limits.max_bookmarks != null ? (
           <Text size="sm">{line('Bookmarks', data.bookmarks, limits.max_bookmarks)}</Text>
         ) : null}
-        {limits.max_stored_image_bytes != null ? (
+        {plan || limits.max_stored_image_bytes != null ? (
           <Text size="sm">{line('Stored images', data.stored_image_bytes, limits.max_stored_image_bytes, ' B')}</Text>
         ) : null}
-        {limits.max_archive_bytes != null ? (
+        {plan || limits.max_archive_bytes != null ? (
           <Text size="sm">{line('Archived copies', data.archive_bytes, limits.max_archive_bytes, ' B')}</Text>
         ) : null}
-        {limits.max_enrich_actions_per_day != null ? (
+        {plan || limits.max_vaults != null ? (
+          <Text size="sm">{line('Vaults', data.vaults, limits.max_vaults)}</Text>
+        ) : null}
+        {plan || limits.max_enrich_actions_per_day != null ? (
           <Text size="sm">
             {line(
               `Enrichment today (${data.enrich_period_start} UTC)`,
