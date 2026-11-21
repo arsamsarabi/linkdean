@@ -35,6 +35,10 @@ pub struct User {
     #[sqlx(default)]
     #[serde(default)]
     pub terms_version: Option<String>,
+    /// Managed Free/Pro plan. `None` on self-host (no plan gating).
+    #[sqlx(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan: Option<String>,
 }
 
 impl User {
@@ -236,7 +240,7 @@ pub struct PlatformSettings {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Effective quotas for a user. Today = platform row; later may AND with a plan.
+/// Effective quotas for a user: platform row, optionally merged with a managed plan.
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ResolvedLimits {
     pub max_bookmarks: Option<i64>,
@@ -246,6 +250,9 @@ pub struct ResolvedLimits {
     pub max_upload_image_bytes: Option<i64>,
     #[serde(default)]
     pub max_archive_bytes: Option<i64>,
+    /// Max personal vaults. `None` = unlimited. Platform has no vault meter today.
+    #[serde(default)]
+    pub max_vaults: Option<i64>,
 }
 
 impl From<&PlatformSettings> for ResolvedLimits {
@@ -257,6 +264,7 @@ impl From<&PlatformSettings> for ResolvedLimits {
             max_import_bytes: p.max_import_bytes,
             max_upload_image_bytes: p.max_upload_image_bytes,
             max_archive_bytes: p.max_archive_bytes,
+            max_vaults: None,
         }
     }
 }
@@ -272,6 +280,12 @@ pub struct QuotaUsageView {
     /// Archived copies on the bookmarks the person owns.
     #[serde(default)]
     pub archive_bytes: i64,
+    /// Managed plan name (`free` / `pro`). `None` on self-host.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan: Option<String>,
+    /// Personal vaults the person owns.
+    #[serde(default)]
+    pub vaults: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
