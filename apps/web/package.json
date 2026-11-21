@@ -24,7 +24,7 @@
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
     "@mantine/core": "^9.7.4",
-    "@mantine/form": "^9.8.0",
+    "@mantine/form": "^9.8.1",
     "@mantine/hooks": "^9.7.4",
     "@mantine/notifications": "^9.7.4",
     "@tabler/icons-react": "^3.51.0",
