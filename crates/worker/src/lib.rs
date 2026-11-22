@@ -220,8 +220,8 @@ pub async fn enrich_bookmark(
         }
         Ok(updated) if updated.deleted_at.is_some() => return,
         Ok(updated) => {
-            let owner = updated.owner_user_id;
-            match db::bookmark_to_view(pool, updated, &VaultKeyring::default(), owner).await {
+            // Viewer is the actor who queued enrichment (works for personal and team rows).
+            match db::bookmark_to_view(pool, updated, &VaultKeyring::default(), user_id).await {
                 Ok(Some(view)) => {
                     // Shared with API search_index: attach page_text + live vault/trash gates.
                     match db::plan_meili_index_writes(pool, &[view]).await {

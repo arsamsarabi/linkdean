@@ -34,6 +34,7 @@ async fn folder(pool: &PgPool, owner: &User, name: &str) -> Uuid {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -47,6 +48,7 @@ async fn bookmark(pool: &PgPool, owner: &User, folder: Uuid) -> Uuid {
         owner.id,
         CreateBookmark {
             vault_id: None,
+            team_id: None,
             url: format!("https://example.com/{}", Uuid::new_v4()),
             title: Some("Activity".into()),
             description: None,

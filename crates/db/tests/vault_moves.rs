@@ -60,6 +60,7 @@ async fn category(s: &Setup, name: &str, parent_id: Option<Uuid>) -> Uuid {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -261,6 +262,7 @@ async fn every_blocker_is_listed_and_nothing_moves() {
         s.owner.id,
         CreateDashboard {
             title: Some("Home".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )
@@ -312,6 +314,7 @@ async fn another_users_pin_does_not_block_and_is_removed() {
         friend.id,
         CreateDashboard {
             title: Some("Friend's secret board".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )

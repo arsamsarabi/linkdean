@@ -533,7 +533,10 @@ pub struct Session {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Category {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    /// Personal owner. `None` when `team_id` is set (XOR).
+    pub owner_user_id: Option<Uuid>,
+    /// Team-space owner. `None` when personal (XOR).
+    pub team_id: Option<Uuid>,
     pub parent_id: Option<Uuid>,
     pub name: String,
     pub is_hidden: bool,
@@ -649,7 +652,9 @@ impl CategoryVisibility {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategoryView {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub team_id: Option<Uuid>,
     pub parent_id: Option<Uuid>,
     pub name: String,
     pub is_hidden: bool,
@@ -684,6 +689,7 @@ impl CategoryView {
         Self {
             id: cat.id,
             owner_user_id: cat.owner_user_id,
+            team_id: cat.team_id,
             parent_id: cat.parent_id,
             name: cat.name,
             is_hidden: cat.is_hidden,
@@ -929,7 +935,8 @@ pub struct UpdateDashboardShare {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Tag {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
+    pub team_id: Option<Uuid>,
     pub name: String,
     pub created_at: DateTime<Utc>,
 }
@@ -972,7 +979,8 @@ impl LinkCheckStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Bookmark {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
+    pub team_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub url: String,
     pub title: String,
@@ -1007,7 +1015,9 @@ pub struct CategoryRef {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BookmarkView {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub team_id: Option<Uuid>,
     /// Primary / first category (legacy + export). Prefer `categories`.
     pub category_id: Option<Uuid>,
     pub categories: Vec<CategoryRef>,
@@ -1263,6 +1273,9 @@ pub struct CreateBookmark {
     /// For a loose vault bookmark. Categories inside a vault imply their vault.
     #[serde(default)]
     pub vault_id: Option<Uuid>,
+    /// Create in this team space instead of the personal library.
+    #[serde(default)]
+    pub team_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
@@ -1311,6 +1324,9 @@ pub struct CreateCategory {
     pub vault_id: Option<Uuid>,
     #[serde(default)]
     pub icon: Option<String>,
+    /// Create in this team space instead of the personal library.
+    #[serde(default)]
+    pub team_id: Option<Uuid>,
 }
 
 /// Copy a readable category tree (+ bookmarks) into a new owned root.
@@ -1384,7 +1400,7 @@ pub struct VaultUnlockRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SearchHit {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
     pub title: String,
     pub url: String,
     pub description: Option<String>,
@@ -1484,7 +1500,8 @@ impl BookmarkExport {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct Dashboard {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
+    pub team_id: Option<Uuid>,
     pub title: String,
     pub is_default: bool,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -1814,7 +1831,9 @@ pub struct DashboardSectionView {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardView {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub team_id: Option<Uuid>,
     pub title: String,
     pub is_default: bool,
     pub sections: Vec<DashboardSectionView>,
@@ -1837,7 +1856,9 @@ pub struct DashboardView {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DashboardSummary {
     pub id: Uuid,
-    pub owner_user_id: Uuid,
+    pub owner_user_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub team_id: Option<Uuid>,
     pub title: String,
     pub is_default: bool,
     pub access: CategoryAccess,
@@ -1883,6 +1904,17 @@ pub struct TrashItemRef {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateDashboard {
     pub title: Option<String>,
+    /// Create in this team space instead of the personal library.
+    #[serde(default)]
+    pub team_id: Option<Uuid>,
+}
+
+/// Move personal content into a team space (organization then owns it).
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct MoveToTeam {
+    pub team_id: Uuid,
+    /// Must be true — the UI warns that the organization will own the content.
+    pub acknowledge_org_ownership: bool,
 }
 
 /// Rename and/or pin. Pinning a shared dashboard needs read access and only affects the caller.

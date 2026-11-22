@@ -67,6 +67,7 @@ async fn public_list_images_are_reachable_only_through_the_list() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -170,6 +171,7 @@ async fn a_banned_owners_public_list_goes_dark_until_the_ban_ends() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await

@@ -178,6 +178,7 @@ async fn a_share_invite_is_pending_only_when_wanted_and_verified() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -392,6 +393,7 @@ async fn a_new_share_invite_email_can_be_found_and_cancelled() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await

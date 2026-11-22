@@ -468,6 +468,8 @@ pub async fn exposed_content(pool: &PgPool, user_id: Uuid) -> Result<ExposedCont
 
 #[derive(sqlx::FromRow)]
 struct CategoryState {
+    // Selected for ownership filter; not read after fetch.
+    #[allow(dead_code)]
     owner_user_id: Uuid,
     name: String,
     is_vault: bool,
@@ -478,6 +480,8 @@ struct CategoryState {
 
 #[derive(sqlx::FromRow)]
 struct BookmarkState {
+    // Selected for ownership filter; not read after fetch.
+    #[allow(dead_code)]
     owner_user_id: Uuid,
     title: String,
     url: String,
@@ -491,14 +495,14 @@ async fn owned_category(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> Res
     let row = sqlx::query_as::<_, CategoryState>(
         r#"
         SELECT owner_user_id, name, is_vault, visibility, public_slug, deleted_at
-        FROM categories WHERE id = $1
+        FROM categories WHERE id = $1 AND owner_user_id = $2
         "#,
     )
     .bind(id)
+    .bind(user_id)
     .fetch_optional(conn)
     .await
     .map_err(db_err)?
-    .filter(|c| c.owner_user_id == user_id)
     .ok_or(Error::NotFound)?;
     if row.is_vault {
         return Err(Error::BadRequest("vault items cannot be moderated".into()));
@@ -510,14 +514,14 @@ async fn owned_bookmark(conn: &mut PgConnection, user_id: Uuid, id: Uuid) -> Res
     let row = sqlx::query_as::<_, BookmarkState>(
         r#"
         SELECT owner_user_id, title, url, is_vault, is_private, deleted_at
-        FROM bookmarks WHERE id = $1
+        FROM bookmarks WHERE id = $1 AND owner_user_id = $2
         "#,
     )
     .bind(id)
+    .bind(user_id)
     .fetch_optional(conn)
     .await
     .map_err(db_err)?
-    .filter(|b| b.owner_user_id == user_id)
     .ok_or(Error::NotFound)?;
     if row.is_vault {
         return Err(Error::BadRequest("vault items cannot be moderated".into()));

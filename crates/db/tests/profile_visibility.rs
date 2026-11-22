@@ -90,6 +90,7 @@ async fn category(pool: &PgPool, owner: &User) -> Uuid {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await

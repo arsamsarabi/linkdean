@@ -63,6 +63,7 @@ async fn category(pool: &PgPool, owner: &User) -> CategoryView {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -158,6 +159,7 @@ async fn block_cuts_follows_mutes_and_shares_both_ways() {
         a.id,
         CreateDashboard {
             title: Some(format!("Board-{}", Uuid::new_v4())),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )

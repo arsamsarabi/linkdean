@@ -3,7 +3,7 @@ use crate::error::ApiResult;
 use crate::notification_mail::{self, InviteEmail};
 use crate::state::AppState;
 use crate::vault_keys::VaultSession;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
 use linkdean_core::{
     CreateDashboard, CreateDashboardShare, CreateDashboardShareOutcome, DashboardShareView,
@@ -12,9 +12,17 @@ use linkdean_core::{
     UpdatePendingShareInvite,
 };
 use linkdean_db::{self as db};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
+
+#[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct ListQuery {
+    #[serde(default)]
+    pub team_id: Option<Uuid>,
+}
 
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
@@ -31,6 +39,7 @@ pub fn router() -> OpenApiRouter<AppState> {
     operation_id = "dashboards_list",
     path = "/dashboards",
     tag = "dashboards",
+    params(ListQuery),
     responses(
         (status = 200, description = "OK", body = Vec<DashboardSummary>),
         (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
@@ -41,7 +50,12 @@ pub fn router() -> OpenApiRouter<AppState> {
 async fn list(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
+    Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<DashboardSummary>>> {
+    if let Some(team_id) = q.team_id {
+        let rows = db::list_team_dashboards(&state.pool, user.id, team_id).await?;
+        return Ok(Json(rows));
+    }
     let settings = db::get_user_settings(&state.pool, user.id).await?;
     let rows = db::list_dashboards_filtered(&state.pool, user.id, settings.show_deleted_in_library)
         .await?;

@@ -76,6 +76,7 @@ async fn category_share_emits_invite_access_revoke() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -189,6 +190,7 @@ async fn shared_bookmark_edit_notifies_owner() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -287,6 +289,7 @@ async fn shared_dashboard_edit_notifies_owner() {
         owner.id,
         CreateDashboard {
             title: Some(format!("Board-{}", Uuid::new_v4())),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )

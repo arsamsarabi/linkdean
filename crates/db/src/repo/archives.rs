@@ -92,9 +92,15 @@ pub async fn request_archive(
             "Archiving is turned off on this server.".into(),
         ));
     }
-    let limits = super::quotas::resolve_limits_for(pool, b.owner_user_id).await?;
+    // Known issue: team-space archive metering is deferred; personal meters only.
+    let Some(owner_id) = b.owner_user_id else {
+        return Err(Error::BadRequest(
+            "archiving team-space bookmarks is not available yet".into(),
+        ));
+    };
+    let limits = super::quotas::resolve_limits_for(pool, owner_id).await?;
     if let Some(limit) = limits.max_archive_bytes {
-        let used = archive_bytes_for_owner(pool, b.owner_user_id).await?;
+        let used = archive_bytes_for_owner(pool, owner_id).await?;
         if used >= limit {
             return Err(Error::QuotaExceeded {
                 meter: METER_ARCHIVE,

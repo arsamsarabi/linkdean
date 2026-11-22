@@ -14,7 +14,7 @@ use super::shares::{
     bookmark_can_read, bookmark_can_write, bookmarks_shared_with, category_access,
     require_category_read, require_category_write,
 };
-use super::tags::ensure_tags;
+use super::tags::ensure_tags_in_space;
 
 pub(super) async fn bookmark_tag_names(pool: &PgPool, bookmark_id: Uuid) -> Result<Vec<String>> {
     let rows: Vec<(String,)> = sqlx::query_as(
@@ -241,7 +241,7 @@ async fn categories_for_bookmark(
     batch: &ViewBatch,
 ) -> Result<Vec<CategoryRef>> {
     let all = categories_for_bookmark_owner(pool, b, batch).await?;
-    if viewer_id == b.owner_user_id {
+    if Some(viewer_id) == b.owner_user_id {
         return Ok(all);
     }
     let mut out = Vec::new();
@@ -343,8 +343,8 @@ struct ViewBatch {
     /// Owned bookmarks only: who their folders are shared with.
     shared_with: HashMap<Uuid, Vec<String>>,
     /// Every category of each owner with a linked bookmark in the set.
-    owner_categories: HashMap<Uuid, HashMap<Uuid, Category>>,
-    owner_names: HashMap<Uuid, Option<String>>,
+    owner_categories: HashMap<Option<Uuid>, HashMap<Uuid, Category>>,
+    owner_names: HashMap<Option<Uuid>, Option<String>>,
     archives: HashMap<Uuid, linkdean_core::ArchiveSummary>,
 }
 
@@ -354,7 +354,7 @@ impl ViewBatch {
         let plain: Vec<Uuid> = rows.iter().filter(|b| !b.is_vault).map(|b| b.id).collect();
         let owned: Vec<Uuid> = rows
             .iter()
-            .filter(|b| b.owner_user_id == viewer_id)
+            .filter(|b| b.owner_user_id == Some(viewer_id))
             .map(|b| b.id)
             .collect();
 
@@ -413,9 +413,11 @@ impl ViewBatch {
                     super::users::owner_display_name_for_viewer(pool, owner, viewer_id).await?;
                 owner_names.insert(owner, name);
             }
-            if links.contains_key(&b.id) && !owner_categories.contains_key(&owner) {
-                let cats = list_owned_categories(pool, owner, true, true).await?;
-                owner_categories.insert(owner, cats.into_iter().map(|c| (c.id, c)).collect());
+            if let Some(oid) = owner {
+                if links.contains_key(&b.id) && !owner_categories.contains_key(&owner) {
+                    let cats = list_owned_categories(pool, oid, true, true).await?;
+                    owner_categories.insert(owner, cats.into_iter().map(|c| (c.id, c)).collect());
+                }
             }
         }
 
@@ -454,16 +456,33 @@ async fn plan_bookmark_categories(
         }
     }
 
-    let (owner_id, bookmark_vault, current_primary): (Uuid, Option<Uuid>, Option<Uuid>) =
-        sqlx::query_as("SELECT owner_user_id, vault_id, category_id FROM bookmarks WHERE id = $1")
-            .bind(bookmark_id)
-            .fetch_one(pool)
+    let (owner_id, team_id, bookmark_vault, current_primary): (
+        Option<Uuid>,
+        Option<Uuid>,
+        Option<Uuid>,
+        Option<Uuid>,
+    ) = sqlx::query_as(
+        "SELECT owner_user_id, team_id, vault_id, category_id FROM bookmarks WHERE id = $1",
+    )
+    .bind(bookmark_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let is_owner = owner_id == Some(user_id)
+        || match team_id {
+            Some(tid) => super::organizations::require_team_role(
+                pool,
+                user_id,
+                tid,
+                linkdean_core::TeamRole::Editor,
+            )
             .await
-            .map_err(|e| Error::msg(e.to_string()))?;
-    let is_owner = owner_id == user_id;
+            .is_ok(),
+            None => false,
+        };
     // Whose lists the bookmark already sits in. The owner of a list that holds someone
     // else's bookmark may move it within their own lists.
-    let tree_owners: Vec<Uuid> = sqlx::query_scalar(
+    let tree_owners: Vec<Option<Uuid>> = sqlx::query_scalar(
         r#"
         SELECT DISTINCT c.owner_user_id FROM bookmark_categories bc
         JOIN categories c ON c.id = bc.category_id
@@ -481,10 +500,17 @@ async fn plan_bookmark_categories(
                 "a bookmark can only sit in categories of its own vault".into(),
             ));
         }
+        if cat.team_id != team_id {
+            return Err(Error::Forbidden);
+        }
         // A list grants access to what it holds, so someone else's bookmark may only be
         // filed in lists of whoever already holds it. Otherwise an invitee could file it in
         // their own list and keep it after losing access.
-        if !is_owner && cat.owner_user_id != owner_id && !tree_owners.contains(&cat.owner_user_id) {
+        if !is_owner
+            && team_id.is_none()
+            && cat.owner_user_id != owner_id
+            && !tree_owners.contains(&cat.owner_user_id)
+        {
             return Err(Error::Forbidden);
         }
     }
@@ -652,8 +678,8 @@ async fn view_from_batch(
     let category_id = categories
         .first()
         .map(|c| c.id)
-        .or(b.category_id.filter(|_| b.owner_user_id == viewer_id));
-    let can_write = if b.owner_user_id == viewer_id {
+        .or(b.category_id.filter(|_| b.owner_user_id == Some(viewer_id)));
+    let can_write = if b.owner_user_id == Some(viewer_id) {
         true
     } else {
         bookmark_can_write(pool, viewer_id, b.id).await?
@@ -683,6 +709,7 @@ async fn view_from_batch(
         return Ok(Some(BookmarkView {
             id: b.id,
             owner_user_id: b.owner_user_id,
+            team_id: b.team_id,
             category_id,
             categories,
             url: payload.url,
@@ -720,6 +747,7 @@ async fn view_from_batch(
     Ok(Some(BookmarkView {
         id: b.id,
         owner_user_id: b.owner_user_id,
+        team_id: b.team_id,
         category_id,
         categories,
         url: b.url,
@@ -865,7 +893,7 @@ pub async fn list_bookmarks(
 
     let none = VaultKeyring::default();
     bookmarks_to_views(pool, rows, user_id, |b| {
-        if b.is_vault && b.owner_user_id == user_id {
+        if b.is_vault && b.owner_user_id == Some(user_id) {
             keyring
         } else {
             &none
@@ -1011,13 +1039,34 @@ pub async fn create_bookmark(
             .chain(req.tags.iter().map(String::as_str)),
     )?;
     require_web_url(&req.url)?;
-    let limits = super::quotas::resolve_limits_for(pool, user_id).await?;
-    super::quotas::refuse_bookmark_quota(pool, user_id, &limits, 1).await?;
+    if req.team_id.is_some() && req.vault_id.is_some() {
+        return Err(Error::BadRequest(
+            "vault bookmarks cannot live in a team space".into(),
+        ));
+    }
+    let team_id = req.team_id;
+    if let Some(tid) = team_id {
+        super::organizations::require_team_writable(
+            pool,
+            user_id,
+            tid,
+            linkdean_core::TeamRole::Editor,
+        )
+        .await?;
+    } else {
+        let limits = super::quotas::resolve_limits_for(pool, user_id).await?;
+        super::quotas::refuse_bookmark_quota(pool, user_id, &limits, 1).await?;
+    }
     let cat_ids = resolve_category_ids(&req.category_ids, req.category_id);
     let mut vault_id = req.vault_id;
     let mut first = true;
     for cid in &cat_ids {
         let (cat, access) = require_category_write(pool, user_id, *cid).await?;
+        if cat.team_id != team_id {
+            return Err(Error::BadRequest(
+                "folders must be in the same workspace as the bookmark".into(),
+            ));
+        }
         if cat.is_vault && !access.is_owner() {
             return Err(Error::Forbidden);
         }
@@ -1070,13 +1119,28 @@ pub async fn create_bookmark(
         );
     }
     let tag_ids: Vec<Uuid> = if vault_id.is_none() {
-        ensure_tags(pool, user_id, &req.tags)
-            .await?
-            .into_iter()
-            .map(|t| t.id)
-            .collect()
+        ensure_tags_in_space(
+            pool,
+            if team_id.is_some() {
+                None
+            } else {
+                Some(user_id)
+            },
+            team_id,
+            &req.tags,
+        )
+        .await?
+        .into_iter()
+        .map(|t| t.id)
+        .collect()
     } else {
         Vec::new()
+    };
+    // Personal: Some(user_id); team: None owner + team_id.
+    let owner_user_id = if team_id.is_some() {
+        None
+    } else {
+        Some(user_id)
     };
 
     let mut tx = pool.begin().await.map_err(db_err)?;
@@ -1084,9 +1148,9 @@ pub async fn create_bookmark(
         sqlx::query_as::<_, Bookmark>(
             r#"
             INSERT INTO bookmarks (
-                id, owner_user_id, category_id, url, title, description, notes,
+                id, owner_user_id, team_id, category_id, url, title, description, notes,
                 is_vault, vault_id, vault_ciphertext, vault_nonce
-            ) VALUES ($6,$1,$2,'','','',NULL,TRUE,$3,$4,$5)
+            ) VALUES ($6,$1,NULL,$2,'','','',NULL,TRUE,$3,$4,$5)
             RETURNING *
             "#,
         )
@@ -1103,12 +1167,13 @@ pub async fn create_bookmark(
         let b = sqlx::query_as::<_, Bookmark>(
             r#"
             INSERT INTO bookmarks (
-                owner_user_id, category_id, url, title, description, notes, is_vault
-            ) VALUES ($1,$2,$3,$4,$5,$6,FALSE)
+                owner_user_id, team_id, category_id, url, title, description, notes, is_vault
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,FALSE)
             RETURNING *
             "#,
         )
-        .bind(user_id)
+        .bind(owner_user_id)
+        .bind(team_id)
         .bind(primary)
         .bind(&req.url)
         .bind(&title)
@@ -1264,7 +1329,7 @@ async fn set_bookmark_private(
     is_private: bool,
 ) -> Result<()> {
     let existing = get_bookmark_raw(pool, user_id, id).await?;
-    if existing.owner_user_id != user_id {
+    if existing.owner_user_id != Some(user_id) {
         return Err(Error::Forbidden);
     }
     if existing.is_vault {
@@ -1339,7 +1404,7 @@ pub async fn update_bookmark(
     }
     let existing = get_bookmark_raw(pool, user_id, id).await?;
     if req.is_private.is_some() {
-        if existing.owner_user_id != user_id {
+        if existing.owner_user_id != Some(user_id) {
             return Err(Error::Forbidden);
         }
         if existing.is_vault {
@@ -1348,7 +1413,7 @@ pub async fn update_bookmark(
             ));
         }
     }
-    if content && existing.is_vault && existing.owner_user_id != user_id {
+    if content && existing.is_vault && existing.owner_user_id != Some(user_id) {
         return Err(Error::Forbidden);
     }
     let categories = match requested_categories(pool, id, &req).await? {
@@ -1359,7 +1424,7 @@ pub async fn update_bookmark(
     // tags live inside the ciphertext.
     let tag_ids: Option<Vec<Uuid>> = match &req.tags {
         Some(tags) if !existing.is_vault => Some(
-            ensure_tags(pool, existing.owner_user_id, tags)
+            ensure_tags_in_space(pool, existing.owner_user_id, existing.team_id, tags)
                 .await?
                 .into_iter()
                 .map(|t| t.id)
@@ -1369,7 +1434,7 @@ pub async fn update_bookmark(
     };
     let add_tag_ids: Option<Vec<Uuid>> = match &req.add_tags {
         Some(tags) if !existing.is_vault => Some(
-            ensure_tags(pool, existing.owner_user_id, tags)
+            ensure_tags_in_space(pool, existing.owner_user_id, existing.team_id, tags)
                 .await?
                 .into_iter()
                 .map(|t| t.id)
@@ -1524,21 +1589,25 @@ pub async fn update_bookmark(
     let b = get_bookmark_raw(pool, user_id, id).await?;
     let none = VaultKeyring::default();
     let ring = if b.is_vault { keyring } else { &none };
-    if content_fields && !b.is_vault && b.owner_user_id != user_id {
-        let title = if b.title.trim().is_empty() {
-            b.url.as_str()
-        } else {
-            b.title.as_str()
-        };
-        super::notifications::notify_shared_edit(
-            pool,
-            user_id,
-            b.owner_user_id,
-            linkdean_core::NotificationSubjectType::Bookmark,
-            b.id,
-            title,
-        )
-        .await;
+    if content_fields && !b.is_vault {
+        if let Some(owner_id) = b.owner_user_id {
+            if owner_id != user_id {
+                let title = if b.title.trim().is_empty() {
+                    b.url.as_str()
+                } else {
+                    b.title.as_str()
+                };
+                super::notifications::notify_shared_edit(
+                    pool,
+                    user_id,
+                    owner_id,
+                    linkdean_core::NotificationSubjectType::Bookmark,
+                    b.id,
+                    title,
+                )
+                .await;
+            }
+        }
     }
     let view = bookmark_to_view(pool, b, ring, user_id)
         .await?
@@ -1558,10 +1627,10 @@ pub async fn delete_bookmark(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(
         return Err(Error::NotFound);
     }
     let existing = get_bookmark_raw(pool, user_id, id).await?;
-    if existing.is_vault && existing.owner_user_id != user_id {
+    if existing.is_vault && existing.owner_user_id != Some(user_id) {
         return Err(Error::Forbidden);
     }
-    if existing.owner_user_id != user_id {
+    if existing.owner_user_id != Some(user_id) {
         // Invitees soft-delete is not supported — only owner can trash.
         return Err(Error::Forbidden);
     }
@@ -1789,6 +1858,7 @@ pub async fn bookmark_wants_preview(pool: &PgPool, id: Uuid) -> Result<bool> {
 
 const FAILED_PREVIEWS: &str = r#"
     is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
+    AND owner_user_id IS NOT NULL
     AND NOT preview_dismissed
     AND preview_failed_at IS NOT NULL
     AND preview_failed_at <= now() - make_interval(hours => $1)
@@ -1830,6 +1900,7 @@ pub async fn list_bookmarks_needing_preview(
         r#"
         SELECT owner_user_id, id FROM bookmarks
         WHERE is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
+          AND owner_user_id IS NOT NULL
           AND NOT preview_dismissed
           AND (preview_failed_at IS NULL
                OR preview_failed_at < now() - make_interval(days => $1))
@@ -1885,6 +1956,7 @@ pub async fn claim_bookmarks_for_link_check(
         WHERE is_vault = FALSE
           AND deleted_at IS NULL
           AND url <> ''
+          AND owner_user_id IS NOT NULL
           AND (
             link_checked_at IS NULL
             OR (link_check_fail_count > 0 AND link_checked_at < $2)
@@ -1970,7 +2042,7 @@ pub async fn save_bookmark_copy(
     source_id: Uuid,
 ) -> Result<BookmarkView> {
     let raw = get_bookmark_raw(pool, user_id, source_id).await?;
-    if raw.owner_user_id == user_id {
+    if raw.owner_user_id == Some(user_id) {
         return Err(Error::BadRequest(
             "bookmark is already in your library".into(),
         ));
@@ -1986,6 +2058,7 @@ pub async fn save_bookmark_copy(
         user_id,
         CreateBookmark {
             vault_id: None,
+            team_id: None,
             url: source.url,
             title: Some(source.title),
             description: source.description,

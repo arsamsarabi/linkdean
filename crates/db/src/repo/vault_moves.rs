@@ -37,7 +37,9 @@ async fn expand_categories(pool: &PgPool, user_id: Uuid, ids: &[Uuid]) -> Result
     .await
     .map_err(db_err)?;
     let found: HashSet<Uuid> = rows.iter().map(|c| c.id).collect();
-    if ids.iter().any(|id| !found.contains(id)) || rows.iter().any(|c| c.owner_user_id != user_id) {
+    if ids.iter().any(|id| !found.contains(id))
+        || rows.iter().any(|c| c.owner_user_id != Some(user_id))
+    {
         return Err(Error::NotFound);
     }
     Ok(rows)
@@ -68,7 +70,7 @@ async fn collect_bookmarks(
     if requested.iter().any(|id| !found.contains(id))
         || rows
             .iter()
-            .any(|b| b.owner_user_id != user_id && requested.contains(&b.id))
+            .any(|b| b.owner_user_id != Some(user_id) && requested.contains(&b.id))
     {
         return Err(Error::NotFound);
     }
@@ -437,7 +439,7 @@ async fn try_move_to_vault(
     let (bookmarks, foreign): (Vec<Bookmark>, Vec<Bookmark>) = bookmarks
         .into_iter()
         .filter(|b| b.vault_id != destination)
-        .partition(|b| b.owner_user_id == user_id);
+        .partition(|b| b.owner_user_id == Some(user_id));
 
     let mut loaded = Vec::with_capacity(bookmarks.len());
     for bookmark in bookmarks {

@@ -49,6 +49,7 @@ async fn bookmark_category_dashboard_activity_flow() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -59,6 +60,7 @@ async fn bookmark_category_dashboard_activity_flow() {
         user.id,
         CreateBookmark {
             vault_id: None,
+            team_id: None,
             url: "https://example.com/activity".into(),
             title: Some("Activity BM".into()),
             description: None,
@@ -121,6 +123,7 @@ async fn bookmark_category_dashboard_activity_flow() {
         user.id,
         CreateDashboard {
             title: Some("Board".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )

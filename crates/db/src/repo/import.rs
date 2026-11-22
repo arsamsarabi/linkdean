@@ -195,6 +195,7 @@ pub async fn apply_parsed_import_counted(
             user_id,
             CreateDashboard {
                 title: Some(dash.title),
+                team_id: None,
             },
             &VaultKeyring::default(),
         )

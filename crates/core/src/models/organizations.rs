@@ -73,6 +73,28 @@ impl TeamRole {
             _ => Err(()),
         }
     }
+
+    /// Rank for permission checks (higher = more power).
+    pub fn rank(self) -> u8 {
+        match self {
+            Self::Maintainer => 3,
+            Self::Editor => 2,
+            Self::Viewer => 1,
+        }
+    }
+
+    pub fn at_least(self, min: Self) -> bool {
+        self.rank() >= min.rank()
+    }
+
+    /// Map team role onto folder/bookmark access used elsewhere in the app.
+    pub fn to_category_access(self) -> crate::CategoryAccess {
+        match self {
+            Self::Maintainer => crate::CategoryAccess::Owner,
+            Self::Editor => crate::CategoryAccess::Write,
+            Self::Viewer => crate::CategoryAccess::Read,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]

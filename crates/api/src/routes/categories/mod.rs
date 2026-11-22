@@ -7,7 +7,7 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 use linkdean_core::{
     CategoryPublicLinkView, CategoryShareView, CategorySharesEnvelope, CategoryView,
-    CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, ForkCategory,
+    CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, ForkCategory, MoveToTeam,
     PendingShareInviteView, PendingShareSubjectType, UpdateCategory, UpdateCategoryShare,
     UpdatePendingShareInvite,
 };
@@ -22,6 +22,8 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(list, create))
         .routes(routes!(update, delete_one))
         .routes(routes!(fork))
+        .routes(routes!(move_to_team))
+        .routes(routes!(copy_to_personal))
         .routes(routes!(list_shares, create_share))
         .routes(routes!(update_share, delete_share))
         .routes(routes!(update_pending_share, delete_pending_share))
@@ -40,6 +42,9 @@ pub struct ListQuery {
     pub include_hidden: bool,
     #[serde(default)]
     pub include_vault: bool,
+    /// When set, list this team space instead of the personal library.
+    #[serde(default)]
+    pub team_id: Option<Uuid>,
 }
 
 #[utoipa::path(
@@ -61,6 +66,18 @@ async fn list(
     vault_session: VaultSession,
     Query(q): Query<ListQuery>,
 ) -> ApiResult<Json<Vec<CategoryView>>> {
+    if let Some(team_id) = q.team_id {
+        let settings = db::get_user_settings(&state.pool, user.id).await?;
+        let cats = db::list_team_categories(
+            &state.pool,
+            user.id,
+            team_id,
+            q.include_hidden,
+            settings.show_deleted_in_library,
+        )
+        .await?;
+        return Ok(Json(cats));
+    }
     let unlocked = if q.include_vault {
         state
             .vault_keyring(&vault_session, user.id)
@@ -183,6 +200,52 @@ async fn fork(
         "category": cat,
         "bookmarks_copied": bookmarks_copied,
     })))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "categories_move_to_team",
+    path = "/categories/{id}/move-to-team",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    request_body = MoveToTeam,
+    responses(
+        (status = 200, description = "OK", body = CategoryView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn move_to_team(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<MoveToTeam>,
+) -> ApiResult<Json<CategoryView>> {
+    let cat = db::move_category_to_team(&state.pool, user.id, id, req).await?;
+    Ok(Json(cat))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "categories_copy_to_personal",
+    path = "/categories/{id}/copy-to-personal",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn copy_to_personal(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CategoryView>> {
+    let cat = db::copy_category_to_personal(&state.pool, user.id, id).await?;
+    Ok(Json(cat))
 }
 
 #[utoipa::path(

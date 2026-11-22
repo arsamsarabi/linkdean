@@ -241,6 +241,7 @@ async fn adding_tags_and_folders_keeps_what_is_there() {
                     is_hidden: false,
                     vault_id: None,
                     icon: None,
+                    team_id: None,
                 },
             )
             .await

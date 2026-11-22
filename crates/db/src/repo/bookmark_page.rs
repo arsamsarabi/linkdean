@@ -415,7 +415,7 @@ pub async fn list_bookmarks_page(
         rows.into_iter().map(|r| r.bookmark).collect(),
         user_id,
         |b| {
-            if b.is_vault && b.owner_user_id == user_id {
+            if b.is_vault && b.owner_user_id == Some(user_id) {
                 keyring
             } else {
                 &none

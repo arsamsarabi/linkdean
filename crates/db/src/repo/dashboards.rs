@@ -95,6 +95,7 @@ fn owned_summary(d: Dashboard, shared_with: Vec<String>, is_default: bool) -> Da
     DashboardSummary {
         id: d.id,
         owner_user_id: d.owner_user_id,
+        team_id: d.team_id,
         title: d.title,
         is_default,
         access: CategoryAccess::Owner,
@@ -116,6 +117,7 @@ fn shared_summary(
     DashboardSummary {
         id: d.id,
         owner_user_id: d.owner_user_id,
+        team_id: d.team_id,
         title: d.title,
         is_default,
         access,
@@ -190,13 +192,15 @@ async fn pin_visible_to(
     pool: &PgPool,
     user_id: Uuid,
     b: &Bookmark,
-    dashboard_owner: Uuid,
+    dashboard_owner: Option<Uuid>,
     keyring: &VaultKeyring,
 ) -> Result<bool> {
     if b.is_vault {
-        return Ok(b.owner_user_id == user_id && b.vault_id.and_then(|v| keyring.get(v)).is_some());
+        return Ok(
+            b.owner_user_id == Some(user_id) && b.vault_id.and_then(|v| keyring.get(v)).is_some()
+        );
     }
-    if b.owner_user_id == dashboard_owner {
+    if dashboard_owner.is_some() && b.owner_user_id == dashboard_owner {
         return Ok(true);
     }
     bookmark_can_read(pool, user_id, b.id).await
@@ -207,7 +211,7 @@ async fn pin_hidden_from(
     pool: &PgPool,
     user_id: Uuid,
     bookmark_id: Uuid,
-    dashboard_owner: Uuid,
+    dashboard_owner: Option<Uuid>,
     keyring: &VaultKeyring,
 ) -> Result<bool> {
     Ok(match fetch_bookmark_row(pool, bookmark_id).await? {
@@ -253,7 +257,7 @@ async fn load_dashboard_view(
         if settings.kind.fills_itself() {
             // Only the owner ever sees these: they draw on the owner's whole library, and a
             // dashboard that has one cannot be shared.
-            if dash.owner_user_id != user_id {
+            if dash.owner_user_id != Some(user_id) {
                 continue;
             }
             let rows =
@@ -301,7 +305,7 @@ async fn load_dashboard_view(
                 continue;
             }
             let none = VaultKeyring::default();
-            let ring = if raw.is_vault && raw.owner_user_id == user_id {
+            let ring = if raw.is_vault && raw.owner_user_id == Some(user_id) {
                 keyring
             } else {
                 &none
@@ -338,6 +342,7 @@ async fn load_dashboard_view(
     Ok(DashboardView {
         id: dash.id,
         owner_user_id: dash.owner_user_id,
+        team_id: dash.team_id,
         title: dash.title,
         is_default,
         sections: section_views,
@@ -357,7 +362,6 @@ pub async fn create_dashboard(
     req: CreateDashboard,
     keyring: &VaultKeyring,
 ) -> Result<DashboardView> {
-    let _ = ensure_default_dashboard(pool, user_id).await?;
     let title = req
         .title
         .as_deref()
@@ -365,14 +369,29 @@ pub async fn create_dashboard(
         .filter(|s| !s.is_empty())
         .unwrap_or("New dashboard");
 
+    let (owner_user_id, team_id, access) = if let Some(tid) = req.team_id {
+        let role = super::organizations::require_team_writable(
+            pool,
+            user_id,
+            tid,
+            linkdean_core::TeamRole::Editor,
+        )
+        .await?;
+        (None, Some(tid), role.to_category_access())
+    } else {
+        let _ = ensure_default_dashboard(pool, user_id).await?;
+        (Some(user_id), None, CategoryAccess::Owner)
+    };
+
     let dash = sqlx::query_as::<_, Dashboard>(
         r#"
-        INSERT INTO dashboards (owner_user_id, title, is_default)
-        VALUES ($1, $2, FALSE)
+        INSERT INTO dashboards (owner_user_id, team_id, title, is_default)
+        VALUES ($1, $2, $3, FALSE)
         RETURNING *
         "#,
     )
-    .bind(user_id)
+    .bind(owner_user_id)
+    .bind(team_id)
     .bind(title)
     .fetch_one(pool)
     .await
@@ -380,7 +399,7 @@ pub async fn create_dashboard(
 
     let title = dash.title.clone();
     let id = dash.id;
-    let view = load_dashboard_view(pool, user_id, dash, CategoryAccess::Owner, keyring).await?;
+    let view = load_dashboard_view(pool, user_id, dash, access, keyring).await?;
     super::activity::record_activity(
         pool,
         user_id,
@@ -391,6 +410,38 @@ pub async fn create_dashboard(
     )
     .await;
     Ok(view)
+}
+
+/// Team-space dashboards (Viewer+).
+pub async fn list_team_dashboards(
+    pool: &PgPool,
+    user_id: Uuid,
+    team_id: Uuid,
+) -> Result<Vec<DashboardSummary>> {
+    let role = super::organizations::require_team_role(
+        pool,
+        user_id,
+        team_id,
+        linkdean_core::TeamRole::Viewer,
+    )
+    .await?;
+    let access = role.to_category_access();
+    let rows = sqlx::query_as::<_, Dashboard>(
+        r#"
+        SELECT * FROM dashboards
+        WHERE team_id = $1 AND deleted_at IS NULL
+        ORDER BY title ASC, created_at ASC
+        "#,
+    )
+    .bind(team_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .map(|d| shared_summary(d, access, None, false))
+        .collect())
 }
 
 pub async fn put_default_dashboard(
@@ -465,7 +516,7 @@ pub async fn put_dashboard(
         }
         let settings = section.settings.clone().normalized()?;
         if settings.kind.fills_itself() {
-            if dash.owner_user_id != user_id {
+            if dash.owner_user_id != Some(user_id) {
                 return Err(Error::BadRequest(
                     super::dashboard_sections::SELF_FILLING_SHARED_MESSAGE.into(),
                 ));
@@ -650,16 +701,18 @@ pub async fn put_dashboard(
 
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
 
-    if dash.owner_user_id != user_id {
-        super::notifications::notify_shared_edit(
-            pool,
-            user_id,
-            dash.owner_user_id,
-            linkdean_core::NotificationSubjectType::Dashboard,
-            dash.id,
-            title,
-        )
-        .await;
+    if let Some(owner_id) = dash.owner_user_id {
+        if owner_id != user_id {
+            super::notifications::notify_shared_edit(
+                pool,
+                user_id,
+                owner_id,
+                linkdean_core::NotificationSubjectType::Dashboard,
+                dash.id,
+                title,
+            )
+            .await;
+        }
     }
 
     let mut changes = Vec::new();

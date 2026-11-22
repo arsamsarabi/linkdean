@@ -67,6 +67,8 @@ pub struct ListQuery {
     pub vault: Option<String>,
     #[serde(default)]
     pub vault_only: bool,
+    // Known issue: team-space list via `?team_id=` is not wired yet; create with body
+    // `team_id` works, and folder-scoped lists under a team category work via access checks.
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
@@ -695,7 +697,7 @@ async fn check_link(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<BookmarkView>> {
     let raw = db::get_bookmark_raw(&state.pool, user.id, id).await?;
-    if raw.owner_user_id != user.id {
+    if raw.owner_user_id != Some(user.id) {
         return Err(Error::Forbidden.into());
     }
     if raw.is_vault {

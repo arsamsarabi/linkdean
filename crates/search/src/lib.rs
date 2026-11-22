@@ -15,7 +15,10 @@ pub struct SearchClient {
 #[serde(default)]
 pub struct BookmarkDoc {
     pub id: String,
+    /// Empty when the bookmark lives in a team space (`team_id` set).
     pub owner_user_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub team_id: Option<String>,
     pub title: String,
     pub url: String,
     pub description: String,
@@ -38,7 +41,11 @@ impl BookmarkDoc {
     fn from_view(view: &BookmarkView) -> Self {
         Self {
             id: view.id.to_string(),
-            owner_user_id: view.owner_user_id.to_string(),
+            owner_user_id: view
+                .owner_user_id
+                .map(|u| u.to_string())
+                .unwrap_or_default(),
+            team_id: view.team_id.map(|t| t.to_string()),
             title: view.title.clone(),
             url: view.url.clone(),
             description: view.description.clone().unwrap_or_default(),
@@ -68,7 +75,13 @@ impl SearchClient {
         let _ = index; // exists ok
         let index = self.client.index(&self.index_name);
         index
-            .set_filterable_attributes(["owner_user_id", "category_id", "category_ids", "tags"])
+            .set_filterable_attributes([
+                "owner_user_id",
+                "team_id",
+                "category_id",
+                "category_ids",
+                "tags",
+            ])
             .await
             .context("filterable attrs")?;
         index
@@ -156,7 +169,8 @@ impl SearchClient {
         Ok(())
     }
 
-    /// Search bookmarks owned by `user` or filed under any of `readable_category_ids`.
+    /// Search bookmarks owned by `user`, in `readable_team_ids`, or filed under
+    /// `readable_category_ids`.
     pub async fn search(
         &self,
         user: Uuid,
@@ -164,8 +178,20 @@ impl SearchClient {
         query: &str,
         limit: usize,
     ) -> anyhow::Result<Vec<BookmarkDoc>> {
+        self.search_in_spaces(user, readable_category_ids, &[], query, limit)
+            .await
+    }
+
+    pub async fn search_in_spaces(
+        &self,
+        user: Uuid,
+        readable_category_ids: &[Uuid],
+        readable_team_ids: &[Uuid],
+        query: &str,
+        limit: usize,
+    ) -> anyhow::Result<Vec<BookmarkDoc>> {
         let index = self.client.index(&self.index_name);
-        let filter = meili_visibility_filter(user, readable_category_ids);
+        let filter = meili_visibility_filter(user, readable_category_ids, readable_team_ids);
         let results = SearchQuery::new(&index)
             .with_query(query)
             .with_filter(&filter)
@@ -178,18 +204,31 @@ impl SearchClient {
     }
 }
 
-fn meili_visibility_filter(user: Uuid, readable_category_ids: &[Uuid]) -> String {
-    let owner = format!("owner_user_id = \"{user}\"");
-    if readable_category_ids.is_empty() {
-        return owner;
+fn meili_visibility_filter(
+    user: Uuid,
+    readable_category_ids: &[Uuid],
+    readable_team_ids: &[Uuid],
+) -> String {
+    let mut parts = vec![format!("owner_user_id = \"{user}\"")];
+    if !readable_team_ids.is_empty() {
+        let list = readable_team_ids
+            .iter()
+            .map(|id| format!("\"{id}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        parts.push(format!("team_id IN [{list}]"));
     }
-    let quoted: Vec<String> = readable_category_ids
-        .iter()
-        .map(|id| format!("\"{id}\""))
-        .collect();
-    let list = quoted.join(", ");
-    // Match primary category_id (legacy docs) or category_ids array (current upserts).
-    format!("{owner} OR category_id IN [{list}] OR category_ids IN [{list}]")
+    if !readable_category_ids.is_empty() {
+        let list = readable_category_ids
+            .iter()
+            .map(|id| format!("\"{id}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        // Match primary category_id (legacy docs) or category_ids array (current upserts).
+        parts.push(format!("category_id IN [{list}]"));
+        parts.push(format!("category_ids IN [{list}]"));
+    }
+    parts.join(" OR ")
 }
 
 #[cfg(test)]
@@ -243,7 +282,7 @@ mod tests {
     fn filter_owner_only_when_no_cats() {
         let uid = Uuid::nil();
         assert_eq!(
-            meili_visibility_filter(uid, &[]),
+            meili_visibility_filter(uid, &[], &[]),
             format!("owner_user_id = \"{uid}\"")
         );
     }
@@ -253,9 +292,17 @@ mod tests {
         let uid = Uuid::nil();
         let c1 = Uuid::from_u128(1);
         let c2 = Uuid::from_u128(2);
-        let f = meili_visibility_filter(uid, &[c1, c2]);
+        let f = meili_visibility_filter(uid, &[c1, c2], &[]);
         assert!(f.contains("owner_user_id"));
         assert!(f.contains(&format!("\"{c1}\"")));
         assert!(f.contains("category_ids IN"));
+    }
+
+    #[test]
+    fn filter_includes_team_ids() {
+        let uid = Uuid::nil();
+        let t1 = Uuid::from_u128(9);
+        let f = meili_visibility_filter(uid, &[], &[t1]);
+        assert!(f.contains(&format!("team_id IN [\"{t1}\"]")));
     }
 }

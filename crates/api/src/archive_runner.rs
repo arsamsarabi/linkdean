@@ -74,11 +74,14 @@ async fn target(state: &AppState, id: Uuid) -> Result<Target, String> {
     if b.deleted_at.is_some() {
         return Err("The bookmark is in Trash.".into());
     }
+    let owner = b
+        .owner_user_id
+        .ok_or("Archiving team-space bookmarks is not available yet.")?;
     let (url, vault) = match (b.is_vault, b.vault_id) {
         (true, Some(vault_id)) => {
             let key = state
                 .vault_keys
-                .user_key(b.owner_user_id, vault_id)
+                .user_key(owner, vault_id)
                 .ok_or("Unlock the vault, then archive again.")?;
             let (ct, nonce) = (
                 b.vault_ciphertext.clone().unwrap_or_default(),
@@ -91,11 +94,7 @@ async fn target(state: &AppState, id: Uuid) -> Result<Target, String> {
         _ => (b.url, None),
     };
     match url::Url::parse(&url) {
-        Ok(u) if matches!(u.scheme(), "http" | "https") => Ok(Target {
-            url,
-            owner: b.owner_user_id,
-            vault,
-        }),
+        Ok(u) if matches!(u.scheme(), "http" | "https") => Ok(Target { url, owner, vault }),
         _ => Err("Only web addresses can be archived.".into()),
     }
 }

@@ -81,6 +81,7 @@ async fn user_b_cannot_access_user_a_bookmark_or_category() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -238,6 +239,7 @@ async fn share_read_and_write_membership() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -387,11 +389,12 @@ async fn share_read_and_write_membership() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
     .expect("RW can create child under shared");
-    assert_eq!(child.owner_user_id, user_a.id);
+    assert_eq!(child.owner_user_id, Some(user_a.id));
     assert_eq!(child.access, CategoryAccess::Write);
 
     let b_created = db::create_bookmark(
@@ -508,6 +511,7 @@ async fn cannot_share_vault_category() {
             is_hidden: false,
             vault_id: Some(vault.id),
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -592,6 +596,7 @@ async fn public_list_slug_is_unlisted_and_revocable() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -736,6 +741,7 @@ async fn pending_share_invite_claims_on_register() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -822,6 +828,7 @@ async fn public_list_owner_without_a_name_shows_no_email() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -872,6 +879,7 @@ async fn a_nested_share_lists_the_nearest_grant() {
                 is_hidden: false,
                 vault_id: None,
                 icon: None,
+                team_id: None,
             },
         )
         .await

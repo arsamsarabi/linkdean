@@ -40,6 +40,7 @@ async fn category(pool: &PgPool, owner: &User, name: &str, parent_id: Option<Uui
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -83,6 +84,7 @@ async fn json_export_restores_folders_flags_times_and_dashboards() {
         from.id,
         CreateDashboard {
             title: Some("Reading".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )

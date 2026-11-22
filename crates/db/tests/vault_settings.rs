@@ -95,6 +95,7 @@ async fn vault_category(s: &Setup, name: &str, parent_id: Option<Uuid>) -> Uuid 
             is_hidden: false,
             vault_id: Some(s.vault),
             icon: None,
+            team_id: None,
         },
     )
     .await

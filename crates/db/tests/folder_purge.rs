@@ -34,6 +34,7 @@ async fn folder(pool: &PgPool, owner: &User, parent_id: Option<Uuid>) -> Uuid {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -141,6 +142,7 @@ async fn no_new_or_moved_folders_under_a_trashed_parent() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await;
@@ -178,6 +180,7 @@ async fn a_folder_cannot_move_into_or_out_of_a_vault_by_reparenting() {
             is_hidden: false,
             vault_id: Some(vault.id),
             icon: None,
+            team_id: None,
         },
     )
     .await

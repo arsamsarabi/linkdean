@@ -253,10 +253,36 @@ pub async fn create_category(
     user_id: Uuid,
     req: CreateCategory,
 ) -> Result<CategoryView> {
+    if req.team_id.is_some() && req.vault_id.is_some() {
+        return Err(Error::BadRequest(
+            "vault folders cannot live in a team space".into(),
+        ));
+    }
     if let Some(vault_id) = req.vault_id {
         super::vault::get_user_vault(pool, user_id, vault_id).await?;
     }
-    let owner_user_id = if let Some(pid) = req.parent_id {
+
+    let (owner_user_id, team_id) = if let Some(tid) = req.team_id {
+        super::organizations::require_team_writable(
+            pool,
+            user_id,
+            tid,
+            linkdean_core::TeamRole::Editor,
+        )
+        .await?;
+        if let Some(pid) = req.parent_id {
+            let (parent, _) = require_category_write(pool, user_id, pid).await?;
+            if parent.deleted_at.is_some() {
+                return Err(Error::BadRequest("that folder is in Trash".into()));
+            }
+            if parent.team_id != Some(tid) {
+                return Err(Error::BadRequest(
+                    "parent folder must be in the same team space".into(),
+                ));
+            }
+        }
+        (None, Some(tid))
+    } else if let Some(pid) = req.parent_id {
         let (parent, access) = require_category_write(pool, user_id, pid).await?;
         if parent.deleted_at.is_some() {
             return Err(Error::BadRequest("that folder is in Trash".into()));
@@ -269,21 +295,27 @@ pub async fn create_category(
         if req.vault_id.is_some() && !access.is_owner() {
             return Err(Error::Forbidden);
         }
-        // Child under shared folder stays under folder owner's tree.
-        parent.owner_user_id
+        if parent.team_id.is_some() {
+            // Inherit team space from parent when team_id omitted.
+            (None, parent.team_id)
+        } else {
+            // Child under shared folder stays under folder owner's tree.
+            (parent.owner_user_id, None)
+        }
     } else {
-        user_id
+        (Some(user_id), None)
     };
 
     let icon = normalize_category_icon(req.icon);
     let cat = sqlx::query_as::<_, Category>(
         r#"
-        INSERT INTO categories (owner_user_id, parent_id, name, is_hidden, is_vault, icon, vault_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO categories (owner_user_id, team_id, parent_id, name, is_hidden, is_vault, icon, vault_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
         "#,
     )
     .bind(owner_user_id)
+    .bind(team_id)
     .bind(req.parent_id)
     .bind(req.name)
     .bind(req.is_hidden)
@@ -306,6 +338,44 @@ pub async fn create_category(
     )
     .await;
     Ok(view)
+}
+
+/// Folders in a team space (caller must be Viewer+).
+pub async fn list_team_categories(
+    pool: &PgPool,
+    user_id: Uuid,
+    team_id: Uuid,
+    include_hidden: bool,
+    include_deleted: bool,
+) -> Result<Vec<CategoryView>> {
+    let role = super::organizations::require_team_role(
+        pool,
+        user_id,
+        team_id,
+        linkdean_core::TeamRole::Viewer,
+    )
+    .await?;
+    let access = role.to_category_access();
+    let rows = sqlx::query_as::<_, Category>(
+        r#"
+        SELECT * FROM categories
+        WHERE team_id = $1
+          AND ($2 OR is_hidden = FALSE)
+          AND ($3 OR deleted_at IS NULL)
+        ORDER BY position, name
+        "#,
+    )
+    .bind(team_id)
+    .bind(include_hidden)
+    .bind(include_deleted)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .map(|c| CategoryView::from_category(c, access))
+        .collect())
 }
 
 fn visibility_label(visibility: &str) -> &'static str {
@@ -357,7 +427,7 @@ pub async fn update_category(
             }
             // A folder stays in its owner's tree and its own vault (or outside vaults).
             // Crossing either would let deleting the other tree delete this one with it.
-            if new_parent.owner_user_id != cat.owner_user_id {
+            if new_parent.owner_user_id != cat.owner_user_id || new_parent.team_id != cat.team_id {
                 return Err(Error::Forbidden);
             }
             if new_parent.vault_id != cat.vault_id {
@@ -463,15 +533,17 @@ pub async fn update_category(
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
 
     if !access.is_owner() {
-        super::notifications::notify_shared_edit(
-            pool,
-            user_id,
-            updated.owner_user_id,
-            linkdean_core::NotificationSubjectType::Category,
-            updated.id,
-            &updated.name,
-        )
-        .await;
+        if let Some(owner_id) = updated.owner_user_id {
+            super::notifications::notify_shared_edit(
+                pool,
+                user_id,
+                owner_id,
+                linkdean_core::NotificationSubjectType::Category,
+                updated.id,
+                &updated.name,
+            )
+            .await;
+        }
     }
 
     let access = category_access(pool, user_id, updated.id).await?;
@@ -837,6 +909,7 @@ async fn fork_category_inner(
                     is_hidden: cat.is_hidden,
                     vault_id: None,
                     icon: cat.icon.clone(),
+                    team_id: None,
                 },
             )
             .await?;
@@ -949,6 +1022,11 @@ pub async fn enable_category_public_link(
     category_id: Uuid,
 ) -> Result<CategoryPublicLinkView> {
     let cat = require_category_owner(pool, owner_user_id, category_id).await?;
+    if cat.team_id.is_some() {
+        return Err(Error::BadRequest(
+            "team-space folders cannot have a public link".into(),
+        ));
+    }
     if cat.deleted_at.is_some() {
         return Err(Error::NotFound);
     }
@@ -1179,7 +1257,8 @@ pub async fn get_public_list_by_slug(pool: &PgPool, slug: &str) -> Result<Public
     let cat = public_list_category(pool, slug).await?;
     let slug = slug.trim();
 
-    let owner = find_user_by_id(pool, cat.owner_user_id)
+    let owner_id = cat.owner_user_id.ok_or(Error::NotFound)?;
+    let owner = find_user_by_id(pool, owner_id)
         .await?
         .ok_or(Error::NotFound)?;
     let owner_display_name = super::users::public_user_label(&owner, "Owner");
@@ -1240,4 +1319,158 @@ pub async fn get_public_list_bookmark(
     .await
     .map_err(|e| Error::msg(e.to_string()))?
     .ok_or(Error::NotFound)
+}
+
+/// Move a personal folder tree into a team space (organization then owns it).
+pub async fn move_category_to_team(
+    pool: &PgPool,
+    user_id: Uuid,
+    category_id: Uuid,
+    req: linkdean_core::MoveToTeam,
+) -> Result<CategoryView> {
+    if !req.acknowledge_org_ownership {
+        return Err(Error::BadRequest(
+            "acknowledge_org_ownership must be true — the organization will own this content"
+                .into(),
+        ));
+    }
+    let cat = require_category_owner(pool, user_id, category_id).await?;
+    if cat.team_id.is_some() {
+        return Err(Error::BadRequest(
+            "that folder is already in a team space".into(),
+        ));
+    }
+    if cat.owner_user_id != Some(user_id) {
+        return Err(Error::Forbidden);
+    }
+    if cat.is_vault || cat.vault_id.is_some() {
+        return Err(Error::BadRequest(
+            "vault folders cannot move into a team space".into(),
+        ));
+    }
+    super::organizations::require_team_writable(
+        pool,
+        user_id,
+        req.team_id,
+        linkdean_core::TeamRole::Editor,
+    )
+    .await?;
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+
+    // Whole subtree (including root).
+    let subtree: Vec<Uuid> = sqlx::query_scalar(
+        r#"
+        WITH RECURSIVE tree AS (
+            SELECT id FROM categories WHERE id = $1
+            UNION ALL
+            SELECT c.id FROM categories c JOIN tree ON c.parent_id = tree.id
+        )
+        SELECT id FROM tree
+        "#,
+    )
+    .bind(category_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    sqlx::query(
+        r#"
+        UPDATE categories
+        SET owner_user_id = NULL, team_id = $2, public_slug = NULL, updated_at = now()
+        WHERE id = ANY($1)
+        "#,
+    )
+    .bind(&subtree)
+    .bind(req.team_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    sqlx::query(
+        r#"
+        UPDATE bookmarks
+        SET owner_user_id = NULL, team_id = $2, updated_at = now()
+        WHERE owner_user_id = $3
+          AND (
+            id IN (SELECT bookmark_id FROM bookmark_categories WHERE category_id = ANY($1))
+            OR category_id = ANY($1)
+          )
+        "#,
+    )
+    .bind(&subtree)
+    .bind(req.team_id)
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    // Drop individual shares on the moved tree.
+    sqlx::query("DELETE FROM category_shares WHERE category_id = ANY($1)")
+        .bind(&subtree)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    let org_id = super::organizations::organization_id_for_team(pool, req.team_id).await?;
+    // Use pool for org id already; audit inside tx:
+    super::organizations::record_audit(
+        &mut tx,
+        org_id,
+        Some(user_id),
+        "content.moved_to_team",
+        serde_json::json!({
+            "kind": "category",
+            "category_id": category_id,
+            "team_id": req.team_id,
+            "subtree": subtree,
+        }),
+    )
+    .await?;
+
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    get_category(pool, user_id, category_id).await
+}
+
+/// Copy a team-space folder tree into the caller's personal library (never a move).
+pub async fn copy_category_to_personal(
+    pool: &PgPool,
+    user_id: Uuid,
+    category_id: Uuid,
+) -> Result<CategoryView> {
+    let cat = get_category_by_id(pool, category_id).await?;
+    let Some(team_id) = cat.team_id else {
+        return Err(Error::BadRequest(
+            "only team-space folders can be copied to personal".into(),
+        ));
+    };
+    super::organizations::require_team_role(
+        pool,
+        user_id,
+        team_id,
+        linkdean_core::TeamRole::Viewer,
+    )
+    .await?;
+    let (forked, _) = fork_category(
+        pool,
+        user_id,
+        category_id,
+        linkdean_core::ForkCategory { name: None },
+    )
+    .await?;
+    let org_id = super::organizations::organization_id_for_team(pool, team_id).await?;
+    super::organizations::append_organization_audit(
+        pool,
+        org_id,
+        Some(user_id),
+        "content.copied_to_personal",
+        serde_json::json!({
+            "kind": "category",
+            "source_category_id": category_id,
+            "personal_category_id": forked.id,
+            "team_id": team_id,
+        }),
+    )
+    .await?;
+    Ok(forked)
 }

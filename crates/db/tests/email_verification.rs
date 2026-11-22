@@ -76,6 +76,7 @@ async fn category(pool: &PgPool, owner: &User) -> Uuid {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -232,6 +233,7 @@ async fn a_dashboard_share_to_an_unverified_account_waits_too() {
         owner.id,
         CreateDashboard {
             title: Some("Shared".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )

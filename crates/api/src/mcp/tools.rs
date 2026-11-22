@@ -32,8 +32,8 @@ pub fn mcp_err(err: Error) -> ErrorData {
 
 /// Agent Skills stance: Only-me bookmarks are owner-visible only, even when a
 /// share would otherwise grant `bookmark_can_read`.
-fn others_only_me(is_private: bool, owner_user_id: Uuid, viewer_id: Uuid) -> bool {
-    is_private && owner_user_id != viewer_id
+fn others_only_me(is_private: bool, owner_user_id: Option<Uuid>, viewer_id: Uuid) -> bool {
+    is_private && owner_user_id != Some(viewer_id)
 }
 
 pub fn require_user_state(parts: &Parts) -> Result<(User, AppState), ErrorData> {
@@ -369,6 +369,7 @@ pub async fn create_bookmark(
         is_unread,
         is_pinned,
         vault_id: None,
+        team_id: None,
     };
     let view = db::create_bookmark(&state.pool, user.id, req, &VaultKeyring::default())
         .await

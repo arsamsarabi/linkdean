@@ -151,6 +151,7 @@ async fn deleting_a_vault_removes_its_contents() {
             is_hidden: false,
             vault_id: Some(vault.id),
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -195,6 +196,7 @@ async fn vault_category(pool: &PgPool, owner: &User, vault_id: Option<Uuid>) -> 
             is_hidden: false,
             vault_id,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -366,6 +368,7 @@ async fn a_subcategory_stays_in_its_parents_vault() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await;
@@ -452,6 +455,7 @@ async fn vault_folder_names_stay_out_of_activity_trash_and_locked_edits() {
             is_hidden: false,
             vault_id: Some(vault.id),
             icon: None,
+            team_id: None,
         },
     )
     .await

@@ -379,7 +379,10 @@
           },
           "owner_user_id": {
             "format": "uuid",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "preview_image_url": {
             "type": [
@@ -404,6 +407,13 @@
             },
             "type": "array"
           },
+          "team_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": "string"
           },
@@ -424,7 +434,6 @@
         },
         "required": [
           "id",
-          "owner_user_id",
           "categories",
           "url",
           "title",
@@ -676,7 +685,10 @@
           },
           "owner_user_id": {
             "format": "uuid",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "parent_id": {
             "format": "uuid",
@@ -700,6 +712,13 @@
             },
             "type": "array"
           },
+          "team_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "updated_at": {
             "format": "date-time",
             "type": "string"
@@ -717,7 +736,6 @@
         },
         "required": [
           "id",
-          "owner_user_id",
           "name",
           "is_hidden",
           "is_vault",
@@ -980,6 +998,14 @@
             },
             "type": "array"
           },
+          "team_id": {
+            "description": "Create in this team space instead of the personal library.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": [
               "string",
@@ -1024,6 +1050,14 @@
               "null"
             ]
           },
+          "team_id": {
+            "description": "Create in this team space instead of the personal library.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "vault_id": {
             "format": "uuid",
             "type": [
@@ -1055,6 +1089,14 @@
       },
       "CreateDashboard": {
         "properties": {
+          "team_id": {
+            "description": "Create in this team space instead of the personal library.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": [
               "string",
@@ -1473,7 +1515,10 @@
           },
           "owner_user_id": {
             "format": "uuid",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "shared_out": {
             "type": "boolean"
@@ -1483,6 +1528,13 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "team_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "title": {
             "type": "string"
@@ -1494,7 +1546,6 @@
         },
         "required": [
           "id",
-          "owner_user_id",
           "title",
           "is_default",
           "access",
@@ -1534,7 +1585,10 @@
           },
           "owner_user_id": {
             "format": "uuid",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "sections": {
             "items": {
@@ -1553,6 +1607,13 @@
             },
             "type": "array"
           },
+          "team_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": "string"
           },
@@ -1563,7 +1624,6 @@
         },
         "required": [
           "id",
-          "owner_user_id",
           "title",
           "is_default",
           "sections",
@@ -2036,6 +2096,24 @@
         "required": [
           "reason",
           "actions"
+        ],
+        "type": "object"
+      },
+      "MoveToTeam": {
+        "description": "Move personal content into a team space (organization then owns it).",
+        "properties": {
+          "acknowledge_org_ownership": {
+            "description": "Must be true — the UI warns that the organization will own the content.",
+            "type": "boolean"
+          },
+          "team_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "acknowledge_org_ownership"
         ],
         "type": "object"
       },
@@ -2950,12 +3028,21 @@
           },
           "owner_user_id": {
             "format": "uuid",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "team_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "id",
-          "owner_user_id",
           "name",
           "created_at"
         ],
@@ -8068,6 +8155,16 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "description": "When set, list this team space instead of the personal library.",
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -8298,6 +8395,65 @@
         ]
       }
     },
+    "/categories/{id}/copy-to-personal": {
+      "post": {
+        "operationId": "categories_copy_to_personal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ]
+      }
+    },
     "/categories/{id}/fork": {
       "post": {
         "operationId": "categories_fork",
@@ -8327,6 +8483,75 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/categories/{id}/move-to-team": {
+      "post": {
+        "operationId": "categories_move_to_team",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveToTeam"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryView"
+                }
               }
             },
             "description": "OK"
@@ -9008,6 +9233,17 @@
     "/dashboards": {
       "get": {
         "operationId": "dashboards_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -12822,6 +13058,17 @@
     "/tags": {
       "get": {
         "operationId": "tags_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

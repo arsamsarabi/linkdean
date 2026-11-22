@@ -50,6 +50,7 @@ async fn shared_board(pool: &PgPool, owner: &User, invitee: &User, access: Share
         owner.id,
         CreateDashboard {
             title: Some("Shared".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )
@@ -434,6 +435,7 @@ async fn bookmark_in_shared_folder(pool: &PgPool, owner: &User, invitee: &User) 
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
