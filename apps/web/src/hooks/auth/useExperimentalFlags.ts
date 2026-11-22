@@ -38,3 +38,9 @@ export function useManagedService(): boolean {
   const { data } = useAuthConfigQuery()
   return data?.managed_service ?? false
 }
+
+/** Managed service with Stripe Checkout configured. */
+export function useBillingEnabled(): boolean {
+  const { data } = useAuthConfigQuery()
+  return data?.billing_enabled ?? false
+}

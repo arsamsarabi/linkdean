@@ -1,6 +1,6 @@
 # Plans and pricing
 
-Defines Free vs paid tiers for the **managed** Linkdean service (Phase A). Enforcement is Phase B; checkout and dollar prices are Phase C. Self-hosted instances stay outside plan gates: the operator sets [platform quotas](../self-hosting/operations.md#per-user-quotas); there is no Linkdean billing on self-host.
+Defines Free vs paid tiers for the **managed** Linkdean service. Self-hosted instances stay outside plan gates: the operator sets [platform quotas](../self-hosting/operations.md#per-user-quotas); there is no Linkdean billing on self-host.
 
 Organization seat plans (Free org size, Team, Business, Enterprise) live in [organizations and teams](./organizations-and-teams.md#saas-plans). This doc freezes the **personal** meters those plans sit on, including archive storage.
 
@@ -13,7 +13,9 @@ Organization seat plans (Free org size, Team, Business, Enterprise) live in [org
 
 ## Non-goals
 
-- Dollar prices, trials, coupons, tax, invoices (Phase C).
+- Inventing dollar amounts in this repo (prices live in the Stripe Dashboard / `STRIPE_PRICE_ID_PRO`).
+- Trials, coupons, and tax details (configure in Stripe; counsel before charging — see [legal review](./legal-review.md)).
+- Org seat checkout (Team/Business) — personal Pro only until Orgs billing.
 - Changing self-host licence text beyond "free for non-commercial use" already on the roadmap.
 - Per-seat archive multipliers for Team/Business (decide with Orgs Phase A / Archive Phase C).
 
@@ -55,12 +57,24 @@ Plan checks live in that one resolver path so SaaS gating does not scatter throu
 
 | Phase | Done when |
 | --- | --- |
-| **A — Define tiers** (this doc) | Free vs Pro personal meters + archive numbers agreed; org seat matrix linked. |
+| **A — Define tiers** (this doc) | Done — Free vs Pro personal meters + archive numbers; org seat matrix linked. |
 | **B — Enforce quotas** | Done — `MANAGED_SERVICE` assigns Free; resolver merges plan + platform; Settings shows plan and caps; admin can set Free/Pro. |
-| **C — Checkout** | Buy/change Pro (and later seat plans); no price invented here. |
+| **C — Checkout** | Done — Stripe Checkout + Customer Portal for personal Pro; webhooks set `users.plan`; price id from env (no dollar amount in repo). |
 
-## Open for Phase B (not blocking A)
+## Checkout (Phase C)
+
+Managed only (`MANAGED_SERVICE=true`) and only when all of `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_ID_PRO` are set:
+
+1. Settings → **Upgrade to Pro** → `POST /api/billing/checkout` → Stripe Checkout (subscription mode).
+2. Stripe webhooks (`POST /api/billing/webhook`) on `checkout.session.completed` / subscription updated/deleted → `set_user_plan` (+ store `users.stripe_customer_id`).
+3. **Manage billing** → `POST /api/billing/portal` → Stripe Customer Portal (invoices, payment method, cancel).
+4. Admins may still set Free/Pro for comps/support; the next webhook for that customer can overwrite the plan.
+
+Self-host and managed without Stripe keys: no billing routes or Settings CTAs.
+
+## Still open (not blocking C)
 
 - Whether managed Free also caps `max_import_bytes` / `max_upload_image_bytes` below the hard caps.
 - Team archive pool: flat per workspace vs per seat × Pro archive.
 - Whether “Unlimited” bookmarks on Pro gets a soft abuse ceiling in ops tooling only.
+- Live dollar price, tax, and paid-plan Terms (counsel); set the Price in Stripe, not here.

@@ -121,7 +121,7 @@ Re-verify against code before publishing counsel’s edits. Numbers below match 
 
 **What Linkdean is.** A bookmark manager: save links, folders, tags, notes, lists, dashboards; optional page archives (HTML/PDF/file); optional client-side **vault** encryption; sharing and public lists; browser extension; REST API with scoped API keys; MCP (read plus scoped bookmark writes) and downloadable Agent Skills that export **library** (non-vault) bookmarks as agent context.
 
-**Commercial status.** Public beta. **No paid plans yet.** Roadmap next: define free vs paid tiers, then quotas, then checkout. Re-engage this brief before charging if counsel has not already signed off.
+**Commercial status.** Public beta. Checkout code can run with Stripe env on the managed service; **do not charge** until counsel signs off on pricing, cancellation, and consumer-law wording. Dollar amounts stay in Stripe, not in this repo.
 
 **Managed vs self-host.** Open-source app. Self-hosters configure their own legal URLs/version or none. These pages are for **linkdean.app** / `app.linkdean.app`.
 

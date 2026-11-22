@@ -16,7 +16,12 @@ describe('useExperimentalFlags', () => {
     vi.spyOn(api, 'authConfig').mockReturnValue(new Promise((r) => (answer = r)))
     const { result } = renderHook(() => useExperimentalFlags(), { wrapper })
     expect(result.current.agent_skills).toBe(false)
-    answer({ experimental: { agent_skills: true }, archives_enabled: true, managed_service: false })
+    answer({
+      experimental: { agent_skills: true },
+      archives_enabled: true,
+      managed_service: false,
+      billing_enabled: false,
+    })
     await waitFor(() => expect(result.current.agent_skills).toBe(true))
   })
 
@@ -34,7 +39,12 @@ describe('useArchivesEnabled', () => {
     vi.spyOn(api, 'authConfig').mockReturnValue(new Promise((r) => (answer = r)))
     const { result } = renderHook(() => useArchivesEnabled(), { wrapper })
     expect(result.current).toBe(true)
-    answer({ experimental: { agent_skills: false }, archives_enabled: false, managed_service: false })
+    answer({
+      experimental: { agent_skills: false },
+      archives_enabled: false,
+      managed_service: false,
+      billing_enabled: false,
+    })
     await waitFor(() => expect(result.current).toBe(false))
   })
 })

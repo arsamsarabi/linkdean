@@ -190,7 +190,7 @@ export function AdminUsersPanel(): ReactElement {
             {managed ? (
               <Select
                 label="Plan"
-                description="Personal Free or Pro meters until checkout ships."
+                description="Personal Free or Pro meters. Checkout can overwrite this when Stripe is configured."
                 data={[
                   { value: 'free', label: 'Free' },
                   { value: 'pro', label: 'Pro' },
