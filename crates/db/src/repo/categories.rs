@@ -2,9 +2,9 @@ use chrono::{DateTime, Utc};
 use linkdean_core::crypto;
 use linkdean_core::VaultKeyring;
 use linkdean_core::{
-    BookmarkView, Category, CategoryAccess, CategoryPublicLinkView, CategoryView, CreateBookmark,
-    CreateCategory, Error, ForkCategory, PublicBookmarkView, PublicListView, Result,
-    UpdateCategory,
+    BookmarkView, Category, CategoryAccess, CategoryPublicLinkView, CategoryRestrictionView,
+    CategoryView, CreateBookmark, CreateCategory, Error, ForkCategory, PublicBookmarkView,
+    PublicListView, Result, SetCategoryRestriction, TeamRole, UpdateCategory,
 };
 use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
@@ -341,6 +341,7 @@ pub async fn create_category(
 }
 
 /// Folders in a team space (caller must be Viewer+).
+/// Restricted folders the caller cannot see are omitted (Maintainers see all).
 pub async fn list_team_categories(
     pool: &PgPool,
     user_id: Uuid,
@@ -348,13 +349,8 @@ pub async fn list_team_categories(
     include_hidden: bool,
     include_deleted: bool,
 ) -> Result<Vec<CategoryView>> {
-    let role = super::organizations::require_team_role(
-        pool,
-        user_id,
-        team_id,
-        linkdean_core::TeamRole::Viewer,
-    )
-    .await?;
+    let role =
+        super::organizations::require_team_role(pool, user_id, team_id, TeamRole::Viewer).await?;
     let access = role.to_category_access();
     let rows = sqlx::query_as::<_, Category>(
         r#"
@@ -372,10 +368,208 @@ pub async fn list_team_categories(
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
-    Ok(rows
-        .into_iter()
-        .map(|c| CategoryView::from_category(c, access))
-        .collect())
+    let maintainer = role.at_least(TeamRole::Maintainer);
+    let mut out = Vec::with_capacity(rows.len());
+    for c in rows {
+        if !maintainer && !user_passes_team_folder_restrictions(pool, user_id, c.id).await? {
+            continue;
+        }
+        out.push(CategoryView::from_category(c, access));
+    }
+    Ok(out)
+}
+
+/// True when every restricted ancestor (including `category_id`) allowlists `user_id`,
+/// or there is no restriction on the path. Callers that are Maintainers should skip this.
+pub async fn user_passes_team_folder_restrictions(
+    pool: &PgPool,
+    user_id: Uuid,
+    category_id: Uuid,
+) -> Result<bool> {
+    let mut current = Some(category_id);
+    while let Some(id) = current {
+        let row: Option<(bool, Option<Uuid>)> = sqlx::query_as(
+            r#"
+            SELECT is_restricted, parent_id FROM categories WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+        let Some((is_restricted, parent_id)) = row else {
+            return Ok(false);
+        };
+        if is_restricted {
+            let allowed: bool = sqlx::query_scalar(
+                r#"
+                SELECT EXISTS (
+                    SELECT 1 FROM category_restriction_members
+                    WHERE category_id = $1 AND user_id = $2
+                )
+                "#,
+            )
+            .bind(id)
+            .bind(user_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+            if !allowed {
+                return Ok(false);
+            }
+        }
+        current = parent_id;
+    }
+    Ok(true)
+}
+
+/// Set or replace the member allowlist; marks the folder restricted.
+/// Maintainer+ on the owning team. Members must belong to that team (or be org admin/owner).
+pub async fn set_category_restriction(
+    pool: &PgPool,
+    actor_user_id: Uuid,
+    category_id: Uuid,
+    req: SetCategoryRestriction,
+) -> Result<CategoryRestrictionView> {
+    let cat = get_category_by_id(pool, category_id).await?;
+    let Some(team_id) = cat.team_id else {
+        return Err(Error::BadRequest(
+            "only team-space folders can be restricted".into(),
+        ));
+    };
+    super::organizations::require_team_writable(pool, actor_user_id, team_id, TeamRole::Maintainer)
+        .await?;
+
+    for uid in &req.member_ids {
+        // Allowlist seats are team members (or org admins acting as Maintainers).
+        if super::organizations::effective_team_role(pool, *uid, team_id)
+            .await
+            .is_err()
+        {
+            return Err(Error::BadRequest(
+                "restriction members must have access to this team".into(),
+            ));
+        }
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query("UPDATE categories SET is_restricted = TRUE, updated_at = now() WHERE id = $1")
+        .bind(category_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query("DELETE FROM category_restriction_members WHERE category_id = $1")
+        .bind(category_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    for uid in &req.member_ids {
+        sqlx::query(
+            r#"
+            INSERT INTO category_restriction_members (category_id, user_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+            "#,
+        )
+        .bind(category_id)
+        .bind(uid)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    }
+
+    let organization_id = super::organizations::organization_id_for_team(pool, team_id).await?;
+    super::organizations::record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_user_id),
+        "folder.restriction_set",
+        serde_json::json!({
+            "category_id": category_id,
+            "member_ids": req.member_ids,
+        }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+
+    get_category_restriction(pool, actor_user_id, category_id).await
+}
+
+/// Clear restriction (folder visible to the whole team again).
+pub async fn clear_category_restriction(
+    pool: &PgPool,
+    actor_user_id: Uuid,
+    category_id: Uuid,
+) -> Result<CategoryRestrictionView> {
+    let cat = get_category_by_id(pool, category_id).await?;
+    let Some(team_id) = cat.team_id else {
+        return Err(Error::BadRequest(
+            "only team-space folders can be restricted".into(),
+        ));
+    };
+    super::organizations::require_team_writable(pool, actor_user_id, team_id, TeamRole::Maintainer)
+        .await?;
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query("DELETE FROM category_restriction_members WHERE category_id = $1")
+        .bind(category_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query("UPDATE categories SET is_restricted = FALSE, updated_at = now() WHERE id = $1")
+        .bind(category_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    let organization_id = super::organizations::organization_id_for_team(pool, team_id).await?;
+    super::organizations::record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_user_id),
+        "folder.restriction_cleared",
+        serde_json::json!({ "category_id": category_id }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+
+    Ok(CategoryRestrictionView {
+        category_id,
+        is_restricted: false,
+        member_ids: Vec::new(),
+    })
+}
+
+/// Read the restriction; Maintainer+ or an allowlisted member may see the allowlist.
+pub async fn get_category_restriction(
+    pool: &PgPool,
+    user_id: Uuid,
+    category_id: Uuid,
+) -> Result<CategoryRestrictionView> {
+    let (cat, access) = require_category_read(pool, user_id, category_id).await?;
+    if cat.team_id.is_none() {
+        return Err(Error::BadRequest(
+            "only team-space folders can be restricted".into(),
+        ));
+    }
+    // Non-maintainers only learn they are allowlisted via being able to read the folder.
+    let _ = access;
+    let member_ids: Vec<Uuid> = sqlx::query_scalar(
+        r#"
+        SELECT user_id FROM category_restriction_members
+        WHERE category_id = $1
+        ORDER BY user_id
+        "#,
+    )
+    .bind(category_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(CategoryRestrictionView {
+        category_id,
+        is_restricted: cat.is_restricted,
+        member_ids,
+    })
 }
 
 fn visibility_label(visibility: &str) -> &'static str {

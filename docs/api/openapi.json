@@ -561,6 +561,30 @@
         ],
         "type": "object"
       },
+      "CategoryRestrictionView": {
+        "properties": {
+          "category_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "is_restricted": {
+            "type": "boolean"
+          },
+          "member_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "category_id",
+          "is_restricted",
+          "member_ids"
+        ],
+        "type": "object"
+      },
       "CategoryShareView": {
         "properties": {
           "access": {
@@ -660,6 +684,10 @@
             "type": "string"
           },
           "is_hidden": {
+            "type": "boolean"
+          },
+          "is_restricted": {
+            "description": "Team-space only; lock icon in the sidebar when true.",
             "type": "boolean"
           },
           "is_vault": {
@@ -2969,6 +2997,22 @@
         },
         "required": [
           "confirm_email"
+        ],
+        "type": "object"
+      },
+      "SetCategoryRestriction": {
+        "description": "Replace the member allowlist on a restricted team-space folder.\nEmpty `member_ids` means restricted to Maintainers only (org owners/admins included).",
+        "properties": {
+          "member_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "member_ids"
         ],
         "type": "object"
       },
@@ -8925,6 +8969,189 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CategoryPublicLinkView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/categories/{id}/restriction": {
+      "delete": {
+        "operationId": "categories_delete_restriction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryRestrictionView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ]
+      },
+      "get": {
+        "operationId": "categories_get_restriction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryRestrictionView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ]
+      },
+      "put": {
+        "operationId": "categories_put_restriction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCategoryRestriction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryRestrictionView"
                 }
               }
             },
