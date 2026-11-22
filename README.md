@@ -327,6 +327,28 @@ Pull requests should stay focused:
 
 ---
 
+## Also by Arsam
+
+Another self-hostable app by the same author.
+
+<table>
+  <tr>
+    <td width="460">
+      <a href="https://github.com/arsamsarabi/homa">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/arsamsarabi/homa/main/docs/media/screenshots/week-dark.webp" />
+          <img src="https://raw.githubusercontent.com/arsamsarabi/homa/main/docs/media/screenshots/week-light.webp" alt="Homa week view" width="460" />
+        </picture>
+      </a>
+      <h3><img src="https://raw.githubusercontent.com/arsamsarabi/homa/main/docs/media/homa-capital-320.webp" alt="" width="28" height="28" />&nbsp;<a href="https://github.com/arsamsarabi/homa">Homa</a></h3>
+      <p>A self-hostable calendar that puts every calendar you use on one timeline. Two-way sync with CalDAV, Google and Microsoft, reminders, tasks, a Jalali second calendar, and English and Farsi.</p>
+      <p><a href="https://homa.day">homa.day</a> · <a href="https://github.com/arsamsarabi/homa">GitHub</a></p>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## License
 
 [PolyForm Noncommercial License 1.0.0](LICENSE) © Arsam Sarabi.
