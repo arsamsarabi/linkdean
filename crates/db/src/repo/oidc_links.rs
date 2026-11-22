@@ -8,6 +8,7 @@ use linkdean_core::{Error, Result};
 use sqlx::{Acquire, PgPool};
 use uuid::Uuid;
 
+use super::organization_invites::link_pending_organization_invites;
 use super::pending_shares::link_pending_share_invites;
 use super::users::find_user_by_id;
 
@@ -202,7 +203,10 @@ pub async fn consume_pending_oidc_link(
     if link.email_verified {
         // Outside the transaction: the link stands even if attaching an invite fails.
         if let Err(e) = link_pending_share_invites(pool, &email, user_id).await {
-            tracing::warn!(%user_id, error = %e, "attaching invites after sso link failed");
+            tracing::warn!(%user_id, error = %e, "attaching share invites after sso link failed");
+        }
+        if let Err(e) = link_pending_organization_invites(pool, &email, user_id).await {
+            tracing::warn!(%user_id, error = %e, "attaching org invites after sso link failed");
         }
     }
     Ok(Some(link))

@@ -13,7 +13,15 @@ use uuid::Uuid;
 use super::account_tokens::{
     create_account_token, take_account_token, void_all_account_tokens, TokenPurpose,
 };
+use super::organization_invites::link_pending_organization_invites;
 use super::pending_shares::link_pending_share_invites;
+
+async fn link_pending_invites(pool: &PgPool, email: &str, user_id: Uuid) -> Result<u32> {
+    let linked = link_pending_share_invites(pool, email, user_id).await?;
+    link_pending_organization_invites(pool, email, user_id).await?;
+    Ok(linked)
+}
+
 use super::users::find_user_by_id;
 
 /// How long a verification or email change link works.
@@ -72,7 +80,7 @@ pub async fn mark_email_verified(pool: &PgPool, user_id: Uuid) -> Result<u32> {
     .await
     .map_err(db_err)?
     .ok_or(Error::NotFound)?;
-    link_pending_share_invites(pool, &email, user_id).await
+    link_pending_invites(pool, &email, user_id).await
 }
 
 /// Verify an address with its link. Works without a session: the token proves control of the
@@ -93,7 +101,7 @@ pub async fn verify_email_token(pool: &PgPool, token: &str) -> Result<Uuid> {
     .map_err(db_err)?;
     tx.commit().await.map_err(db_err)?;
     // Outside the transaction: the verification stands even if attaching an invite fails.
-    link_pending_share_invites(pool, &email, user_id).await?;
+    link_pending_invites(pool, &email, user_id).await?;
     Ok(user_id)
 }
 
@@ -180,7 +188,7 @@ pub async fn confirm_email_change(pool: &PgPool, token: &str) -> Result<(Uuid, S
     };
     let old_email = switch_email(&mut tx, user_id, &new_email).await?;
     tx.commit().await.map_err(email_write_err)?;
-    link_pending_share_invites(pool, &new_email, user_id).await?;
+    link_pending_invites(pool, &new_email, user_id).await?;
     Ok((user_id, old_email, new_email))
 }
 
@@ -211,6 +219,6 @@ pub async fn admin_change_email(pool: &PgPool, user_id: Uuid, new_email: &str) -
     let mut tx = pool.begin().await.map_err(db_err)?;
     switch_email(&mut tx, user_id, &new_email).await?;
     tx.commit().await.map_err(email_write_err)?;
-    link_pending_share_invites(pool, &new_email, user_id).await?;
+    link_pending_invites(pool, &new_email, user_id).await?;
     Ok(())
 }

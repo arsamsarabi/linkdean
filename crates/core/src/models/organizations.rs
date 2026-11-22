@@ -159,3 +159,60 @@ pub struct CreateTeam {
 pub struct PatchOrganizationMember {
     pub role: OrganizationRole,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct OrganizationInvite {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub invitee_email: String,
+    pub role: String,
+    pub invited_by_user_id: Uuid,
+    pub invitee_user_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub claimed_at: Option<DateTime<Utc>>,
+    pub claimed_by_user_id: Option<Uuid>,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub rejected_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationInviteTeamSpec {
+    pub team_id: Uuid,
+    #[serde(default)]
+    pub role: Option<TeamRole>,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct CreateOrganizationInvite {
+    pub email: String,
+    pub role: OrganizationRole,
+    /// Teams to join on accept. Required for guests; optional for others (default team).
+    #[serde(default)]
+    pub teams: Vec<OrganizationInviteTeamSpec>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationInviteView {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub organization_name: String,
+    pub invitee_email: String,
+    pub role: OrganizationRole,
+    pub invited_by_user_id: Uuid,
+    pub invitee_user_id: Option<Uuid>,
+    pub team_ids: Vec<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub rejected_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationInviteInboxItem {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub organization_name: String,
+    pub role: OrganizationRole,
+    pub inviter_display_name: String,
+    pub created_at: DateTime<Utc>,
+    pub rejected_at: Option<DateTime<Utc>>,
+}

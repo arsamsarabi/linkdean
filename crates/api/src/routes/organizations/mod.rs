@@ -4,10 +4,10 @@ use crate::state::AppState;
 use axum::extract::{Path, State};
 use axum::Json;
 use linkdean_core::{
-    CreateOrganization, CreateTeam, OrganizationMemberView, OrganizationWorkspace,
-    PatchOrganizationMember, TeamView,
+    CreateOrganization, CreateOrganizationInvite, CreateTeam, OrganizationInviteView,
+    OrganizationMemberView, OrganizationWorkspace, PatchOrganizationMember, TeamView,
 };
-use linkdean_db::{self as db};
+use linkdean_db::{self as db, NewOutboxEmail};
 use serde_json::{json, Value};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -18,6 +18,7 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(get, leave))
         .routes(routes!(list_members, patch_member, remove_member))
         .routes(routes!(list_teams, create_team))
+        .routes(routes!(list_invites, create_invite, revoke_invite))
 }
 
 #[utoipa::path(
@@ -220,4 +221,100 @@ async fn create_team(
     Json(req): Json<CreateTeam>,
 ) -> ApiResult<Json<TeamView>> {
     Ok(Json(db::create_team(&state.pool, user.id, id, req).await?))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_list_invites",
+    path = "/organizations/{id}/invites",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = Vec<OrganizationInviteView>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn list_invites(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Vec<OrganizationInviteView>>> {
+    Ok(Json(
+        db::list_organization_invites(&state.pool, user.id, id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_create_invite",
+    path = "/organizations/{id}/invites",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = OrganizationInviteView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn create_invite(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<CreateOrganizationInvite>,
+) -> ApiResult<Json<OrganizationInviteView>> {
+    let (view, _notifiable) = db::create_organization_invite(&state.pool, &user, id, req).await?;
+    // Known issue: no branded HTML template yet; plain outbox when mail is configured.
+    // Upgrade: share-invite-style template + claim token when A5 UI ships.
+    if state.mail.is_some() {
+        let inviter = user
+            .display_name
+            .clone()
+            .unwrap_or_else(|| user.email.clone());
+        let subject = format!("{inviter} invited you to {}", view.organization_name);
+        let text = format!(
+            "{inviter} invited you to join {org} on Linkdean as {role}.\n\nSign in (or register with {email}) and open your organization invites to accept.\n",
+            org = view.organization_name,
+            role = view.role.as_str(),
+            email = view.invitee_email,
+        );
+        let html = format!("<p>{}</p>", text.replace('\n', "<br/>"));
+        let _ = db::enqueue_email(
+            &state.pool,
+            &NewOutboxEmail {
+                recipient: view.invitee_email.clone(),
+                template: "organization_invite".into(),
+                subject,
+                html,
+                text,
+                list_unsubscribe: None,
+            },
+        )
+        .await;
+    }
+    Ok(Json(view))
+}
+
+#[utoipa::path(
+    delete,
+    operation_id = "organizations_revoke_invite",
+    path = "/organizations/{id}/invites/{invite_id}",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("invite_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn revoke_invite(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, invite_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::revoke_organization_invite(&state.pool, user.id, id, invite_id).await?;
+    Ok(Json(json!({ "ok": true })))
 }
