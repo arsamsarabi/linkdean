@@ -72,7 +72,7 @@ pub async fn create_organization(
         r#"
         INSERT INTO organizations (name)
         VALUES ($1)
-        RETURNING id, name, created_at, updated_at, deleted_at
+        RETURNING id, name, created_at, updated_at, deleted_at, invite_links_enabled
         "#,
     )
     .bind(&name)
@@ -133,6 +133,7 @@ pub async fn create_organization(
         name: org.name,
         role: OrganizationRole::Owner,
         deleted_at: None,
+        invite_links_enabled: org.invite_links_enabled,
         created_at: org.created_at,
         updated_at: org.updated_at,
     })
@@ -150,12 +151,13 @@ pub async fn list_organizations_for_user(
             String,
             String,
             Option<chrono::DateTime<chrono::Utc>>,
+            bool,
             chrono::DateTime<chrono::Utc>,
             chrono::DateTime<chrono::Utc>,
         ),
     >(
         r#"
-        SELECT o.id, o.name, m.role, o.deleted_at, o.created_at, o.updated_at
+        SELECT o.id, o.name, m.role, o.deleted_at, o.invite_links_enabled, o.created_at, o.updated_at
         FROM organizations o
         INNER JOIN organization_members m ON m.organization_id = o.id
         WHERE m.user_id = $1
@@ -172,16 +174,19 @@ pub async fn list_organizations_for_user(
     .map_err(|e| Error::msg(e.to_string()))?;
 
     rows.into_iter()
-        .map(|(id, name, role, deleted_at, created_at, updated_at)| {
-            Ok(OrganizationWorkspace {
-                id,
-                name,
-                role: parse_org_role(&role)?,
-                deleted_at,
-                created_at,
-                updated_at,
-            })
-        })
+        .map(
+            |(id, name, role, deleted_at, invite_links_enabled, created_at, updated_at)| {
+                Ok(OrganizationWorkspace {
+                    id,
+                    name,
+                    role: parse_org_role(&role)?,
+                    deleted_at,
+                    invite_links_enabled,
+                    created_at,
+                    updated_at,
+                })
+            },
+        )
         .collect()
 }
 
@@ -197,12 +202,13 @@ pub async fn get_organization_for_member(
             String,
             String,
             Option<chrono::DateTime<chrono::Utc>>,
+            bool,
             chrono::DateTime<chrono::Utc>,
             chrono::DateTime<chrono::Utc>,
         ),
     >(
         r#"
-        SELECT o.id, o.name, m.role, o.deleted_at, o.created_at, o.updated_at
+        SELECT o.id, o.name, m.role, o.deleted_at, o.invite_links_enabled, o.created_at, o.updated_at
         FROM organizations o
         INNER JOIN organization_members m ON m.organization_id = o.id
         WHERE o.id = $1
@@ -225,8 +231,9 @@ pub async fn get_organization_for_member(
         name: row.1,
         role: parse_org_role(&row.2)?,
         deleted_at: row.3,
-        created_at: row.4,
-        updated_at: row.5,
+        invite_links_enabled: row.4,
+        created_at: row.5,
+        updated_at: row.6,
     })
 }
 
@@ -1123,7 +1130,7 @@ pub async fn soft_delete_organization(
     require_org_role(pool, actor_id, organization_id, OrganizationRole::Owner).await?;
     let org = sqlx::query_as::<_, Organization>(
         r#"
-        SELECT id, name, created_at, updated_at, deleted_at
+        SELECT id, name, created_at, updated_at, deleted_at, invite_links_enabled
         FROM organizations WHERE id = $1
         "#,
     )
@@ -1198,7 +1205,7 @@ pub async fn restore_organization(
         UPDATE organizations
         SET deleted_at = NULL, updated_at = now()
         WHERE id = $1 AND deleted_at IS NOT NULL
-        RETURNING id, name, created_at, updated_at, deleted_at
+        RETURNING id, name, created_at, updated_at, deleted_at, invite_links_enabled
         "#,
     )
     .bind(organization_id)
@@ -1224,6 +1231,7 @@ pub async fn restore_organization(
         name: org.name,
         role: OrganizationRole::Owner,
         deleted_at: None,
+        invite_links_enabled: org.invite_links_enabled,
         created_at: org.created_at,
         updated_at: org.updated_at,
     })

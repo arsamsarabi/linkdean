@@ -58,10 +58,11 @@ Fixed now and used in the UI, API and docs, in American spelling.
 - Every member joins the default team as Editor; admins can change that default to Viewer.
 - Guests never join the default team automatically.
 
-## Joining an organization (v1)
+## Joining an organization
 
-- **Email invites only**: an admin picks the address, organization role and teams.
+- **Email invites**: an admin picks the address, organization role and teams.
 - An invite to an address without an account waits until someone registers with that address, as pending folder-share invites do today.
+- **Invite links** (optional, off by default): an admin enables them in organization settings, then creates a shareable code with role, expiry and optional use limit. Guests on a link must include at least one team. Accepting a link requires a signed-in account with a verified email.
 - Accepting requires a verified email address (part C). With mail off, only accounts an admin created or approved can accept.
 
 ## Team space features (v1)
@@ -117,7 +118,7 @@ Fixed now and used in the UI, API and docs, in American spelling.
 - Solo users: unchanged.
 - Members of an organization get a **workspace switcher** at the top of the sidebar ("Personal", "Acme Inc."). Each workspace has its own sidebar, search and dashboards. The current workspace is always visible: the switcher shows the organization's name and logo, and the header is subtly tinted.
 - Inside an organization, the sidebar lists the user's teams, each expanding to its folder tree, the default team first. Restricted folders show a lock.
-- Organization settings for owners and admins: Members, Teams, Policies, Audit log, Danger zone.
+- Organization settings for owners and admins: Members, Teams, Invite links, Policies, Audit log, Danger zone.
 - Search covers the current workspace by default, with an "all my workspaces" toggle.
 - Capture (paste, the future browser extension) saves to the current workspace, with a picker.
 
@@ -139,7 +140,6 @@ Self-hosted has every feature, with no plan gates. Plan checks live in one place
 
 ## Backlog (after v1)
 
-- Invite links (role, expiry, use limit; off by default).
 - Verified domains: DNS TXT proof, then auto-join or join-on-request for matching verified addresses.
 - SSO (SAML / per-organization OIDC) and SCIM provisioning.
 - Team vaults: shared keys, rotation when members leave, recovery.

@@ -1,4 +1,4 @@
-//! Organizations and teams membership (Phase A).
+//! Organizations and teams membership (Phase A) + invite links (Phase B).
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -104,6 +104,7 @@ pub struct Organization {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+    pub invite_links_enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
@@ -145,6 +146,8 @@ pub struct OrganizationWorkspace {
     /// Set while the org is in the 30-day delete grace (owners only see these).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<DateTime<Utc>>,
+    /// When false, invite-link create/accept is refused (default).
+    pub invite_links_enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -287,4 +290,68 @@ pub struct OrganizationInviteInboxItem {
     pub inviter_display_name: String,
     pub created_at: DateTime<Utc>,
     pub rejected_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct OrganizationInviteLink {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub code_hash: String,
+    pub code_prefix: String,
+    pub role: String,
+    pub created_by_user_id: Uuid,
+    pub expires_at: DateTime<Utc>,
+    pub max_uses: Option<i32>,
+    pub use_count: i32,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct CreateOrganizationInviteLink {
+    pub role: OrganizationRole,
+    /// Days until expiry; clamped 1..=90; default 7.
+    #[serde(default)]
+    pub expires_in_days: Option<u32>,
+    /// Max redemptions. `None` or omit = unlimited.
+    #[serde(default)]
+    pub max_uses: Option<i32>,
+    /// Teams to join on accept. Required for guests; optional for others (default team).
+    #[serde(default)]
+    pub teams: Vec<OrganizationInviteTeamSpec>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationInviteLinkView {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub organization_name: String,
+    pub code_prefix: String,
+    pub role: OrganizationRole,
+    pub created_by_user_id: Uuid,
+    pub expires_at: DateTime<Utc>,
+    pub max_uses: Option<i32>,
+    pub use_count: i32,
+    pub team_ids: Vec<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct CreateOrganizationInviteLinkResponse {
+    pub link: OrganizationInviteLinkView,
+    /// Full secret code; returned once on create.
+    pub code: String,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct AcceptOrganizationInviteLink {
+    pub code: String,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct PatchOrganizationInviteLinks {
+    pub invite_links_enabled: bool,
 }

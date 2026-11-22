@@ -8,8 +8,30 @@ export const organizationWorkspaceSchema = z.object({
   name: z.string(),
   role: organizationRoleSchema,
   deleted_at: z.string().nullish(),
+  invite_links_enabled: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
+})
+
+export const organizationInviteLinkViewSchema = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  organization_name: z.string(),
+  code_prefix: z.string(),
+  role: organizationRoleSchema,
+  created_by_user_id: z.string().uuid(),
+  expires_at: z.string(),
+  max_uses: z.number().int().nullable(),
+  use_count: z.number().int(),
+  team_ids: z.array(z.string().uuid()),
+  created_at: z.string(),
+  revoked_at: z.string().nullable(),
+  status: z.string(),
+})
+
+export const createOrganizationInviteLinkResponseSchema = z.object({
+  link: organizationInviteLinkViewSchema,
+  code: z.string(),
 })
 
 export const teamViewSchema = z.object({
@@ -46,3 +68,5 @@ export type OrganizationWorkspace = z.infer<typeof organizationWorkspaceSchema>
 export type TeamView = z.infer<typeof teamViewSchema>
 export type OrganizationMemberView = z.infer<typeof organizationMemberViewSchema>
 export type OrganizationAuditEvent = z.infer<typeof organizationAuditEventSchema>
+export type OrganizationInviteLinkView = z.infer<typeof organizationInviteLinkViewSchema>
+export type CreateOrganizationInviteLinkResponse = z.infer<typeof createOrganizationInviteLinkResponseSchema>

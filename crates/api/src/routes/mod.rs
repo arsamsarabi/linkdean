@@ -14,6 +14,7 @@ mod email_unsubscribe;
 mod health;
 mod import_export;
 mod notifications;
+mod organization_invite_links;
 mod organization_invites;
 mod organizations;
 mod public;
@@ -111,6 +112,7 @@ fn documented(agent_skills: bool) -> OpenApiRouter<AppState> {
         .merge(activity::router())
         .merge(notifications::router())
         .merge(organizations::router())
+        .merge(organization_invite_links::router())
         .merge(organization_invites::router())
         .merge(share_invites::router())
         .merge(users::router())

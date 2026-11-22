@@ -6,7 +6,13 @@ db-global-state = { max-threads = 1 }
 
 [[profile.default.overrides]]
 # archives: claim_next_archive + platform archive settings are global (GATE mutex is a no-op across nextest processes).
-filter = "package(linkdean-db) & (binary(api_keys) | binary(archives) | binary(email_outbox) | binary(email_verification) | binary(instance_races) | binary(notification_email))"
+# orgs: organizations_create_open is a single platform row; create_organization in sibling binaries races the gate test.
+filter = "package(linkdean-db) & (binary(api_keys) | binary(archives) | binary(email_outbox) | binary(email_verification) | binary(instance_races) | binary(notification_email) | binary(organizations) | binary(organization_invites) | binary(organization_invite_links) | binary(org_lifecycle) | binary(team_spaces) | binary(restricted_folders))"
+test-group = "db-global-state"
+
+# CI selects --profile ci; repeat the override so grouping is not only on default.
+[[profile.ci.overrides]]
+filter = "package(linkdean-db) & (binary(api_keys) | binary(archives) | binary(email_outbox) | binary(email_verification) | binary(instance_races) | binary(notification_email) | binary(organizations) | binary(organization_invites) | binary(organization_invite_links) | binary(org_lifecycle) | binary(team_spaces) | binary(restricted_folders))"
 test-group = "db-global-state"
 
 [profile.ci]

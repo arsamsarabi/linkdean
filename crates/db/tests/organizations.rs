@@ -179,6 +179,8 @@ async fn create_blocked_when_instance_closes_org_creation() {
         return;
     };
     let a = user(&pool, "locked").await;
+    // Global platform row — nextest serializes this binary with other org creators via
+    // db-global-state. Always reopen, even if the assert fails.
     db::set_organizations_create_open(&pool, false)
         .await
         .expect("close");
@@ -189,12 +191,11 @@ async fn create_blocked_when_instance_closes_org_creation() {
             name: "Nope".into(),
         },
     )
-    .await
-    .expect_err("forbidden");
+    .await;
+    let reopen = db::set_organizations_create_open(&pool, true).await;
+    reopen.expect("reopen");
+    let err = err.expect_err("forbidden");
     assert!(matches!(err, Error::Forbidden));
-    db::set_organizations_create_open(&pool, true)
-        .await
-        .expect("reopen");
 }
 
 #[tokio::test]
