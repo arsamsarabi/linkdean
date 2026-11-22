@@ -128,8 +128,8 @@ async fn webhook(
     }
     let text = std::str::from_utf8(&body)
         .map_err(|_| Error::BadRequest("webhook body is not UTF-8".into()))?;
-    let event: Value = serde_json::from_str(text)
-        .map_err(|_| Error::BadRequest("invalid webhook JSON".into()))?;
+    let event: Value =
+        serde_json::from_str(text).map_err(|_| Error::BadRequest("invalid webhook JSON".into()))?;
     if let Some(change) = plan_change_from_event(&event, &billing.price_id_pro) {
         apply_plan_change(&state.pool, change).await?;
     }
