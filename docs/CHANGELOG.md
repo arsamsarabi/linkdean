@@ -2,6 +2,11 @@
 
 Every release cuts a section: on release, rename `[Unreleased]` to the new version and date, and start a fresh `[Unreleased]` above it. The Release workflow copies a version's `### Breaking` section into its GitHub release notes.
 
+### Fixed
+
+- Upgraded `url` to 2.5.9 for RUSTSEC-2026-0592 (stack overflow in `Url::origin()` on nested `blob:` URLs).
+
+
 ## [Unreleased]
 
 ### Added
