@@ -122,6 +122,7 @@ pub struct Team {
     pub name: String,
     pub is_default: bool,
     pub archived_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -141,6 +142,9 @@ pub struct OrganizationWorkspace {
     pub id: Uuid,
     pub name: String,
     pub role: OrganizationRole,
+    /// Set while the org is in the 30-day delete grace (owners only see these).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -161,10 +165,56 @@ pub struct TeamView {
     pub name: String,
     pub is_default: bool,
     pub archived_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
     /// Caller's team role when listed; org owners/admins act as maintainer without a row.
     pub role: Option<TeamRole>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct ConfirmOrganizationName {
+    /// Must match the organization name exactly (trimmed).
+    pub confirm_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct OrganizationAuditEvent {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub actor_user_id: Option<Uuid>,
+    pub action: String,
+    pub payload: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationAuditEventView {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub actor_user_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actor_email: Option<String>,
+    pub action: String,
+    pub payload: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, utoipa::ToSchema)]
+pub struct ListOrganizationAuditQuery {
+    #[serde(default)]
+    pub actor_user_id: Option<Uuid>,
+    #[serde(default)]
+    pub action: Option<String>,
+    #[serde(default)]
+    pub from: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub to: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub limit: Option<i64>,
+    #[serde(default)]
+    pub offset: Option<i64>,
 }
 
 #[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]

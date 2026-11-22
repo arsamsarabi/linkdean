@@ -130,6 +130,25 @@ async fn run_once(state: &AppState) {
         Err(e) => tracing::warn!(error = %e, "bookmark open purge failed"),
     }
 
+    match linkdean_db::purge_organizations_past_grace(&state.pool).await {
+        Ok(0) => {}
+        Ok(n) => tracing::info!(organizations = n, "purged organizations past delete grace"),
+        Err(e) => tracing::warn!(error = %e, "organization grace purge failed"),
+    }
+    match linkdean_db::purge_teams_past_grace(&state.pool).await {
+        Ok(0) => {}
+        Ok(n) => tracing::info!(teams = n, "purged teams past delete grace"),
+        Err(e) => tracing::warn!(error = %e, "team grace purge failed"),
+    }
+    match linkdean_db::prune_organization_audit_events(&state.pool).await {
+        Ok(0) => {}
+        Ok(n) => tracing::info!(
+            events = n,
+            "pruned organization audit events older than 1 year"
+        ),
+        Err(e) => tracing::warn!(error = %e, "organization audit prune failed"),
+    }
+
     // Vault keys of sessions that ended or sat idle past the owner's auto-lock time.
     let hashes = state.vault_keys.session_hashes();
     match linkdean_db::live_session_hashes(&state.pool, &hashes).await {

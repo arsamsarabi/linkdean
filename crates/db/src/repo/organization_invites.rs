@@ -99,7 +99,8 @@ pub async fn create_organization_invite(
             r#"
             SELECT EXISTS(
                 SELECT 1 FROM teams
-                WHERE id = $1 AND organization_id = $2 AND archived_at IS NULL
+                WHERE id = $1 AND organization_id = $2
+                  AND archived_at IS NULL AND deleted_at IS NULL
             )
             "#,
         )

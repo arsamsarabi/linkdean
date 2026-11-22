@@ -61,6 +61,9 @@ import {
   notificationsEnvelopeSchema,
   okSchema,
   okUserEnvelopeSchema,
+  organizationAuditEventSchema,
+  organizationMemberViewSchema,
+  organizationWorkspaceSchema,
   pageDetailsSchema,
   passkeyListSchema,
   passkeySchema,
@@ -85,6 +88,7 @@ import {
   shareInvitesEnvelopeSchema,
   socialEnvelopeSchema,
   tagNamesSchema,
+  teamViewSchema,
   testEmailResultSchema,
   trashItemsSchema,
   trashPurgeResultSchema,
@@ -152,6 +156,9 @@ import {
   type Notification,
   type NotificationEmailPref,
   type NotificationKind,
+  type OrganizationAuditEvent,
+  type OrganizationMemberView,
+  type OrganizationWorkspace,
   type Passkey,
   type PatchDashboard,
   type PendingOidcLink,
@@ -176,6 +183,7 @@ import {
   type ShareInvite,
   type SocialSubjectType,
   type SocialSummary,
+  type TeamView,
   type TestEmailResult,
   type TrashItem,
   type TrashKind,
@@ -354,6 +362,59 @@ export const api = {
     req('/api-keys', { method: 'POST', body: JSON.stringify(body) }, createApiKeyResponseSchema),
 
   revokeApiKey: (id: string): Promise<{ ok: boolean }> => req(`/api-keys/${id}`, { method: 'DELETE' }, okSchema),
+
+  listOrganizations: (): Promise<OrganizationWorkspace[]> =>
+    req('/organizations', {}, z.array(organizationWorkspaceSchema)),
+
+  createOrganization: (body: { name: string }): Promise<OrganizationWorkspace> =>
+    req('/organizations', { method: 'POST', body: JSON.stringify(body) }, organizationWorkspaceSchema),
+
+  getOrganization: (id: string): Promise<OrganizationWorkspace> =>
+    req(`/organizations/${id}`, {}, organizationWorkspaceSchema),
+
+  listOrganizationMembers: (id: string): Promise<OrganizationMemberView[]> =>
+    req(`/organizations/${id}/members`, {}, z.array(organizationMemberViewSchema)),
+
+  listOrganizationTeams: (id: string): Promise<TeamView[]> =>
+    req(`/organizations/${id}/teams`, {}, z.array(teamViewSchema)),
+
+  createOrganizationTeam: (id: string, body: { name: string }): Promise<TeamView> =>
+    req(`/organizations/${id}/teams`, { method: 'POST', body: JSON.stringify(body) }, teamViewSchema),
+
+  archiveOrganizationTeam: (id: string, teamId: string): Promise<TeamView> =>
+    req(`/organizations/${id}/teams/${teamId}/archive`, { method: 'POST' }, teamViewSchema),
+
+  unarchiveOrganizationTeam: (id: string, teamId: string): Promise<TeamView> =>
+    req(`/organizations/${id}/teams/${teamId}/unarchive`, { method: 'POST' }, teamViewSchema),
+
+  deleteOrganizationTeam: (id: string, teamId: string): Promise<{ ok: boolean }> =>
+    req(`/organizations/${id}/teams/${teamId}`, { method: 'DELETE' }, okSchema),
+
+  restoreOrganizationTeam: (id: string, teamId: string): Promise<TeamView> =>
+    req(`/organizations/${id}/teams/${teamId}/restore`, { method: 'POST' }, teamViewSchema),
+
+  deleteOrganization: (id: string, confirmName: string): Promise<{ ok: boolean }> =>
+    req(
+      `/organizations/${id}/delete`,
+      { method: 'POST', body: JSON.stringify({ confirm_name: confirmName }) },
+      okSchema
+    ),
+
+  restoreOrganization: (id: string): Promise<OrganizationWorkspace> =>
+    req(`/organizations/${id}/restore`, { method: 'POST' }, organizationWorkspaceSchema),
+
+  listOrganizationAudit: (
+    id: string,
+    opts?: { actorUserId?: string; action?: string; limit?: number; offset?: number }
+  ): Promise<OrganizationAuditEvent[]> => {
+    const params = new URLSearchParams()
+    if (opts?.actorUserId) params.set('actor_user_id', opts.actorUserId)
+    if (opts?.action) params.set('action', opts.action)
+    if (opts?.limit != null) params.set('limit', String(opts.limit))
+    if (opts?.offset != null) params.set('offset', String(opts.offset))
+    const q = params.toString()
+    return req(`/organizations/${id}/audit${q ? `?${q}` : ''}`, {}, z.array(organizationAuditEventSchema))
+  },
 
   listSavedSearches: (): Promise<SavedSearch[]> => req('/saved-searches', {}, z.array(savedSearchSchema)),
 
@@ -632,8 +693,13 @@ export const api = {
   unmuteUser: (id: string): Promise<{ mute: MuteRelation }> =>
     req(`/users/${id}/mute`, { method: 'DELETE' }, muteEnvelopeSchema),
 
-  categories: (include_hidden = false, include_vault = false): Promise<Category[]> =>
-    req(`/categories?include_hidden=${include_hidden}&include_vault=${include_vault}`, {}, categoriesSchema),
+  categories: (include_hidden = false, include_vault = false, team_id?: string | null): Promise<Category[]> => {
+    const q = new URLSearchParams()
+    q.set('include_hidden', String(include_hidden))
+    q.set('include_vault', String(include_vault))
+    if (team_id) q.set('team_id', team_id)
+    return req(`/categories?${q.toString()}`, {}, categoriesSchema)
+  },
 
   createCategory: (body: CreateCategoryBody): Promise<Category> =>
     req('/categories', { method: 'POST', body: JSON.stringify(body) }, categorySchema),

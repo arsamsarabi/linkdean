@@ -38,6 +38,8 @@ vi.mock('@/hooks', () => ({
   useDeleteSavedSearch: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useExperimentalFlags: () => ({ agent_skills: false }),
   useDownloadAgentSkill: () => ({ download: vi.fn(), pending: false }),
+  useOrganizations: () => ({ isLoading: false, data: [] }),
+  useOrganizationTeams: () => ({ isLoading: false, data: [] }),
 }))
 
 vi.mock('./useIconRail', () => ({

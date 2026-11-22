@@ -7,16 +7,18 @@ import {
 } from '@tanstack/react-query'
 import { api } from '@/api'
 import type { Category, CategoryVisibility, CreateCategoryBody } from '@/schemas'
-import { useUi } from '@/stores'
+import { useShellUi, useUi } from '@/stores'
 
 export function useCategories(includeHidden?: boolean, includeVault?: boolean): UseQueryResult<Category[]> {
   const showHidden = useUi((s) => s.showHidden)
   const vaultUnlocked = useUi((s) => s.vaultUnlocked)
+  const workspace = useShellUi((s) => s.workspace)
+  const teamId = workspace.kind === 'organization' ? workspace.teamId : null
   const hidden = includeHidden ?? showHidden
   const vault = includeVault ?? vaultUnlocked
   return useQuery({
-    queryKey: ['categories', hidden, vault],
-    queryFn: () => api.categories(hidden, vault),
+    queryKey: ['categories', hidden, vault, teamId],
+    queryFn: () => api.categories(hidden, vault, teamId),
   })
 }
 
