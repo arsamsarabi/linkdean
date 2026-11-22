@@ -5,6 +5,7 @@ export const categoryAccessSchema = z.enum(['owner', 'read', 'write'])
 export const categorySchema = z.object({
   id: z.string(),
   owner_user_id: z.string().optional(),
+  team_id: z.string().nullish(),
   parent_id: z.string().nullish(),
   name: z.string(),
   is_hidden: z.boolean(),
@@ -12,6 +13,8 @@ export const categorySchema = z.object({
   is_vault: z.boolean(),
   vault_id: z.string().nullish(),
   icon: z.string().nullish(),
+  /** Team-space folders only; sidebar shows a lock when true. */
+  is_restricted: z.boolean().default(false),
   position: z.number(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),

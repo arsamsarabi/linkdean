@@ -548,6 +548,9 @@ pub struct Category {
     pub public_slug: Option<String>,
     /// `private`, `followers` or `members`. Unrelated to `is_hidden`, which only affects the owner's views.
     pub visibility: String,
+    /// Team-space only: when true, only allowlisted members (plus Maintainers) see this folder.
+    #[serde(default)]
+    pub is_restricted: bool,
     pub position: i32,
     pub deleted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -663,6 +666,9 @@ pub struct CategoryView {
     pub visibility: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// Team-space only; lock icon in the sidebar when true.
+    #[serde(default)]
+    pub is_restricted: bool,
     pub position: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -697,6 +703,7 @@ impl CategoryView {
             vault_id: cat.vault_id,
             visibility: cat.visibility,
             icon: cat.icon,
+            is_restricted: cat.is_restricted,
             position: cat.position,
             created_at: cat.created_at,
             updated_at: cat.updated_at,
@@ -1327,6 +1334,20 @@ pub struct CreateCategory {
     /// Create in this team space instead of the personal library.
     #[serde(default)]
     pub team_id: Option<Uuid>,
+}
+
+/// Replace the member allowlist on a restricted team-space folder.
+/// Empty `member_ids` means restricted to Maintainers only (org owners/admins included).
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct SetCategoryRestriction {
+    pub member_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct CategoryRestrictionView {
+    pub category_id: Uuid,
+    pub is_restricted: bool,
+    pub member_ids: Vec<Uuid>,
 }
 
 /// Copy a readable category tree (+ bookmarks) into a new owned root.

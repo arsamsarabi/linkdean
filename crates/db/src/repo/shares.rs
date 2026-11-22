@@ -38,7 +38,8 @@ fn to_view(row: ShareRow) -> Result<CategoryShareView> {
 }
 
 /// Resolve effective access for `user_id` on `category_id`.
-/// Owner wins. Team-space membership maps to CategoryAccess. Else nearest ancestor share.
+/// Owner wins. Team-space membership maps to CategoryAccess, narrowed by folder
+/// restrictions. Else nearest ancestor share.
 /// Vault → NotFound for non-owners. Trash is the owner's for personal shares.
 pub async fn category_access(
     pool: &PgPool,
@@ -51,6 +52,14 @@ pub async fn category_access(
     }
     if let Some(team_id) = cat.team_id {
         let role = super::organizations::effective_team_role(pool, user_id, team_id).await?;
+        // Maintainers (incl. org owners/admins) always see restricted folders.
+        // Editors/Viewers need an allowlist seat on every restricted ancestor.
+        if !role.at_least(TeamRole::Maintainer)
+            && !super::categories::user_passes_team_folder_restrictions(pool, user_id, category_id)
+                .await?
+        {
+            return Err(Error::NotFound);
+        }
         return Ok(role.to_category_access());
     }
     if cat.is_vault {
@@ -228,6 +237,7 @@ impl CategoryShareRow {
             public_slug: None,
             // Visibility is an owner setting; the shared listing does not carry it.
             visibility: "private".to_string(),
+            is_restricted: false,
             position: self.position,
             deleted_at: self.deleted_at,
             created_at: self.created_at,

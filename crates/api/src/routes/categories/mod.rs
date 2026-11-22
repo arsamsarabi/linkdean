@@ -6,10 +6,10 @@ use crate::vault_keys::VaultSession;
 use axum::extract::{Path, Query, State};
 use axum::Json;
 use linkdean_core::{
-    CategoryPublicLinkView, CategoryShareView, CategorySharesEnvelope, CategoryView,
-    CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, ForkCategory, MoveToTeam,
-    PendingShareInviteView, PendingShareSubjectType, UpdateCategory, UpdateCategoryShare,
-    UpdatePendingShareInvite,
+    CategoryPublicLinkView, CategoryRestrictionView, CategoryShareView, CategorySharesEnvelope,
+    CategoryView, CreateCategory, CreateCategoryShare, CreateCategoryShareOutcome, ForkCategory,
+    MoveToTeam, PendingShareInviteView, PendingShareSubjectType, SetCategoryRestriction,
+    UpdateCategory, UpdateCategoryShare, UpdatePendingShareInvite,
 };
 use linkdean_db::{self as db};
 use serde::Deserialize;
@@ -33,6 +33,11 @@ pub fn router() -> OpenApiRouter<AppState> {
             disable_public_link
         ))
         .routes(routes!(rotate_public_link))
+        .routes(routes!(
+            get_restriction,
+            put_restriction,
+            delete_restriction
+        ))
 }
 
 #[derive(Deserialize, utoipa::ToSchema, utoipa::IntoParams)]
@@ -494,4 +499,72 @@ async fn disable_public_link(
 ) -> ApiResult<Json<CategoryPublicLinkView>> {
     let link = db::disable_category_public_link(&state.pool, user.id, id).await?;
     Ok(Json(link))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "categories_get_restriction",
+    path = "/categories/{id}/restriction",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryRestrictionView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn get_restriction(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CategoryRestrictionView>> {
+    let view = db::get_category_restriction(&state.pool, user.id, id).await?;
+    Ok(Json(view))
+}
+
+#[utoipa::path(
+    put,
+    operation_id = "categories_put_restriction",
+    path = "/categories/{id}/restriction",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    request_body = SetCategoryRestriction,
+    responses(
+        (status = 200, description = "OK", body = CategoryRestrictionView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn put_restriction(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<SetCategoryRestriction>,
+) -> ApiResult<Json<CategoryRestrictionView>> {
+    let view = db::set_category_restriction(&state.pool, user.id, id, req).await?;
+    Ok(Json(view))
+}
+
+#[utoipa::path(
+    delete,
+    operation_id = "categories_delete_restriction",
+    path = "/categories/{id}/restriction",
+    tag = "categories",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = CategoryRestrictionView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn delete_restriction(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<CategoryRestrictionView>> {
+    let view = db::clear_category_restriction(&state.pool, user.id, id).await?;
+    Ok(Json(view))
 }
