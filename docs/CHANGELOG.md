@@ -11,6 +11,7 @@ Every release cuts a section: on release, rename `[Unreleased]` to the new versi
 
 ### Added
 
+- **Organizations Phase A closeout:** team archive/delete with grace restore, organization soft-delete (30-day restore), audit log API/CSV and settings UI, workspace switcher in the sidebar. See [organizations and teams](design/organizations-and-teams.md).
 - **Restricted team folders:** Maintainers can lock a team-space folder to an allowlist of team members (`PUT/DELETE /categories/{id}/restriction`). Effective access is still the team role; org owners/admins always see. Restrictions never widen access. See [organizations and teams](design/organizations-and-teams.md).
 - **Team-space content ownership:** folders, bookmarks, tags, and dashboards can belong to a team (`owner_user_id` XOR `team_id`). List/create with `?team_id=` / body `team_id`; move personal folders into a team (with ownership ack); copy team folders to personal. Vaults and individual shares stay personal-only. See [organizations and teams](design/organizations-and-teams.md).
 - **Organization email invites:** org admins invite by email (role + optional teams); invitees accept from `/api/organization-invites` after email verification. Plain invite email when mail is on. See [organizations and teams](design/organizations-and-teams.md).
