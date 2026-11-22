@@ -18,6 +18,17 @@
         ],
         "type": "string"
       },
+      "AcceptOrganizationInviteLink": {
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
       "AcceptTerms": {
         "description": "Body of `POST /users/me/terms`.",
         "properties": {
@@ -1194,6 +1205,57 @@
         ],
         "type": "object"
       },
+      "CreateOrganizationInviteLink": {
+        "properties": {
+          "expires_in_days": {
+            "description": "Days until expiry; clamped 1..=90; default 7.",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "max_uses": {
+            "description": "Max redemptions. `None` or omit = unlimited.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          },
+          "teams": {
+            "description": "Teams to join on accept. Required for guests; optional for others (default team).",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationInviteTeamSpec"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "type": "object"
+      },
+      "CreateOrganizationInviteLinkResponse": {
+        "properties": {
+          "code": {
+            "description": "Full secret code; returned once on create.",
+            "type": "string"
+          },
+          "link": {
+            "$ref": "#/components/schemas/OrganizationInviteLinkView"
+          }
+        },
+        "required": [
+          "link",
+          "code"
+        ],
+        "type": "object"
+      },
       "CreateRegistrationInvite": {
         "properties": {
           "email": {
@@ -2265,6 +2327,81 @@
         ],
         "type": "object"
       },
+      "OrganizationInviteLinkView": {
+        "properties": {
+          "code_prefix": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by_user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "max_uses": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "organization_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "organization_name": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          },
+          "status": {
+            "type": "string"
+          },
+          "team_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "use_count": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "organization_name",
+          "code_prefix",
+          "role",
+          "created_by_user_id",
+          "expires_at",
+          "use_count",
+          "team_ids",
+          "created_at",
+          "status"
+        ],
+        "type": "object"
+      },
       "OrganizationInviteTeamSpec": {
         "properties": {
           "role": {
@@ -2407,6 +2544,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "invite_links_enabled": {
+            "description": "When false, invite-link create/accept is refused (default).",
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
           },
@@ -2422,6 +2563,7 @@
           "id",
           "name",
           "role",
+          "invite_links_enabled",
           "created_at",
           "updated_at"
         ],
@@ -2454,6 +2596,17 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "PatchOrganizationInviteLinks": {
+        "properties": {
+          "invite_links_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "invite_links_enabled"
+        ],
         "type": "object"
       },
       "PatchOrganizationMember": {
@@ -11001,6 +11154,64 @@
         ]
       }
     },
+    "/organization-invite-links/accept": {
+      "post": {
+        "operationId": "organization_invite_links_accept",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptOrganizationInviteLink"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationWorkspace"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
     "/organization-invites": {
       "get": {
         "operationId": "organization_invites_list",
@@ -11585,6 +11796,270 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/organizations/{id}/invite-links": {
+      "get": {
+        "operationId": "organizations_list_invite_links",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationInviteLinkView"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      },
+      "post": {
+        "operationId": "organizations_create_invite_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationInviteLink"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrganizationInviteLinkResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/organizations/{id}/invite-links/settings": {
+      "patch": {
+        "operationId": "organizations_patch_invite_links_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchOrganizationInviteLinks"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationWorkspace"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/organizations/{id}/invite-links/{link_id}": {
+      "delete": {
+        "operationId": "organizations_revoke_invite_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

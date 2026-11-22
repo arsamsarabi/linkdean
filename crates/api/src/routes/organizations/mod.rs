@@ -6,9 +6,11 @@ use axum::http::{header, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use linkdean_core::{
-    ConfirmOrganizationName, CreateOrganization, CreateOrganizationInvite, CreateTeam,
-    ListOrganizationAuditQuery, OrganizationAuditEventView, OrganizationInviteView,
-    OrganizationMemberView, OrganizationWorkspace, PatchOrganizationMember, TeamView,
+    ConfirmOrganizationName, CreateOrganization, CreateOrganizationInvite,
+    CreateOrganizationInviteLink, CreateOrganizationInviteLinkResponse, CreateTeam,
+    ListOrganizationAuditQuery, OrganizationAuditEventView, OrganizationInviteLinkView,
+    OrganizationInviteView, OrganizationMemberView, OrganizationWorkspace,
+    PatchOrganizationInviteLinks, PatchOrganizationMember, TeamView,
 };
 use linkdean_db::{self as db, NewOutboxEmail};
 use serde_json::{json, Value};
@@ -22,6 +24,9 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(list_members, patch_member, remove_member))
         .routes(routes!(list_teams, create_team))
         .routes(routes!(list_invites, create_invite, revoke_invite))
+        .routes(routes!(list_invite_links, create_invite_link))
+        .routes(routes!(revoke_invite_link))
+        .routes(routes!(patch_invite_links_settings))
         .routes(routes!(archive_team))
         .routes(routes!(restore_archived_team))
         .routes(routes!(delete_team))
@@ -328,6 +333,101 @@ async fn revoke_invite(
 ) -> ApiResult<Json<Value>> {
     db::revoke_organization_invite(&state.pool, user.id, id, invite_id).await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_list_invite_links",
+    path = "/organizations/{id}/invite-links",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = Vec<OrganizationInviteLinkView>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn list_invite_links(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Vec<OrganizationInviteLinkView>>> {
+    Ok(Json(
+        db::list_organization_invite_links(&state.pool, user.id, id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_create_invite_link",
+    path = "/organizations/{id}/invite-links",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    request_body = CreateOrganizationInviteLink,
+    responses(
+        (status = 200, description = "OK", body = CreateOrganizationInviteLinkResponse),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn create_invite_link(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<CreateOrganizationInviteLink>,
+) -> ApiResult<Json<CreateOrganizationInviteLinkResponse>> {
+    Ok(Json(
+        db::create_organization_invite_link(&state.pool, &user, id, req).await?,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    operation_id = "organizations_revoke_invite_link",
+    path = "/organizations/{id}/invite-links/{link_id}",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("link_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn revoke_invite_link(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, link_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::revoke_organization_invite_link(&state.pool, user.id, id, link_id).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[utoipa::path(
+    patch,
+    operation_id = "organizations_patch_invite_links_settings",
+    path = "/organizations/{id}/invite-links/settings",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    request_body = PatchOrganizationInviteLinks,
+    responses(
+        (status = 200, description = "OK", body = OrganizationWorkspace),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn patch_invite_links_settings(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<PatchOrganizationInviteLinks>,
+) -> ApiResult<Json<OrganizationWorkspace>> {
+    Ok(Json(
+        db::set_organization_invite_links_enabled(&state.pool, user.id, id, req).await?,
+    ))
 }
 
 #[utoipa::path(
