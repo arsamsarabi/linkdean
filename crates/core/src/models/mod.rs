@@ -8,6 +8,8 @@ mod archive;
 pub use archive::*;
 mod moderation;
 pub use moderation::*;
+mod organizations;
+pub use organizations::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct User {
@@ -217,6 +219,8 @@ pub struct PlatformSettings {
     pub registration_open: bool,
     pub api_keys_enabled: bool,
     pub require_verified_email: bool,
+    /// When true (default), anyone can create an organization. When false, instance admins only.
+    pub organizations_create_open: bool,
     /// Max owned bookmarks (non-deleted). `None` = unlimited.
     pub max_bookmarks: Option<i64>,
     /// Max bytes for avatar + preview assets. `None` = unlimited.
@@ -300,6 +304,7 @@ pub struct UpdatePlatformSettings {
     pub registration_open: Option<bool>,
     pub api_keys_enabled: Option<bool>,
     pub require_verified_email: Option<bool>,
+    pub organizations_create_open: Option<bool>,
     /// `Some(None)` clears; `Some(Some(n))` sets; omit = no change.
     #[serde(default, deserialize_with = "deserialize_option_option_i64")]
     pub max_bookmarks: Option<Option<i64>>,
