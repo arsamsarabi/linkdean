@@ -32,3 +32,9 @@ export function useArchivesEnabled(): boolean {
   const { data } = useAuthConfigQuery()
   return data?.archives_enabled ?? true
 }
+
+/** Managed Linkdean service with Free/Pro plans. Self-host is false. */
+export function useManagedService(): boolean {
+  const { data } = useAuthConfigQuery()
+  return data?.managed_service ?? false
+}

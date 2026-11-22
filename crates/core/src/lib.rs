@@ -8,6 +8,7 @@ pub mod import_export;
 pub mod legal;
 pub mod models;
 pub mod page_text;
+pub mod plans;
 pub mod preview_image;
 pub mod unsubscribe;
 
@@ -17,3 +18,4 @@ pub use api_scopes::{
 };
 pub use error::{Error, Result};
 pub use models::*;
+pub use plans::{merge_limits, tighter, AccountPlan};

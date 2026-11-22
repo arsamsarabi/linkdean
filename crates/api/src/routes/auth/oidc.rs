@@ -562,6 +562,7 @@ async fn sign_in(
             invite_code: None,
             bootstrap_token_ok: state.cfg.bootstrap_token_ok(None),
             terms_version: state.cfg.terms_version(),
+            plan: state.cfg.managed_service.then_some("free"),
         },
     )
     .await?;

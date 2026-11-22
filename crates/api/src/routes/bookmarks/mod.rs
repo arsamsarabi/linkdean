@@ -384,7 +384,7 @@ async fn upload_preview(
         break;
     }
     let raw_bytes = bytes.ok_or_else(|| Error::BadRequest("missing preview file field".into()))?;
-    let limits = crate::quotas::limits_for(&state.pool).await?;
+    let limits = crate::quotas::limits_for(&state.pool, user.id).await?;
     crate::quotas::refuse_upload(
         &state,
         user.id,
@@ -623,7 +623,7 @@ async fn page_details(
     let rate = crate::rate_limit::page_details_limit(user.id);
     state.limiter.check(&rate)?;
     state.limiter.record(&rate);
-    let limits = crate::quotas::limits_for(&state.pool).await?;
+    let limits = crate::quotas::limits_for(&state.pool, user.id).await?;
     db::consume_enrich_action(&state.pool, user.id, &limits).await?;
 
     use linkdean_worker::PageDetailsError;

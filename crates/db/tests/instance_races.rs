@@ -59,6 +59,7 @@ fn gate(invite_code: Option<&str>, bootstrap_token_ok: Option<bool>) -> SignupGa
         invite_code,
         bootstrap_token_ok,
         terms_version: None,
+        plan: None,
     }
 }
 
@@ -168,6 +169,7 @@ async fn one_invite_makes_one_account_when_sign_ups_race() {
 
 fn set_admin(is_admin: bool) -> UpdateAdminUser {
     UpdateAdminUser {
+        plan: None,
         is_admin: Some(is_admin),
         api_keys_enabled: None,
     }

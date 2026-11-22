@@ -339,14 +339,13 @@ impl AssetKind {
 /// Cache remote image on disk; return local API URL (or remote fallback / None = no DB change).
 /// Consume one enrich action when a daily cap is set. Returns false when over quota.
 async fn consume_enrich_or_skip(pool: &PgPool, user_id: Uuid) -> bool {
-    let settings = match db::get_platform_settings(pool).await {
-        Ok(s) => s,
+    let limits = match db::resolve_limits_for(pool, user_id).await {
+        Ok(l) => l,
         Err(e) => {
-            warn!(%user_id, error = %e, "enrich quota: platform settings");
+            warn!(%user_id, error = %e, "enrich quota: resolve limits");
             return false;
         }
     };
-    let limits = db::resolve_limits(&settings);
     match db::consume_enrich_action(pool, user_id, &limits).await {
         Ok(()) => true,
         Err(e) => {

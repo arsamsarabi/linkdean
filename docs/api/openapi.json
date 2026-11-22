@@ -2797,6 +2797,13 @@
               "boolean",
               "null"
             ]
+          },
+          "plan": {
+            "description": "Set Free/Pro on managed service. Ignored / rejected by the API when not managed.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "type": "object"

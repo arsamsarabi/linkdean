@@ -71,14 +71,16 @@ export function useAdminUsers(enabled = true): UseQueryResult<{ users: AdminUser
 export function useUpdateAdminUser(): UseMutationResult<
   { user: AdminUserSummary },
   Error,
-  { id: string; api_keys_enabled?: boolean; is_admin?: boolean }
+  { id: string; api_keys_enabled?: boolean; is_admin?: boolean; plan?: 'free' | 'pro' }
 > {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, api_keys_enabled, is_admin }) => api.updateAdminUser(id, { api_keys_enabled, is_admin }),
+    mutationFn: ({ id, api_keys_enabled, is_admin, plan }) =>
+      api.updateAdminUser(id, { api_keys_enabled, is_admin, plan }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] })
       void qc.invalidateQueries({ queryKey: ['me'] })
+      void qc.invalidateQueries({ queryKey: ['quota-usage'] })
     },
   })
 }

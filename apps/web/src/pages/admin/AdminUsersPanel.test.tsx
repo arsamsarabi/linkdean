@@ -12,6 +12,7 @@ const users = vi.hoisted(() => ({ list: [] as AdminUserSummary[] }))
 vi.mock('@/hooks', () => ({
   useAdminUsers: () => ({ data: { users: users.list }, isLoading: false, isError: false }),
   useUpdateAdminUser: () => ({ isPending: false, mutate: vi.fn() }),
+  useManagedService: () => false,
   useMe: () => ({ data: { user: { id: 'admin' } } }),
   useLiftBans: () => ({ isPending: false, mutate: vi.fn() }),
   useSetEmailVerified: () => setVerified,

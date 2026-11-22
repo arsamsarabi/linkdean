@@ -92,7 +92,8 @@ pub async fn request_archive(
             "Archiving is turned off on this server.".into(),
         ));
     }
-    if let Some(limit) = settings.max_archive_bytes {
+    let limits = super::quotas::resolve_limits_for(pool, b.owner_user_id).await?;
+    if let Some(limit) = limits.max_archive_bytes {
         let used = archive_bytes_for_owner(pool, b.owner_user_id).await?;
         if used >= limit {
             return Err(Error::QuotaExceeded {
@@ -123,7 +124,8 @@ pub async fn archive_new_bookmark(pool: &PgPool, user_id: Uuid, bookmark_id: Uui
         .filter_map(|f| ArchiveFormat::parse(f).ok())
         .collect();
     let formats = clean_archive_formats(&formats)?;
-    if let Some(limit) = settings.max_archive_bytes {
+    let limits = super::quotas::resolve_limits_for(pool, user_id).await?;
+    if let Some(limit) = limits.max_archive_bytes {
         if archive_bytes_for_owner(pool, user_id).await? >= limit {
             sqlx::query(
                 r#"

@@ -38,6 +38,7 @@ async fn admin(pool: &PgPool) -> User {
         pool,
         u.id,
         UpdateAdminUser {
+            plan: None,
             api_keys_enabled: None,
             is_admin: Some(true),
         },

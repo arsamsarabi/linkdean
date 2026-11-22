@@ -113,10 +113,11 @@ impl Drop for ImportSlot {
 /// the async runtime. Returns the lower-cased format, the parsed file and the limits.
 async fn parse_import(
     state: &AppState,
+    user_id: uuid::Uuid,
     format: &str,
     content: String,
 ) -> ApiResult<(String, ParsedImport, ResolvedLimits)> {
-    let limits = crate::quotas::limits_for(&state.pool).await?;
+    let limits = crate::quotas::limits_for(&state.pool, user_id).await?;
     let max_bytes = crate::quotas::effective_import_max(&limits);
     if content.len() > max_bytes {
         return Err(Error::QuotaExceeded {
@@ -167,7 +168,7 @@ async fn preview(
     state.limiter.check(&rate)?;
     let _slot = ImportSlot::acquire(user.id)?;
     state.limiter.record(&rate);
-    let (_, parsed, _) = parse_import(&state, &body.format, body.content).await?;
+    let (_, parsed, _) = parse_import(&state, user.id, &body.format, body.content).await?;
     Ok(Json(
         db::preview_import(&state.pool, user.id, &parsed).await?,
     ))
@@ -194,7 +195,8 @@ async fn import(
     state.limiter.check(&rate)?;
     let _slot = ImportSlot::acquire(user.id)?;
     state.limiter.record(&rate);
-    let (format, parsed, limits) = parse_import(&state, &body.format, body.content).await?;
+    let (format, parsed, limits) =
+        parse_import(&state, user.id, &body.format, body.content).await?;
     let plan = db::plan_import(&state.pool, user.id, &parsed, &body.duplicates).await?;
 
     // Refuse the whole import when the bookmark gauge would overflow. Skipped and replaced

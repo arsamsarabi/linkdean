@@ -33,6 +33,8 @@ pub struct SignupGate<'a> {
     /// Terms version the new account accepted, stored with the time of acceptance. The caller
     /// checks it is current; `None` for tools that create users directly.
     pub terms_version: Option<&'a str>,
+    /// Managed plan to store (`free` / `pro`). `None` on self-host.
+    pub plan: Option<&'a str>,
 }
 
 /// Creates a user with no sign-up checks. The first user still becomes admin.
@@ -104,9 +106,13 @@ pub async fn create_user_gated(
         r#"
         INSERT INTO users (
             email, display_name, password_hash, oidc_subject, oidc_issuer,
-            is_admin, onboarding_completed, terms_version, terms_accepted_at
+            is_admin, onboarding_completed, terms_version, terms_accepted_at, plan
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::text, CASE WHEN $8::text IS NULL THEN NULL ELSE now() END)
+        VALUES (
+            $1, $2, $3, $4, $5, $6, $7,
+            $8::text, CASE WHEN $8::text IS NULL THEN NULL ELSE now() END,
+            $9
+        )
         RETURNING *
         "#,
     )
@@ -118,6 +124,7 @@ pub async fn create_user_gated(
     .bind(is_first) // first user = admin
     .bind(false) // onboarding starts incomplete for new admins
     .bind(gate.terms_version)
+    .bind(gate.plan)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -284,7 +291,42 @@ fn admin_summary(user: User, ban: Option<&BanWindow>) -> AdminUserSummary {
         created_at: user.created_at,
         banned: ban.is_some(),
         banned_until: ban.and_then(|b| b.ends_at),
+        plan: user.plan,
     }
+}
+
+/// On managed service cutover: assign Free to any account that still has no plan.
+pub async fn ensure_managed_free_plans(pool: &PgPool) -> Result<u64> {
+    let done = sqlx::query(
+        r#"
+        UPDATE users SET plan = 'free', updated_at = now()
+        WHERE plan IS NULL
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(done.rows_affected())
+}
+
+/// Sets `free` or `pro`. Rejects other values.
+pub async fn set_user_plan(pool: &PgPool, user_id: Uuid, plan: &str) -> Result<User> {
+    if linkdean_core::AccountPlan::parse(plan).is_none() {
+        return Err(Error::BadRequest("plan must be free or pro".into()));
+    }
+    sqlx::query_as::<_, User>(
+        r#"
+        UPDATE users SET plan = $1, updated_at = now()
+        WHERE id = $2
+        RETURNING *
+        "#,
+    )
+    .bind(plan)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
 }
 
 pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
@@ -377,6 +419,9 @@ pub async fn update_admin_user(
         .await
         .map_err(|e| Error::msg(e.to_string()))?;
         tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    }
+    if let Some(plan) = patch.plan.as_deref() {
+        user = set_user_plan(pool, user_id, plan).await?;
     }
     let ban = active_ban_windows(pool).await?;
     let ban = ban.iter().find(|b| b.user_id == user_id);

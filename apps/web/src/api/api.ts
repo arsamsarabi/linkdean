@@ -252,7 +252,7 @@ export const api = {
 
   updateAdminUser: (
     id: string,
-    body: { api_keys_enabled?: boolean; is_admin?: boolean }
+    body: { api_keys_enabled?: boolean; is_admin?: boolean; plan?: 'free' | 'pro' }
   ): Promise<{ user: AdminUserSummary }> =>
     req(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, adminUserEnvelopeSchema),
 
