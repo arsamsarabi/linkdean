@@ -120,21 +120,20 @@ async fn webhook(
     if !verify_webhook_signature(&billing.webhook_secret, &body, sig, now) {
         return Err(Error::Unauthorized.into());
     }
-    // Bound size before JSON parse (CodeQL rust/unsafe-deserialization). Payload is already
-    // authenticated by Stripe-Signature above; Value has no polymorphic gadget risk.
+    // Authenticated by Stripe-Signature above. Cap size, require UTF-8, then parse as a plain
+    // `Value` (no #[typetag] / trait objects) so the only risk is a large JSON structure.
     const MAX_WEBHOOK_BYTES: usize = 1_048_576;
     if body.len() > MAX_WEBHOOK_BYTES {
         return Err(Error::BadRequest("webhook body too large".into()).into());
     }
-    let event = parse_webhook_json(&body)?;
+    let text = std::str::from_utf8(&body)
+        .map_err(|_| Error::BadRequest("webhook body is not UTF-8".into()))?;
+    let event: Value = serde_json::from_str(text)
+        .map_err(|_| Error::BadRequest("invalid webhook JSON".into()))?;
     if let Some(change) = plan_change_from_event(&event, &billing.price_id_pro) {
         apply_plan_change(&state.pool, change).await?;
     }
     Ok((StatusCode::OK, Json(json!({ "received": true }))))
-}
-
-fn parse_webhook_json(body: &[u8]) -> Result<Value, Error> {
-    serde_json::from_slice(body).map_err(|_| Error::BadRequest("invalid webhook JSON".into()))
 }
 
 async fn ensure_customer(
