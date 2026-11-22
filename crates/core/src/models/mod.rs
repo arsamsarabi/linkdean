@@ -39,6 +39,10 @@ pub struct User {
     #[sqlx(default)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plan: Option<String>,
+    /// Stripe Customer id when the managed account has started checkout. Never sent to clients.
+    #[sqlx(default)]
+    #[serde(skip)]
+    pub stripe_customer_id: Option<String>,
 }
 
 impl User {
@@ -286,6 +290,9 @@ pub struct QuotaUsageView {
     /// Personal vaults the person owns.
     #[serde(default)]
     pub vaults: i64,
+    /// Whether a Stripe customer id is stored (portal available after a past checkout).
+    #[serde(default)]
+    pub has_billing_customer: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]

@@ -94,6 +94,8 @@ export const authConfigSchema = z.object({
   archives_enabled: z.boolean().default(true),
   /** Managed service: Free/Pro plans apply. Self-host leaves this false. */
   managed_service: z.boolean().default(false),
+  /** Managed service with Stripe configured: Upgrade / Manage billing in Settings. */
+  billing_enabled: z.boolean().default(false),
 })
 
 /** `GET /admin/update`: a newer Linkdean release, or null when up to date or unknown. */
@@ -161,6 +163,8 @@ export const quotaUsageSchema = z.object({
   /** Managed plan name. Absent on self-host. */
   plan: z.enum(['free', 'pro']).nullish(),
   vaults: z.number().int().default(0),
+  /** Stripe customer on file (Customer Portal available). */
+  has_billing_customer: z.boolean().default(false),
 })
 
 export const apiKeySchema = z.object({

@@ -1,7 +1,9 @@
-import { type ReactElement } from 'react'
-import { Paper, Stack, Text, Title } from '@mantine/core'
+import { useState, type ReactElement } from 'react'
+import { Button, Group, Paper, Stack, Text, Title } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
+import { api } from '@/api'
 import { QueryErrorAlert } from '@/components'
-import { useQuotaUsage } from '@/hooks'
+import { useBillingEnabled, useQuotaUsage } from '@/hooks'
 import { SettingsSkeleton } from './SettingsSkeleton'
 
 function line(label: string, used: number, limit: number | null | undefined, unit = ''): string {
@@ -18,6 +20,8 @@ function planLabel(plan: 'free' | 'pro' | null | undefined): string {
 /** Shows plan and quota usage when a managed plan or any limit is configured. */
 export function QuotaUsagePanel(): ReactElement | null {
   const usage = useQuotaUsage()
+  const billingEnabled = useBillingEnabled()
+  const [busy, setBusy] = useState<'checkout' | 'portal' | null>(null)
 
   if (usage.isLoading) return <SettingsSkeleton />
   if (usage.isError) {
@@ -37,6 +41,21 @@ export function QuotaUsagePanel(): ReactElement | null {
     limits.max_vaults != null
   if (!plan && !anyLimit) return null
 
+  async function openBilling(kind: 'checkout' | 'portal') {
+    setBusy(kind)
+    try {
+      const { url } = kind === 'checkout' ? await api.billingCheckout() : await api.billingPortal()
+      window.location.assign(url)
+    } catch (e) {
+      notifications.show({
+        color: 'red',
+        title: kind === 'checkout' ? 'Upgrade failed' : 'Billing portal failed',
+        message: e instanceof Error ? e.message : 'Try again later.',
+      })
+      setBusy(null)
+    }
+  }
+
   return (
     <Paper p="lg" withBorder>
       <Stack gap="sm">
@@ -55,6 +74,20 @@ export function QuotaUsagePanel(): ReactElement | null {
             Limits set by the instance admin. Empty means unlimited.
           </Text>
         )}
+        {billingEnabled && plan === 'free' ? (
+          <Group>
+            <Button loading={busy === 'checkout'} onClick={() => void openBilling('checkout')}>
+              Upgrade to Pro
+            </Button>
+          </Group>
+        ) : null}
+        {billingEnabled && (plan === 'pro' || data.has_billing_customer) ? (
+          <Group>
+            <Button variant="default" loading={busy === 'portal'} onClick={() => void openBilling('portal')}>
+              Manage billing
+            </Button>
+          </Group>
+        ) : null}
         {plan || limits.max_bookmarks != null ? (
           <Text size="sm">{line('Bookmarks', data.bookmarks, limits.max_bookmarks)}</Text>
         ) : null}

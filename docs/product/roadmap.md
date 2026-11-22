@@ -12,12 +12,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Plans and pricing** · `near` · (M). Decide what stays free on the managed service, what a paid plan adds, and the limits of each. Self-hosting stays free for non-commercial use. Tier table: [plans and pricing](../design/plans-and-pricing.md).
-    - **Phase A — Define tiers:** Done — Free vs Pro personal meters (incl. archive) and link to the org seat matrix.
-    - **Phase B — Enforce quotas:** Done — managed accounts carry Free/Pro; resolver merges plan + platform; Settings shows plan and caps; admin can set plan until checkout.
-    - **Phase C — Checkout:** Billing / payment integration.
-
-2. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md).
+1. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md).
     - **Phase A — v1:** Orgs, team spaces, owner/admin/member/guest, restricted folders, email invites, lifecycle rules, basic audit log.
     - **Phase B — Invite links:** Role, expiry, use limit; off by default.
     - **Phase C — Verified domains:** DNS TXT proof, then auto-join for matching addresses.
@@ -25,16 +20,16 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - **Phase E — Team vaults:** Shared keys, rotation when members leave, recovery.
     - **Phase F — Audit and roles:** Richer audit (retention, SIEM/webhook, hash chain); custom roles and Billing manager when needed.
 
-3. **Localization** · `mid` · (M). Ship the product in more than English.
+2. **Localization** · `mid` · (M). Ship the product in more than English.
     - **Phase A — i18n-ready:** Extract and wrap UI strings.
     - **Phase B — Locale packs:** First translated locale(s).
 
-4. **Archive follow-ups** · `parked` · (L). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)).
+3. **Archive follow-ups** · `parked` · (L). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)).
     - **Phase A — Out-of-band media:** Fetch plain `<video>` / `<audio>` URLs that never landed in the Chrome snapshot (not streams), under item and account caps; fail soft and leave the live link.
     - **Phase B — Version history:** Keep more than one copy per format.
-    - **Phase C — Per-tier limits:** Hosted per-plan archive storage (needs item 1); today only the platform-wide archive quota applies.
+    - **Phase C — Per-tier limits:** Hosted per-plan archive storage (personal Free/Pro meters already apply; this phase is extras such as Team pools).
 
-5. **AI assistance** · `parked` · (M–L). Karakeep, Linkwarden and Raindrop.io (Pro) offer AI tagging or summaries; Linkdean has none. Add it without giving up the privacy stance.
+4. **AI assistance** · `parked` · (M–L). Karakeep, Linkwarden and Raindrop.io (Pro) offer AI tagging or summaries; Linkdean has none. Add it without giving up the privacy stance.
     - **Phase A — Opt-in provider:** Off by default; BYOK (OpenAI-compatible or Anthropic) or local Ollama on self-host; vault contents never leave for a model; settings show what is sent.
     - **Phase B — Tag and folder suggestions:** When saving and in **File one by one** (extends same-site suggestions); nothing applied without a click unless auto-tagging is on.
     - **Phase C — Summaries:** Short summary per bookmark from archived page text when present.
@@ -42,26 +37,26 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
     - **Phase E — Related / near-duplicates:** Hints for related and near-duplicate bookmarks.
     - **Phase F — Dashboards:** Suggest sections and sources from what the person saves and opens.
 
-6. **Privacy-respecting usage statistics** · `parked` · (M). Know how a public instance is used without tracking people.
+5. **Privacy-respecting usage statistics** · `parked` · (M). Know how a public instance is used without tracking people.
     - Aggregate counts only (active users, bookmarks saved, features used); no personal data, page content or URLs, nothing per person.
     - Off by default on self-hosted instances; operators can export to their own backend (OpenTelemetry / Datadog-style), building on tracing the API already exports.
     - Managed service uses the same hooks; document exactly what is collected.
 
-7. **Previews for sites behind bot protection** · `parked` · (M). Some sites (e.g. behind Cloudflare) block screenshot and metadata fetch. Investigate allowed options such as the site's own OG data or a user-uploaded preview.
+6. **Previews for sites behind bot protection** · `parked` · (M). Some sites (e.g. behind Cloudflare) block screenshot and metadata fetch. Investigate allowed options such as the site's own OG data or a user-uploaded preview.
 
-8. **Welcome email** · `parked` · (S). Welcome email for new accounts, with Dean's avatar badge. Security emails stay plain.
+7. **Welcome email** · `parked` · (S). Welcome email for new accounts, with Dean's avatar badge. Security emails stay plain.
 
-9. **Docs FAQ** · `parked` · (S). Frequently asked questions on the docs site.
+8. **Docs FAQ** · `parked` · (S). Frequently asked questions on the docs site.
 
-10. **Desktop app** · `parked` · (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
+9. **Desktop app** · `parked` · (M). A [Tauri](https://tauri.app/) wrapper around the web app for macOS, Windows and Linux.
 
-11. **Native mobile apps** · `parked` · (L). iOS and Android, separate from the responsive web app and PWA.
+10. **Native mobile apps** · `parked` · (L). iOS and Android, separate from the responsive web app and PWA.
 
-12. **Client-held vault key** · `parked` · (L). True end-to-end encryption where the server never sees the key. Makes vault search much harder.
+11. **Client-held vault key** · `parked` · (L). True end-to-end encryption where the server never sees the key. Makes vault search much harder.
 
-13. **Gamification** · `parked` · (M). Points and badges on top of likes and ratings.
+12. **Gamification** · `parked` · (M). Points and badges on top of likes and ratings.
 
-14. **Easter eggs** · `parked` · (S). Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), which needs React 19 support first). Internal only — never list on the public docs roadmap.
+13. **Easter eggs** · `parked` · (S). Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), which needs React 19 support first). Internal only — never list on the public docs roadmap.
 
 ---
 

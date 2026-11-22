@@ -248,6 +248,14 @@ export const api = {
 
   getQuotaUsage: (): Promise<QuotaUsage> => req('/users/me/quota-usage', {}, quotaUsageSchema),
 
+  /** Stripe Checkout URL for personal Pro (managed + billing configured). */
+  billingCheckout: (): Promise<{ url: string }> =>
+    req('/billing/checkout', { method: 'POST' }, z.object({ url: z.string().url() })),
+
+  /** Stripe Customer Portal URL. */
+  billingPortal: (): Promise<{ url: string }> =>
+    req('/billing/portal', { method: 'POST' }, z.object({ url: z.string().url() })),
+
   listAdminUsers: (): Promise<{ users: AdminUserSummary[] }> => req('/admin/users', {}, adminUsersEnvelopeSchema),
 
   updateAdminUser: (

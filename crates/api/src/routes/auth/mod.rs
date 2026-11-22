@@ -115,6 +115,7 @@ async fn auth_config(State(state): State<AppState>) -> ApiResult<Json<Value>> {
         "version": env!("CARGO_PKG_VERSION"),
         "archives_enabled": platform.archives_enabled,
         "managed_service": state.cfg.managed_service,
+        "billing_enabled": state.cfg.billing_enabled(),
         "experimental": {
             "agent_skills": state.cfg.experimental_agent_skills,
         },

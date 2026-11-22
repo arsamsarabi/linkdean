@@ -86,6 +86,13 @@ pub async fn usage_view(state: &AppState, user_id: Uuid) -> Result<QuotaUsageVie
     let enrich_actions_today = db::enrich_usage_today(&state.pool, user_id).await?;
     let archive_bytes = db::archive_bytes_for_owner(&state.pool, user_id).await?;
     let vaults = db::count_vaults(&state.pool, user_id).await?;
+    let user = db::find_user_by_id(&state.pool, user_id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    let has_billing_customer = user
+        .stripe_customer_id
+        .as_deref()
+        .is_some_and(|s| !s.is_empty());
     Ok(QuotaUsageView {
         limits,
         bookmarks,
@@ -95,5 +102,6 @@ pub async fn usage_view(state: &AppState, user_id: Uuid) -> Result<QuotaUsageVie
         archive_bytes,
         plan,
         vaults,
+        has_billing_customer,
     })
 }
