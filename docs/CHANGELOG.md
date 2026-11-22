@@ -11,6 +11,7 @@ Every release cuts a section: on release, rename `[Unreleased]` to the new versi
 
 ### Added
 
+- **Organizations membership API:** create an organization (default team + owner), list workspaces, members and teams, leave, and change roles. Team spaces and invites come next. See [organizations and teams](design/organizations-and-teams.md).
 - **Managed Pro checkout:** with `MANAGED_SERVICE=true` and Stripe env (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_PRO`), Settings can open Stripe Checkout for personal Pro and the Customer Portal to manage or cancel; webhooks update the plan. No dollar prices in the repo. See [plans and pricing](design/plans-and-pricing.md).
 - **Managed Free vs Pro enforcement:** with `MANAGED_SERVICE=true`, accounts get a Free or Pro plan that merges into quotas (bookmarks, images, enrich, archive, vaults); Settings shows the plan and caps; admins can set Free/Pro (comps/support). Self-host stays operator quotas only. See [plans and pricing](design/plans-and-pricing.md).
 - **Managed Free vs Pro tiers (design):** personal meters including archive storage are defined for the managed service; self-host stays operator quotas only.

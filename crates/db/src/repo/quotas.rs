@@ -211,6 +211,7 @@ mod tests {
             registration_open: true,
             api_keys_enabled: true,
             require_verified_email: false,
+            organizations_create_open: true,
             max_bookmarks: None,
             max_stored_image_bytes: None,
             max_enrich_actions_per_day: None,

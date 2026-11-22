@@ -106,6 +106,9 @@ async fn patch_platform_settings(
         }
         settings = db::set_require_verified_email(&state.pool, on).await?;
     }
+    if let Some(open) = req.organizations_create_open {
+        settings = db::set_organizations_create_open(&state.pool, open).await?;
+    }
     if req.max_bookmarks.is_some()
         || req.max_stored_image_bytes.is_some()
         || req.max_enrich_actions_per_day.is_some()

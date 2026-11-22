@@ -4,7 +4,7 @@ use sqlx::AssertSqlSafe;
 use sqlx::PgPool;
 
 const PLATFORM_COLS: &str = r#"
-    registration_open, api_keys_enabled, require_verified_email,
+    registration_open, api_keys_enabled, require_verified_email, organizations_create_open,
     max_bookmarks, max_stored_image_bytes, max_enrich_actions_per_day,
     max_import_bytes, max_upload_image_bytes, abuse_contact_email,
     screenshot_retry_cooldown_hours, screenshot_auto_retry_days, screenshot_retry_last_run_at,
@@ -70,6 +70,22 @@ pub async fn set_require_verified_email(pool: &PgPool, on: bool) -> Result<Platf
         "#
     )))
     .bind(on)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or_else(|| Error::msg("platform_settings row missing"))
+}
+
+pub async fn set_organizations_create_open(pool: &PgPool, open: bool) -> Result<PlatformSettings> {
+    sqlx::query_as::<_, PlatformSettings>(AssertSqlSafe(format!(
+        r#"
+        UPDATE platform_settings
+        SET organizations_create_open = $1, updated_at = now()
+        WHERE id = TRUE
+        RETURNING {PLATFORM_COLS}
+        "#
+    )))
+    .bind(open)
     .fetch_optional(pool)
     .await
     .map_err(|e| Error::msg(e.to_string()))?
