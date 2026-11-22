@@ -181,6 +181,8 @@ fn path_exempt(path: &str) -> bool {
         || path.starts_with("/api/metrics")
         || path == "/api/openapi.json"
         || path.starts_with("/api/email/")
+        // Stripe webhook (unsigned); checkout/portal are SessionUser-only.
+        || path == "/api/billing/webhook"
 }
 
 fn is_archive_path(path: &str) -> bool {

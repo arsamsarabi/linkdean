@@ -329,6 +329,67 @@ pub async fn set_user_plan(pool: &PgPool, user_id: Uuid, plan: &str) -> Result<U
     .ok_or(Error::NotFound)
 }
 
+/// Stores the Stripe customer id for managed checkout.
+pub async fn set_stripe_customer_id(
+    pool: &PgPool,
+    user_id: Uuid,
+    customer_id: &str,
+) -> Result<User> {
+    sqlx::query_as::<_, User>(
+        r#"
+        UPDATE users SET stripe_customer_id = $1, updated_at = now()
+        WHERE id = $2
+        RETURNING *
+        "#,
+    )
+    .bind(customer_id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
+}
+
+/// Sets plan and Stripe customer id together (webhook provision).
+pub async fn set_user_plan_and_stripe_customer(
+    pool: &PgPool,
+    user_id: Uuid,
+    plan: &str,
+    customer_id: &str,
+) -> Result<User> {
+    if linkdean_core::AccountPlan::parse(plan).is_none() {
+        return Err(Error::BadRequest("plan must be free or pro".into()));
+    }
+    sqlx::query_as::<_, User>(
+        r#"
+        UPDATE users
+        SET plan = $1, stripe_customer_id = $2, updated_at = now()
+        WHERE id = $3
+        RETURNING *
+        "#,
+    )
+    .bind(plan)
+    .bind(customer_id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
+}
+
+/// Looks up a user by Stripe customer id.
+pub async fn user_by_stripe_customer(pool: &PgPool, customer_id: &str) -> Result<Option<User>> {
+    sqlx::query_as::<_, User>(
+        r#"
+        SELECT * FROM users WHERE stripe_customer_id = $1
+        "#,
+    )
+    .bind(customer_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
 pub async fn list_admin_users(pool: &PgPool) -> Result<Vec<AdminUserSummary>> {
     let rows = sqlx::query_as::<_, User>(
         r#"

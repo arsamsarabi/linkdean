@@ -10,6 +10,7 @@ pub mod models;
 pub mod page_text;
 pub mod plans;
 pub mod preview_image;
+pub mod stripe;
 pub mod unsubscribe;
 
 pub use api_scopes::{
@@ -19,3 +20,4 @@ pub use api_scopes::{
 pub use error::{Error, Result};
 pub use models::*;
 pub use plans::{merge_limits, tighter, AccountPlan};
+pub use stripe::{plan_change_from_event, plan_str, verify_webhook_signature, PlanChange};
