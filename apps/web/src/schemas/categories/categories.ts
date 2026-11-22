@@ -13,8 +13,8 @@ export const categorySchema = z.object({
   is_vault: z.boolean(),
   vault_id: z.string().nullish(),
   icon: z.string().nullish(),
-  /** Team-space folders only; sidebar shows a lock when true. */
-  is_restricted: z.boolean().default(false),
+  /** Team-space folders only; sidebar shows a lock when true. Absent → false. */
+  is_restricted: z.boolean().optional(),
   position: z.number(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),

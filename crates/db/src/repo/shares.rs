@@ -475,24 +475,26 @@ pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) 
         {
             return Ok(false);
         }
-        // Team seat is not enough when every filed folder is restricted away.
-        return bookmark_reachable_via_categories(pool, user_id, bookmark_id, false).await;
+        // Loose team bookmarks are team-wide; filed ones must clear folder restrictions.
+        return bookmark_reachable_via_categories(pool, user_id, bookmark_id, false, true).await;
     }
     if bookmark_trashed(pool, bookmark_id).await? {
         // Trash is the owner's alone.
         return Ok(false);
     }
 
-    bookmark_reachable_via_categories(pool, user_id, bookmark_id, false).await
+    // Personal shares: unfiled → no path in; filed → need a readable/writable folder.
+    bookmark_reachable_via_categories(pool, user_id, bookmark_id, false, false).await
 }
 
-/// Loose (unfiled) bookmarks are team-wide; filed ones need access to at least one folder
-/// so restricted folders cannot leak by bookmark id.
+/// Filed bookmarks need access to at least one folder (so restricted folders cannot leak
+/// by id). `unfiled_ok` is true for loose team-space bookmarks (team seat already checked).
 async fn bookmark_reachable_via_categories(
     pool: &PgPool,
     user_id: Uuid,
     bookmark_id: Uuid,
     need_write: bool,
+    unfiled_ok: bool,
 ) -> Result<bool> {
     let cat_ids: Vec<(Uuid,)> = sqlx::query_as(
         r#"
@@ -507,7 +509,7 @@ async fn bookmark_reachable_via_categories(
     .map_err(|e| Error::msg(e.to_string()))?;
 
     if cat_ids.is_empty() {
-        return Ok(true);
+        return Ok(unfiled_ok);
     }
     for (cid,) in cat_ids {
         match category_access(pool, user_id, cid).await {
@@ -555,14 +557,14 @@ pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid)
         {
             return Ok(false);
         }
-        return bookmark_reachable_via_categories(pool, user_id, bookmark_id, true).await;
+        return bookmark_reachable_via_categories(pool, user_id, bookmark_id, true, true).await;
     }
     if bookmark_trashed(pool, bookmark_id).await? {
         // Trash is the owner's alone.
         return Ok(false);
     }
 
-    bookmark_reachable_via_categories(pool, user_id, bookmark_id, true).await
+    bookmark_reachable_via_categories(pool, user_id, bookmark_id, true, false).await
 }
 
 /// Category ids the owner has shared out (share roots + their non-vault descendants).
