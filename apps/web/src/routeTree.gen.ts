@@ -27,6 +27,7 @@ import { Route as AppFileRouteImport } from './routes/_app/file'
 import { Route as AppHistoryRouteImport } from './routes/_app/history'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppLibraryRouteImport } from './routes/_app/library'
+import { Route as AppOrgJoinRouteImport } from './routes/_app/org-join'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppSaveRouteImport } from './routes/_app/save'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -129,6 +130,11 @@ const AppLibraryRoute = AppLibraryRouteImport.update({
   path: '/library',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOrgJoinRoute = AppOrgJoinRouteImport.update({
+  id: '/org-join',
+  path: '/org-join',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
+  '/org-join': typeof AppOrgJoinRoute
   '/profile': typeof AppProfileRoute
   '/save': typeof AppSaveRoute
   '/settings': typeof AppSettingsRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/history': typeof AppHistoryRoute
   '/import': typeof AppImportRoute
   '/library': typeof AppLibraryRoute
+  '/org-join': typeof AppOrgJoinRoute
   '/profile': typeof AppProfileRoute
   '/save': typeof AppSaveRoute
   '/settings': typeof AppSettingsRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/_app/history': typeof AppHistoryRoute
   '/_app/import': typeof AppImportRoute
   '/_app/library': typeof AppLibraryRoute
+  '/_app/org-join': typeof AppOrgJoinRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/save': typeof AppSaveRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -305,6 +314,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/import'
     | '/library'
+    | '/org-join'
     | '/profile'
     | '/save'
     | '/settings'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/import'
     | '/library'
+    | '/org-join'
     | '/profile'
     | '/save'
     | '/settings'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/_app/history'
     | '/_app/import'
     | '/_app/library'
+    | '/_app/org-join'
     | '/_app/profile'
     | '/_app/save'
     | '/_app/settings'
@@ -523,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLibraryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/org-join': {
+      id: '/_app/org-join'
+      path: '/org-join'
+      fullPath: '/org-join'
+      preLoaderRoute: typeof AppOrgJoinRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/profile': {
       id: '/_app/profile'
       path: '/profile'
@@ -619,6 +638,7 @@ interface AppRouteChildren {
   AppHistoryRoute: typeof AppHistoryRoute
   AppImportRoute: typeof AppImportRoute
   AppLibraryRoute: typeof AppLibraryRoute
+  AppOrgJoinRoute: typeof AppOrgJoinRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSaveRoute: typeof AppSaveRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -642,6 +662,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHistoryRoute: AppHistoryRoute,
   AppImportRoute: AppImportRoute,
   AppLibraryRoute: AppLibraryRoute,
+  AppOrgJoinRoute: AppOrgJoinRoute,
   AppProfileRoute: AppProfileRoute,
   AppSaveRoute: AppSaveRoute,
   AppSettingsRoute: AppSettingsRoute,

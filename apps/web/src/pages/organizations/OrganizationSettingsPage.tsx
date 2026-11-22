@@ -1,20 +1,42 @@
 import { useState, type ReactElement } from 'react'
-import { Button, Group, Stack, Table, Tabs, Text, TextInput, ThemeIcon, Title } from '@mantine/core'
+import {
+  Button,
+  Group,
+  NumberInput,
+  Select,
+  Stack,
+  Switch,
+  Table,
+  Tabs,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Title,
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconBuilding, IconTrash } from '@tabler/icons-react'
 import { useParams } from '@tanstack/react-router'
 import { QueryErrorAlert } from '@/components'
 import {
   useArchiveTeam,
+  useCreateOrganizationInviteLink,
   useDeleteOrganization,
   useDeleteTeam,
   useOrganization,
   useOrganizationAudit,
+  useOrganizationInviteLinks,
   useOrganizationMembers,
   useOrganizationTeams,
+  usePatchOrganizationInviteLinks,
   useRestoreOrganization,
+  useRevokeOrganizationInviteLink,
   useUnarchiveTeam,
 } from '@/hooks'
+
+function joinUrl(code: string): string {
+  const base = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${base}/org-join?code=${encodeURIComponent(code)}`
+}
 
 export function OrganizationSettingsPage(): ReactElement {
   const { id } = useParams({ from: '/_app/organizations/$id' })
@@ -22,16 +44,27 @@ export function OrganizationSettingsPage(): ReactElement {
   const members = useOrganizationMembers(id)
   const teams = useOrganizationTeams(id)
   const audit = useOrganizationAudit(id)
+  const linksEnabled = !!org.data?.invite_links_enabled
+  const inviteLinks = useOrganizationInviteLinks(id, linksEnabled)
   const delOrg = useDeleteOrganization(id)
   const restoreOrg = useRestoreOrganization(id)
   const archiveTeam = useArchiveTeam(id)
   const unarchiveTeam = useUnarchiveTeam(id)
   const deleteTeam = useDeleteTeam(id)
+  const patchLinks = usePatchOrganizationInviteLinks(id)
+  const createLink = useCreateOrganizationInviteLink(id)
+  const revokeLink = useRevokeOrganizationInviteLink(id)
   const [confirmName, setConfirmName] = useState('')
   const [tab, setTab] = useState<string | null>('members')
+  const [linkRole, setLinkRole] = useState<'admin' | 'member' | 'guest'>('member')
+  const [expiresDays, setExpiresDays] = useState<number | string>(7)
+  const [maxUses, setMaxUses] = useState<number | string>('')
+  const [freshCode, setFreshCode] = useState<string | null>(null)
+  const [guestTeamId, setGuestTeamId] = useState<string | null>(null)
 
   const canAdmin = org.data?.role === 'owner' || org.data?.role === 'admin'
   const pendingDelete = !!org.data?.deleted_at
+  const liveTeams = (teams.data ?? []).filter((t) => !t.archived_at && !t.deleted_at)
 
   return (
     <Stack gap="xl">
@@ -73,6 +106,7 @@ export function OrganizationSettingsPage(): ReactElement {
           <Tabs.List>
             <Tabs.Tab value="members">Members</Tabs.Tab>
             <Tabs.Tab value="teams">Teams</Tabs.Tab>
+            <Tabs.Tab value="invite-links">Invite links</Tabs.Tab>
             <Tabs.Tab value="audit">Audit log</Tabs.Tab>
             <Tabs.Tab value="danger">Danger zone</Tabs.Tab>
           </Tabs.List>
@@ -157,6 +191,147 @@ export function OrganizationSettingsPage(): ReactElement {
                   </Group>
                 </Group>
               ))}
+            </Stack>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="invite-links" pt="md">
+            <Stack gap="md" maw={640}>
+              <Switch
+                label="Allow invite links"
+                description="Off by default. When on, admins can create shareable join links."
+                checked={linksEnabled}
+                disabled={patchLinks.isPending}
+                onChange={(e) =>
+                  patchLinks.mutate(e.currentTarget.checked, {
+                    onError: (err) => notifications.show({ color: 'red', message: String(err) }),
+                  })
+                }
+              />
+
+              {linksEnabled ? (
+                <>
+                  <Group align="flex-end" grow>
+                    <Select
+                      label="Role"
+                      data={[
+                        { value: 'member', label: 'Member' },
+                        { value: 'admin', label: 'Admin' },
+                        { value: 'guest', label: 'Guest' },
+                      ]}
+                      value={linkRole}
+                      onChange={(v) => setLinkRole((v as 'admin' | 'member' | 'guest') ?? 'member')}
+                    />
+                    <NumberInput
+                      label="Expires (days)"
+                      min={1}
+                      max={90}
+                      value={expiresDays}
+                      onChange={setExpiresDays}
+                    />
+                    <NumberInput
+                      label="Max uses"
+                      placeholder="Unlimited"
+                      min={1}
+                      value={maxUses}
+                      onChange={setMaxUses}
+                    />
+                  </Group>
+                  {linkRole === 'guest' ? (
+                    <Select
+                      label="Team for guests"
+                      placeholder="Pick a team"
+                      data={liveTeams.map((t) => ({ value: t.id, label: t.name }))}
+                      value={guestTeamId}
+                      onChange={setGuestTeamId}
+                    />
+                  ) : null}
+                  <Button
+                    loading={createLink.isPending}
+                    disabled={linkRole === 'guest' && !guestTeamId}
+                    onClick={() =>
+                      createLink.mutate(
+                        {
+                          role: linkRole,
+                          expires_in_days: typeof expiresDays === 'number' ? expiresDays : 7,
+                          max_uses: typeof maxUses === 'number' ? maxUses : null,
+                          teams: linkRole === 'guest' && guestTeamId ? [{ team_id: guestTeamId }] : undefined,
+                        },
+                        {
+                          onSuccess: (res) => {
+                            setFreshCode(res.code)
+                            notifications.show({ message: 'Invite link created — copy it now' })
+                          },
+                          onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                        }
+                      )
+                    }
+                  >
+                    Create invite link
+                  </Button>
+                  {freshCode ? (
+                    <Stack gap="xs">
+                      <Text size="sm">New link (shown once):</Text>
+                      <TextInput readOnly value={joinUrl(freshCode)} />
+                      <Button
+                        variant="light"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(joinUrl(freshCode))
+                          notifications.show({ message: 'Copied' })
+                        }}
+                      >
+                        Copy URL
+                      </Button>
+                    </Stack>
+                  ) : null}
+
+                  {inviteLinks.isError ? (
+                    <QueryErrorAlert error={inviteLinks.error} onRetry={() => void inviteLinks.refetch()} />
+                  ) : (
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Prefix</Table.Th>
+                          <Table.Th>Role</Table.Th>
+                          <Table.Th>Uses</Table.Th>
+                          <Table.Th>Status</Table.Th>
+                          <Table.Th />
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {(inviteLinks.data ?? []).map((link) => (
+                          <Table.Tr key={link.id}>
+                            <Table.Td>{link.code_prefix}…</Table.Td>
+                            <Table.Td>{link.role}</Table.Td>
+                            <Table.Td>
+                              {link.use_count}
+                              {link.max_uses != null ? ` / ${link.max_uses}` : ''}
+                            </Table.Td>
+                            <Table.Td>{link.status}</Table.Td>
+                            <Table.Td>
+                              {link.revoked_at ? null : (
+                                <Button
+                                  size="xs"
+                                  color="red"
+                                  variant="light"
+                                  loading={revokeLink.isPending}
+                                  onClick={() =>
+                                    revokeLink.mutate(link.id, {
+                                      onSuccess: () => notifications.show({ message: 'Invite link revoked' }),
+                                      onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                                    })
+                                  }
+                                >
+                                  Revoke
+                                </Button>
+                              )}
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  )}
+                </>
+              ) : null}
             </Stack>
           </Tabs.Panel>
 

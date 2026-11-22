@@ -93,3 +93,53 @@ export function useDeleteTeam(orgId: string) {
     onSuccess: () => invalidateOrg(qc, orgId),
   })
 }
+
+export function useOrganizationInviteLinks(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['organizations', id, 'invite-links'],
+    queryFn: () => api.listOrganizationInviteLinks(id!),
+    enabled: !!id && enabled,
+  })
+}
+
+export function usePatchOrganizationInviteLinks(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (invite_links_enabled: boolean) =>
+      api.patchOrganizationInviteLinksSettings(id, { invite_links_enabled }),
+    onSuccess: () => invalidateOrg(qc, id),
+  })
+}
+
+export function useCreateOrganizationInviteLink(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      role: 'admin' | 'member' | 'guest'
+      expires_in_days?: number
+      max_uses?: number | null
+      teams?: { team_id: string; role?: 'maintainer' | 'editor' | 'viewer' }[]
+    }) => api.createOrganizationInviteLink(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'invite-links'] })
+    },
+  })
+}
+
+export function useRevokeOrganizationInviteLink(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (linkId: string) => api.revokeOrganizationInviteLink(id, linkId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'invite-links'] })
+    },
+  })
+}
+
+export function useAcceptOrganizationInviteLink() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (code: string) => api.acceptOrganizationInviteLink(code),
+    onSuccess: () => invalidateOrg(qc),
+  })
+}

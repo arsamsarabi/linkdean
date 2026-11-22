@@ -117,11 +117,12 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Create an organization with a default **General** team; personal libraries stay private.
 - Roles: organization owner/admin/member/guest; team maintainer/editor/viewer. Org owners/admins act as maintainers on every team.
 - Email invites (accept after verified email); guests are team-scoped only.
+- Invite links (off by default): admins set role, expiry and optional use limit; join via `/org-join` after a verified email.
 - Team-space folders, bookmarks, tags and dashboards (`owner_user_id` XOR `team_id`); move personal → team (with ack); copy team → personal.
 - Restricted folders: maintainer allowlist; org owners/admins always see; restrictions never widen access.
 - Team archive (read-only) and soft-delete (30-day restore); organization soft-delete with name confirmation and owner email notice.
 - Audit log for owners/admins (filterable API + CSV export); append-only, 1-year retention prune.
-- Sidebar **workspace switcher** (Personal vs organization) and organization settings (members, teams, audit, danger zone).
+- Sidebar **workspace switcher** (Personal vs organization) and organization settings (members, teams, invite links, audit, danger zone).
 
 ## Sharing (same instance)
 

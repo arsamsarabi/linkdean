@@ -31,6 +31,7 @@ import {
   createCategoryShareOutcomeSchema,
   createDashboardShareOutcomeSchema,
   createdVaultSchema,
+  createOrganizationInviteLinkResponseSchema,
   createRegistrationInviteResponseSchema,
   dashboardSchema,
   dashboardShareSchema,
@@ -62,6 +63,7 @@ import {
   okSchema,
   okUserEnvelopeSchema,
   organizationAuditEventSchema,
+  organizationInviteLinkViewSchema,
   organizationMemberViewSchema,
   organizationWorkspaceSchema,
   pageDetailsSchema,
@@ -129,6 +131,7 @@ import {
   type CreateCategoryShareOutcome,
   type CreateDashboard,
   type CreateDashboardShareOutcome,
+  type CreateOrganizationInviteLinkResponse,
   type CreateRegistrationInviteResponse,
   type Dashboard,
   type DashboardShare,
@@ -157,6 +160,7 @@ import {
   type NotificationEmailPref,
   type NotificationKind,
   type OrganizationAuditEvent,
+  type OrganizationInviteLinkView,
   type OrganizationMemberView,
   type OrganizationWorkspace,
   type Passkey,
@@ -415,6 +419,44 @@ export const api = {
     const q = params.toString()
     return req(`/organizations/${id}/audit${q ? `?${q}` : ''}`, {}, z.array(organizationAuditEventSchema))
   },
+
+  patchOrganizationInviteLinksSettings: (
+    id: string,
+    body: { invite_links_enabled: boolean }
+  ): Promise<OrganizationWorkspace> =>
+    req(
+      `/organizations/${id}/invite-links/settings`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+      organizationWorkspaceSchema
+    ),
+
+  listOrganizationInviteLinks: (id: string): Promise<OrganizationInviteLinkView[]> =>
+    req(`/organizations/${id}/invite-links`, {}, z.array(organizationInviteLinkViewSchema)),
+
+  createOrganizationInviteLink: (
+    id: string,
+    body: {
+      role: 'admin' | 'member' | 'guest'
+      expires_in_days?: number
+      max_uses?: number | null
+      teams?: { team_id: string; role?: 'maintainer' | 'editor' | 'viewer' }[]
+    }
+  ): Promise<CreateOrganizationInviteLinkResponse> =>
+    req(
+      `/organizations/${id}/invite-links`,
+      { method: 'POST', body: JSON.stringify(body) },
+      createOrganizationInviteLinkResponseSchema
+    ),
+
+  revokeOrganizationInviteLink: (id: string, linkId: string): Promise<{ ok: boolean }> =>
+    req(`/organizations/${id}/invite-links/${linkId}`, { method: 'DELETE' }, okSchema),
+
+  acceptOrganizationInviteLink: (code: string): Promise<OrganizationWorkspace> =>
+    req(
+      '/organization-invite-links/accept',
+      { method: 'POST', body: JSON.stringify({ code }) },
+      organizationWorkspaceSchema
+    ),
 
   listSavedSearches: (): Promise<SavedSearch[]> => req('/saved-searches', {}, z.array(savedSearchSchema)),
 
