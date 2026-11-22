@@ -1130,7 +1130,7 @@ pub async fn soft_delete_organization(
     require_org_role(pool, actor_id, organization_id, OrganizationRole::Owner).await?;
     let org = sqlx::query_as::<_, Organization>(
         r#"
-        SELECT id, name, created_at, updated_at, deleted_at
+        SELECT id, name, created_at, updated_at, deleted_at, invite_links_enabled
         FROM organizations WHERE id = $1
         "#,
     )
