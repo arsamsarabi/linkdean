@@ -96,7 +96,7 @@ pub async fn create_organization(
         r#"
         INSERT INTO teams (organization_id, name, is_default)
         VALUES ($1, $2, TRUE)
-        RETURNING id, organization_id, name, is_default, archived_at, created_at, updated_at
+        RETURNING id, organization_id, name, is_default, archived_at, deleted_at, created_at, updated_at
         "#,
     )
     .bind(org.id)
@@ -132,6 +132,7 @@ pub async fn create_organization(
         id: org.id,
         name: org.name,
         role: OrganizationRole::Owner,
+        deleted_at: None,
         created_at: org.created_at,
         updated_at: org.updated_at,
     })
@@ -141,23 +142,28 @@ pub async fn list_organizations_for_user(
     pool: &PgPool,
     user_id: Uuid,
 ) -> Result<Vec<OrganizationWorkspace>> {
+    // Live orgs for every member; soft-deleted orgs only for owners (grace restore).
     let rows = sqlx::query_as::<
         _,
         (
             Uuid,
             String,
             String,
+            Option<chrono::DateTime<chrono::Utc>>,
             chrono::DateTime<chrono::Utc>,
             chrono::DateTime<chrono::Utc>,
         ),
     >(
         r#"
-        SELECT o.id, o.name, m.role, o.created_at, o.updated_at
+        SELECT o.id, o.name, m.role, o.deleted_at, o.created_at, o.updated_at
         FROM organizations o
         INNER JOIN organization_members m ON m.organization_id = o.id
         WHERE m.user_id = $1
-          AND o.deleted_at IS NULL
-        ORDER BY lower(o.name), o.id
+          AND (
+            o.deleted_at IS NULL
+            OR m.role = 'owner'
+          )
+        ORDER BY o.deleted_at NULLS FIRST, lower(o.name), o.id
         "#,
     )
     .bind(user_id)
@@ -166,11 +172,12 @@ pub async fn list_organizations_for_user(
     .map_err(|e| Error::msg(e.to_string()))?;
 
     rows.into_iter()
-        .map(|(id, name, role, created_at, updated_at)| {
+        .map(|(id, name, role, deleted_at, created_at, updated_at)| {
             Ok(OrganizationWorkspace {
                 id,
                 name,
                 role: parse_org_role(&role)?,
+                deleted_at,
                 created_at,
                 updated_at,
             })
@@ -189,17 +196,21 @@ pub async fn get_organization_for_member(
             Uuid,
             String,
             String,
+            Option<chrono::DateTime<chrono::Utc>>,
             chrono::DateTime<chrono::Utc>,
             chrono::DateTime<chrono::Utc>,
         ),
     >(
         r#"
-        SELECT o.id, o.name, m.role, o.created_at, o.updated_at
+        SELECT o.id, o.name, m.role, o.deleted_at, o.created_at, o.updated_at
         FROM organizations o
         INNER JOIN organization_members m ON m.organization_id = o.id
         WHERE o.id = $1
           AND m.user_id = $2
-          AND o.deleted_at IS NULL
+          AND (
+            o.deleted_at IS NULL
+            OR m.role = 'owner'
+          )
         "#,
     )
     .bind(organization_id)
@@ -213,8 +224,9 @@ pub async fn get_organization_for_member(
         id: row.0,
         name: row.1,
         role: parse_org_role(&row.2)?,
-        created_at: row.3,
-        updated_at: row.4,
+        deleted_at: row.3,
+        created_at: row.4,
+        updated_at: row.5,
     })
 }
 
@@ -630,9 +642,10 @@ pub async fn list_teams_for_member(
 
     let teams = sqlx::query_as::<_, Team>(
         r#"
-        SELECT id, organization_id, name, is_default, archived_at, created_at, updated_at
+        SELECT id, organization_id, name, is_default, archived_at, deleted_at, created_at, updated_at
         FROM teams
         WHERE organization_id = $1
+          AND deleted_at IS NULL
         ORDER BY is_default DESC, lower(name), id
         "#,
     )
@@ -674,6 +687,7 @@ pub async fn list_teams_for_member(
             name: team.name,
             is_default: team.is_default,
             archived_at: team.archived_at,
+            deleted_at: team.deleted_at,
             role,
             created_at: team.created_at,
             updated_at: team.updated_at,
@@ -697,7 +711,7 @@ pub async fn create_team(
         r#"
         INSERT INTO teams (organization_id, name, is_default)
         VALUES ($1, $2, FALSE)
-        RETURNING id, organization_id, name, is_default, archived_at, created_at, updated_at
+        RETURNING id, organization_id, name, is_default, archived_at, deleted_at, created_at, updated_at
         "#,
     )
     .bind(organization_id)
@@ -723,6 +737,7 @@ pub async fn create_team(
         name: team.name,
         is_default: team.is_default,
         archived_at: team.archived_at,
+        deleted_at: team.deleted_at,
         role: Some(TeamRole::Maintainer),
         created_at: team.created_at,
         updated_at: team.updated_at,
@@ -741,6 +756,7 @@ pub async fn effective_team_role(pool: &PgPool, user_id: Uuid, team_id: Uuid) ->
           AND m.user_id = $2
         WHERE t.id = $1
           AND o.deleted_at IS NULL
+          AND t.deleted_at IS NULL
         "#,
     )
     .bind(team_id)
@@ -799,7 +815,7 @@ pub async fn team_is_archived(pool: &PgPool, team_id: Uuid) -> Result<bool> {
         SELECT t.archived_at
         FROM teams t
         INNER JOIN organizations o ON o.id = t.organization_id
-        WHERE t.id = $1 AND o.deleted_at IS NULL
+        WHERE t.id = $1 AND o.deleted_at IS NULL AND t.deleted_at IS NULL
         "#,
     )
     .bind(team_id)
@@ -833,7 +849,7 @@ pub async fn organization_id_for_team(pool: &PgPool, team_id: Uuid) -> Result<Uu
         SELECT t.organization_id
         FROM teams t
         INNER JOIN organizations o ON o.id = t.organization_id
-        WHERE t.id = $1 AND o.deleted_at IS NULL
+        WHERE t.id = $1 AND o.deleted_at IS NULL AND t.deleted_at IS NULL
         "#,
     )
     .bind(team_id)
@@ -854,4 +870,487 @@ pub async fn append_organization_audit(
     let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
     record_audit(&mut tx, organization_id, actor_user_id, action, payload).await?;
     tx.commit().await.map_err(|e| Error::msg(e.to_string()))
+}
+
+const ORG_DELETE_GRACE_DAYS: i64 = 30;
+const AUDIT_RETENTION_DAYS: i64 = 365;
+
+async fn load_team_in_org(pool: &PgPool, organization_id: Uuid, team_id: Uuid) -> Result<Team> {
+    sqlx::query_as::<_, Team>(
+        r#"
+        SELECT id, organization_id, name, is_default, archived_at, deleted_at, created_at, updated_at
+        FROM teams
+        WHERE id = $1 AND organization_id = $2
+        "#,
+    )
+    .bind(team_id)
+    .bind(organization_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
+}
+
+fn team_to_view(team: Team, role: Option<TeamRole>) -> TeamView {
+    TeamView {
+        id: team.id,
+        organization_id: team.organization_id,
+        name: team.name,
+        is_default: team.is_default,
+        archived_at: team.archived_at,
+        deleted_at: team.deleted_at,
+        role,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+    }
+}
+
+/// Archive a team (read-only). Maintainers or org admins/owners.
+pub async fn archive_team(
+    pool: &PgPool,
+    actor_id: Uuid,
+    organization_id: Uuid,
+    team_id: Uuid,
+) -> Result<TeamView> {
+    require_org_role(pool, actor_id, organization_id, OrganizationRole::Guest).await?;
+    require_team_role(pool, actor_id, team_id, TeamRole::Maintainer).await?;
+    let team = load_team_in_org(pool, organization_id, team_id).await?;
+    if team.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    if team.archived_at.is_some() {
+        return Ok(team_to_view(team, Some(TeamRole::Maintainer)));
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    let updated = sqlx::query_as::<_, Team>(
+        r#"
+        UPDATE teams
+        SET archived_at = now(), updated_at = now()
+        WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL AND archived_at IS NULL
+        RETURNING id, organization_id, name, is_default, archived_at, deleted_at, created_at, updated_at
+        "#,
+    )
+    .bind(team_id)
+    .bind(organization_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+
+    record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_id),
+        "team.archived",
+        json!({ "team_id": team_id, "name": updated.name }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    Ok(team_to_view(updated, Some(TeamRole::Maintainer)))
+}
+
+/// Clear `archived_at` on a live team.
+pub async fn restore_archived_team(
+    pool: &PgPool,
+    actor_id: Uuid,
+    organization_id: Uuid,
+    team_id: Uuid,
+) -> Result<TeamView> {
+    require_org_role(pool, actor_id, organization_id, OrganizationRole::Guest).await?;
+    require_team_role(pool, actor_id, team_id, TeamRole::Maintainer).await?;
+    let team = load_team_in_org(pool, organization_id, team_id).await?;
+    if team.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    if team.archived_at.is_none() {
+        return Ok(team_to_view(team, Some(TeamRole::Maintainer)));
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    let updated = sqlx::query_as::<_, Team>(
+        r#"
+        UPDATE teams
+        SET archived_at = NULL, updated_at = now()
+        WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL
+        RETURNING id, organization_id, name, is_default, archived_at, deleted_at, created_at, updated_at
+        "#,
+    )
+    .bind(team_id)
+    .bind(organization_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+
+    record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_id),
+        "team.restored",
+        json!({ "team_id": team_id, "name": updated.name }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    Ok(team_to_view(updated, Some(TeamRole::Maintainer)))
+}
+
+/// Soft-delete a non-default team and its live content (same `deleted_at` stamp for restore).
+pub async fn soft_delete_team(
+    pool: &PgPool,
+    actor_id: Uuid,
+    organization_id: Uuid,
+    team_id: Uuid,
+) -> Result<()> {
+    require_org_role(pool, actor_id, organization_id, OrganizationRole::Admin).await?;
+    let team = load_team_in_org(pool, organization_id, team_id).await?;
+    if team.is_default {
+        return Err(Error::BadRequest(
+            "the default team cannot be deleted".into(),
+        ));
+    }
+    if team.deleted_at.is_some() {
+        return Ok(());
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    let stamp: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT now()")
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| Error::msg(e.to_string()))?;
+
+    sqlx::query(
+        r#"
+        UPDATE teams
+        SET deleted_at = $3, updated_at = $3
+        WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL
+        "#,
+    )
+    .bind(team_id)
+    .bind(organization_id)
+    .bind(stamp)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    for q in [
+        "UPDATE categories SET deleted_at = $2, updated_at = $2 WHERE team_id = $1 AND deleted_at IS NULL",
+        "UPDATE bookmarks SET deleted_at = $2, updated_at = $2 WHERE team_id = $1 AND deleted_at IS NULL",
+        "UPDATE dashboards SET deleted_at = $2, updated_at = $2 WHERE team_id = $1 AND deleted_at IS NULL",
+    ] {
+        sqlx::query(q)
+            .bind(team_id)
+            .bind(stamp)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+    }
+
+    record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_id),
+        "team.deleted",
+        json!({ "team_id": team_id, "name": team.name, "deleted_at": stamp }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    Ok(())
+}
+
+/// Undo a team soft-delete within the grace window (restores content stamped with the team).
+pub async fn restore_deleted_team(
+    pool: &PgPool,
+    actor_id: Uuid,
+    organization_id: Uuid,
+    team_id: Uuid,
+) -> Result<TeamView> {
+    require_org_role(pool, actor_id, organization_id, OrganizationRole::Admin).await?;
+    let team = load_team_in_org(pool, organization_id, team_id).await?;
+    let Some(stamp) = team.deleted_at else {
+        return Ok(team_to_view(team, Some(TeamRole::Maintainer)));
+    };
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    let updated = sqlx::query_as::<_, Team>(
+        r#"
+        UPDATE teams
+        SET deleted_at = NULL, updated_at = now()
+        WHERE id = $1 AND organization_id = $2 AND deleted_at IS NOT NULL
+        RETURNING id, organization_id, name, is_default, archived_at, deleted_at, created_at, updated_at
+        "#,
+    )
+    .bind(team_id)
+    .bind(organization_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+
+    for q in [
+        "UPDATE categories SET deleted_at = NULL, updated_at = now() WHERE team_id = $1 AND deleted_at = $2",
+        "UPDATE bookmarks SET deleted_at = NULL, updated_at = now() WHERE team_id = $1 AND deleted_at = $2",
+        "UPDATE dashboards SET deleted_at = NULL, updated_at = now() WHERE team_id = $1 AND deleted_at = $2",
+    ] {
+        sqlx::query(q)
+            .bind(team_id)
+            .bind(stamp)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+    }
+
+    record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_id),
+        "team.undeleted",
+        json!({ "team_id": team_id, "name": updated.name }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    Ok(team_to_view(updated, Some(TeamRole::Maintainer)))
+}
+
+/// Owner-only soft delete. `confirm_name` must match the org name (trimmed).
+/// Returns owner emails to notify (caller enqueues mail).
+pub async fn soft_delete_organization(
+    pool: &PgPool,
+    actor_id: Uuid,
+    organization_id: Uuid,
+    confirm_name: &str,
+) -> Result<Vec<String>> {
+    require_org_role(pool, actor_id, organization_id, OrganizationRole::Owner).await?;
+    let org = sqlx::query_as::<_, Organization>(
+        r#"
+        SELECT id, name, created_at, updated_at, deleted_at
+        FROM organizations WHERE id = $1
+        "#,
+    )
+    .bind(organization_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)?;
+
+    if org.deleted_at.is_some() {
+        return list_owner_emails(pool, organization_id).await;
+    }
+    if org.name != confirm_name.trim() {
+        return Err(Error::BadRequest(
+            "type the organization name to confirm deletion".into(),
+        ));
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    sqlx::query(
+        r#"
+        UPDATE organizations
+        SET deleted_at = now(), updated_at = now()
+        WHERE id = $1 AND deleted_at IS NULL
+        "#,
+    )
+    .bind(organization_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_id),
+        "organization.deleted",
+        json!({ "name": org.name }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+    list_owner_emails(pool, organization_id).await
+}
+
+pub async fn restore_organization(
+    pool: &PgPool,
+    actor_id: Uuid,
+    organization_id: Uuid,
+) -> Result<OrganizationWorkspace> {
+    // membership_role hides soft-deleted orgs; check owner directly.
+    let role: Option<(String,)> = sqlx::query_as(
+        r#"
+        SELECT m.role
+        FROM organization_members m
+        WHERE m.organization_id = $1 AND m.user_id = $2
+        "#,
+    )
+    .bind(organization_id)
+    .bind(actor_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    let Some((role_s,)) = role else {
+        return Err(Error::NotFound);
+    };
+    if parse_org_role(&role_s)? != OrganizationRole::Owner {
+        return Err(Error::Forbidden);
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    let org = sqlx::query_as::<_, Organization>(
+        r#"
+        UPDATE organizations
+        SET deleted_at = NULL, updated_at = now()
+        WHERE id = $1 AND deleted_at IS NOT NULL
+        RETURNING id, name, created_at, updated_at, deleted_at
+        "#,
+    )
+    .bind(organization_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::BadRequest(
+        "organization is not pending deletion".into(),
+    ))?;
+
+    record_audit(
+        &mut tx,
+        organization_id,
+        Some(actor_id),
+        "organization.restored",
+        json!({ "name": org.name }),
+    )
+    .await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))?;
+
+    Ok(OrganizationWorkspace {
+        id: org.id,
+        name: org.name,
+        role: OrganizationRole::Owner,
+        deleted_at: None,
+        created_at: org.created_at,
+        updated_at: org.updated_at,
+    })
+}
+
+pub async fn list_owner_emails(pool: &PgPool, organization_id: Uuid) -> Result<Vec<String>> {
+    sqlx::query_scalar(
+        r#"
+        SELECT u.email
+        FROM organization_members m
+        INNER JOIN users u ON u.id = m.user_id
+        WHERE m.organization_id = $1 AND m.role = 'owner'
+        ORDER BY u.email
+        "#,
+    )
+    .bind(organization_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))
+}
+
+pub async fn list_organization_audit_events(
+    pool: &PgPool,
+    actor_id: Uuid,
+    organization_id: Uuid,
+    query: &linkdean_core::ListOrganizationAuditQuery,
+) -> Result<Vec<linkdean_core::OrganizationAuditEventView>> {
+    require_org_role(pool, actor_id, organization_id, OrganizationRole::Admin).await?;
+    let limit = query.limit.unwrap_or(50).clamp(1, 200);
+    let offset = query.offset.unwrap_or(0).max(0);
+
+    let rows = sqlx::query_as::<
+        _,
+        (
+            Uuid,
+            Uuid,
+            Option<Uuid>,
+            Option<String>,
+            String,
+            serde_json::Value,
+            chrono::DateTime<chrono::Utc>,
+        ),
+    >(
+        r#"
+        SELECT e.id, e.organization_id, e.actor_user_id, u.email, e.action, e.payload, e.created_at
+        FROM organization_audit_events e
+        LEFT JOIN users u ON u.id = e.actor_user_id
+        WHERE e.organization_id = $1
+          AND ($2::uuid IS NULL OR e.actor_user_id = $2)
+          AND ($3::text IS NULL OR e.action = $3)
+          AND ($4::timestamptz IS NULL OR e.created_at >= $4)
+          AND ($5::timestamptz IS NULL OR e.created_at <= $5)
+        ORDER BY e.created_at DESC, e.id DESC
+        LIMIT $6 OFFSET $7
+        "#,
+    )
+    .bind(organization_id)
+    .bind(query.actor_user_id)
+    .bind(query.action.as_deref())
+    .bind(query.from)
+    .bind(query.to)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    Ok(rows
+        .into_iter()
+        .map(
+            |(id, organization_id, actor_user_id, actor_email, action, payload, created_at)| {
+                linkdean_core::OrganizationAuditEventView {
+                    id,
+                    organization_id,
+                    actor_user_id,
+                    actor_email,
+                    action,
+                    payload,
+                    created_at,
+                }
+            },
+        )
+        .collect())
+}
+
+/// Hard-delete orgs past the grace window. Cascades teams/content via FKs.
+pub async fn purge_organizations_past_grace(pool: &PgPool) -> Result<u64> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM organizations
+        WHERE deleted_at IS NOT NULL
+          AND deleted_at < now() - ($1::text || ' days')::interval
+        "#,
+    )
+    .bind(ORG_DELETE_GRACE_DAYS.to_string())
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(res.rows_affected())
+}
+
+/// Hard-delete soft-deleted teams past grace (cascades team_id content).
+pub async fn purge_teams_past_grace(pool: &PgPool) -> Result<u64> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM teams
+        WHERE deleted_at IS NOT NULL
+          AND deleted_at < now() - ($1::text || ' days')::interval
+        "#,
+    )
+    .bind(ORG_DELETE_GRACE_DAYS.to_string())
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(res.rows_affected())
+}
+
+pub async fn prune_organization_audit_events(pool: &PgPool) -> Result<u64> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM organization_audit_events
+        WHERE created_at < now() - ($1::text || ' days')::interval
+        "#,
+    )
+    .bind(AUDIT_RETENTION_DAYS.to_string())
+    .execute(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(res.rows_affected())
 }
