@@ -306,3 +306,49 @@ async fn personal_folder_cannot_be_restricted() {
     .expect_err("personal restrict");
     assert!(matches!(err, Error::BadRequest(_)));
 }
+
+#[tokio::test]
+async fn restricted_folder_hides_filed_bookmark_from_editor() {
+    let Some(pool) = pool_or_skip().await else {
+        return;
+    };
+    let owner = user(&pool, "own").await;
+    let editor = user(&pool, "ed").await;
+    let (org_id, team_id) = org_with_general(&pool, &owner).await;
+    db::add_organization_member(&pool, org_id, editor.id, OrganizationRole::Member)
+        .await
+        .expect("member");
+
+    let folder = team_folder(&pool, &owner, team_id).await;
+    let bm = db::create_bookmark(
+        &pool,
+        owner.id,
+        linkdean_core::CreateBookmark {
+            url: format!("https://restricted.example/{}", Uuid::new_v4()),
+            title: Some("Secret".into()),
+            category_id: Some(folder),
+            category_ids: vec![folder],
+            team_id: Some(team_id),
+            ..Default::default()
+        },
+        &linkdean_core::VaultKeyring::default(),
+    )
+    .await
+    .expect("bookmark");
+
+    db::set_category_restriction(
+        &pool,
+        owner.id,
+        folder,
+        SetCategoryRestriction { member_ids: vec![] },
+    )
+    .await
+    .expect("restrict");
+
+    assert!(!db::bookmark_can_read(&pool, editor.id, bm.id)
+        .await
+        .expect("read check"));
+    assert!(db::bookmark_can_read(&pool, owner.id, bm.id)
+        .await
+        .expect("owner read"));
+}

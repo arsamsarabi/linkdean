@@ -471,17 +471,29 @@ pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) 
     if let Some((tid,)) = team_id {
         if super::organizations::require_team_role(pool, user_id, tid, TeamRole::Viewer)
             .await
-            .is_ok()
+            .is_err()
         {
-            return Ok(true);
+            return Ok(false);
         }
-        return Ok(false);
+        // Team seat is not enough when every filed folder is restricted away.
+        return bookmark_reachable_via_categories(pool, user_id, bookmark_id, false).await;
     }
     if bookmark_trashed(pool, bookmark_id).await? {
         // Trash is the owner's alone.
         return Ok(false);
     }
 
+    bookmark_reachable_via_categories(pool, user_id, bookmark_id, false).await
+}
+
+/// Loose (unfiled) bookmarks are team-wide; filed ones need access to at least one folder
+/// so restricted folders cannot leak by bookmark id.
+async fn bookmark_reachable_via_categories(
+    pool: &PgPool,
+    user_id: Uuid,
+    bookmark_id: Uuid,
+    need_write: bool,
+) -> Result<bool> {
     let cat_ids: Vec<(Uuid,)> = sqlx::query_as(
         r#"
         SELECT category_id FROM bookmark_categories WHERE bookmark_id = $1
@@ -494,9 +506,15 @@ pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) 
     .await
     .map_err(|e| Error::msg(e.to_string()))?;
 
+    if cat_ids.is_empty() {
+        return Ok(true);
+    }
     for (cid,) in cat_ids {
-        if category_access(pool, user_id, cid).await.is_ok() {
-            return Ok(true);
+        match category_access(pool, user_id, cid).await {
+            Ok(a) if !need_write || a.can_write() => return Ok(true),
+            Ok(_) => {}
+            Err(Error::NotFound) => {}
+            Err(e) => return Err(e),
         }
     }
     Ok(false)
@@ -531,41 +549,20 @@ pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid)
             .await
             .map_err(|e| Error::msg(e.to_string()))?;
     if let Some((tid,)) = team_id {
-        return Ok(super::organizations::require_team_writable(
-            pool,
-            user_id,
-            tid,
-            TeamRole::Editor,
-        )
-        .await
-        .is_ok());
+        if super::organizations::require_team_writable(pool, user_id, tid, TeamRole::Editor)
+            .await
+            .is_err()
+        {
+            return Ok(false);
+        }
+        return bookmark_reachable_via_categories(pool, user_id, bookmark_id, true).await;
     }
     if bookmark_trashed(pool, bookmark_id).await? {
         // Trash is the owner's alone.
         return Ok(false);
     }
 
-    let cat_ids: Vec<(Uuid,)> = sqlx::query_as(
-        r#"
-        SELECT category_id FROM bookmark_categories WHERE bookmark_id = $1
-        UNION
-        SELECT category_id FROM bookmarks WHERE id = $1 AND category_id IS NOT NULL
-        "#,
-    )
-    .bind(bookmark_id)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| Error::msg(e.to_string()))?;
-
-    for (cid,) in cat_ids {
-        match category_access(pool, user_id, cid).await {
-            Ok(a) if a.can_write() => return Ok(true),
-            Ok(_) => {}
-            Err(Error::NotFound) => {}
-            Err(e) => return Err(e),
-        }
-    }
-    Ok(false)
+    bookmark_reachable_via_categories(pool, user_id, bookmark_id, true).await
 }
 
 /// Category ids the owner has shared out (share roots + their non-vault descendants).
