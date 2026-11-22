@@ -37,6 +37,28 @@
   letter-spacing: 0.04em;
 }
 
+.workspaceSwitcher {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  width: calc(100% - var(--mantine-spacing-md) * 2);
+  margin: 0 var(--mantine-spacing-md) var(--mantine-spacing-xs);
+  padding: 6px 10px;
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+}
+
+.workspaceSwitcher:hover {
+  background: var(--mantine-color-default-hover);
+}
+
+.orgTint {
+  /* Subtle header/sidebar cue when an organization workspace is active. */
+  --app-shell-org-tint: color-mix(in srgb, var(--mantine-color-teal-filled) 12%, transparent);
+}
+
 .footer {
   border-top: 1px solid var(--mantine-color-default-border);
 }

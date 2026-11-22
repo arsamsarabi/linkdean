@@ -36,6 +36,7 @@ export type CreateCategoryBody = {
   is_hidden: boolean
   vault_id?: string | null
   icon?: string | null
+  team_id?: string | null
 }
 
 export const forkCategoryResultSchema = z.object({

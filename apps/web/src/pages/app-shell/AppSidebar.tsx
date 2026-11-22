@@ -27,6 +27,7 @@ import { SidebarRail } from './SidebarRail'
 import { SidebarSavedSearches } from './SidebarSavedSearches'
 import { SidebarVersion } from './SidebarVersion'
 import { useIconRail } from './useIconRail'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 const iconProps = { size: 18, stroke: 1.5 } as const
 
@@ -78,6 +79,7 @@ export function AppSidebar({ pathname, search, vaultUnlocked, isAdmin }: Props):
   return (
     <>
       <AppShell.Section grow component={ScrollArea} py="md">
+        <WorkspaceSwitcher />
         <Stack gap={2}>
           <NavLink
             component={Link}
