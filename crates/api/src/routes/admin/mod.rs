@@ -627,7 +627,7 @@ async fn reindex_search(
             .into_iter()
             // Shared rows appear under multiple invitees; upsert by id is idempotent.
             // Prefer owner-owned docs: skip when listing through a non-owner (shared).
-            .filter(|v| v.owner_user_id == u.id)
+            .filter(|v| v.owner_user_id == Some(u.id))
             .collect();
         let n = owned.len() as u64;
         match crate::search_index::upsert_many(&state, &owned).await {

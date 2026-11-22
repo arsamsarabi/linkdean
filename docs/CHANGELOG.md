@@ -11,6 +11,7 @@ Every release cuts a section: on release, rename `[Unreleased]` to the new versi
 
 ### Added
 
+- **Team-space content ownership:** folders, bookmarks, tags, and dashboards can belong to a team (`owner_user_id` XOR `team_id`). List/create with `?team_id=` / body `team_id`; move personal folders into a team (with ownership ack); copy team folders to personal. Vaults and individual shares stay personal-only. See [organizations and teams](design/organizations-and-teams.md).
 - **Organization email invites:** org admins invite by email (role + optional teams); invitees accept from `/api/organization-invites` after email verification. Plain invite email when mail is on. See [organizations and teams](design/organizations-and-teams.md).
 - **Organizations membership API:** create an organization (default team + owner), list workspaces, members and teams, leave, and change roles. Team spaces and invites come next. See [organizations and teams](design/organizations-and-teams.md).
 - **Managed Pro checkout:** with `MANAGED_SERVICE=true` and Stripe env (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_PRO`), Settings can open Stripe Checkout for personal Pro and the Customer Portal to manage or cancel; webhooks update the plan. No dollar prices in the repo. See [plans and pricing](design/plans-and-pricing.md).

@@ -52,6 +52,7 @@ impl ParsedBookmark {
 impl ParsedImport {
     fn push_category(&mut self, name: String, parent: Option<usize>) -> usize {
         self.categories.push(CreateCategory {
+            team_id: None,
             name,
             parent_id: None,
             is_hidden: false,

@@ -1,6 +1,6 @@
 use linkdean_core::{
     Category, CategoryAccess, CategoryShare, CategoryShareView, CreateCategoryShare, Error, Result,
-    ShareAccess, UpdateCategoryShare,
+    ShareAccess, TeamRole, UpdateCategoryShare,
 };
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -38,16 +38,20 @@ fn to_view(row: ShareRow) -> Result<CategoryShareView> {
 }
 
 /// Resolve effective access for `user_id` on `category_id`.
-/// Owner wins. Else nearest ancestor share (walking parent chain). Vault → NotFound for non-owners.
-/// Trash is the owner's: a non-owner gets NotFound when the folder or any ancestor is trashed.
+/// Owner wins. Team-space membership maps to CategoryAccess. Else nearest ancestor share.
+/// Vault → NotFound for non-owners. Trash is the owner's for personal shares.
 pub async fn category_access(
     pool: &PgPool,
     user_id: Uuid,
     category_id: Uuid,
 ) -> Result<CategoryAccess> {
     let cat = get_category_by_id(pool, category_id).await?;
-    if cat.owner_user_id == user_id {
+    if cat.owner_user_id == Some(user_id) {
         return Ok(CategoryAccess::Owner);
+    }
+    if let Some(team_id) = cat.team_id {
+        let role = super::organizations::effective_team_role(pool, user_id, team_id).await?;
+        return Ok(role.to_category_access());
     }
     if cat.is_vault {
         return Err(Error::NotFound);
@@ -137,13 +141,14 @@ pub async fn list_shared_categories(
         r#"
         WITH RECURSIVE tree AS (
             SELECT
-                c.id, c.owner_user_id, c.parent_id, c.name, c.is_hidden, c.is_vault,
+                c.id, c.owner_user_id, c.team_id, c.parent_id, c.name, c.is_hidden, c.is_vault,
                 c.icon, c.position, c.deleted_at, c.created_at, c.updated_at,
                 cs.access AS share_access, 0 AS depth
             FROM category_shares cs
             JOIN categories c ON c.id = cs.category_id
             WHERE cs.invitee_user_id = $1
               AND c.is_vault = FALSE
+              AND c.team_id IS NULL
               AND c.deleted_at IS NULL
               AND ($2 OR c.is_hidden = FALSE)
               -- A share under a trashed folder is in the owner's Trash too.
@@ -158,9 +163,9 @@ pub async fn list_shared_categories(
               )
             UNION
             SELECT
-                child.id, child.owner_user_id, child.parent_id, child.name, child.is_hidden,
-                child.is_vault, child.icon, child.position, child.deleted_at, child.created_at,
-                child.updated_at, tree.share_access, tree.depth + 1
+                child.id, child.owner_user_id, child.team_id, child.parent_id, child.name,
+                child.is_hidden, child.is_vault, child.icon, child.position, child.deleted_at,
+                child.created_at, child.updated_at, tree.share_access, tree.depth + 1
             FROM categories child
             JOIN tree ON child.parent_id = tree.id
             WHERE child.is_vault = FALSE
@@ -168,7 +173,7 @@ pub async fn list_shared_categories(
               AND ($2 OR child.is_hidden = FALSE)
         )
         SELECT DISTINCT ON (id)
-            id, owner_user_id, parent_id, name, is_hidden, is_vault, icon, position,
+            id, owner_user_id, team_id, parent_id, name, is_hidden, is_vault, icon, position,
             deleted_at, created_at, updated_at, share_access
         FROM tree
         ORDER BY id, depth
@@ -193,7 +198,8 @@ pub async fn list_shared_categories(
 #[derive(Debug, sqlx::FromRow)]
 struct CategoryShareRow {
     id: Uuid,
-    owner_user_id: Uuid,
+    owner_user_id: Option<Uuid>,
+    team_id: Option<Uuid>,
     parent_id: Option<Uuid>,
     name: String,
     is_hidden: bool,
@@ -211,6 +217,7 @@ impl CategoryShareRow {
         Category {
             id: self.id,
             owner_user_id: self.owner_user_id,
+            team_id: self.team_id,
             parent_id: self.parent_id,
             name: self.name,
             is_hidden: self.is_hidden,
@@ -266,6 +273,11 @@ pub async fn create_share(
     use linkdean_core::{CreateCategoryShareOutcome, PendingShareSubjectType};
 
     let cat = require_category_owner(pool, owner_user_id, category_id).await?;
+    if cat.team_id.is_some() {
+        return Err(Error::BadRequest(
+            "team-space folders cannot be shared with individuals".into(),
+        ));
+    }
     if cat.is_vault {
         return Err(Error::BadRequest("cannot share vault categories".into()));
     }
@@ -428,7 +440,7 @@ pub async fn delete_share(
     Ok(())
 }
 
-/// True if user can read the bookmark via ownership or a linked category share.
+/// True if user can read the bookmark via ownership, team membership, or a linked category share.
 pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) -> Result<bool> {
     let owned: Option<(Uuid,)> =
         sqlx::query_as("SELECT id FROM bookmarks WHERE id = $1 AND owner_user_id = $2")
@@ -439,6 +451,21 @@ pub async fn bookmark_can_read(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) 
             .map_err(|e| Error::msg(e.to_string()))?;
     if owned.is_some() {
         return Ok(true);
+    }
+    let team_id: Option<(Uuid,)> =
+        sqlx::query_as("SELECT team_id FROM bookmarks WHERE id = $1 AND team_id IS NOT NULL")
+            .bind(bookmark_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+    if let Some((tid,)) = team_id {
+        if super::organizations::require_team_role(pool, user_id, tid, TeamRole::Viewer)
+            .await
+            .is_ok()
+        {
+            return Ok(true);
+        }
+        return Ok(false);
     }
     if bookmark_trashed(pool, bookmark_id).await? {
         // Trash is the owner's alone.
@@ -475,7 +502,7 @@ async fn bookmark_trashed(pool: &PgPool, bookmark_id: Uuid) -> Result<bool> {
     Ok(trashed.unwrap_or(true))
 }
 
-/// True if user can mutate bookmark: owns it, or has write on any linked category.
+/// True if user can mutate bookmark: owns it, team Editor+, or write on a linked category.
 pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid) -> Result<bool> {
     let owned: Option<(Uuid,)> =
         sqlx::query_as("SELECT id FROM bookmarks WHERE id = $1 AND owner_user_id = $2")
@@ -486,6 +513,22 @@ pub async fn bookmark_can_write(pool: &PgPool, user_id: Uuid, bookmark_id: Uuid)
             .map_err(|e| Error::msg(e.to_string()))?;
     if owned.is_some() {
         return Ok(true);
+    }
+    let team_id: Option<(Uuid,)> =
+        sqlx::query_as("SELECT team_id FROM bookmarks WHERE id = $1 AND team_id IS NOT NULL")
+            .bind(bookmark_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Error::msg(e.to_string()))?;
+    if let Some((tid,)) = team_id {
+        return Ok(super::organizations::require_team_writable(
+            pool,
+            user_id,
+            tid,
+            TeamRole::Editor,
+        )
+        .await
+        .is_ok());
     }
     if bookmark_trashed(pool, bookmark_id).await? {
         // Trash is the owner's alone.

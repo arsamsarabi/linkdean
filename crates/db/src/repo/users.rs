@@ -189,12 +189,15 @@ pub fn user_share_label(user: &User) -> String {
     share_invitee_label(user.display_name.as_deref(), &user.email, "Owner")
 }
 
-/// Owner label for invitee views (`None` when viewer is the owner).
+/// Owner label for invitee views (`None` when viewer is the owner, or team-owned content).
 pub async fn owner_display_name_for_viewer(
     pool: &PgPool,
-    owner_id: Uuid,
+    owner_id: Option<Uuid>,
     viewer_id: Uuid,
 ) -> Result<Option<String>> {
+    let Some(owner_id) = owner_id else {
+        return Ok(None);
+    };
     if owner_id == viewer_id {
         return Ok(None);
     }

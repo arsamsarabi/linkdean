@@ -31,7 +31,7 @@ fn parse_team_role(s: &str) -> Result<TeamRole> {
     TeamRole::parse(s).map_err(|_| Error::msg(format!("invalid team role `{s}`")))
 }
 
-async fn record_audit(
+pub(crate) async fn record_audit(
     tx: &mut Transaction<'_, Postgres>,
     organization_id: Uuid,
     actor_user_id: Option<Uuid>,
@@ -727,4 +727,131 @@ pub async fn create_team(
         created_at: team.created_at,
         updated_at: team.updated_at,
     })
+}
+
+/// Effective team role for `user_id` on `team_id`.
+/// Org owners/admins act as Maintainer without a `team_members` row.
+pub async fn effective_team_role(pool: &PgPool, user_id: Uuid, team_id: Uuid) -> Result<TeamRole> {
+    let row: Option<(Uuid, Option<chrono::DateTime<chrono::Utc>>, String)> = sqlx::query_as(
+        r#"
+        SELECT t.organization_id, t.archived_at, m.role
+        FROM teams t
+        INNER JOIN organizations o ON o.id = t.organization_id
+        INNER JOIN organization_members m ON m.organization_id = t.organization_id
+          AND m.user_id = $2
+        WHERE t.id = $1
+          AND o.deleted_at IS NULL
+        "#,
+    )
+    .bind(team_id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    let Some((organization_id, _archived_at, org_role_s)) = row else {
+        return Err(Error::NotFound);
+    };
+    let org_role = parse_org_role(&org_role_s)?;
+    if org_role.at_least(OrganizationRole::Admin) {
+        return Ok(TeamRole::Maintainer);
+    }
+
+    let membership: Option<(String,)> = sqlx::query_as(
+        r#"
+        SELECT role FROM team_members
+        WHERE team_id = $1 AND user_id = $2
+        "#,
+    )
+    .bind(team_id)
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    match membership {
+        Some((r,)) => parse_team_role(&r),
+        None => {
+            // Guests without a team seat, or members not on this team.
+            let _ = organization_id;
+            Err(Error::NotFound)
+        }
+    }
+}
+
+pub async fn require_team_role(
+    pool: &PgPool,
+    user_id: Uuid,
+    team_id: Uuid,
+    min: TeamRole,
+) -> Result<TeamRole> {
+    let role = effective_team_role(pool, user_id, team_id).await?;
+    if !role.at_least(min) {
+        return Err(Error::Forbidden);
+    }
+    Ok(role)
+}
+
+/// True when the team exists, org is live, and `archived_at` is set.
+pub async fn team_is_archived(pool: &PgPool, team_id: Uuid) -> Result<bool> {
+    let archived: Option<Option<chrono::DateTime<chrono::Utc>>> = sqlx::query_scalar(
+        r#"
+        SELECT t.archived_at
+        FROM teams t
+        INNER JOIN organizations o ON o.id = t.organization_id
+        WHERE t.id = $1 AND o.deleted_at IS NULL
+        "#,
+    )
+    .bind(team_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?;
+
+    match archived {
+        Some(Some(_)) => Ok(true),
+        Some(None) => Ok(false),
+        None => Err(Error::NotFound),
+    }
+}
+
+pub async fn require_team_writable(
+    pool: &PgPool,
+    user_id: Uuid,
+    team_id: Uuid,
+    min: TeamRole,
+) -> Result<TeamRole> {
+    if team_is_archived(pool, team_id).await? {
+        return Err(Error::BadRequest("that team is archived".into()));
+    }
+    require_team_role(pool, user_id, team_id, min).await
+}
+
+/// Organization id for a live team (for audit events).
+pub async fn organization_id_for_team(pool: &PgPool, team_id: Uuid) -> Result<Uuid> {
+    sqlx::query_scalar(
+        r#"
+        SELECT t.organization_id
+        FROM teams t
+        INNER JOIN organizations o ON o.id = t.organization_id
+        WHERE t.id = $1 AND o.deleted_at IS NULL
+        "#,
+    )
+    .bind(team_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| Error::msg(e.to_string()))?
+    .ok_or(Error::NotFound)
+}
+
+/// Append an org audit event outside an existing transaction.
+pub async fn append_organization_audit(
+    pool: &PgPool,
+    organization_id: Uuid,
+    actor_user_id: Option<Uuid>,
+    action: &str,
+    payload: serde_json::Value,
+) -> Result<()> {
+    let mut tx = pool.begin().await.map_err(|e| Error::msg(e.to_string()))?;
+    record_audit(&mut tx, organization_id, actor_user_id, action, payload).await?;
+    tx.commit().await.map_err(|e| Error::msg(e.to_string()))
 }

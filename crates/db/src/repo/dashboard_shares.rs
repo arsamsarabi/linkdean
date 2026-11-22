@@ -63,15 +63,19 @@ async fn find_direct_dashboard_share(
     .map_err(|e| Error::msg(e.to_string()))
 }
 
-/// Owner wins. Else direct share, unless the owner put the dashboard in Trash. Else NotFound.
+/// Owner wins. Team-space membership maps to access. Else direct share (personal only).
 pub async fn dashboard_access(
     pool: &PgPool,
     user_id: Uuid,
     dashboard_id: Uuid,
 ) -> Result<CategoryAccess> {
     let dash = get_dashboard_row(pool, dashboard_id).await?;
-    if dash.owner_user_id == user_id {
+    if dash.owner_user_id == Some(user_id) {
         return Ok(CategoryAccess::Owner);
+    }
+    if let Some(team_id) = dash.team_id {
+        let role = super::organizations::effective_team_role(pool, user_id, team_id).await?;
+        return Ok(role.to_category_access());
     }
     if dash.deleted_at.is_some() {
         return Err(Error::NotFound);
@@ -191,7 +195,8 @@ pub async fn list_shared_dashboards(
     #[derive(Debug, sqlx::FromRow)]
     struct Row {
         id: Uuid,
-        owner_user_id: Uuid,
+        owner_user_id: Option<Uuid>,
+        team_id: Option<Uuid>,
         title: String,
         is_default: bool,
         deleted_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -203,11 +208,12 @@ pub async fn list_shared_dashboards(
     let rows = sqlx::query_as::<_, Row>(
         r#"
         SELECT
-            d.id, d.owner_user_id, d.title, d.is_default, d.deleted_at, d.created_at, d.updated_at,
-            ds.access AS share_access
+            d.id, d.owner_user_id, d.team_id, d.title, d.is_default, d.deleted_at, d.created_at,
+            d.updated_at, ds.access AS share_access
         FROM dashboard_shares ds
         JOIN dashboards d ON d.id = ds.dashboard_id
         WHERE ds.invitee_user_id = $1
+          AND d.team_id IS NULL
           AND d.deleted_at IS NULL
         ORDER BY d.title ASC, d.created_at ASC
         "#,
@@ -226,6 +232,7 @@ pub async fn list_shared_dashboards(
             Dashboard {
                 id: row.id,
                 owner_user_id: row.owner_user_id,
+                team_id: row.team_id,
                 title: row.title,
                 is_default: row.is_default,
                 deleted_at: row.deleted_at,

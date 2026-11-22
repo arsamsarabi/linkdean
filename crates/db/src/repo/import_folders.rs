@@ -112,6 +112,7 @@ pub(crate) async fn resolve_folders(
                 is_hidden: cat.is_hidden,
                 vault_id: None,
                 icon: cat.icon,
+                team_id: None,
             },
         )
         .await?;

@@ -89,7 +89,7 @@ pub struct McpArchiveText {
 impl McpBookmark {
     /// Map a REST/db view for MCP: drop vault fields; hide others' notes (Agent Skills stance).
     pub fn from_view(view: &BookmarkView, viewer_id: Uuid) -> Self {
-        let notes = if view.owner_user_id == viewer_id {
+        let notes = if view.owner_user_id == Some(viewer_id) {
             view.notes.clone()
         } else {
             None

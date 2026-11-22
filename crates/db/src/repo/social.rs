@@ -64,9 +64,13 @@ pub(super) async fn resolve_subject(
             if cat.is_vault {
                 return Err(Error::Forbidden);
             }
-            require_shared_context(pool, subject_type, subject_id, cat.owner_user_id).await?;
+            // Known issue: team-space likes/comments need a non-personal owner model.
+            let owner = cat.owner_user_id.ok_or(Error::BadRequest(
+                "likes and comments on team-space items are not available yet".into(),
+            ))?;
+            require_shared_context(pool, subject_type, subject_id, owner).await?;
             SubjectMeta {
-                owner_user_id: cat.owner_user_id,
+                owner_user_id: owner,
                 title: cat.name,
             }
         }
@@ -75,9 +79,12 @@ pub(super) async fn resolve_subject(
             if dash.deleted_at.is_some() {
                 return Err(Error::NotFound);
             }
-            require_shared_context(pool, subject_type, subject_id, dash.owner_user_id).await?;
+            let owner = dash.owner_user_id.ok_or(Error::BadRequest(
+                "likes and comments on team-space items are not available yet".into(),
+            ))?;
+            require_shared_context(pool, subject_type, subject_id, owner).await?;
             SubjectMeta {
-                owner_user_id: dash.owner_user_id,
+                owner_user_id: owner,
                 title: dash.title,
             }
         }
