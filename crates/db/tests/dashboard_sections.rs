@@ -40,6 +40,7 @@ async fn board(pool: &PgPool, owner: &User) -> Uuid {
         owner.id,
         CreateDashboard {
             title: Some("Mine".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )
@@ -122,6 +123,7 @@ async fn latest_matches_every_source_filter_newest_first() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -135,6 +137,7 @@ async fn latest_matches_every_source_filter_newest_first() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -533,6 +536,7 @@ async fn a_folder_source_must_be_the_owners_and_a_deleted_one_empties_the_sectio
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -564,6 +568,7 @@ async fn a_folder_source_must_be_the_owners_and_a_deleted_one_empties_the_sectio
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await

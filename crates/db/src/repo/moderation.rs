@@ -468,6 +468,8 @@ pub async fn exposed_content(pool: &PgPool, user_id: Uuid) -> Result<ExposedCont
 
 #[derive(sqlx::FromRow)]
 struct CategoryState {
+    // Selected for ownership filter; not read after fetch.
+    #[allow(dead_code)]
     owner_user_id: Uuid,
     name: String,
     is_vault: bool,
@@ -478,6 +480,8 @@ struct CategoryState {
 
 #[derive(sqlx::FromRow)]
 struct BookmarkState {
+    // Selected for ownership filter; not read after fetch.
+    #[allow(dead_code)]
     owner_user_id: Uuid,
     title: String,
     url: String,

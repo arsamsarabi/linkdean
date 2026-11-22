@@ -39,6 +39,7 @@ async fn folder(pool: &PgPool, owner: &User, name: &str, parent_id: Option<Uuid>
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await

@@ -36,7 +36,7 @@ pub(super) async fn resolve_subject(
             if !bookmark_can_read(pool, user_id, subject_id).await? {
                 return Err(Error::NotFound);
             }
-            let row: Option<(Uuid, String, bool)> = sqlx::query_as(
+            let row: Option<(Option<Uuid>, String, bool)> = sqlx::query_as(
                 r#"
                 SELECT owner_user_id, title, is_vault
                 FROM bookmarks
@@ -47,12 +47,16 @@ pub(super) async fn resolve_subject(
             .fetch_optional(pool)
             .await
             .map_err(|e| Error::msg(e.to_string()))?;
-            let Some((owner, title, is_vault)) = row else {
+            let Some((owner_opt, title, is_vault)) = row else {
                 return Err(Error::NotFound);
             };
             if is_vault {
                 return Err(Error::Forbidden);
             }
+            // Known issue: team-space likes/comments need a non-personal owner model.
+            let owner = owner_opt.ok_or(Error::BadRequest(
+                "likes and comments on team-space items are not available yet".into(),
+            ))?;
             require_shared_context(pool, subject_type, subject_id, owner).await?;
             SubjectMeta {
                 owner_user_id: owner,
@@ -417,11 +421,12 @@ async fn subject_owner(
         SocialSubjectType::Category => "SELECT owner_user_id FROM categories WHERE id = $1",
         SocialSubjectType::Dashboard => "SELECT owner_user_id FROM dashboards WHERE id = $1",
     };
-    sqlx::query_scalar(sql)
+    let owner: Option<Option<Uuid>> = sqlx::query_scalar(sql)
         .bind(subject_id)
         .fetch_optional(pool)
         .await
-        .map_err(|e| Error::msg(e.to_string()))
+        .map_err(|e| Error::msg(e.to_string()))?;
+    Ok(owner.flatten())
 }
 
 pub async fn delete_comment(pool: &PgPool, user_id: Uuid, comment_id: Uuid) -> Result<()> {

@@ -1858,6 +1858,7 @@ pub async fn bookmark_wants_preview(pool: &PgPool, id: Uuid) -> Result<bool> {
 
 const FAILED_PREVIEWS: &str = r#"
     is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
+    AND owner_user_id IS NOT NULL
     AND NOT preview_dismissed
     AND preview_failed_at IS NOT NULL
     AND preview_failed_at <= now() - make_interval(hours => $1)
@@ -1899,6 +1900,7 @@ pub async fn list_bookmarks_needing_preview(
         r#"
         SELECT owner_user_id, id FROM bookmarks
         WHERE is_vault = FALSE AND has_preview = FALSE AND deleted_at IS NULL AND url <> ''
+          AND owner_user_id IS NOT NULL
           AND NOT preview_dismissed
           AND (preview_failed_at IS NULL
                OR preview_failed_at < now() - make_interval(days => $1))
@@ -1954,6 +1956,7 @@ pub async fn claim_bookmarks_for_link_check(
         WHERE is_vault = FALSE
           AND deleted_at IS NULL
           AND url <> ''
+          AND owner_user_id IS NOT NULL
           AND (
             link_checked_at IS NULL
             OR (link_check_fail_count > 0 AND link_checked_at < $2)

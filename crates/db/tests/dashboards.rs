@@ -82,6 +82,7 @@ async fn default_dashboard_roundtrip_and_authz() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -231,6 +232,7 @@ async fn multi_dashboard_create_pin_delete() {
         user.id,
         CreateDashboard {
             title: Some("Work".into()),
+            team_id: None,
         },
         &VaultKeyring::default(),
     )
@@ -323,6 +325,7 @@ async fn dashboard_share_read_write_and_revoke() {
             is_hidden: false,
             vault_id: None,
             icon: None,
+            team_id: None,
         },
     )
     .await
@@ -558,6 +561,7 @@ async fn saving_a_layout_keeps_pins_the_editor_cannot_see() {
         owner.id,
         CreateDashboard {
             title: Some("Board".into()),
+            team_id: None,
         },
         &unlocked,
     )
