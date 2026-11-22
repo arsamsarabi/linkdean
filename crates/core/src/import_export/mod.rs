@@ -526,12 +526,67 @@ fn html_escape(s: &str) -> String {
 }
 
 fn html_unescape(s: &str) -> String {
-    // `&amp;` goes last, or an escaped entity such as `&amp;lt;` would decode twice.
-    s.replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&amp;", "&")
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let candidate = &rest[amp..];
+
+        if let Some(after) = candidate.strip_prefix("&lt;") {
+            out.push('<');
+            rest = after;
+        } else if let Some(after) = candidate.strip_prefix("&gt;") {
+            out.push('>');
+            rest = after;
+        } else if let Some(after) = candidate.strip_prefix("&quot;") {
+            out.push('"');
+            rest = after;
+        } else if let Some(after) = candidate.strip_prefix("&amp;") {
+            out.push('&');
+            rest = after;
+        } else if let Some((ch, len)) = decode_numeric_entity(candidate) {
+            out.push(ch);
+            rest = &candidate[len..];
+        } else {
+            out.push('&');
+            rest = &candidate[1..];
+        }
+    }
+
+    out.push_str(rest);
+    out
+}
+
+fn decode_numeric_entity(candidate: &str) -> Option<(char, usize)> {
+    if !candidate.starts_with("&#") {
+        return None;
+    }
+    let semi = candidate.find(';')?;
+    let inner = &candidate[2..semi];
+    if !inner.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    let (digits, radix) =
+        if let Some(hex) = inner.strip_prefix('x').or_else(|| inner.strip_prefix('X')) {
+            (hex, 16)
+        } else {
+            (inner, 10)
+        };
+    if digits.is_empty() {
+        return None;
+    }
+    let valid_digits = if radix == 16 {
+        digits.chars().all(|c| c.is_ascii_hexdigit())
+    } else {
+        digits.chars().all(|c| c.is_ascii_digit())
+    };
+    if !valid_digits {
+        return None;
+    }
+    let code = u32::from_str_radix(digits, radix).ok()?;
+    let ch = char::from_u32(code)?;
+    Some((ch, semi + 1))
 }
 
 pub fn new_id() -> Uuid {
@@ -596,6 +651,23 @@ mod tests {
     fn html_unescape_decodes_each_entity_once() {
         assert_eq!(html_unescape("&amp;lt;"), "&lt;");
         assert_eq!(html_unescape("it&#39;s"), "it's");
+        assert_eq!(html_unescape("&amp;#39;"), "&#39;");
+    }
+
+    #[test]
+    fn html_unescape_numeric_entities() {
+        assert_eq!(html_unescape("It&#8217;s"), "It’s");
+        assert_eq!(html_unescape("&#x27;"), "'");
+        assert_eq!(html_unescape("&#X27;"), "'");
+        assert_eq!(html_unescape("&#8211;"), "–");
+
+        // Malformed input stays unchanged
+        assert_eq!(html_unescape("&#xZZ;"), "&#xZZ;");
+        assert_eq!(html_unescape("&#55296;"), "&#55296;");
+        assert_eq!(html_unescape("&#8217"), "&#8217");
+        assert_eq!(html_unescape("&#;"), "&#;");
+        assert_eq!(html_unescape("&#x;"), "&#x;");
+        assert_eq!(html_unescape("&#1114112;"), "&#1114112;");
     }
 
     #[test]
