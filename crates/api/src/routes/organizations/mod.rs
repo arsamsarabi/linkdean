@@ -1,10 +1,13 @@
 use crate::auth::AuthUser;
 use crate::error::ApiResult;
 use crate::state::AppState;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
+use axum::http::{header, StatusCode};
+use axum::response::IntoResponse;
 use axum::Json;
 use linkdean_core::{
-    CreateOrganization, CreateOrganizationInvite, CreateTeam, OrganizationInviteView,
+    ConfirmOrganizationName, CreateOrganization, CreateOrganizationInvite, CreateTeam,
+    ListOrganizationAuditQuery, OrganizationAuditEventView, OrganizationInviteView,
     OrganizationMemberView, OrganizationWorkspace, PatchOrganizationMember, TeamView,
 };
 use linkdean_db::{self as db, NewOutboxEmail};
@@ -19,6 +22,14 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(list_members, patch_member, remove_member))
         .routes(routes!(list_teams, create_team))
         .routes(routes!(list_invites, create_invite, revoke_invite))
+        .routes(routes!(archive_team))
+        .routes(routes!(restore_archived_team))
+        .routes(routes!(delete_team))
+        .routes(routes!(restore_deleted_team))
+        .routes(routes!(soft_delete_org))
+        .routes(routes!(restore_org))
+        .routes(routes!(list_audit))
+        .routes(routes!(export_audit_csv))
 }
 
 #[utoipa::path(
@@ -317,4 +328,240 @@ async fn revoke_invite(
 ) -> ApiResult<Json<Value>> {
     db::revoke_organization_invite(&state.pool, user.id, id, invite_id).await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_archive_team",
+    path = "/organizations/{id}/teams/{team_id}/archive",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("team_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = TeamView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn archive_team(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, team_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<TeamView>> {
+    Ok(Json(
+        db::archive_team(&state.pool, user.id, id, team_id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_restore_archived_team",
+    path = "/organizations/{id}/teams/{team_id}/unarchive",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("team_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = TeamView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn restore_archived_team(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, team_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<TeamView>> {
+    Ok(Json(
+        db::restore_archived_team(&state.pool, user.id, id, team_id).await?,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    operation_id = "organizations_delete_team",
+    path = "/organizations/{id}/teams/{team_id}",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("team_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn delete_team(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, team_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::soft_delete_team(&state.pool, user.id, id, team_id).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_restore_deleted_team",
+    path = "/organizations/{id}/teams/{team_id}/restore",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("team_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = TeamView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn restore_deleted_team(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, team_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<TeamView>> {
+    Ok(Json(
+        db::restore_deleted_team(&state.pool, user.id, id, team_id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_soft_delete",
+    path = "/organizations/{id}/delete",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    request_body = ConfirmOrganizationName,
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn soft_delete_org(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ConfirmOrganizationName>,
+) -> ApiResult<Json<Value>> {
+    let owners = db::soft_delete_organization(&state.pool, user.id, id, &body.confirm_name).await?;
+    // Known issue: plain outbox only; branded org-deletion template later.
+    if state.mail.is_some() {
+        let name = body.confirm_name.trim();
+        let subject = format!("{name} is scheduled for deletion");
+        let text = format!(
+            "The organization \"{name}\" was marked for deletion. Owners can restore it within 30 days from organization settings.\n",
+        );
+        let html = format!("<p>{}</p>", text.replace('\n', "<br/>"));
+        for email in owners {
+            let _ = db::enqueue_email(
+                &state.pool,
+                &NewOutboxEmail {
+                    recipient: email,
+                    template: "organization_deleted".into(),
+                    subject: subject.clone(),
+                    html: html.clone(),
+                    text: text.clone(),
+                    list_unsubscribe: None,
+                },
+            )
+            .await;
+        }
+    }
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_restore",
+    path = "/organizations/{id}/restore",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = OrganizationWorkspace),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn restore_org(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<OrganizationWorkspace>> {
+    Ok(Json(
+        db::restore_organization(&state.pool, user.id, id).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_list_audit",
+    path = "/organizations/{id}/audit",
+    tag = "organizations",
+    params(
+        ("id" = Uuid, Path),
+        ("actor_user_id" = Option<Uuid>, Query, description = "Filter by actor"),
+        ("action" = Option<String>, Query, description = "Exact action key"),
+        ("from" = Option<String>, Query, description = "ISO datetime lower bound"),
+        ("to" = Option<String>, Query, description = "ISO datetime upper bound"),
+        ("limit" = Option<i64>, Query),
+        ("offset" = Option<i64>, Query),
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<OrganizationAuditEventView>),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn list_audit(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Query(query): Query<ListOrganizationAuditQuery>,
+) -> ApiResult<Json<Vec<OrganizationAuditEventView>>> {
+    Ok(Json(
+        db::list_organization_audit_events(&state.pool, user.id, id, &query).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_export_audit_csv",
+    path = "/organizations/{id}/audit.csv",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "CSV", content_type = "text/csv"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn export_audit_csv(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<impl IntoResponse> {
+    let query = ListOrganizationAuditQuery {
+        limit: Some(200),
+        offset: Some(0),
+        ..Default::default()
+    };
+    let events = db::list_organization_audit_events(&state.pool, user.id, id, &query).await?;
+    let mut csv = String::from("created_at,action,actor_user_id,actor_email,payload\n");
+    for e in events {
+        let payload = e.payload.to_string().replace('"', "\"\"");
+        csv.push_str(&format!(
+            "{},{},{},{},\"{}\"\n",
+            e.created_at.to_rfc3339(),
+            e.action,
+            e.actor_user_id.map(|u| u.to_string()).unwrap_or_default(),
+            e.actor_email.unwrap_or_default().replace(',', " "),
+            payload,
+        ));
+    }
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/csv; charset=utf-8")],
+        csv,
+    ))
 }
