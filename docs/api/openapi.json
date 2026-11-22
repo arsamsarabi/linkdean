@@ -157,6 +157,17 @@
         ],
         "type": "object"
       },
+      "BillingUrl": {
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
       "BookmarkArchiveView": {
         "description": "One copy of a bookmark, stored or on its way.",
         "properties": {
@@ -5958,6 +5969,104 @@
         "summary": "Local sign-up. The first account becomes admin and needs `BOOTSTRAP_TOKEN` when one is set;\nlater ones need open registration or an invite. `create_user_gated` checks both and claims\nthe invite under one lock and transaction.",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "operationId": "billing_checkout",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingUrl"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "session_token": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "summary": "Creates a Stripe Checkout Session for personal Pro and returns the hosted URL.",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/portal": {
+      "post": {
+        "operationId": "billing_portal",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingUrl"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Client error"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "session_token": []
+          },
+          {
+            "session_cookie": []
+          }
+        ],
+        "summary": "Creates a Stripe Customer Portal session for the signed-in account.",
+        "tags": [
+          "billing"
         ]
       }
     },

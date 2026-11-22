@@ -66,7 +66,18 @@ pub struct Config {
     /// Managed Linkdean service: assign Free/Pro plans and merge them into quotas.
     /// Self-host leaves this off (platform quotas only).
     pub managed_service: bool,
+    /// Stripe keys for personal Pro checkout. All three or none. Used only when managed.
+    pub stripe: Option<StripeBilling>,
     pub link_check: linkdean_worker::LinkCheckOpts,
+}
+
+/// Stripe Billing for managed Pro. Price amounts live in the Stripe Dashboard, not here.
+#[derive(Clone, Debug)]
+pub struct StripeBilling {
+    pub secret_key: String,
+    pub webhook_secret: String,
+    /// Stripe Price id for personal Pro (`price_…`).
+    pub price_id_pro: String,
 }
 
 /// The operator's legal documents, from `TERMS_VERSION`, `TERMS_URL` and `PRIVACY_URL`. Without
@@ -254,6 +265,7 @@ impl Config {
             experimental_agent_skills: env_bool("EXPERIMENTAL_AGENT_SKILLS", false),
             update_check: env_bool("UPDATE_CHECK", true),
             managed_service: env_bool("MANAGED_SERVICE", false),
+            stripe: stripe_billing()?,
             link_check: linkdean_worker::LinkCheckOpts {
                 enabled: env_bool("LINK_CHECK_ENABLED", true),
                 tick_secs: env_u64("LINK_CHECK_TICK_SECS", 60),
@@ -296,6 +308,11 @@ impl Config {
 
     pub fn turnstile_enabled(&self) -> bool {
         self.turnstile_site_key.is_some() && self.turnstile_secret_key.is_some()
+    }
+
+    /// Managed service with Stripe keys: Settings can open Checkout / Customer Portal.
+    pub fn billing_enabled(&self) -> bool {
+        self.managed_service && self.stripe.is_some()
     }
 
     /// `None` when no bootstrap token is configured, else whether `given` matches it.
@@ -375,6 +392,31 @@ fn optional_pair(a: &str, b: &str) -> anyhow::Result<Option<(String, String)>> {
         (None, None) => Ok(None),
         (Some(_), None) => anyhow::bail!("{a} is set but {b} is missing"),
         (None, Some(_)) => anyhow::bail!("{b} is set but {a} is missing"),
+    }
+}
+
+fn env_opt(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_PRO`: all three or none.
+fn stripe_billing() -> anyhow::Result<Option<StripeBilling>> {
+    let secret_key = env_opt("STRIPE_SECRET_KEY");
+    let webhook_secret = env_opt("STRIPE_WEBHOOK_SECRET");
+    let price_id_pro = env_opt("STRIPE_PRICE_ID_PRO");
+    match (secret_key, webhook_secret, price_id_pro) {
+        (Some(secret_key), Some(webhook_secret), Some(price_id_pro)) => Ok(Some(StripeBilling {
+            secret_key,
+            webhook_secret,
+            price_id_pro,
+        })),
+        (None, None, None) => Ok(None),
+        _ => anyhow::bail!(
+            "STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_PRICE_ID_PRO must all be set together, or all unset"
+        ),
     }
 }
 

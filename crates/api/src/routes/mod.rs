@@ -5,6 +5,7 @@ mod api_keys;
 mod archives;
 mod assets;
 pub(crate) mod auth;
+mod billing;
 mod bookmarks;
 mod categories;
 mod dashboards;
@@ -34,6 +35,8 @@ use utoipa_axum::router::OpenApiRouter;
 /// experimental features only when their flag is on (otherwise they answer 404).
 pub fn api_router(dev_routes: bool, agent_skills: bool) -> Router<AppState> {
     let (mut routes, _) = documented(agent_skills).split_for_parts();
+    // Stripe webhook needs a raw body; keep it off the OpenAPI router.
+    routes = routes.merge(billing::webhook_router());
     // MCP sits outside OpenAPI; same experimental flag as the Agent Skill zip.
     if agent_skills {
         routes = routes.merge(crate::mcp::router());
@@ -100,6 +103,7 @@ fn documented(agent_skills: bool) -> OpenApiRouter<AppState> {
     let mut routes = OpenApiRouter::new()
         .merge(health::router())
         .merge(auth::router())
+        .merge(billing::router())
         .merge(admin::router())
         .merge(api_keys::router())
         .merge(activity::router())

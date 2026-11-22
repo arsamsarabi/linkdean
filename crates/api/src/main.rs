@@ -19,6 +19,7 @@ mod search_index;
 mod security;
 mod shutdown;
 mod state;
+mod stripe_client;
 mod turnstile;
 mod vault_keys;
 
