@@ -355,3 +355,64 @@ pub struct AcceptOrganizationInviteLink {
 pub struct PatchOrganizationInviteLinks {
     pub invite_links_enabled: bool,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DomainJoinMode {
+    AutoJoin,
+    Request,
+}
+
+impl DomainJoinMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::AutoJoin => "auto_join",
+            Self::Request => "request",
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, ()> {
+        match s {
+            "auto_join" => Ok(Self::AutoJoin),
+            "request" => Ok(Self::Request),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct OrganizationDomain {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub domain: String,
+    pub verification_token: String,
+    pub verified_at: Option<DateTime<Utc>>,
+    pub join_mode: String,
+    pub created_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationDomainView {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub domain: String,
+    /// DNS name to publish (e.g. `_linkdean-challenge.acme.com`).
+    pub txt_name: String,
+    /// Exact TXT value to publish.
+    pub txt_value: String,
+    pub verified_at: Option<DateTime<Utc>>,
+    pub join_mode: DomainJoinMode,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct CreateOrganizationDomain {
+    pub domain: String,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct PatchOrganizationDomain {
+    pub join_mode: DomainJoinMode,
+}

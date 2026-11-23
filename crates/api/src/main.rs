@@ -2,6 +2,7 @@ mod archive_runner;
 mod auth;
 mod config;
 mod disposable_email;
+mod domain_verification;
 mod error;
 mod http_cache;
 mod legal;
