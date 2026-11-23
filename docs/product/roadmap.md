@@ -12,11 +12,11 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links, verified domains and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A–D plus audit filters/CSV in settings (OIDC SSO + SCIM Users; SAML deferred — see [organization SSO and SCIM](../design/organization-sso-scim.md)). Team vaults, SIEM/hash-chain audit, and custom roles are parked until a customer asks.
-
-2. **Localization** · `mid` · (M). Ship the product in more than English.
+1. **Localization** · `mid` · (M). Ship the product in more than English.
     - **Phase A — i18n-ready:** Extract and wrap UI strings.
     - **Phase B — Locale packs:** First translated locale(s).
+
+2. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links, verified domains and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A–D plus audit filters/CSV in settings (OIDC SSO + SCIM Users; SAML deferred — see [organization SSO and SCIM](../design/organization-sso-scim.md)). Team vaults, SIEM/hash-chain audit, and custom roles are parked until a customer asks.
 
 3. **Archive follow-ups** · `parked` · (L). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)).
     - **Phase A — Out-of-band media:** Fetch plain `<video>` / `<audio>` URLs that never landed in the Chrome snapshot (not streams), under item and account caps; fail soft and leave the live link.
