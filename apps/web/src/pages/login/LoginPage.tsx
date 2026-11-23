@@ -32,6 +32,7 @@ import { useBootstrap, useDropSignedOutCache, useLogin, usePasskeyLogin, usePend
 import {
   isPasskeyCancel,
   oidcStartUrl,
+  orgOidcStartUrl,
   passkeysSupported,
   resolveDefaultLanding,
   ssoButtons,
@@ -48,6 +49,11 @@ export function LoginPage(): ReactElement {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [companySso, setCompanySso] = useState<{
+    organization_id: string
+    organization_name: string
+  } | null>(null)
+  const [companySsoPending, setCompanySsoPending] = useState(false)
   const bootstrap = useBootstrap()
   const passkeyLogin = usePasskeyLogin()
   const [canUsePasskeys] = useState(passkeysSupported)
@@ -96,6 +102,29 @@ export function LoginPage(): ReactElement {
         message:
           e instanceof ApiError && e.status === 401 ? 'That passkey did not work. Try another sign-in.' : String(e),
       })
+    }
+  }
+
+  async function checkCompanySso(): Promise<void> {
+    if (companySsoPending || !email.trim()) return
+    setCompanySsoPending(true)
+    setCompanySso(null)
+    try {
+      const res = await api.discoverOrgSso(email.trim())
+      if (res.sso && res.organization_id && res.organization_name) {
+        setCompanySso({
+          organization_id: res.organization_id,
+          organization_name: res.organization_name,
+        })
+      } else {
+        notifications.show({
+          message: 'No company single sign-on for that email domain.',
+        })
+      }
+    } catch (e) {
+      notifications.show({ color: 'red', message: String(e) })
+    } finally {
+      setCompanySsoPending(false)
     }
   }
 
@@ -162,7 +191,10 @@ export function LoginPage(): ReactElement {
             <TextInput
               label="Email"
               value={email}
-              onChange={(e) => setEmail(e.currentTarget.value)}
+              onChange={(e) => {
+                setEmail(e.currentTarget.value)
+                setCompanySso(null)
+              }}
               onKeyDown={(e) => e.key === 'Enter' && void submit()}
             />
             <PasswordInput
@@ -190,6 +222,32 @@ export function LoginPage(): ReactElement {
             <Button leftSection={<IconLogin {...iconSm} />} loading={login.isPending} onClick={() => void submit()}>
               Sign in
             </Button>
+            <Button
+              variant="default"
+              loading={companySsoPending}
+              disabled={!email.trim().includes('@')}
+              onClick={() => void checkCompanySso()}
+            >
+              Continue with company SSO
+            </Button>
+            {companySso ? (
+              <>
+                <TermsAgreement
+                  legal={legal}
+                  checked={termsAccepted}
+                  onChange={setTermsAccepted}
+                  description="Needed to create an account with company single sign-on."
+                />
+                <Button
+                  component="a"
+                  href={ssoAllowed ? orgOidcStartUrl(companySso.organization_id, legal.terms_version) : undefined}
+                  disabled={!ssoAllowed}
+                  variant="light"
+                >
+                  Sign in to {companySso.organization_name}
+                </Button>
+              </>
+            ) : null}
             {canUsePasskeys ? (
               <Button
                 variant="default"

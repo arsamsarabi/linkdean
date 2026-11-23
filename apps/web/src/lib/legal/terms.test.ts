@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { oidcStartUrl, ssoButtons, ssoConnectUrl, termsSatisfied } from './terms'
+import { oidcStartUrl, orgOidcStartUrl, ssoButtons, ssoConnectUrl, termsSatisfied } from './terms'
 
 describe('terms', () => {
   it('sends the current version when starting OIDC sign-in', () => {
@@ -7,6 +7,15 @@ describe('terms', () => {
     expect(oidcStartUrl('2026-11-15', 'github')).toBe('/api/auth/oidc/start?terms_version=2026-11-15&provider=github')
     expect(oidcStartUrl(null, 'github')).toBe('/api/auth/oidc/start?provider=github')
     expect(oidcStartUrl(undefined)).toBe('/api/auth/oidc/start')
+  })
+
+  it('builds the organization OIDC start URL', () => {
+    expect(orgOidcStartUrl('00000000-0000-0000-0000-000000000001', '2026-11-15')).toBe(
+      '/api/auth/org-oidc/start?organization_id=00000000-0000-0000-0000-000000000001&terms_version=2026-11-15'
+    )
+    expect(orgOidcStartUrl('00000000-0000-0000-0000-000000000001', null)).toBe(
+      '/api/auth/org-oidc/start?organization_id=00000000-0000-0000-0000-000000000001'
+    )
   })
 
   it('needs the box ticked only on a server with terms', () => {

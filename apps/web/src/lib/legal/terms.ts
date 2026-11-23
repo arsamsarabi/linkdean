@@ -12,6 +12,14 @@ export function oidcStartUrl(termsVersion: string | null | undefined, provider?:
   return qs ? `/api/auth/oidc/start?${qs}` : '/api/auth/oidc/start'
 }
 
+/** Per-organization OIDC start URL (Phase D). */
+export function orgOidcStartUrl(organizationId: string, termsVersion: string | null | undefined): string {
+  const query = new URLSearchParams()
+  query.set('organization_id', organizationId)
+  if (termsVersion) query.set('terms_version', termsVersion)
+  return `/api/auth/org-oidc/start?${query.toString()}`
+}
+
 /** Where Connect sends the browser: the provider, then back to the profile page. */
 export function ssoConnectUrl(provider?: string): string {
   const base = '/api/auth/oidc/start?mode=connect'

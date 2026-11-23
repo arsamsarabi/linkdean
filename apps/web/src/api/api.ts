@@ -37,6 +37,7 @@ import {
   dashboardShareSchema,
   dashboardSharesEnvelopeSchema,
   dashboardSummariesSchema,
+  discoverOrgSsoResponseSchema,
   duplicatesSchema,
   emailChangeResponseSchema,
   emailStatusSchema,
@@ -67,6 +68,7 @@ import {
   organizationDomainViewSchema,
   organizationInviteLinkViewSchema,
   organizationMemberViewSchema,
+  organizationSsoConfigViewSchema,
   organizationWorkspaceSchema,
   pageDetailsSchema,
   passkeyListSchema,
@@ -139,6 +141,7 @@ import {
   type DashboardShare,
   type DashboardSharesEnvelope,
   type DashboardSummary,
+  type DiscoverOrgSsoResponse,
   type DuplicateDecisions,
   type DuplicateGroup,
   type EmailChangeResponse,
@@ -166,6 +169,7 @@ import {
   type OrganizationDomainView,
   type OrganizationInviteLinkView,
   type OrganizationMemberView,
+  type OrganizationSsoConfigView,
   type OrganizationWorkspace,
   type Passkey,
   type PatchDashboard,
@@ -198,6 +202,7 @@ import {
   type UnsubscribeLink,
   type UnsubscribeResult,
   type UpdateStatus,
+  type UpsertOrganizationSso,
   type UserPublic,
   type UserSettings,
   type Vault,
@@ -501,6 +506,21 @@ export const api = {
 
   denyOrganizationDomainJoinRequest: (id: string, requestId: string): Promise<{ ok: boolean }> =>
     req(`/organizations/${id}/domain-join-requests/${requestId}/deny`, { method: 'POST' }, okSchema),
+
+  getOrganizationSso: async (id: string): Promise<OrganizationSsoConfigView | null> => {
+    const raw = await req<OrganizationSsoConfigView | undefined>(`/organizations/${id}/sso`, {})
+    if (raw == null) return null
+    return organizationSsoConfigViewSchema.parse(raw)
+  },
+
+  upsertOrganizationSso: (id: string, body: UpsertOrganizationSso): Promise<OrganizationSsoConfigView> =>
+    req(`/organizations/${id}/sso`, { method: 'PUT', body: JSON.stringify(body) }, organizationSsoConfigViewSchema),
+
+  deleteOrganizationSso: (id: string): Promise<{ ok: boolean }> =>
+    req(`/organizations/${id}/sso`, { method: 'DELETE' }, okSchema),
+
+  discoverOrgSso: (email: string): Promise<DiscoverOrgSsoResponse> =>
+    req('/auth/org-sso/discover', { method: 'POST', body: JSON.stringify({ email }) }, discoverOrgSsoResponseSchema),
 
   listSavedSearches: (): Promise<SavedSearch[]> => req('/saved-searches', {}, z.array(savedSearchSchema)),
 

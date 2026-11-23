@@ -1,8 +1,9 @@
-import { useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import {
   Button,
   Group,
   NumberInput,
+  PasswordInput,
   Select,
   Stack,
   Switch,
@@ -24,6 +25,7 @@ import {
   useCreateOrganizationInviteLink,
   useDeleteOrganization,
   useDeleteOrganizationDomain,
+  useDeleteOrganizationSso,
   useDeleteTeam,
   useDenyDomainJoinRequest,
   useOrganization,
@@ -32,12 +34,14 @@ import {
   useOrganizationDomains,
   useOrganizationInviteLinks,
   useOrganizationMembers,
+  useOrganizationSso,
   useOrganizationTeams,
   usePatchOrganizationDomain,
   usePatchOrganizationInviteLinks,
   useRestoreOrganization,
   useRevokeOrganizationInviteLink,
   useUnarchiveTeam,
+  useUpsertOrganizationSso,
   useVerifyOrganizationDomain,
 } from '@/hooks'
 
@@ -70,6 +74,9 @@ export function OrganizationSettingsPage(): ReactElement {
   const joinRequests = useOrganizationDomainJoinRequests(id)
   const approveJoin = useApproveDomainJoinRequest(id)
   const denyJoin = useDenyDomainJoinRequest(id)
+  const sso = useOrganizationSso(id)
+  const upsertSso = useUpsertOrganizationSso(id)
+  const deleteSso = useDeleteOrganizationSso(id)
   const [confirmName, setConfirmName] = useState('')
   const [tab, setTab] = useState<string | null>('members')
   const [linkRole, setLinkRole] = useState<'admin' | 'member' | 'guest'>('member')
@@ -78,10 +85,29 @@ export function OrganizationSettingsPage(): ReactElement {
   const [freshCode, setFreshCode] = useState<string | null>(null)
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null)
   const [newDomain, setNewDomain] = useState('')
+  const [ssoIssuer, setSsoIssuer] = useState('')
+  const [ssoClientId, setSsoClientId] = useState('')
+  const [ssoSecret, setSsoSecret] = useState('')
+  const [ssoDisplayName, setSsoDisplayName] = useState('Company SSO')
+  const [ssoEnabled, setSsoEnabled] = useState(false)
+  const [ssoLoadedKey, setSsoLoadedKey] = useState<string | null>(null)
 
   const canAdmin = org.data?.role === 'owner' || org.data?.role === 'admin'
   const pendingDelete = !!org.data?.deleted_at
   const liveTeams = (teams.data ?? []).filter((t) => !t.archived_at && !t.deleted_at)
+  const hasVerifiedDomain = (domains.data ?? []).some((d) => !!d.verified_at)
+
+  useEffect(() => {
+    if (!sso.isSuccess) return
+    const key = sso.data?.updated_at ?? 'none'
+    if (ssoLoadedKey === key) return
+    setSsoIssuer(sso.data?.issuer_url ?? '')
+    setSsoClientId(sso.data?.client_id ?? '')
+    setSsoDisplayName(sso.data?.display_name ?? 'Company SSO')
+    setSsoEnabled(sso.data?.enabled ?? false)
+    setSsoSecret('')
+    setSsoLoadedKey(key)
+  }, [sso.isSuccess, sso.data, ssoLoadedKey])
 
   return (
     <Stack gap="xl">
@@ -125,6 +151,7 @@ export function OrganizationSettingsPage(): ReactElement {
             <Tabs.Tab value="teams">Teams</Tabs.Tab>
             <Tabs.Tab value="invite-links">Invite links</Tabs.Tab>
             <Tabs.Tab value="domains">Domains</Tabs.Tab>
+            <Tabs.Tab value="sso">SSO</Tabs.Tab>
             <Tabs.Tab value="audit">Audit log</Tabs.Tab>
             <Tabs.Tab value="danger">Danger zone</Tabs.Tab>
           </Tabs.List>
@@ -498,6 +525,107 @@ export function OrganizationSettingsPage(): ReactElement {
                     ))}
                   </Table.Tbody>
                 </Table>
+              )}
+            </Stack>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="sso" pt="md">
+            <Stack gap="md" maw={720}>
+              <Text size="sm" c="dimmed">
+                Connect one OpenID Connect IdP so members with a verified domain can sign in and join this organization.
+                Register the redirect URI below at your IdP.
+              </Text>
+              {sso.isError ? (
+                <QueryErrorAlert error={sso.error} onRetry={() => void sso.refetch()} />
+              ) : (
+                <>
+                  <TextInput
+                    label="Redirect URI"
+                    readOnly
+                    value={
+                      sso.data?.redirect_uri ??
+                      `${typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/org-oidc/callback`
+                    }
+                  />
+                  <TextInput
+                    label="Issuer URL"
+                    placeholder="https://idp.example/realms/acme"
+                    value={ssoIssuer}
+                    onChange={(e) => setSsoIssuer(e.currentTarget.value)}
+                  />
+                  <TextInput
+                    label="Client ID"
+                    value={ssoClientId}
+                    onChange={(e) => setSsoClientId(e.currentTarget.value)}
+                  />
+                  <PasswordInput
+                    label="Client secret"
+                    description={
+                      sso.data ? 'Leave blank to keep the current secret.' : 'Required when configuring SSO.'
+                    }
+                    value={ssoSecret}
+                    onChange={(e) => setSsoSecret(e.currentTarget.value)}
+                  />
+                  <TextInput
+                    label="Button label"
+                    value={ssoDisplayName}
+                    onChange={(e) => setSsoDisplayName(e.currentTarget.value)}
+                  />
+                  <Switch
+                    label="Enable organization SSO"
+                    description={
+                      hasVerifiedDomain
+                        ? 'Members discover this IdP from a matching work email.'
+                        : 'Verify at least one domain before enabling.'
+                    }
+                    checked={ssoEnabled}
+                    disabled={!hasVerifiedDomain && !ssoEnabled}
+                    onChange={(e) => setSsoEnabled(e.currentTarget.checked)}
+                  />
+                  <Group>
+                    <Button
+                      loading={upsertSso.isPending}
+                      onClick={() =>
+                        upsertSso.mutate(
+                          {
+                            issuer_url: ssoIssuer.trim(),
+                            client_id: ssoClientId.trim(),
+                            client_secret: ssoSecret.trim() || undefined,
+                            display_name: ssoDisplayName.trim() || 'Company SSO',
+                            enabled: ssoEnabled,
+                          },
+                          {
+                            onSuccess: () => {
+                              setSsoSecret('')
+                              notifications.show({ message: 'SSO settings saved' })
+                            },
+                            onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                          }
+                        )
+                      }
+                    >
+                      Save SSO
+                    </Button>
+                    {sso.data ? (
+                      <Button
+                        color="red"
+                        variant="light"
+                        loading={deleteSso.isPending}
+                        onClick={() =>
+                          deleteSso.mutate(undefined, {
+                            onSuccess: () => {
+                              setSsoLoadedKey(null)
+                              notifications.show({ message: 'SSO configuration removed' })
+                            },
+                            onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                          })
+                        }
+                      >
+                        Remove SSO
+                      </Button>
+                    ) : null}
+                  </Group>
+                </>
               )}
             </Stack>
           </Tabs.Panel>

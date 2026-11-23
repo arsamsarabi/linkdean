@@ -221,3 +221,37 @@ export function useDenyDomainJoinRequest(id: string) {
     },
   })
 }
+
+export function useOrganizationSso(id: string | undefined) {
+  return useQuery({
+    queryKey: ['organizations', id, 'sso'],
+    queryFn: () => api.getOrganizationSso(id!),
+    enabled: !!id,
+  })
+}
+
+export function useUpsertOrganizationSso(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      issuer_url: string
+      client_id: string
+      client_secret?: string
+      display_name?: string
+      enabled: boolean
+    }) => api.upsertOrganizationSso(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'sso'] })
+    },
+  })
+}
+
+export function useDeleteOrganizationSso(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.deleteOrganizationSso(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'sso'] })
+    },
+  })
+}

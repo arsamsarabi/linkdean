@@ -98,3 +98,30 @@ export const organizationDomainJoinRequestViewSchema = z.object({
 
 export type OrganizationDomainView = z.infer<typeof organizationDomainViewSchema>
 export type OrganizationDomainJoinRequestView = z.infer<typeof organizationDomainJoinRequestViewSchema>
+
+export const organizationSsoConfigViewSchema = z.object({
+  organization_id: z.string().uuid(),
+  issuer_url: z.string(),
+  client_id: z.string(),
+  display_name: z.string(),
+  enabled: z.boolean(),
+  redirect_uri: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+
+export const discoverOrgSsoResponseSchema = z.object({
+  sso: z.boolean(),
+  organization_id: z.string().uuid().optional().nullable(),
+  organization_name: z.string().optional().nullable(),
+})
+
+export type OrganizationSsoConfigView = z.infer<typeof organizationSsoConfigViewSchema>
+export type DiscoverOrgSsoResponse = z.infer<typeof discoverOrgSsoResponseSchema>
+export type UpsertOrganizationSso = {
+  issuer_url: string
+  client_id: string
+  client_secret?: string
+  display_name?: string
+  enabled: boolean
+}
