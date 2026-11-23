@@ -143,6 +143,5 @@ Self-hosted has every feature, with no plan gates. Plan checks live in one place
 - ~~Verified domains~~ — shipped (Phase C): DNS TXT proof; auto-join or join-on-request.
 - ~~SSO / SCIM~~ — shipped (Phase D): per-organization OIDC + SCIM Users; SAML deferred. Design: [organization SSO and SCIM](./organization-sso-scim.md).
 - Team vaults — **parked** until a customer asks: shared keys, rotation when members leave, recovery. Restricted folders cover ACL secrecy; team vaults would add shared encryption. Tracked on the product roadmap under parked **Team vaults**.
-- Audit log: every content edit and restricted-folder view, configurable retention, SIEM or webhook streaming, hash-chained tamper evidence.
-- Custom roles and a Billing manager role, when a customer needs them.
+- Richer audit + custom roles — **parked** until a customer asks: content-edit / restricted-folder-view events, configurable retention, SIEM/webhook, hash chain; custom roles and Billing manager. Filterable audit + CSV in settings already ships. Tracked on the product roadmap under parked **Richer org audit and custom roles**.
 - SaaS pricing models and the paid personal plans.

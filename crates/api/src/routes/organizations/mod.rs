@@ -1067,7 +1067,15 @@ async fn list_audit(
     operation_id = "organizations_export_audit_csv",
     path = "/organizations/{id}/audit.csv",
     tag = "organizations",
-    params(("id" = Uuid, Path)),
+    params(
+        ("id" = Uuid, Path),
+        ("actor_user_id" = Option<Uuid>, Query, description = "Filter by actor"),
+        ("action" = Option<String>, Query, description = "Exact action key"),
+        ("from" = Option<String>, Query, description = "ISO datetime lower bound"),
+        ("to" = Option<String>, Query, description = "ISO datetime upper bound"),
+        ("limit" = Option<i64>, Query),
+        ("offset" = Option<i64>, Query),
+    ),
     responses(
         (status = 200, description = "CSV", content_type = "text/csv"),
         (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
@@ -1079,12 +1087,15 @@ async fn export_audit_csv(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
+    Query(mut query): Query<ListOrganizationAuditQuery>,
 ) -> ApiResult<impl IntoResponse> {
-    let query = ListOrganizationAuditQuery {
-        limit: Some(200),
-        offset: Some(0),
-        ..Default::default()
-    };
+    // Exports allow a larger page than the settings table default.
+    if query.limit.is_none() {
+        query.limit = Some(1000);
+    }
+    if query.offset.is_none() {
+        query.offset = Some(0);
+    }
     let events = db::list_organization_audit_events(&state.pool, user.id, id, &query).await?;
     let mut csv = String::from("created_at,action,actor_user_id,actor_email,payload\n");
     for e in events {

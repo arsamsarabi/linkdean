@@ -12,12 +12,11 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links, verified domains and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A–D (OIDC SSO + SCIM Users; SAML deferred — see [organization SSO and SCIM](../design/organization-sso-scim.md)). Team vaults are parked until a customer asks (see item below).
-    - **Phase E — Audit and roles:** Richer audit (retention, SIEM/webhook, hash chain); custom roles and Billing manager when needed.
-
-2. **Localization** · `mid` · (M). Ship the product in more than English.
+1. **Localization** · `mid` · (M). Ship the product in more than English.
     - **Phase A — i18n-ready:** Extract and wrap UI strings.
     - **Phase B — Locale packs:** First translated locale(s).
+
+2. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links, verified domains and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A–D plus audit filters/CSV in settings (OIDC SSO + SCIM Users; SAML deferred — see [organization SSO and SCIM](../design/organization-sso-scim.md)). Team vaults, SIEM/hash-chain audit, and custom roles are parked until a customer asks.
 
 3. **Archive follow-ups** · `parked` · (L). Core archive already ships (see [features](./features.md#archive) and the [archive design](../design/archive.md)).
     - **Phase A — Out-of-band media:** Fetch plain `<video>` / `<audio>` URLs that never landed in the Chrome snapshot (not streams), under item and account caps; fail soft and leave the live link.
@@ -51,9 +50,11 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 12. **Team vaults** · `parked` · (L). Shared encrypted vaults for a team (shared keys, rotation when members leave, recovery). Restricted folders cover ACL-only secrecy today; build this if someone needs shared encryption inside an organization. Design notes: [organizations and teams](../design/organizations-and-teams.md).
 
-13. **Gamification** · `parked` · (M). Points and badges on top of likes and ratings.
+13. **Richer org audit and custom roles** · `parked` · (L). Content-edit / restricted-folder-view events, configurable retention, SIEM or webhook streaming, hash-chained tamper evidence; custom roles and a Billing manager role. Basic filterable audit + CSV already ships. Design notes: [organizations and teams](../design/organizations-and-teams.md).
 
-14. **Easter eggs** · `parked` · (S). Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), which needs React 19 support first). Internal only — never list on the public docs roadmap.
+14. **Gamification** · `parked` · (M). Points and badges on top of likes and ratings.
+
+15. **Easter eggs** · `parked` · (S). Konami-style key sequences ([@arsams/konami-codes-react](https://www.npmjs.com/package/@arsams/konami-codes-react), which needs React 19 support first). Internal only — never list on the public docs roadmap.
 
 ---
 

@@ -11,6 +11,7 @@ Every release cuts a section: on release, rename `[Unreleased]` to the new versi
 
 ### Added
 
+- Organization audit log filters (person, action, date) and CSV download in Organization settings; CSV export respects the same filters.
 - Organization SSO (OIDC) and SCIM: per-org IdP config, email-domain discover, org-scoped OIDC login, settings SSO tab, login **Continue with company SSO**, and SCIM 2.0 Users with `ldscim_` tokens. See [organization SSO and SCIM](design/organization-sso-scim.md).
 - Organization verified domains (DNS TXT), auto-join or join-request for matching verified emails, Domains settings tab.
 - Organization invite links: optional shareable join codes with role, expiry and use limit (off by default; verified email required to accept).

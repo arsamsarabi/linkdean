@@ -33,12 +33,53 @@ export function useOrganizationTeams(id: string | undefined) {
   })
 }
 
-export function useOrganizationAudit(id: string | undefined) {
+export type OrganizationAuditFilters = {
+  actorUserId?: string
+  action?: string
+  from?: string
+  to?: string
+}
+
+export function useOrganizationAudit(id: string | undefined, filters: OrganizationAuditFilters = {}) {
+  const actorUserId = filters.actorUserId?.trim() || undefined
+  const action = filters.action?.trim() || undefined
+  const from = filters.from?.trim() || undefined
+  const to = filters.to?.trim() || undefined
   return useQuery({
-    queryKey: ['organizations', id, 'audit'],
-    queryFn: () => api.listOrganizationAudit(id!, { limit: 100 }),
+    queryKey: ['organizations', id, 'audit', actorUserId, action, from, to],
+    queryFn: () =>
+      api.listOrganizationAudit(id!, {
+        actorUserId,
+        action,
+        from,
+        to,
+        limit: 100,
+      }),
     enabled: !!id,
   })
+}
+
+export async function downloadOrganizationAuditCsv(id: string, filters: OrganizationAuditFilters = {}): Promise<void> {
+  const res = await fetch(
+    api.organizationAuditCsvUrl(id, {
+      actorUserId: filters.actorUserId?.trim() || undefined,
+      action: filters.action?.trim() || undefined,
+      from: filters.from?.trim() || undefined,
+      to: filters.to?.trim() || undefined,
+      limit: 1000,
+    }),
+    { credentials: 'include' }
+  )
+  if (!res.ok) {
+    throw new Error(res.statusText || 'Export failed')
+  }
+  const blob = await res.blob()
+  const a = document.createElement('a')
+  const objectUrl = URL.createObjectURL(blob)
+  a.href = objectUrl
+  a.download = 'organization-audit.csv'
+  a.click()
+  URL.revokeObjectURL(objectUrl)
 }
 
 function invalidateOrg(qc: ReturnType<typeof useQueryClient>, id?: string) {

@@ -244,6 +244,26 @@ function bookmarksQuery(p: BookmarksListParams): URLSearchParams {
 /** What an Agent Skill is made from. */
 export type AgentSkillSource = { folder: string } | { tag: string } | { search: string }
 
+export type OrganizationAuditQuery = {
+  actorUserId?: string
+  action?: string
+  from?: string
+  to?: string
+  limit?: number
+  offset?: number
+}
+
+function organizationAuditQueryString(opts?: OrganizationAuditQuery): string {
+  const params = new URLSearchParams()
+  if (opts?.actorUserId) params.set('actor_user_id', opts.actorUserId)
+  if (opts?.action) params.set('action', opts.action)
+  if (opts?.from) params.set('from', opts.from)
+  if (opts?.to) params.set('to', opts.to)
+  if (opts?.limit != null) params.set('limit', String(opts.limit))
+  if (opts?.offset != null) params.set('offset', String(opts.offset))
+  return params.toString()
+}
+
 export const api = {
   bootstrap: (): Promise<BootstrapStatus> => req('/auth/bootstrap-status', {}, bootstrapStatusSchema),
   authConfig: (): Promise<AuthConfig> => req('/auth/config', {}, authConfigSchema),
@@ -420,17 +440,15 @@ export const api = {
   restoreOrganization: (id: string): Promise<OrganizationWorkspace> =>
     req(`/organizations/${id}/restore`, { method: 'POST' }, organizationWorkspaceSchema),
 
-  listOrganizationAudit: (
-    id: string,
-    opts?: { actorUserId?: string; action?: string; limit?: number; offset?: number }
-  ): Promise<OrganizationAuditEvent[]> => {
-    const params = new URLSearchParams()
-    if (opts?.actorUserId) params.set('actor_user_id', opts.actorUserId)
-    if (opts?.action) params.set('action', opts.action)
-    if (opts?.limit != null) params.set('limit', String(opts.limit))
-    if (opts?.offset != null) params.set('offset', String(opts.offset))
-    const q = params.toString()
+  listOrganizationAudit: (id: string, opts?: OrganizationAuditQuery): Promise<OrganizationAuditEvent[]> => {
+    const q = organizationAuditQueryString(opts)
     return req(`/organizations/${id}/audit${q ? `?${q}` : ''}`, {}, z.array(organizationAuditEventSchema))
+  },
+
+  /** Session-cookie download URL for the filtered audit CSV. */
+  organizationAuditCsvUrl: (id: string, opts?: OrganizationAuditQuery): string => {
+    const q = organizationAuditQueryString(opts)
+    return `/api/organizations/${id}/audit.csv${q ? `?${q}` : ''}`
   },
 
   patchOrganizationInviteLinksSettings: (

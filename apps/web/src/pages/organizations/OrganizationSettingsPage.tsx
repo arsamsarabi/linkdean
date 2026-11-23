@@ -30,7 +30,6 @@ import {
   useDeleteTeam,
   useDenyDomainJoinRequest,
   useOrganization,
-  useOrganizationAudit,
   useOrganizationDomainJoinRequests,
   useOrganizationDomains,
   useOrganizationInviteLinks,
@@ -47,6 +46,7 @@ import {
   useUpsertOrganizationSso,
   useVerifyOrganizationDomain,
 } from '@/hooks'
+import { OrganizationAuditPanel } from './OrganizationAuditPanel'
 
 function joinUrl(code: string): string {
   const base = typeof window !== 'undefined' ? window.location.origin : ''
@@ -58,7 +58,6 @@ export function OrganizationSettingsPage(): ReactElement {
   const org = useOrganization(id)
   const members = useOrganizationMembers(id)
   const teams = useOrganizationTeams(id)
-  const audit = useOrganizationAudit(id)
   const linksEnabled = !!org.data?.invite_links_enabled
   const inviteLinks = useOrganizationInviteLinks(id, linksEnabled)
   const delOrg = useDeleteOrganization(id)
@@ -700,28 +699,7 @@ export function OrganizationSettingsPage(): ReactElement {
           </Tabs.Panel>
 
           <Tabs.Panel value="audit" pt="md">
-            {audit.isError ? (
-              <QueryErrorAlert error={audit.error} onRetry={() => void audit.refetch()} />
-            ) : (
-              <Table striped highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>When</Table.Th>
-                    <Table.Th>Action</Table.Th>
-                    <Table.Th>Actor</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {(audit.data ?? []).map((e) => (
-                    <Table.Tr key={e.id}>
-                      <Table.Td>{new Date(e.created_at).toLocaleString()}</Table.Td>
-                      <Table.Td>{e.action}</Table.Td>
-                      <Table.Td>{e.actor_email ?? e.actor_user_id ?? '—'}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            )}
+            <OrganizationAuditPanel organizationId={id} />
           </Tabs.Panel>
 
           <Tabs.Panel value="danger" pt="md">
