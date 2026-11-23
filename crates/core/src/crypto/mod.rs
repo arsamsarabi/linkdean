@@ -92,6 +92,32 @@ pub fn hash_token(token: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
+/// AES-256-GCM key for organization SSO client secrets: SHA-256(`linkdean-org-sso-v1` || session_secret).
+/// Rotating `SESSION_SECRET` voids stored secrets (same as unsubscribe links).
+fn org_sso_key(session_secret: &str) -> [u8; KEY_LEN] {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(b"linkdean-org-sso-v1");
+    hasher.update(session_secret.as_bytes());
+    hasher.finalize().into()
+}
+
+/// Encrypt an organization OIDC client secret for storage.
+pub fn encrypt_org_sso_secret(session_secret: &str, plaintext: &str) -> Result<(Vec<u8>, Vec<u8>)> {
+    encrypt(&org_sso_key(session_secret), plaintext.as_bytes(), b"")
+}
+
+/// Decrypt an organization OIDC client secret.
+pub fn decrypt_org_sso_secret(
+    session_secret: &str,
+    ciphertext: &[u8],
+    nonce: &[u8],
+) -> Result<String> {
+    let plain = decrypt(&org_sso_key(session_secret), ciphertext, nonce, b"")
+        .map_err(|_| Error::msg("organization SSO secret could not be decrypted"))?;
+    String::from_utf8(plain).map_err(|e| Error::msg(e.to_string()))
+}
+
 pub fn unlock_vault(
     passphrase: &str,
     kdf_salt: &[u8],
@@ -349,6 +375,17 @@ mod tests {
     fn token_hash_stable() {
         assert_eq!(hash_token("abc"), hash_token("abc"));
         assert_ne!(hash_token("abc"), hash_token("abd"));
+    }
+
+    #[test]
+    fn org_sso_secret_round_trips() {
+        let secret = "session-secret-for-org-sso-tests";
+        let (ct, nonce) = encrypt_org_sso_secret(secret, "client-secret-value").unwrap();
+        assert_eq!(
+            decrypt_org_sso_secret(secret, &ct, &nonce).unwrap(),
+            "client-secret-value"
+        );
+        assert!(decrypt_org_sso_secret("wrong-session-secret!!", &ct, &nonce).is_err());
     }
 
     #[test]

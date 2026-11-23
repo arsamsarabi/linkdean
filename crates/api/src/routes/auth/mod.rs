@@ -2,6 +2,7 @@ mod email_verification;
 mod extension;
 mod github;
 mod oidc;
+mod org_oidc;
 mod passkey;
 mod password_reset;
 pub(crate) mod providers;
@@ -44,6 +45,9 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(oidc::callback))
         .routes(routes!(oidc::pending_link))
         .routes(routes!(oidc::disconnect))
+        .routes(routes!(org_oidc::discover))
+        .routes(routes!(org_oidc::start))
+        .routes(routes!(org_oidc::callback))
         .routes(routes!(auth_config))
         .routes(routes!(extension::authorize))
         .routes(routes!(extension::token))
