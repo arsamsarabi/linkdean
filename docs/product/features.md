@@ -114,9 +114,9 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 
 ## Organizations and teams
 
-- Create an organization with a default **General** team; personal libraries stay private.
+- Create an organization (workspace switcher or Account menu) with a default **General** team; personal libraries stay private.
 - Roles: organization owner/admin/member/guest; team maintainer/editor/viewer. Org owners/admins act as maintainers on every team.
-- Email invites (accept after verified email); guests are team-scoped only.
+- Email invites from **Organization settings → Members** (role + guest team); accept or decline in Notifications after a verified email; guests are team-scoped only.
 - Invite links (off by default): admins set role, expiry and optional use limit; join via `/org-join` after a verified email.
 - Team-space folders, bookmarks, tags and dashboards (`owner_user_id` XOR `team_id`); move personal → team (with ack); copy team → personal.
 - Restricted folders: maintainer allowlist; org owners/admins always see; restrictions never widen access.
@@ -124,7 +124,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Audit log for owners/admins in **Organization settings → Audit log**: filter by person, action and date; **Download CSV** (same filters). Append-only; 1-year retention prune.
 - **Verified domains:** owners/admins add a domain, publish DNS TXT `_linkdean-challenge.<domain>` = `linkdean-domain-verification=<token>`, then Verify. Per-domain join mode: auto-join matching verified emails as members, or require admin approval of join requests. Consumer and disposable mail domains are refused.
 - **Organization SSO (OIDC) + SCIM:** owners/admins configure one OpenID Connect IdP and a SCIM bearer token in **Organization settings → SSO**; enable SSO only after a verified domain. Members use **Continue with company SSO** on the login page. IdPs can provision/deprovision members at `/api/scim/v2/Users` with an `ldscim_` token. Client secrets encrypted at rest. SAML deferred. Design: [organization SSO and SCIM](../design/organization-sso-scim.md).
-- Sidebar **workspace switcher** (Personal vs organization) and organization settings (members, teams, invite links, domains, SSO, audit, danger zone).
+- Sidebar **workspace switcher** (always shown: Personal, organizations, Create organization) and organization settings (members + email invites, teams, invite links, domains, SSO, audit, danger zone).
 
 ## Sharing (same instance)
 

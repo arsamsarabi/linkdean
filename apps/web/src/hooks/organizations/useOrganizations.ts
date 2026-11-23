@@ -95,6 +95,66 @@ export function useCreateOrganization() {
   })
 }
 
+export function useOrganizationInvites(id: string | undefined) {
+  return useQuery({
+    queryKey: ['organizations', id, 'invites'],
+    queryFn: () => api.listOrganizationInvites(id!),
+    enabled: !!id,
+  })
+}
+
+export function useCreateOrganizationInvite(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { email: string; role: 'admin' | 'member' | 'guest'; teams?: { team_id: string }[] }) =>
+      api.createOrganizationInvite(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'invites'] })
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'members'] })
+    },
+  })
+}
+
+export function useRevokeOrganizationInvite(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (inviteId: string) => api.revokeOrganizationInvite(id, inviteId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['organizations', id, 'invites'] }),
+  })
+}
+
+export function useOrganizationInviteInbox(enabled = true) {
+  return useQuery({
+    queryKey: ['organization-invites'],
+    queryFn: () => api.listOrganizationInviteInbox(),
+    enabled,
+    refetchInterval: 30_000,
+  })
+}
+
+export function useAcceptOrganizationInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (inviteId: string) => api.acceptOrganizationInvite(inviteId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organization-invites'] })
+      void qc.invalidateQueries({ queryKey: ['organizations'] })
+      void qc.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+
+export function useRejectOrganizationInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (inviteId: string) => api.rejectOrganizationInvite(inviteId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organization-invites'] })
+      void qc.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+
 export function useDeleteOrganization(id: string) {
   const qc = useQueryClient()
   return useMutation({

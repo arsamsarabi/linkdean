@@ -7,6 +7,7 @@ import { CommandPalette, NotificationsDrawer, PageContainer, PeekPanel, QueryErr
 import {
   useBootstrap,
   useLogout,
+  useOrganizationInviteInbox,
   usePasteToAdd,
   usePrefsHydration,
   useSessionSync,
@@ -32,8 +33,10 @@ export function AppShell(): ReactElement {
   const shell = useShellUi()
   const unread = useUnreadNotificationCount(!!me.data)
   const invites = useShareInvites(!!me.data)
+  const orgInvites = useOrganizationInviteInbox(!!me.data)
   const mailEnabled = useBootstrap(!!me.data).data?.mail_enabled ?? false
-  const pendingInvites = invites.data?.invites.filter((i) => !i.rejected_at).length ?? 0
+  const pendingShareInvites = invites.data?.invites.filter((i) => !i.rejected_at).length ?? 0
+  const pendingOrgInvites = orgInvites.data?.length ?? 0
 
   useEffect(() => {
     if (!me.data) return
@@ -90,8 +93,9 @@ export function AppShell(): ReactElement {
           email={user?.email}
           hasAvatar={!!user?.has_avatar}
           vaultUnlocked={vaultUnlocked}
-          // A new invite is also an unread notification, so don't add the two.
-          unreadCount={Math.max(unread.data?.count ?? 0, pendingInvites)}
+          // Share invites also land as unread notifications — max, don't add.
+          // Org invites are inbox-only (no notification row), so add those.
+          unreadCount={Math.max(unread.data?.count ?? 0, pendingShareInvites) + pendingOrgInvites}
           onLogout={() => void onLogout()}
         />
       </MantineAppShell.Header>

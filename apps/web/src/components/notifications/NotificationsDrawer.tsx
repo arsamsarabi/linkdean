@@ -31,12 +31,14 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
+  useOrganizationInviteInbox,
   useShareInvites,
   useUnreadNotificationCount,
 } from '@/hooks'
 import { useDrawerSize } from '@/hooks/render'
 import type { Notification, ShareInvite } from '@/schemas'
 import styles from './NotificationsDrawer.module.css'
+import { OrganizationInvitesList } from './OrganizationInvitesList'
 import { ShareInvitesList } from './ShareInvitesList'
 
 type Props = {
@@ -110,13 +112,16 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
   const list = useNotifications(opened)
   const unread = useUnreadNotificationCount(true)
   const invites = useShareInvites(opened)
+  const orgInvites = useOrganizationInviteInbox(opened)
   const markOne = useMarkNotificationRead()
   const markAll = useMarkAllNotificationsRead()
   const prevOpened = useRef(opened)
   const unreadCount = unread.data?.count ?? 0
   const inviteList = invites.data?.invites ?? []
   const rows = withoutOpenInvites(list.data?.notifications ?? [], inviteList)
-  const hasPendingInvite = inviteList.some((i) => !i.rejected_at)
+  const hasPendingShareInvite = inviteList.some((i) => !i.rejected_at)
+  const hasPendingOrgInvite = (orgInvites.data ?? []).length > 0
+  const hasPendingInvite = hasPendingShareInvite || hasPendingOrgInvite
   const hasUnread = unreadCount > 0 || (list.data?.notifications.some((n) => !n.read_at) ?? false)
 
   useEffect(() => {
@@ -166,6 +171,7 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
         </Group>
 
         <ShareInvitesList />
+        <OrganizationInvitesList />
 
         {list.isError ? <QueryErrorAlert error={list.error} onRetry={() => void list.refetch()} /> : null}
 
@@ -184,7 +190,7 @@ export function NotificationsDrawer({ opened, onClose }: Props): ReactElement {
             </ThemeIcon>
             <Text fw={600}>You're all caught up</Text>
             <Text size="sm" c="dimmed" ta="center" maw={280}>
-              Invites, comments, likes and new followers will show up here.
+              Share and organization invites, comments, likes and new followers will show up here.
             </Text>
           </Stack>
         ) : null}

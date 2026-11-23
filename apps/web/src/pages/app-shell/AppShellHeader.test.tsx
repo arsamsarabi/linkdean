@@ -21,6 +21,10 @@ vi.mock('@/components', () => ({
   UserAvatar: () => null,
 }))
 
+vi.mock('@/components/organizations', () => ({
+  CreateOrganizationModal: () => null,
+}))
+
 function renderHeader(vaultUnlocked: boolean) {
   return render(
     <MantineProvider env="test">

@@ -1,4 +1,4 @@
-import { type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import {
   ActionIcon,
   Burger,
@@ -14,6 +14,7 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import {
+  IconBuilding,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLogout,
@@ -24,6 +25,7 @@ import {
 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { LogoMark, NotificationsBell, ThemeMenuSwitch, UserAvatar } from '@/components'
+import { CreateOrganizationModal } from '@/components/organizations'
 import { useShellUi } from '@/stores'
 import classes from './AppShell.module.css'
 
@@ -58,6 +60,7 @@ export function AppShellHeader({
   const toggleNavCollapsed = useShellUi((s) => s.toggleNavCollapsed)
   const openPalette = useShellUi((s) => s.openPalette)
   const openNotif = useShellUi((s) => s.openNotif)
+  const [createOrgOpen, setCreateOrgOpen] = useState(false)
 
   return (
     <Group h="100%" px="md" justify="space-between" wrap="nowrap" gap="md">
@@ -145,6 +148,9 @@ export function AppShellHeader({
               <Menu.Item component={Link} to="/trash" leftSection={<IconTrash {...iconProps} />}>
                 Deleted items
               </Menu.Item>
+              <Menu.Item leftSection={<IconBuilding {...iconProps} />} onClick={() => setCreateOrgOpen(true)}>
+                Create organization
+              </Menu.Item>
               <Menu.Divider />
               <ThemeMenuSwitch />
               <Menu.Divider />
@@ -153,6 +159,7 @@ export function AppShellHeader({
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          <CreateOrganizationModal opened={createOrgOpen} onClose={() => setCreateOrgOpen(false)} />
         </Group>
       )}
     </Group>

@@ -67,7 +67,9 @@ import {
   organizationAuditEventSchema,
   organizationDomainJoinRequestViewSchema,
   organizationDomainViewSchema,
+  organizationInviteInboxItemSchema,
   organizationInviteLinkViewSchema,
+  organizationInviteViewSchema,
   organizationMemberViewSchema,
   organizationScimTokenViewSchema,
   organizationSsoConfigViewSchema,
@@ -170,7 +172,9 @@ import {
   type OrganizationAuditEvent,
   type OrganizationDomainJoinRequestView,
   type OrganizationDomainView,
+  type OrganizationInviteInboxItem,
   type OrganizationInviteLinkView,
+  type OrganizationInviteView,
   type OrganizationMemberView,
   type OrganizationScimTokenView,
   type OrganizationSsoConfigView,
@@ -411,6 +415,27 @@ export const api = {
 
   listOrganizationMembers: (id: string): Promise<OrganizationMemberView[]> =>
     req(`/organizations/${id}/members`, {}, z.array(organizationMemberViewSchema)),
+
+  listOrganizationInvites: (id: string): Promise<OrganizationInviteView[]> =>
+    req(`/organizations/${id}/invites`, {}, z.array(organizationInviteViewSchema)),
+
+  createOrganizationInvite: (
+    id: string,
+    body: { email: string; role: 'admin' | 'member' | 'guest'; teams?: { team_id: string }[] }
+  ): Promise<OrganizationInviteView> =>
+    req(`/organizations/${id}/invites`, { method: 'POST', body: JSON.stringify(body) }, organizationInviteViewSchema),
+
+  revokeOrganizationInvite: (id: string, inviteId: string): Promise<{ ok: boolean }> =>
+    req(`/organizations/${id}/invites/${inviteId}`, { method: 'DELETE' }, okSchema),
+
+  listOrganizationInviteInbox: (): Promise<OrganizationInviteInboxItem[]> =>
+    req('/organization-invites', {}, z.array(organizationInviteInboxItemSchema)),
+
+  acceptOrganizationInvite: (inviteId: string): Promise<{ ok: boolean }> =>
+    req(`/organization-invites/${inviteId}/accept`, { method: 'POST' }, okSchema),
+
+  rejectOrganizationInvite: (inviteId: string): Promise<{ ok: boolean }> =>
+    req(`/organization-invites/${inviteId}/reject`, { method: 'POST' }, okSchema),
 
   listOrganizationTeams: (id: string): Promise<TeamView[]> =>
     req(`/organizations/${id}/teams`, {}, z.array(teamViewSchema)),

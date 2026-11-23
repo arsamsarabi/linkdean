@@ -64,12 +64,36 @@ export const organizationAuditEventSchema = z.object({
   created_at: z.string(),
 })
 
+export const organizationInviteViewSchema = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  organization_name: z.string(),
+  invitee_email: z.string(),
+  role: organizationRoleSchema,
+  invited_by_user_id: z.string().uuid(),
+  invitee_user_id: z.string().uuid().nullish(),
+  team_ids: z.array(z.string().uuid()),
+  created_at: z.string(),
+  rejected_at: z.string().nullable(),
+})
+
+export const organizationInviteInboxItemSchema = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  organization_name: z.string(),
+  role: organizationRoleSchema,
+  inviter_display_name: z.string(),
+  created_at: z.string(),
+})
+
 export type OrganizationWorkspace = z.infer<typeof organizationWorkspaceSchema>
 export type TeamView = z.infer<typeof teamViewSchema>
 export type OrganizationMemberView = z.infer<typeof organizationMemberViewSchema>
 export type OrganizationAuditEvent = z.infer<typeof organizationAuditEventSchema>
 export type OrganizationInviteLinkView = z.infer<typeof organizationInviteLinkViewSchema>
 export type CreateOrganizationInviteLinkResponse = z.infer<typeof createOrganizationInviteLinkResponseSchema>
+export type OrganizationInviteView = z.infer<typeof organizationInviteViewSchema>
+export type OrganizationInviteInboxItem = z.infer<typeof organizationInviteInboxItemSchema>
 
 export const domainJoinModeSchema = z.enum(['auto_join', 'request'])
 
