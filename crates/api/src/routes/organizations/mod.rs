@@ -1,4 +1,5 @@
 use crate::auth::AuthUser;
+use crate::domain_verification;
 use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
@@ -6,11 +7,12 @@ use axum::http::{header, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use linkdean_core::{
-    ConfirmOrganizationName, CreateOrganization, CreateOrganizationInvite,
-    CreateOrganizationInviteLink, CreateOrganizationInviteLinkResponse, CreateTeam,
-    ListOrganizationAuditQuery, OrganizationAuditEventView, OrganizationInviteLinkView,
-    OrganizationInviteView, OrganizationMemberView, OrganizationWorkspace,
-    PatchOrganizationInviteLinks, PatchOrganizationMember, TeamView,
+    ConfirmOrganizationName, CreateOrganization, CreateOrganizationDomain,
+    CreateOrganizationInvite, CreateOrganizationInviteLink, CreateOrganizationInviteLinkResponse,
+    CreateTeam, ListOrganizationAuditQuery, OrganizationAuditEventView, OrganizationDomainView,
+    OrganizationInviteLinkView, OrganizationInviteView, OrganizationMemberView,
+    OrganizationWorkspace, PatchOrganizationDomain, PatchOrganizationInviteLinks,
+    PatchOrganizationMember, TeamView,
 };
 use linkdean_db::{self as db, NewOutboxEmail};
 use serde_json::{json, Value};
@@ -27,6 +29,8 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(list_invite_links, create_invite_link))
         .routes(routes!(revoke_invite_link))
         .routes(routes!(patch_invite_links_settings))
+        .routes(routes!(list_domains, create_domain))
+        .routes(routes!(delete_domain, patch_domain, verify_domain))
         .routes(routes!(archive_team))
         .routes(routes!(restore_archived_team))
         .routes(routes!(delete_team))
@@ -427,6 +431,142 @@ async fn patch_invite_links_settings(
 ) -> ApiResult<Json<OrganizationWorkspace>> {
     Ok(Json(
         db::set_organization_invite_links_enabled(&state.pool, user.id, id, req).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_list_domains",
+    path = "/organizations/{id}/domains",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = [OrganizationDomainView]),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn list_domains(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Vec<OrganizationDomainView>>> {
+    Ok(Json(
+        db::list_organization_domains(&state.pool, user.id, id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_create_domain",
+    path = "/organizations/{id}/domains",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    request_body = CreateOrganizationDomain,
+    responses(
+        (status = 200, description = "OK", body = OrganizationDomainView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn create_domain(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<CreateOrganizationDomain>,
+) -> ApiResult<Json<OrganizationDomainView>> {
+    if let Ok(domain) = db::normalize_domain(&req.domain) {
+        if domain_verification::is_consumer_mail_domain(&domain)
+            || crate::disposable_email::is_disposable_domain(&domain)
+        {
+            return Err(linkdean_core::Error::BadRequest(
+                "That domain can't be verified for an organization.".into(),
+            )
+            .into());
+        }
+    }
+    Ok(Json(
+        db::create_organization_domain(&state.pool, user.id, id, req).await?,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    operation_id = "organizations_delete_domain",
+    path = "/organizations/{id}/domains/{domain_id}",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("domain_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn delete_domain(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, domain_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::delete_organization_domain(&state.pool, user.id, id, domain_id).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[utoipa::path(
+    patch,
+    operation_id = "organizations_patch_domain",
+    path = "/organizations/{id}/domains/{domain_id}",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("domain_id" = Uuid, Path)),
+    request_body = PatchOrganizationDomain,
+    responses(
+        (status = 200, description = "OK", body = OrganizationDomainView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn patch_domain(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, domain_id)): Path<(Uuid, Uuid)>,
+    Json(req): Json<PatchOrganizationDomain>,
+) -> ApiResult<Json<OrganizationDomainView>> {
+    Ok(Json(
+        db::patch_organization_domain(&state.pool, user.id, id, domain_id, req).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_verify_domain",
+    path = "/organizations/{id}/domains/{domain_id}/verify",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("domain_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = OrganizationDomainView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn verify_domain(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, domain_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<OrganizationDomainView>> {
+    let row = db::get_organization_domain_for_admin(&state.pool, user.id, id, domain_id).await?;
+    let records = if row.verified_at.is_some() {
+        Vec::new()
+    } else {
+        let name = domain_verification::challenge_name(&row.domain);
+        domain_verification::lookup_txt(&name).await?
+    };
+    Ok(Json(
+        db::verify_organization_domain_with_txt(&state.pool, user.id, id, domain_id, &records)
+            .await?,
     ))
 }
 
