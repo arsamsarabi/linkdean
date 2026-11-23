@@ -10,11 +10,13 @@ use linkdean_core::crypto::encrypt_org_sso_secret;
 use linkdean_core::{
     ConfirmOrganizationName, CreateOrganization, CreateOrganizationDomain,
     CreateOrganizationInvite, CreateOrganizationInviteLink, CreateOrganizationInviteLinkResponse,
-    CreateTeam, DomainJoinResponse, ListOrganizationAuditQuery, OrganizationAuditEventView,
+    CreateOrganizationScimToken, CreateOrganizationScimTokenResponse, CreateTeam,
+    DomainJoinResponse, ListOrganizationAuditQuery, OrganizationAuditEventView,
     OrganizationDomainJoinRequestView, OrganizationDomainSuggestion, OrganizationDomainView,
     OrganizationInviteLinkView, OrganizationInviteView, OrganizationMemberView,
-    OrganizationSsoConfigView, OrganizationWorkspace, PatchOrganizationDomain,
-    PatchOrganizationInviteLinks, PatchOrganizationMember, TeamView, UpsertOrganizationSso,
+    OrganizationScimTokenView, OrganizationSsoConfigView, OrganizationWorkspace,
+    PatchOrganizationDomain, PatchOrganizationInviteLinks, PatchOrganizationMember, TeamView,
+    UpsertOrganizationSso,
 };
 use linkdean_db::{self as db, NewOutboxEmail};
 use serde_json::{json, Value};
@@ -41,6 +43,9 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(get_sso))
         .routes(routes!(upsert_sso))
         .routes(routes!(delete_sso))
+        .routes(routes!(list_scim_tokens))
+        .routes(routes!(create_scim_token))
+        .routes(routes!(revoke_scim_token))
         .routes(routes!(archive_team))
         .routes(routes!(restore_archived_team))
         .routes(routes!(delete_team))
@@ -791,6 +796,76 @@ async fn delete_sso(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
     db::delete_organization_sso(&state.pool, user.id, id).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_list_scim_tokens",
+    path = "/organizations/{id}/scim-tokens",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = [OrganizationScimTokenView]),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn list_scim_tokens(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Vec<OrganizationScimTokenView>>> {
+    Ok(Json(
+        db::list_organization_scim_tokens(&state.pool, user.id, id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_create_scim_token",
+    path = "/organizations/{id}/scim-tokens",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    request_body = CreateOrganizationScimToken,
+    responses(
+        (status = 200, description = "OK", body = CreateOrganizationScimTokenResponse),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn create_scim_token(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<CreateOrganizationScimToken>,
+) -> ApiResult<Json<CreateOrganizationScimTokenResponse>> {
+    Ok(Json(
+        db::create_organization_scim_token(&state.pool, user.id, id, req).await?,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    operation_id = "organizations_revoke_scim_token",
+    path = "/organizations/{id}/scim-tokens/{token_id}",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("token_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn revoke_scim_token(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, token_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::revoke_organization_scim_token(&state.pool, user.id, id, token_id).await?;
     Ok(Json(json!({ "ok": true })))
 }
 

@@ -79,9 +79,9 @@ At most one **active** token per org (creating a new one revokes the previous). 
 
 ## Delivery slices
 
-1. **D1 — OIDC backend:** migration, crypto helper, config CRUD, discover, start/callback, JIT membership, tests, OpenAPI, design + features/changelog/roadmap notes.
-2. **D2 — SSO settings + login UI:** settings tab, discover on login, docs screenshots if needed.
-3. **D3 — SCIM:** tokens, Users CRUD/PATCH/filter, ServiceProviderConfig stubs, settings SCIM section, docs.
+1. ~~**D1 — OIDC backend**~~ — shipped.
+2. ~~**D2 — SSO settings + login UI**~~ — shipped.
+3. ~~**D3 — SCIM**~~ — shipped (Users + tokens; Groups deferred).
 
 Merge in order; stack D2/D3 on the prior branch while earlier PRs are open.
 

@@ -141,7 +141,7 @@ Self-hosted has every feature, with no plan gates. Plan checks live in one place
 ## Backlog (after v1)
 
 - ~~Verified domains~~ — shipped (Phase C): DNS TXT proof; auto-join or join-on-request.
-- SSO / SCIM — in progress (Phase D): per-organization OIDC config + login shipped; settings UI and SCIM next. SAML deferred. Design: [organization SSO and SCIM](./organization-sso-scim.md).
+- ~~SSO / SCIM~~ — shipped (Phase D): per-organization OIDC + SCIM Users; SAML deferred. Design: [organization SSO and SCIM](./organization-sso-scim.md).
 - Team vaults: shared keys, rotation when members leave, recovery.
 - Audit log: every content edit and restricted-folder view, configurable retention, SIEM or webhook streaming, hash-chained tamper evidence.
 - Custom roles and a Billing manager role, when a customer needs them.

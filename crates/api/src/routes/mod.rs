@@ -20,6 +20,7 @@ mod organizations;
 mod public;
 mod reports;
 mod saved_searches;
+mod scim;
 mod search;
 mod share_invites;
 mod social;
@@ -114,6 +115,7 @@ fn documented(agent_skills: bool) -> OpenApiRouter<AppState> {
         .merge(organizations::router())
         .merge(organization_invite_links::router())
         .merge(organization_invites::router())
+        .merge(scim::router())
         .merge(share_invites::router())
         .merge(users::router())
         .merge(categories::router())

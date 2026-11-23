@@ -23,6 +23,7 @@ import {
   useArchiveTeam,
   useCreateOrganizationDomain,
   useCreateOrganizationInviteLink,
+  useCreateOrganizationScimToken,
   useDeleteOrganization,
   useDeleteOrganizationDomain,
   useDeleteOrganizationSso,
@@ -34,12 +35,14 @@ import {
   useOrganizationDomains,
   useOrganizationInviteLinks,
   useOrganizationMembers,
+  useOrganizationScimTokens,
   useOrganizationSso,
   useOrganizationTeams,
   usePatchOrganizationDomain,
   usePatchOrganizationInviteLinks,
   useRestoreOrganization,
   useRevokeOrganizationInviteLink,
+  useRevokeOrganizationScimToken,
   useUnarchiveTeam,
   useUpsertOrganizationSso,
   useVerifyOrganizationDomain,
@@ -77,7 +80,11 @@ export function OrganizationSettingsPage(): ReactElement {
   const sso = useOrganizationSso(id)
   const upsertSso = useUpsertOrganizationSso(id)
   const deleteSso = useDeleteOrganizationSso(id)
+  const scimTokens = useOrganizationScimTokens(id)
+  const createScimToken = useCreateOrganizationScimToken(id)
+  const revokeScimToken = useRevokeOrganizationScimToken(id)
   const [confirmName, setConfirmName] = useState('')
+  const [freshScimToken, setFreshScimToken] = useState<string | null>(null)
   const [tab, setTab] = useState<string | null>('members')
   const [linkRole, setLinkRole] = useState<'admin' | 'member' | 'guest'>('member')
   const [expiresDays, setExpiresDays] = useState<number | string>(7)
@@ -625,6 +632,68 @@ export function OrganizationSettingsPage(): ReactElement {
                       </Button>
                     ) : null}
                   </Group>
+
+                  <Title order={4}>SCIM</Title>
+                  <Text size="sm" c="dimmed">
+                    Provision members from your IdP. Base URL:{' '}
+                    {`${typeof window !== 'undefined' ? window.location.origin : ''}/api/scim/v2`}. Creating a new token
+                    revokes the previous one.
+                  </Text>
+                  {freshScimToken ? <TextInput label="New token (copy now)" readOnly value={freshScimToken} /> : null}
+                  <Button
+                    loading={createScimToken.isPending}
+                    onClick={() =>
+                      createScimToken.mutate('SCIM', {
+                        onSuccess: (res) => {
+                          setFreshScimToken(res.token)
+                          notifications.show({ message: 'SCIM token created — copy it now' })
+                        },
+                        onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                      })
+                    }
+                  >
+                    Create SCIM token
+                  </Button>
+                  {scimTokens.isError ? (
+                    <QueryErrorAlert error={scimTokens.error} onRetry={() => void scimTokens.refetch()} />
+                  ) : (
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Prefix</Table.Th>
+                          <Table.Th>Name</Table.Th>
+                          <Table.Th />
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {(scimTokens.data ?? []).map((t) => (
+                          <Table.Tr key={t.id}>
+                            <Table.Td>{t.prefix}</Table.Td>
+                            <Table.Td>{t.name}</Table.Td>
+                            <Table.Td>
+                              <Button
+                                size="xs"
+                                color="red"
+                                variant="light"
+                                loading={revokeScimToken.isPending}
+                                onClick={() =>
+                                  revokeScimToken.mutate(t.id, {
+                                    onSuccess: () => {
+                                      setFreshScimToken(null)
+                                      notifications.show({ message: 'SCIM token revoked' })
+                                    },
+                                    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                                  })
+                                }
+                              >
+                                Revoke
+                              </Button>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  )}
                 </>
               )}
             </Stack>

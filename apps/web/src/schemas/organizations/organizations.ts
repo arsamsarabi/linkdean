@@ -125,3 +125,20 @@ export type UpsertOrganizationSso = {
   display_name?: string
   enabled: boolean
 }
+
+export const organizationScimTokenViewSchema = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  name: z.string(),
+  prefix: z.string(),
+  last_used_at: z.string().nullable().optional(),
+  created_at: z.string(),
+})
+
+export const createOrganizationScimTokenResponseSchema = z.object({
+  token: z.string(),
+  view: organizationScimTokenViewSchema,
+})
+
+export type OrganizationScimTokenView = z.infer<typeof organizationScimTokenViewSchema>
+export type CreateOrganizationScimTokenResponse = z.infer<typeof createOrganizationScimTokenResponseSchema>

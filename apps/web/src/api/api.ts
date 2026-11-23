@@ -32,6 +32,7 @@ import {
   createDashboardShareOutcomeSchema,
   createdVaultSchema,
   createOrganizationInviteLinkResponseSchema,
+  createOrganizationScimTokenResponseSchema,
   createRegistrationInviteResponseSchema,
   dashboardSchema,
   dashboardShareSchema,
@@ -68,6 +69,7 @@ import {
   organizationDomainViewSchema,
   organizationInviteLinkViewSchema,
   organizationMemberViewSchema,
+  organizationScimTokenViewSchema,
   organizationSsoConfigViewSchema,
   organizationWorkspaceSchema,
   pageDetailsSchema,
@@ -136,6 +138,7 @@ import {
   type CreateDashboard,
   type CreateDashboardShareOutcome,
   type CreateOrganizationInviteLinkResponse,
+  type CreateOrganizationScimTokenResponse,
   type CreateRegistrationInviteResponse,
   type Dashboard,
   type DashboardShare,
@@ -169,6 +172,7 @@ import {
   type OrganizationDomainView,
   type OrganizationInviteLinkView,
   type OrganizationMemberView,
+  type OrganizationScimTokenView,
   type OrganizationSsoConfigView,
   type OrganizationWorkspace,
   type Passkey,
@@ -521,6 +525,19 @@ export const api = {
 
   discoverOrgSso: (email: string): Promise<DiscoverOrgSsoResponse> =>
     req('/auth/org-sso/discover', { method: 'POST', body: JSON.stringify({ email }) }, discoverOrgSsoResponseSchema),
+
+  listOrganizationScimTokens: (id: string): Promise<OrganizationScimTokenView[]> =>
+    req(`/organizations/${id}/scim-tokens`, {}, z.array(organizationScimTokenViewSchema)),
+
+  createOrganizationScimToken: (id: string, name: string): Promise<CreateOrganizationScimTokenResponse> =>
+    req(
+      `/organizations/${id}/scim-tokens`,
+      { method: 'POST', body: JSON.stringify({ name }) },
+      createOrganizationScimTokenResponseSchema
+    ),
+
+  revokeOrganizationScimToken: (id: string, tokenId: string): Promise<{ ok: boolean }> =>
+    req(`/organizations/${id}/scim-tokens/${tokenId}`, { method: 'DELETE' }, okSchema),
 
   listSavedSearches: (): Promise<SavedSearch[]> => req('/saved-searches', {}, z.array(savedSearchSchema)),
 
