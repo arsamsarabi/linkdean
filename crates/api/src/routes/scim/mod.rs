@@ -121,7 +121,11 @@ fn users_location(state: &AppState) -> String {
     operation_id = "scim_service_provider_config",
     path = "/scim/v2/ServiceProviderConfig",
     tag = "scim",
-    responses((status = 200, description = "OK")),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
 )]
 async fn service_provider_config(
     State(state): State<AppState>,
@@ -182,7 +186,11 @@ fn parse_username_eq(filter: &str) -> Option<String> {
     operation_id = "scim_list_users",
     path = "/scim/v2/Users",
     tag = "scim",
-    responses((status = 200, description = "OK")),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
 )]
 async fn list_users(
     State(state): State<AppState>,
@@ -219,7 +227,11 @@ async fn list_users(
     path = "/scim/v2/Users",
     tag = "scim",
     request_body = serde_json::Value,
-    responses((status = 201, description = "Created")),
+    responses(
+        (status = 201, description = "Created"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
 )]
 async fn create_user(
     State(state): State<AppState>,
@@ -274,7 +286,11 @@ async fn create_user(
     path = "/scim/v2/Users/{id}",
     tag = "scim",
     params(("id" = Uuid, Path)),
-    responses((status = 200, description = "OK")),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
 )]
 async fn get_user(
     State(state): State<AppState>,
@@ -296,7 +312,11 @@ async fn get_user(
     tag = "scim",
     params(("id" = Uuid, Path)),
     request_body = serde_json::Value,
-    responses((status = 200, description = "OK")),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
 )]
 async fn replace_user(
     State(state): State<AppState>,
@@ -344,7 +364,11 @@ async fn replace_user(
     tag = "scim",
     params(("id" = Uuid, Path)),
     request_body = serde_json::Value,
-    responses((status = 200, description = "OK")),
+    responses(
+        (status = 200, description = "OK"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
 )]
 async fn patch_user(
     State(state): State<AppState>,
@@ -409,7 +433,11 @@ async fn patch_user(
     path = "/scim/v2/Users/{id}",
     tag = "scim",
     params(("id" = Uuid, Path)),
-    responses((status = 204, description = "No content")),
+    responses(
+        (status = 204, description = "No content"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
 )]
 async fn delete_user(
     State(state): State<AppState>,
