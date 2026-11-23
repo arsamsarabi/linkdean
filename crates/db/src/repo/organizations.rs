@@ -1260,7 +1260,7 @@ pub async fn list_organization_audit_events(
     query: &linkdean_core::ListOrganizationAuditQuery,
 ) -> Result<Vec<linkdean_core::OrganizationAuditEventView>> {
     require_org_role(pool, actor_id, organization_id, OrganizationRole::Admin).await?;
-    let limit = query.limit.unwrap_or(50).clamp(1, 200);
+    let limit = query.limit.unwrap_or(50).clamp(1, 1000);
     let offset = query.offset.unwrap_or(0).max(0);
 
     let rows = sqlx::query_as::<
