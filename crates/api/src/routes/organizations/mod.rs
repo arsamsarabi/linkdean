@@ -4,16 +4,17 @@ use crate::error::ApiResult;
 use crate::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
+use linkdean_core::crypto::encrypt_org_sso_secret;
 use linkdean_core::{
     ConfirmOrganizationName, CreateOrganization, CreateOrganizationDomain,
     CreateOrganizationInvite, CreateOrganizationInviteLink, CreateOrganizationInviteLinkResponse,
     CreateTeam, DomainJoinResponse, ListOrganizationAuditQuery, OrganizationAuditEventView,
     OrganizationDomainJoinRequestView, OrganizationDomainSuggestion, OrganizationDomainView,
     OrganizationInviteLinkView, OrganizationInviteView, OrganizationMemberView,
-    OrganizationWorkspace, PatchOrganizationDomain, PatchOrganizationInviteLinks,
-    PatchOrganizationMember, TeamView,
+    OrganizationSsoConfigView, OrganizationWorkspace, PatchOrganizationDomain,
+    PatchOrganizationInviteLinks, PatchOrganizationMember, TeamView, UpsertOrganizationSso,
 };
 use linkdean_db::{self as db, NewOutboxEmail};
 use serde_json::{json, Value};
@@ -37,6 +38,9 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(list_domain_join_requests))
         .routes(routes!(approve_domain_join_request))
         .routes(routes!(deny_domain_join_request))
+        .routes(routes!(get_sso))
+        .routes(routes!(upsert_sso))
+        .routes(routes!(delete_sso))
         .routes(routes!(archive_team))
         .routes(routes!(restore_archived_team))
         .routes(routes!(delete_team))
@@ -685,6 +689,108 @@ async fn deny_domain_join_request(
     Path((id, request_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<Json<Value>> {
     db::deny_organization_domain_join_request(&state.pool, user.id, id, request_id).await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+fn org_oidc_redirect_uri(state: &AppState) -> String {
+    format!(
+        "{}/api/auth/org-oidc/callback",
+        state.cfg.app_url.trim_end_matches('/')
+    )
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_get_sso",
+    path = "/organizations/{id}/sso",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = OrganizationSsoConfigView),
+        (status = 204, description = "Not configured"),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn get_sso(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Response> {
+    let redirect = org_oidc_redirect_uri(&state);
+    match db::get_organization_sso(&state.pool, user.id, id, &redirect).await? {
+        Some(view) => Ok(Json(view).into_response()),
+        None => Ok(StatusCode::NO_CONTENT.into_response()),
+    }
+}
+
+#[utoipa::path(
+    put,
+    operation_id = "organizations_upsert_sso",
+    path = "/organizations/{id}/sso",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    request_body = UpsertOrganizationSso,
+    responses(
+        (status = 200, description = "OK", body = OrganizationSsoConfigView),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn upsert_sso(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpsertOrganizationSso>,
+) -> ApiResult<Json<OrganizationSsoConfigView>> {
+    let secret = match req
+        .client_secret
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        Some(plain) => Some(encrypt_org_sso_secret(&state.cfg.session_secret, plain)?),
+        None => None,
+    };
+    let display_name = req.display_name.as_deref().unwrap_or("Company SSO");
+    let redirect = org_oidc_redirect_uri(&state);
+    Ok(Json(
+        db::upsert_organization_sso(
+            &state.pool,
+            user.id,
+            id,
+            &req.issuer_url,
+            &req.client_id,
+            secret,
+            display_name,
+            req.enabled,
+            &redirect,
+        )
+        .await?,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    operation_id = "organizations_delete_sso",
+    path = "/organizations/{id}/sso",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn delete_sso(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    db::delete_organization_sso(&state.pool, user.id, id).await?;
     Ok(Json(json!({ "ok": true })))
 }
 

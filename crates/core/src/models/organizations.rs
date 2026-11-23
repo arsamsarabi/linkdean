@@ -458,3 +458,57 @@ pub struct DomainJoinResponse {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub organization: Option<OrganizationWorkspace>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct OrganizationSsoConfig {
+    pub organization_id: Uuid,
+    pub issuer_url: String,
+    pub client_id: String,
+    pub client_secret_ciphertext: Vec<u8>,
+    pub client_secret_nonce: Vec<u8>,
+    pub display_name: String,
+    pub enabled: bool,
+    pub created_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationSsoConfigView {
+    pub organization_id: Uuid,
+    pub issuer_url: String,
+    pub client_id: String,
+    pub display_name: String,
+    pub enabled: bool,
+    /// Redirect URI to register at the IdP (`{APP_URL}/api/auth/org-oidc/callback`).
+    pub redirect_uri: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct UpsertOrganizationSso {
+    pub issuer_url: String,
+    pub client_id: String,
+    /// Required on create; omit on update to keep the stored secret.
+    #[serde(default)]
+    pub client_secret: Option<String>,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct DiscoverOrgSsoRequest {
+    pub email: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct DiscoverOrgSsoResponse {
+    pub sso: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub organization_name: Option<String>,
+}
