@@ -123,8 +123,8 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Team archive (read-only) and soft-delete (30-day restore); organization soft-delete with name confirmation and owner email notice.
 - Audit log for owners/admins (filterable API + CSV export); append-only, 1-year retention prune.
 - **Verified domains:** owners/admins add a domain, publish DNS TXT `_linkdean-challenge.<domain>` = `linkdean-domain-verification=<token>`, then Verify. Per-domain join mode: auto-join matching verified emails as members, or require admin approval of join requests. Consumer and disposable mail domains are refused.
-- **Organization SSO (OIDC):** owners/admins configure one OpenID Connect IdP per organization (`GET/PUT/DELETE /api/organizations/{id}/sso`); enable only after a verified domain. Members discover by work email (`POST /api/auth/org-sso/discover`) and sign in via `/api/auth/org-oidc/start` / `callback`, joining as member + default-team editor. Client secrets are encrypted at rest. Settings UI and SCIM ship in follow-up slices. Design: [organization SSO and SCIM](../design/organization-sso-scim.md).
-- Sidebar **workspace switcher** (Personal vs organization) and organization settings (members, teams, invite links, audit, danger zone).
+- **Organization SSO (OIDC):** owners/admins configure one OpenID Connect IdP per organization in **Organization settings → SSO** (`GET/PUT/DELETE /api/organizations/{id}/sso`); enable only after a verified domain. Members use **Continue with company SSO** on the login page (`POST /api/auth/org-sso/discover` then `/api/auth/org-oidc/start`), joining as member + default-team editor. Client secrets are encrypted at rest. SCIM ships next. Design: [organization SSO and SCIM](../design/organization-sso-scim.md).
+- Sidebar **workspace switcher** (Personal vs organization) and organization settings (members, teams, invite links, domains, SSO, audit, danger zone).
 
 ## Sharing (same instance)
 

@@ -11,7 +11,7 @@ Every release cuts a section: on release, rename `[Unreleased]` to the new versi
 
 ### Added
 
-- Organization SSO (OIDC): per-org IdP config API, email-domain discover, and org-scoped OIDC login that joins members. Settings UI and SCIM follow. See [organization SSO and SCIM](design/organization-sso-scim.md).
+- Organization SSO (OIDC): per-org IdP config API, email-domain discover, org-scoped OIDC login, Organization settings → SSO tab, and login **Continue with company SSO**. SCIM follows. See [organization SSO and SCIM](design/organization-sso-scim.md).
 - Organization verified domains (DNS TXT), auto-join or join-request for matching verified emails, Domains settings tab.
 - Organization invite links: optional shareable join codes with role, expiry and use limit (off by default; verified email required to accept).
 
