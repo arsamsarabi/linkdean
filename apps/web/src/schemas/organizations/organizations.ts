@@ -70,3 +70,31 @@ export type OrganizationMemberView = z.infer<typeof organizationMemberViewSchema
 export type OrganizationAuditEvent = z.infer<typeof organizationAuditEventSchema>
 export type OrganizationInviteLinkView = z.infer<typeof organizationInviteLinkViewSchema>
 export type CreateOrganizationInviteLinkResponse = z.infer<typeof createOrganizationInviteLinkResponseSchema>
+
+export const domainJoinModeSchema = z.enum(['auto_join', 'request'])
+
+export const organizationDomainViewSchema = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  domain: z.string(),
+  txt_name: z.string(),
+  txt_value: z.string(),
+  verified_at: z.string().nullable(),
+  join_mode: domainJoinModeSchema,
+  created_at: z.string(),
+})
+
+export const organizationDomainJoinRequestViewSchema = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  domain_id: z.string().uuid(),
+  domain: z.string(),
+  user_id: z.string().uuid(),
+  email: z.string(),
+  display_name: z.string().nullish(),
+  status: z.string(),
+  created_at: z.string(),
+})
+
+export type OrganizationDomainView = z.infer<typeof organizationDomainViewSchema>
+export type OrganizationDomainJoinRequestView = z.infer<typeof organizationDomainJoinRequestViewSchema>

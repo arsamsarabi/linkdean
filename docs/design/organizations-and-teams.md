@@ -140,7 +140,7 @@ Self-hosted has every feature, with no plan gates. Plan checks live in one place
 
 ## Backlog (after v1)
 
-- Verified domains: DNS TXT proof, then auto-join or join-on-request for matching verified addresses.
+- ~~Verified domains~~ — shipped (Phase C): DNS TXT proof; auto-join or join-on-request.
 - SSO (SAML / per-organization OIDC) and SCIM provisioning.
 - Team vaults: shared keys, rotation when members leave, recovery.
 - Audit log: every content edit and restricted-folder view, configurable retention, SIEM or webhook streaming, hash-chained tamper evidence.

@@ -18,19 +18,27 @@ import { IconBuilding, IconTrash } from '@tabler/icons-react'
 import { useParams } from '@tanstack/react-router'
 import { QueryErrorAlert } from '@/components'
 import {
+  useApproveDomainJoinRequest,
   useArchiveTeam,
+  useCreateOrganizationDomain,
   useCreateOrganizationInviteLink,
   useDeleteOrganization,
+  useDeleteOrganizationDomain,
   useDeleteTeam,
+  useDenyDomainJoinRequest,
   useOrganization,
   useOrganizationAudit,
+  useOrganizationDomainJoinRequests,
+  useOrganizationDomains,
   useOrganizationInviteLinks,
   useOrganizationMembers,
   useOrganizationTeams,
+  usePatchOrganizationDomain,
   usePatchOrganizationInviteLinks,
   useRestoreOrganization,
   useRevokeOrganizationInviteLink,
   useUnarchiveTeam,
+  useVerifyOrganizationDomain,
 } from '@/hooks'
 
 function joinUrl(code: string): string {
@@ -54,6 +62,14 @@ export function OrganizationSettingsPage(): ReactElement {
   const patchLinks = usePatchOrganizationInviteLinks(id)
   const createLink = useCreateOrganizationInviteLink(id)
   const revokeLink = useRevokeOrganizationInviteLink(id)
+  const domains = useOrganizationDomains(id)
+  const createDomain = useCreateOrganizationDomain(id)
+  const deleteDomain = useDeleteOrganizationDomain(id)
+  const verifyDomain = useVerifyOrganizationDomain(id)
+  const patchDomain = usePatchOrganizationDomain(id)
+  const joinRequests = useOrganizationDomainJoinRequests(id)
+  const approveJoin = useApproveDomainJoinRequest(id)
+  const denyJoin = useDenyDomainJoinRequest(id)
   const [confirmName, setConfirmName] = useState('')
   const [tab, setTab] = useState<string | null>('members')
   const [linkRole, setLinkRole] = useState<'admin' | 'member' | 'guest'>('member')
@@ -61,6 +77,7 @@ export function OrganizationSettingsPage(): ReactElement {
   const [maxUses, setMaxUses] = useState<number | string>('')
   const [freshCode, setFreshCode] = useState<string | null>(null)
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null)
+  const [newDomain, setNewDomain] = useState('')
 
   const canAdmin = org.data?.role === 'owner' || org.data?.role === 'admin'
   const pendingDelete = !!org.data?.deleted_at
@@ -107,6 +124,7 @@ export function OrganizationSettingsPage(): ReactElement {
             <Tabs.Tab value="members">Members</Tabs.Tab>
             <Tabs.Tab value="teams">Teams</Tabs.Tab>
             <Tabs.Tab value="invite-links">Invite links</Tabs.Tab>
+            <Tabs.Tab value="domains">Domains</Tabs.Tab>
             <Tabs.Tab value="audit">Audit log</Tabs.Tab>
             <Tabs.Tab value="danger">Danger zone</Tabs.Tab>
           </Tabs.List>
@@ -332,6 +350,155 @@ export function OrganizationSettingsPage(): ReactElement {
                   )}
                 </>
               ) : null}
+            </Stack>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="domains" pt="md">
+            <Stack gap="md" maw={720}>
+              <Text size="sm" c="dimmed">
+                Prove you control a domain with a DNS TXT record. Matching verified emails can auto-join or request to
+                join.
+              </Text>
+              <Group align="flex-end" grow>
+                <TextInput
+                  label="Domain"
+                  placeholder="acme.com"
+                  value={newDomain}
+                  onChange={(e) => setNewDomain(e.currentTarget.value)}
+                />
+                <Button
+                  loading={createDomain.isPending}
+                  onClick={() =>
+                    createDomain.mutate(newDomain.trim(), {
+                      onSuccess: () => {
+                        setNewDomain('')
+                        notifications.show({ message: 'Domain added — publish the TXT record' })
+                      },
+                      onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                    })
+                  }
+                >
+                  Add domain
+                </Button>
+              </Group>
+
+              {domains.isError ? (
+                <QueryErrorAlert error={domains.error} onRetry={() => void domains.refetch()} />
+              ) : (
+                <Stack gap="lg">
+                  {(domains.data ?? []).map((d) => (
+                    <Stack key={d.id} gap="xs">
+                      <Group justify="space-between">
+                        <Text fw={600}>
+                          {d.domain} {d.verified_at ? '(verified)' : '(pending)'}
+                        </Text>
+                        <Group gap="xs">
+                          {!d.verified_at ? (
+                            <Button
+                              size="xs"
+                              loading={verifyDomain.isPending}
+                              onClick={() =>
+                                verifyDomain.mutate(d.id, {
+                                  onSuccess: () => notifications.show({ message: 'Domain verified' }),
+                                  onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                                })
+                              }
+                            >
+                              Verify DNS
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="light"
+                            loading={deleteDomain.isPending}
+                            onClick={() =>
+                              deleteDomain.mutate(d.id, {
+                                onSuccess: () => notifications.show({ message: 'Domain removed' }),
+                                onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                              })
+                            }
+                          >
+                            Remove
+                          </Button>
+                        </Group>
+                      </Group>
+                      <TextInput label="TXT name" readOnly value={d.txt_name} />
+                      <TextInput label="TXT value" readOnly value={d.txt_value} />
+                      <Select
+                        label="Join mode"
+                        data={[
+                          { value: 'auto_join', label: 'Auto-join matching emails' },
+                          { value: 'request', label: 'Require admin approval' },
+                        ]}
+                        value={d.join_mode}
+                        onChange={(v) => {
+                          if (!v) return
+                          patchDomain.mutate(
+                            { domainId: d.id, join_mode: v as 'auto_join' | 'request' },
+                            {
+                              onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                            }
+                          )
+                        }}
+                      />
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
+
+              <Title order={4}>Join requests</Title>
+              {joinRequests.isError ? (
+                <QueryErrorAlert error={joinRequests.error} onRetry={() => void joinRequests.refetch()} />
+              ) : (
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Email</Table.Th>
+                      <Table.Th>Domain</Table.Th>
+                      <Table.Th />
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {(joinRequests.data ?? []).map((r) => (
+                      <Table.Tr key={r.id}>
+                        <Table.Td>{r.display_name ? `${r.display_name} (${r.email})` : r.email}</Table.Td>
+                        <Table.Td>{r.domain}</Table.Td>
+                        <Table.Td>
+                          <Group gap="xs" justify="flex-end">
+                            <Button
+                              size="xs"
+                              loading={approveJoin.isPending}
+                              onClick={() =>
+                                approveJoin.mutate(r.id, {
+                                  onSuccess: () => notifications.show({ message: 'Request approved' }),
+                                  onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                                })
+                              }
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="xs"
+                              color="red"
+                              variant="light"
+                              loading={denyJoin.isPending}
+                              onClick={() =>
+                                denyJoin.mutate(r.id, {
+                                  onSuccess: () => notifications.show({ message: 'Request denied' }),
+                                  onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                                })
+                              }
+                            >
+                              Deny
+                            </Button>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              )}
             </Stack>
           </Tabs.Panel>
 

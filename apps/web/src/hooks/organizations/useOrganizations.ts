@@ -143,3 +143,81 @@ export function useAcceptOrganizationInviteLink() {
     onSuccess: () => invalidateOrg(qc),
   })
 }
+
+export function useOrganizationDomains(id: string | undefined) {
+  return useQuery({
+    queryKey: ['organizations', id, 'domains'],
+    queryFn: () => api.listOrganizationDomains(id!),
+    enabled: !!id,
+  })
+}
+
+export function useCreateOrganizationDomain(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (domain: string) => api.createOrganizationDomain(id, domain),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'domains'] })
+    },
+  })
+}
+
+export function useDeleteOrganizationDomain(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (domainId: string) => api.deleteOrganizationDomain(id, domainId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'domains'] })
+    },
+  })
+}
+
+export function useVerifyOrganizationDomain(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (domainId: string) => api.verifyOrganizationDomain(id, domainId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'domains'] })
+    },
+  })
+}
+
+export function usePatchOrganizationDomain(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: { domainId: string; join_mode: 'auto_join' | 'request' }) =>
+      api.patchOrganizationDomain(id, args.domainId, args.join_mode),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'domains'] })
+    },
+  })
+}
+
+export function useOrganizationDomainJoinRequests(id: string | undefined) {
+  return useQuery({
+    queryKey: ['organizations', id, 'domain-join-requests'],
+    queryFn: () => api.listOrganizationDomainJoinRequests(id!),
+    enabled: !!id,
+  })
+}
+
+export function useApproveDomainJoinRequest(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (requestId: string) => api.approveOrganizationDomainJoinRequest(id, requestId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'domain-join-requests'] })
+      invalidateOrg(qc, id)
+    },
+  })
+}
+
+export function useDenyDomainJoinRequest(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (requestId: string) => api.denyOrganizationDomainJoinRequest(id, requestId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'domain-join-requests'] })
+    },
+  })
+}
