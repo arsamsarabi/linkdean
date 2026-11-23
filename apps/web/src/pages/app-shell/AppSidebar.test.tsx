@@ -42,6 +42,10 @@ vi.mock('@/hooks', () => ({
   useOrganizationTeams: () => ({ isLoading: false, data: [] }),
 }))
 
+vi.mock('@/components/organizations', () => ({
+  CreateOrganizationModal: () => null,
+}))
+
 vi.mock('./useIconRail', () => ({
   useIconRail: () => iconRail.on,
 }))
