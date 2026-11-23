@@ -10,9 +10,11 @@ const data = vi.hoisted(() => ({ rows: [] as Notification[], invites: [] as Shar
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
 vi.mock('./ShareInvitesList', () => ({ ShareInvitesList: () => null }))
+vi.mock('./OrganizationInvitesList', () => ({ OrganizationInvitesList: () => null }))
 
 vi.mock('@/hooks', () => ({
   useShareInvites: () => ({ data: { invites: data.invites } }),
+  useOrganizationInviteInbox: () => ({ data: [] }),
   useNotifications: () => ({ data: { notifications: data.rows }, isLoading: false, isError: false }),
   useUnreadNotificationCount: () => ({ data: { count: 2 } }),
   useMarkNotificationRead: () => ({ mutateAsync: vi.fn() }),

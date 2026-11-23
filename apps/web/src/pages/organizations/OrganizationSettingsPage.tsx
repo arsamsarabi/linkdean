@@ -22,6 +22,7 @@ import {
   useApproveDomainJoinRequest,
   useArchiveTeam,
   useCreateOrganizationDomain,
+  useCreateOrganizationInvite,
   useCreateOrganizationInviteLink,
   useCreateOrganizationScimToken,
   useDeleteOrganization,
@@ -33,6 +34,7 @@ import {
   useOrganizationDomainJoinRequests,
   useOrganizationDomains,
   useOrganizationInviteLinks,
+  useOrganizationInvites,
   useOrganizationMembers,
   useOrganizationScimTokens,
   useOrganizationSso,
@@ -40,6 +42,7 @@ import {
   usePatchOrganizationDomain,
   usePatchOrganizationInviteLinks,
   useRestoreOrganization,
+  useRevokeOrganizationInvite,
   useRevokeOrganizationInviteLink,
   useRevokeOrganizationScimToken,
   useUnarchiveTeam,
@@ -58,6 +61,9 @@ export function OrganizationSettingsPage(): ReactElement {
   const org = useOrganization(id)
   const members = useOrganizationMembers(id)
   const teams = useOrganizationTeams(id)
+  const emailInvites = useOrganizationInvites(id)
+  const createEmailInvite = useCreateOrganizationInvite(id)
+  const revokeEmailInvite = useRevokeOrganizationInvite(id)
   const linksEnabled = !!org.data?.invite_links_enabled
   const inviteLinks = useOrganizationInviteLinks(id, linksEnabled)
   const delOrg = useDeleteOrganization(id)
@@ -85,6 +91,9 @@ export function OrganizationSettingsPage(): ReactElement {
   const [confirmName, setConfirmName] = useState('')
   const [freshScimToken, setFreshScimToken] = useState<string | null>(null)
   const [tab, setTab] = useState<string | null>('members')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<'admin' | 'member' | 'guest'>('member')
+  const [inviteGuestTeamId, setInviteGuestTeamId] = useState<string | null>(null)
   const [linkRole, setLinkRole] = useState<'admin' | 'member' | 'guest'>('member')
   const [expiresDays, setExpiresDays] = useState<number | string>(7)
   const [maxUses, setMaxUses] = useState<number | string>('')
@@ -163,26 +172,137 @@ export function OrganizationSettingsPage(): ReactElement {
           </Tabs.List>
 
           <Tabs.Panel value="members" pt="md">
-            {members.isError ? (
-              <QueryErrorAlert error={members.error} onRetry={() => void members.refetch()} />
-            ) : (
-              <Table striped highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Email</Table.Th>
-                    <Table.Th>Role</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {(members.data ?? []).map((m) => (
-                    <Table.Tr key={m.user_id}>
-                      <Table.Td>{m.display_name ? `${m.display_name} (${m.email})` : m.email}</Table.Td>
-                      <Table.Td>{m.role}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            )}
+            <Stack gap="lg" maw={720}>
+              <Stack gap="sm">
+                <Title order={4}>Invite by email</Title>
+                <Text size="sm" c="dimmed">
+                  Sends an email when mail is configured. The invitee accepts from Notifications after signing in with
+                  that address.
+                </Text>
+                <Group align="flex-end" grow>
+                  <TextInput
+                    label="Email"
+                    placeholder="teammate@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.currentTarget.value)}
+                  />
+                  <Select
+                    label="Role"
+                    data={[
+                      { value: 'member', label: 'Member' },
+                      { value: 'admin', label: 'Admin' },
+                      { value: 'guest', label: 'Guest' },
+                    ]}
+                    value={inviteRole}
+                    onChange={(v) => setInviteRole((v as 'admin' | 'member' | 'guest') ?? 'member')}
+                  />
+                </Group>
+                {inviteRole === 'guest' ? (
+                  <Select
+                    label="Team for guests"
+                    placeholder="Pick a team"
+                    data={liveTeams.map((t) => ({ value: t.id, label: t.name }))}
+                    value={inviteGuestTeamId}
+                    onChange={setInviteGuestTeamId}
+                  />
+                ) : null}
+                <Button
+                  loading={createEmailInvite.isPending}
+                  disabled={!inviteEmail.trim() || (inviteRole === 'guest' && !inviteGuestTeamId)}
+                  onClick={() =>
+                    createEmailInvite.mutate(
+                      {
+                        email: inviteEmail.trim(),
+                        role: inviteRole,
+                        teams:
+                          inviteRole === 'guest' && inviteGuestTeamId ? [{ team_id: inviteGuestTeamId }] : undefined,
+                      },
+                      {
+                        onSuccess: () => {
+                          setInviteEmail('')
+                          setInviteGuestTeamId(null)
+                          notifications.show({ message: 'Invite sent' })
+                        },
+                        onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                      }
+                    )
+                  }
+                >
+                  Send invite
+                </Button>
+              </Stack>
+
+              <Stack gap="sm">
+                <Title order={4}>Pending invites</Title>
+                {emailInvites.isError ? (
+                  <QueryErrorAlert error={emailInvites.error} onRetry={() => void emailInvites.refetch()} />
+                ) : (emailInvites.data ?? []).filter((i) => !i.rejected_at).length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    No pending invites.
+                  </Text>
+                ) : (
+                  <Table striped highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Email</Table.Th>
+                        <Table.Th>Role</Table.Th>
+                        <Table.Th />
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {(emailInvites.data ?? [])
+                        .filter((i) => !i.rejected_at)
+                        .map((i) => (
+                          <Table.Tr key={i.id}>
+                            <Table.Td>{i.invitee_email}</Table.Td>
+                            <Table.Td>{i.role}</Table.Td>
+                            <Table.Td>
+                              <Button
+                                size="xs"
+                                color="red"
+                                variant="light"
+                                loading={revokeEmailInvite.isPending}
+                                onClick={() =>
+                                  revokeEmailInvite.mutate(i.id, {
+                                    onSuccess: () => notifications.show({ message: 'Invite revoked' }),
+                                    onError: (e) => notifications.show({ color: 'red', message: String(e) }),
+                                  })
+                                }
+                              >
+                                Revoke
+                              </Button>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+              </Stack>
+
+              <Stack gap="sm">
+                <Title order={4}>Members</Title>
+                {members.isError ? (
+                  <QueryErrorAlert error={members.error} onRetry={() => void members.refetch()} />
+                ) : (
+                  <Table striped highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Email</Table.Th>
+                        <Table.Th>Role</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {(members.data ?? []).map((m) => (
+                        <Table.Tr key={m.user_id}>
+                          <Table.Td>{m.display_name ? `${m.display_name} (${m.email})` : m.email}</Table.Td>
+                          <Table.Td>{m.role}</Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+              </Stack>
+            </Stack>
           </Tabs.Panel>
 
           <Tabs.Panel value="teams" pt="md">
