@@ -512,3 +512,38 @@ pub struct DiscoverOrgSsoResponse {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub organization_name: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct OrganizationScimToken {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub name: String,
+    pub token_hash: String,
+    pub prefix: String,
+    pub created_by_user_id: Uuid,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub revoked_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationScimTokenView {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub name: String,
+    pub prefix: String,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct CreateOrganizationScimToken {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct CreateOrganizationScimTokenResponse {
+    pub token: String,
+    pub view: OrganizationScimTokenView,
+}

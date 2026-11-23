@@ -255,3 +255,31 @@ export function useDeleteOrganizationSso(id: string) {
     },
   })
 }
+
+export function useOrganizationScimTokens(id: string | undefined) {
+  return useQuery({
+    queryKey: ['organizations', id, 'scim-tokens'],
+    queryFn: () => api.listOrganizationScimTokens(id!),
+    enabled: !!id,
+  })
+}
+
+export function useCreateOrganizationScimToken(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (name: string) => api.createOrganizationScimToken(id, name),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'scim-tokens'] })
+    },
+  })
+}
+
+export function useRevokeOrganizationScimToken(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (tokenId: string) => api.revokeOrganizationScimToken(id, tokenId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['organizations', id, 'scim-tokens'] })
+    },
+  })
+}

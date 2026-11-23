@@ -12,8 +12,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links, verified domains and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A–C; Phase D OIDC backend in flight (see [organization SSO and SCIM](../design/organization-sso-scim.md)).
-    - **Phase D — SSO / SCIM:** Per-organization OIDC (config + login API shipping); settings UI and SCIM Users next. SAML deferred.
+1. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links, verified domains and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A–D (OIDC SSO + SCIM Users; SAML deferred — see [organization SSO and SCIM](../design/organization-sso-scim.md)).
     - **Phase E — Team vaults:** Shared keys, rotation when members leave, recovery.
     - **Phase F — Audit and roles:** Richer audit (retention, SIEM/webhook, hash chain); custom roles and Billing manager when needed.
 
