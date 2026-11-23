@@ -122,6 +122,7 @@ What Linkdean can do today. For planned work see [roadmap.md](./roadmap.md). For
 - Restricted folders: maintainer allowlist; org owners/admins always see; restrictions never widen access.
 - Team archive (read-only) and soft-delete (30-day restore); organization soft-delete with name confirmation and owner email notice.
 - Audit log for owners/admins (filterable API + CSV export); append-only, 1-year retention prune.
+- **Verified domains:** owners/admins add a domain, publish DNS TXT `_linkdean-challenge.<domain>` = `linkdean-domain-verification=<token>`, then Verify. Per-domain join mode: auto-join matching verified emails as members, or require admin approval of join requests. Consumer and disposable mail domains are refused.
 - Sidebar **workspace switcher** (Personal vs organization) and organization settings (members, teams, invite links, audit, danger zone).
 
 ## Sharing (same instance)

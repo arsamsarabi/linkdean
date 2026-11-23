@@ -9,7 +9,8 @@ use axum::Json;
 use linkdean_core::{
     ConfirmOrganizationName, CreateOrganization, CreateOrganizationDomain,
     CreateOrganizationInvite, CreateOrganizationInviteLink, CreateOrganizationInviteLinkResponse,
-    CreateTeam, ListOrganizationAuditQuery, OrganizationAuditEventView, OrganizationDomainView,
+    CreateTeam, DomainJoinResponse, ListOrganizationAuditQuery, OrganizationAuditEventView,
+    OrganizationDomainJoinRequestView, OrganizationDomainSuggestion, OrganizationDomainView,
     OrganizationInviteLinkView, OrganizationInviteView, OrganizationMemberView,
     OrganizationWorkspace, PatchOrganizationDomain, PatchOrganizationInviteLinks,
     PatchOrganizationMember, TeamView,
@@ -31,6 +32,11 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(patch_invite_links_settings))
         .routes(routes!(list_domains, create_domain))
         .routes(routes!(delete_domain, patch_domain, verify_domain))
+        .routes(routes!(list_domain_suggestions))
+        .routes(routes!(domain_join))
+        .routes(routes!(list_domain_join_requests))
+        .routes(routes!(approve_domain_join_request))
+        .routes(routes!(deny_domain_join_request))
         .routes(routes!(archive_team))
         .routes(routes!(restore_archived_team))
         .routes(routes!(delete_team))
@@ -568,6 +574,118 @@ async fn verify_domain(
         db::verify_organization_domain_with_txt(&state.pool, user.id, id, domain_id, &records)
             .await?,
     ))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_list_domain_suggestions",
+    path = "/organizations/domain-suggestions",
+    tag = "organizations",
+    responses(
+        (status = 200, description = "OK", body = [OrganizationDomainSuggestion]),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn list_domain_suggestions(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+) -> ApiResult<Json<Vec<OrganizationDomainSuggestion>>> {
+    Ok(Json(
+        db::list_organization_domain_suggestions(&state.pool, user.id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_domain_join",
+    path = "/organizations/{id}/domain-join",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = DomainJoinResponse),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn domain_join(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<DomainJoinResponse>> {
+    Ok(Json(
+        db::request_or_join_via_domain(&state.pool, user.id, id).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "organizations_list_domain_join_requests",
+    path = "/organizations/{id}/domain-join-requests",
+    tag = "organizations",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = [OrganizationDomainJoinRequestView]),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn list_domain_join_requests(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Vec<OrganizationDomainJoinRequestView>>> {
+    Ok(Json(
+        db::list_organization_domain_join_requests(&state.pool, user.id, id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_approve_domain_join_request",
+    path = "/organizations/{id}/domain-join-requests/{request_id}/approve",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("request_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = OrganizationWorkspace),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn approve_domain_join_request(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, request_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<OrganizationWorkspace>> {
+    Ok(Json(
+        db::approve_organization_domain_join_request(&state.pool, user.id, id, request_id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    operation_id = "organizations_deny_domain_join_request",
+    path = "/organizations/{id}/domain-join-requests/{request_id}/deny",
+    tag = "organizations",
+    params(("id" = Uuid, Path), ("request_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "OK", body = serde_json::Value),
+        (status = "4XX", description = "Client error", body = crate::error::ErrorBody),
+        (status = "5XX", description = "Server error", body = crate::error::ErrorBody),
+    ),
+    security(("api_key" = []), ("session_cookie" = [])),
+)]
+async fn deny_domain_join_request(
+    State(state): State<AppState>,
+    AuthUser(user): AuthUser,
+    Path((id, request_id)): Path<(Uuid, Uuid)>,
+) -> ApiResult<Json<Value>> {
+    db::deny_organization_domain_join_request(&state.pool, user.id, id, request_id).await?;
+    Ok(Json(json!({ "ok": true })))
 }
 
 #[utoipa::path(

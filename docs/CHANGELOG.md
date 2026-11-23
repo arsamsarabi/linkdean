@@ -11,6 +11,7 @@ Every release cuts a section: on release, rename `[Unreleased]` to the new versi
 
 ### Added
 
+- Organization verified domains (DNS TXT), auto-join or join-request for matching verified emails, Domains settings tab.
 - Organization invite links: optional shareable join codes with role, expiry and use limit (off by default; verified email required to accept).
 
 

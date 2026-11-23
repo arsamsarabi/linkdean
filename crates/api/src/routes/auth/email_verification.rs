@@ -150,7 +150,10 @@ pub async fn verify(
     Json(req): Json<TokenRequest>,
 ) -> ApiResult<Json<Value>> {
     limit_by_ip(&state, peer, &headers)?;
-    db::verify_email_token(&state.pool, req.token.trim()).await?;
+    let user_id = db::verify_email_token(&state.pool, req.token.trim()).await?;
+    if let Err(e) = db::auto_join_organizations_for_verified_email(&state.pool, user_id).await {
+        tracing::warn!(%user_id, error = %e, "domain auto-join after email verify");
+    }
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -220,6 +223,9 @@ pub async fn confirm_change(
     limit_by_ip(&state, peer, &headers)?;
     let (user_id, _old, _new) = db::confirm_email_change(&state.pool, req.token.trim()).await?;
     tracing::info!(%user_id, "email changed");
+    if let Err(e) = db::auto_join_organizations_for_verified_email(&state.pool, user_id).await {
+        tracing::warn!(%user_id, error = %e, "domain auto-join after email change");
+    }
     Ok(Json(json!({ "ok": true })))
 }
 

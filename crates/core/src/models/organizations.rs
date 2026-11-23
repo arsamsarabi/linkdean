@@ -416,3 +416,45 @@ pub struct CreateOrganizationDomain {
 pub struct PatchOrganizationDomain {
     pub join_mode: DomainJoinMode,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationDomainSuggestion {
+    pub organization_id: Uuid,
+    pub organization_name: String,
+    pub domain: String,
+    pub join_mode: DomainJoinMode,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, utoipa::ToSchema)]
+pub struct OrganizationDomainJoinRequest {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub domain_id: Uuid,
+    pub user_id: Uuid,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub resolved_by_user_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct OrganizationDomainJoinRequestView {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub domain_id: Uuid,
+    pub domain: String,
+    pub user_id: Uuid,
+    pub email: String,
+    pub display_name: Option<String>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct DomainJoinResponse {
+    /// `joined` or `pending`.
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub organization: Option<OrganizationWorkspace>,
+}

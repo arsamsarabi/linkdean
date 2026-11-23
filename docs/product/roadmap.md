@@ -12,8 +12,7 @@ Open defects are not listed here. They are `Known issue:` comments at the code t
 
 ## Features
 
-1. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A (membership, email invites, team spaces, restricted folders, lifecycle, audit log, workspace switcher) and Phase B (invite links).
-    - **Phase C — Verified domains:** DNS TXT proof, then auto-join for matching addresses.
+1. **Organizations and teams** · `mid` · (L). Organizations own shared content in team spaces, with roles, restricted folders, email invites, invite links, verified domains and a basic audit log. Personal libraries stay private. Requirements: [organizations and teams design](../design/organizations-and-teams.md). Shipped so far: Phase A–C (through verified domains with auto-join / join-request).
     - **Phase D — SSO / SCIM:** SAML or per-organization OIDC, plus SCIM provisioning.
     - **Phase E — Team vaults:** Shared keys, rotation when members leave, recovery.
     - **Phase F — Audit and roles:** Richer audit (retention, SIEM/webhook, hash chain); custom roles and Billing manager when needed.

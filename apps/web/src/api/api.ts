@@ -63,6 +63,8 @@ import {
   okSchema,
   okUserEnvelopeSchema,
   organizationAuditEventSchema,
+  organizationDomainJoinRequestViewSchema,
+  organizationDomainViewSchema,
   organizationInviteLinkViewSchema,
   organizationMemberViewSchema,
   organizationWorkspaceSchema,
@@ -160,6 +162,8 @@ import {
   type NotificationEmailPref,
   type NotificationKind,
   type OrganizationAuditEvent,
+  type OrganizationDomainJoinRequestView,
+  type OrganizationDomainView,
   type OrganizationInviteLinkView,
   type OrganizationMemberView,
   type OrganizationWorkspace,
@@ -457,6 +461,46 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ code }) },
       organizationWorkspaceSchema
     ),
+
+  listOrganizationDomains: (id: string): Promise<OrganizationDomainView[]> =>
+    req(`/organizations/${id}/domains`, {}, z.array(organizationDomainViewSchema)),
+
+  createOrganizationDomain: (id: string, domain: string): Promise<OrganizationDomainView> =>
+    req(
+      `/organizations/${id}/domains`,
+      { method: 'POST', body: JSON.stringify({ domain }) },
+      organizationDomainViewSchema
+    ),
+
+  deleteOrganizationDomain: (id: string, domainId: string): Promise<{ ok: boolean }> =>
+    req(`/organizations/${id}/domains/${domainId}`, { method: 'DELETE' }, okSchema),
+
+  patchOrganizationDomain: (
+    id: string,
+    domainId: string,
+    join_mode: 'auto_join' | 'request'
+  ): Promise<OrganizationDomainView> =>
+    req(
+      `/organizations/${id}/domains/${domainId}`,
+      { method: 'PATCH', body: JSON.stringify({ join_mode }) },
+      organizationDomainViewSchema
+    ),
+
+  verifyOrganizationDomain: (id: string, domainId: string): Promise<OrganizationDomainView> =>
+    req(`/organizations/${id}/domains/${domainId}/verify`, { method: 'POST' }, organizationDomainViewSchema),
+
+  listOrganizationDomainJoinRequests: (id: string): Promise<OrganizationDomainJoinRequestView[]> =>
+    req(`/organizations/${id}/domain-join-requests`, {}, z.array(organizationDomainJoinRequestViewSchema)),
+
+  approveOrganizationDomainJoinRequest: (id: string, requestId: string): Promise<OrganizationWorkspace> =>
+    req(
+      `/organizations/${id}/domain-join-requests/${requestId}/approve`,
+      { method: 'POST' },
+      organizationWorkspaceSchema
+    ),
+
+  denyOrganizationDomainJoinRequest: (id: string, requestId: string): Promise<{ ok: boolean }> =>
+    req(`/organizations/${id}/domain-join-requests/${requestId}/deny`, { method: 'POST' }, okSchema),
 
   listSavedSearches: (): Promise<SavedSearch[]> => req('/saved-searches', {}, z.array(savedSearchSchema)),
 
